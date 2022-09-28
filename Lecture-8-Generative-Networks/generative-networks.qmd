@@ -1,0 +1,1893 @@
+---
+title: Generative Networks
+subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+author: Dr Patrick Laub
+date: Week 9
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.2
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+```{python}
+#| echo: false
+import matplotlib
+
+def set_square_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (2.0, 2.0)
+
+def set_rectangular_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (5.0, 2.0)
+
+def squareFig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams['figure.dpi'] = 350
+matplotlib.pyplot.rcParams['savefig.bbox'] = "tight"
+matplotlib.pyplot.rcParams['font.family'] = "serif"
+
+matplotlib.pyplot.rcParams['axes.spines.right'] = False
+matplotlib.pyplot.rcParams['axes.spines.top'] = False
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortestSide = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+
+import pandas
+pandas.options.display.max_rows = 6
+
+import numpy
+numpy.set_printoptions(precision=2)
+numpy.random.seed(123)
+
+import tensorflow
+tensorflow.random.set_seed(1)
+tensorflow.config.set_visible_devices([], 'GPU')
+
+tensorflow.get_logger().setLevel('ERROR')
+
+def skip_empty(line):
+  if line.strip() != "":
+    print(line.strip())
+```
+
+## Lecture Outline
+
+<br><br>
+
+::: columns
+::: column
+- Recap (project, lecture, Story Wall)
+- Continue car crash police report example
+- Word embeddings
+:::
+::: column
+- Text Generation
+- Image Generation
+- Autoencoders
+:::
+:::
+
+<br>
+
+Thanks Hang Nguyen & Michael Jacinto for draft slides.
+
+## Load packages {data-visibility="uncounted"}
+
+<br>
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+%load_ext watermark
+%watermark -p matplotlib,numpy,pandas,tensorflow
+```
+
+# Project {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+::: footer
+Now possible to upload report to shared Moodle page, under Week 10.
+:::
+
+## On time series splits
+
+If you have a lot of time series data, then use:
+
+```{python}
+from tensorflow.keras.utils import timeseries_dataset_from_array
+data = range(20); seq = 3; ts = data[:-seq]; target = data[seq:]
+nTrain = int(0.5 * len(ts)); nVal = int(0.25 * len(ts))
+nTest = len(ts) - nTrain - nVal
+print(f"# Train: {nTrain}, # Val: {nVal}, # Test: {nTest}")
+```
+
+::: columns
+::: {.column width="33%"}
+```{python}
+trainDS = \
+  timeseries_dataset_from_array(
+    ts, target, seq,
+    end_index=nTrain)
+```
+:::
+::: {.column width="33%"}
+```{python}
+valDS = \
+  timeseries_dataset_from_array(
+    ts, target, seq,
+    start_index=nTrain,
+    end_index=nTrain+nVal)
+```
+:::
+::: {.column width="33%"}
+```{python}
+testDS = \
+  timeseries_dataset_from_array(
+    ts, target, seq,
+    start_index=nTrain+nVal)
+```
+:::
+:::
+
+::: columns
+::: {.column width="33%"}
+```{python}
+#| echo: false
+print("Training dataset")
+for inputs, targets in trainDS:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+:::
+::: {.column width="33%"}
+```{python}
+#| echo: false
+print("Validation dataset")
+for inputs, targets in valDS:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+:::
+::: {.column width="33%"}
+```{python}
+#| echo: false
+print("Test dataset")
+for inputs, targets in testDS:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+:::
+:::
+
+::: footer
+Adapted from: François Chollet (2021), _Deep Learning with Python_, Second Edition, Listing 10.7.
+:::
+
+## On time series splits II
+
+If you _don't_ have a lot of time series data, consider:
+
+```{python}
+X = []; y = []
+for i in range(len(data)-seq):
+    X.append(data[i:i+seq])
+    y.append(data[i+seq])
+X = np.array(X); y = np.array(y);
+```
+
+::: columns
+::: {.column width="33%"}
+```{python}
+nTrain = int(0.5 * X.shape[0])
+X_train = X[:nTrain]
+y_train = y[:nTrain]
+```
+:::
+::: {.column width="33%"}
+```{python}
+nVal = int(np.ceil(0.25 * X.shape[0]))
+X_val = X[nTrain:nTrain+nVal]
+y_val = y[nTrain:nTrain+nVal]
+```
+:::
+::: {.column width="33%"}
+```{python}
+nTest = X.shape[0] - nTrain - nVal
+X_test = X[nTrain+nVal:]
+y_test = y[nTrain+nVal:]
+```
+:::
+:::
+
+::: columns
+::: {.column width="33%"}
+```{python}
+#| echo: false
+print("Training dataset")
+for i in range(X_train.shape[0]):
+    print([int(x) for x in X_train[i]], int(y_train[i]))
+```
+:::
+::: {.column width="33%"}
+```{python}
+#| echo: false
+print("Validation dataset")
+for i in range(X_val.shape[0]):
+    print([int(x) for x in X_val[i]], int(y_val[i]))
+```
+:::
+::: {.column width="33%"}
+```{python}
+#| echo: false
+print("Test dataset")
+for i in range(X_test.shape[0]):
+    print([int(x) for x in X_test[i]], int(y_test[i]))
+```
+:::
+:::
+
+# Previous lecture {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Escape characters
+
+::: columns
+::: column
+```{python}
+print("Hello,\tworld!")
+```
+```{python}
+print("Line 1\nLine 2")
+```
+
+```{python}
+#| eval: false
+print("Patrick\rLaub")
+```
+```{python}
+#| echo: false
+print("Laubick")
+```
+:::
+::: column
+```{python}
+#| error: true
+print("C:\tom\new folder")
+```
+
+Escape the backslash:
+
+```{python}
+print("C:\\tom\\new folder")
+```
+
+```{python}
+repr("Hello,\rworld!")
+```
+:::
+:::
+
+## A more robust `permutation_test`
+
+```{python}
+import numpy.random as rnd
+
+def permutation_test(model, X, y, numReps=1, seed=42):
+    """
+    Run the permutation test for variable importance.
+    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
+    """
+    rnd.seed(seed)
+    scores = []    
+
+    for j in range(X.shape[1]):
+        originalColumn = np.copy(X[:, j])
+        colScores = []
+
+        for r in range(numReps):
+            rnd.shuffle(X[:,j])
+            colScores.append(model.evaluate(X, y, verbose=0))
+
+        scores.append(np.mean(colScores, axis=0))
+        X[:,j] = originalColumn
+    
+    return np.array(scores)
+```
+
+## Pretrained model
+
+```{python}
+#| output: false
+from tensorflow.keras.applications import mobilenet
+from PIL import Image
+
+model = mobilenet.MobileNet(weights="imagenet")
+
+imageFilenames = ["patrick-0.jpg", "umbrella-0.jpg", "hand-15.jpg"]
+images = [np.asarray(Image.open(name)) for name in imageFilenames]
+
+images_resized = tf.image.resize(images, [224, 224])
+inputs = mobilenet.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = mobilenet.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+
+## Predicted classes (MobileNet)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="patrick-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="umbrella-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="hand-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Predicted classes (MobileNetV2)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+from tensorflow.keras.applications import mobilenet_v2
+
+model = mobilenet_v2.MobileNetV2(weights="imagenet")
+inputs = mobilenet_v2.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = mobilenet_v2.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="patrick-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="umbrella-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="hand-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Predicted classes (InceptionV3)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+from tensorflow.keras.applications import inception_v3
+
+model = inception_v3.InceptionV3(weights="imagenet")
+
+images_resized = tf.image.resize(images, [299, 299])
+inputs = inception_v3.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = inception_v3.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="patrick-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="umbrella-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="hand-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+
+## Predicted classes (MobileNet)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+imageFilenames = ["charger-4.jpg", "table-tennis-17.jpg", "water-bottle-15.jpg"]
+images = [np.asarray(Image.open(name)) for name in imageFilenames]
+
+images_resized = tf.image.resize(images, [224, 224])
+inputs = mobilenet.preprocess_input(images_resized)
+
+model = mobilenet.MobileNet(weights="imagenet")
+inputs = mobilenet.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = mobilenet.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+``` 
+:::
+::: {.column width="20%"}
+
+<img src="charger-4.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="table-tennis-17.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="water-bottle-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Predicted classes (MobileNetV2)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+model = mobilenet_v2.MobileNetV2(weights="imagenet")
+inputs = mobilenet_v2.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = mobilenet_v2.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="charger-4.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="table-tennis-17.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="water-bottle-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Predicted classes (InceptionV3)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+model = inception_v3.InceptionV3(weights="imagenet")
+
+images_resized = tf.image.resize(images, [299, 299])
+inputs = inception_v3.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = inception_v3.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="charger-4.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="table-tennis-17.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="water-bottle-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Transfer learned model
+
+::: columns
+::: {.column width="65%"}
+```{python}
+modelFile = "teachable-machine-model-3143.h5"
+model = keras.models.load_model(modelFile)
+model.layers
+```
+
+```{python}
+model.layers[0].layers
+```
+
+```{python}
+model.layers[1].layers
+```
+
+:::
+::: {.column width="35%"}
+![Models inside of models...](turtles-all-the-way-down.jpeg)
+:::
+:::
+
+::: footer
+Source: [Behance](https://www.behance.net/gallery/66946885/Turtles-All-the-Way-Down).
+:::
+
+## Transfer learned model II
+
+```{python}
+model.layers[0].layers[0].layers
+```
+
+```{python}
+len(model.layers[0].layers[0].layers)
+```
+
+## Transfer learned model III
+
+<div style="overflow:auto; height: 90%">
+<img src="mobilenet-model.png">
+</div>
+
+
+# Car Crash NLP Part II {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+::: footer
+Dataset source: [Dr Jürg Schelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
+:::
+
+## The data
+
+```{python}
+from pathlib import Path
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+
+if not Path("NHTSA_NMVCCS_extract.parquet.gzip").exists():
+    print("Downloading dataset")
+    !wget https://github.com/JSchelldorfer/ActuarialDataScience/raw/master/12%20-%20NLP%20Using%20Transformers/NHTSA_NMVCCS_extract.parquet.gzip
+
+df = pd.read_parquet("NHTSA_NMVCCS_extract.parquet.gzip")
+
+features = df["SUMMARY_EN"]
+target = LabelEncoder().fit_transform(df["INJSEVB"])
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## What is TF-IDF?
+
+Stands for _term frequency-inverse document frequency_.
+
+![Infographic explaining TF-IDF](td-idf-graphic.png)
+
+::: footer
+Source: FiloTechnologia (2014), [A simple java class for tf-idf scoring](http://filotechnologia.blogspot.com/2014/01/a-simple-java-class-for-tfidf-scoring.html), Blog post.
+:::
+
+## Using Keras `TextVectorization`
+
+```{python}
+max_tokens = 1_000
+vect = layers.TextVectorization(
+    max_tokens=max_tokens,
+    output_mode="tf_idf",
+)
+
+vect.adapt(X_train)
+vocab = vect.get_vocabulary()
+
+X_train_txt = vect(X_train)
+X_val_txt = vect(X_val)
+X_test_txt = vect(X_test)
+
+print(vocab[:50])
+```
+
+## The TF-IDF vectors
+
+```{python}
+pd.DataFrame(X_train_txt, columns=vocab, index=X_train.index)
+```
+
+## Feed TF-IDF into an ANN
+
+```{python}
+tf.random.set_seed(42)
+tfidfModel = keras.models.Sequential([
+    layers.Dense(250, "relu", input_dim=X_train_txt.shape[1]),
+    layers.Dense(1, "sigmoid")
+])
+
+tfidfModel.compile("adam", "BinaryCrossentropy", metrics=["accuracy"])
+tfidfModel.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate
+
+```{python}
+es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if not Path("tfidfModel.h5").exists():
+    tfidfModel.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_txt, y_val), verbose=0)
+    tfidfModel.save("tfidfModel.h5")
+else:
+    tfidfModel = keras.models.load_model("tfidfModel.h5")
+```
+```{python}
+tfidfModel.evaluate(X_train_txt, y_train, verbose=0)
+```
+```{python}
+tfidfModel.evaluate(X_val_txt, y_val, verbose=0)
+```
+
+## Keep text as sequence of tokens
+
+```{python}
+max_length = 800 
+max_tokens = 1_000
+vect = layers.TextVectorization(
+    max_tokens=max_tokens,
+    output_sequence_length=max_length,    
+)
+
+vect.adapt(X_train)
+vocab = vect.get_vocabulary()
+
+X_train_txt = vect(X_train)
+X_val_txt = vect(X_val)
+X_test_txt = vect(X_test)
+
+print(vocab[:50])
+```
+
+## A sequence of integers
+
+```{python}
+X_train_txt[0]
+```
+
+## Feed LSTM a sequence of one-hots
+
+```{python}
+tf.random.set_seed(42)
+inputs = keras.Input(shape=(max_length,), dtype="int64")
+onehot = tf.one_hot(inputs, depth=max_tokens)
+x = layers.Bidirectional(layers.LSTM(32))(onehot)
+x = layers.Dropout(0.5)(x) 
+outputs = layers.Dense(1, activation="sigmoid")(x)    
+oneHotModel = keras.Model(inputs, outputs)
+oneHotModel.compile(optimizer="rmsprop",
+    loss="binary_crossentropy", metrics=["accuracy"])
+oneHotModel.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate
+
+```{python}
+es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if not Path("oneHotModel.h5").exists():
+    oneHotModel.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_txt, y_val), verbose=0);
+    oneHotModel.save("oneHotModel.h5")
+else:
+    oneHotModel = keras.models.load_model("oneHotModel.h5")
+```
+
+```{python}
+oneHotModel.evaluate(X_train_txt, y_train, verbose=0)
+```
+```{python}
+oneHotModel.evaluate(X_val_txt, y_val, verbose=0)
+```
+
+## Custom embeddings
+
+```{python}
+inputs = keras.Input(shape=(max_length,), dtype="int64")
+embedded = layers.Embedding(input_dim=max_tokens, output_dim=32,
+        mask_zero=True)(inputs)
+x = layers.Bidirectional(layers.LSTM(32))(embedded)
+x = layers.Dropout(0.5)(x)
+outputs = layers.Dense(1, activation="sigmoid")(x)
+embedLSTM = keras.Model(inputs, outputs)
+embedLSTM.compile("rmsprop", "binary_crossentropy", metrics=["accuracy"])
+embedLSTM.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate
+
+```{python}
+es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if not Path("embedLSTM.h5").exists():
+    embedLSTM.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_txt, y_val), verbose=0);
+    embedLSTM.save("embedLSTM.h5")
+else:
+    embedLSTM = keras.models.load_model("embedLSTM.h5")
+```
+
+```{python}
+embedLSTM.evaluate(X_train_txt, y_train, verbose=0)
+```
+```{python}
+embedLSTM.evaluate(X_val_txt, y_val, verbose=0)
+```
+```{python}
+embedLSTM.evaluate(X_test_txt, y_test, verbose=0)
+```
+
+# Word Embeddings {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Overview
+
+::: {.notes}
+In order for deep learning models to process language, we need to supply that language to the model in a way it can digest, i.e. a __quantitative representation__ such as a 2-D matrix of numerical values.
+:::
+
+::: columns
+:::: {.column width="60%"}
+Popular methods for converting text into numbers include:
+
+- One-hot encoding
+- Bag of words
+- TF-IDF
+- Word vectors (_transfer learning_)
+
+::::
+:::: {.column width="40%"}
+![Assigning Numbers](xkcd-assigning_numbers_2x.png)
+::::
+:::
+
+::: footer
+Source: Randall Munroe (2022), [xkcd #2610: Assigning Numbers](https://xkcd.com/2610/).
+:::
+
+## Word Vectors
+
+- One-hot representations capture word 'existence' only, whereas word vectors capture information about word meaning as well as location.
+- This enables deep learning NLP models to automatically learn linguistic features.
+- **Word2Vec** & **GloVe** are popular algorithms for generating word embeddings (i.e. word vectors).
+
+## Word Vectors
+
+![Illustrative word vectors.](krohn_f02_06-blur.png)
+
+::: {.notes}
+- Overarching concept is to assign each word within a corpus to a particular, meaningful location within a multidimensional space called the vector space.
+- Initially each word is assigned to a random location.
+- BUT by considering the words that tend to be used around a given word within the corpus, the locations of the words shift. 
+:::
+
+::: footer
+Source: Krohn (2019), _Deep Learning Illustrated_, Figure 2-6 (__redacted__).
+::: 
+
+## Remember this diagram?
+
+![Embeddings will gradually improve during training.](Geron-mls2_1304-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 13-4 (__redacted__).
+:::
+
+## Word2Vec
+
+**Key idea**: You're known by the company you keep.
+
+Two algorithms are used to calculate embeddings:
+
+* _Continuous bag of words_: uses the context words to predict the target word
+* _Skip-gram_: uses the target word to predict the context words
+
+Predictions are made using a neural network with one hidden layer. Through backpropagation, we update a set of "weights" which become the word vectors.
+
+::: footer
+Paper: Mikolov et al. (2013), [_Efficient estimation of word representations in vector space_](https://arxiv.org/pdf/1301.3781.pdf), arXiv:1301.3781.
+:::
+
+## Word2Vec training methods
+
+![Continuous bag of words is a _center word prediction_ task](Chaudhary-nlp-ssl-center-word-prediction.gif)
+
+![Skip-gram is a _neighbour word prediction_ task](Chaudhary-nlp-ssl-neighbor-word-prediction.gif)
+
+:::{.callout-tip}
+## Suggested viewing
+
+Computerphile (2019), [Vectoring Words (Word Embeddings)](https://youtu.be/gQddtTdmG_8), YouTube (16 mins).
+:::
+
+::: footer
+Source: Amit Chaudhary (2020), [Self Supervised Representation Learning in NLP](https://amitness.com/2020/05/self-supervised-learning-nlp/).
+:::
+
+## The skip-gram network
+
+![The skip-gram model. Both the input vector $\boldsymbol{x}$ and the output $\boldsymbol{y}$ are one-hot encoded word representations. The hidden layer is the word embedding of size 
+$N$.](lilianweng-word2vec-skip-gram.png)
+
+::: footer
+Source: Lilian Weng (2017), [Learning Word Embedding](https://lilianweng.github.io/posts/2017-10-15-word-embedding/), Blog post, Figure 1.
+:::
+
+
+## GloVe {.smaller}
+
+GloVe (Global Vectors for Word Representation) is an unsupervised learning algorithm for obtaining word vector representations, developed by Stanford University in 2014.
+
+GloVe captures contextual information about words by comparing co-occurrence probability ratios
+
+_A co-occurrence probability_ is the probability that word $k$ is present in the corpus if word $j$ is present.
+
+![Example co-occurrence probabilities](co-occurrence.png)
+
+::: footer
+Source: Pennington et al. (2014), [GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/projects/glove/), Project webpage.
+:::
+
+## Word Vector Arithmetic
+
+::: columns
+::: column
+
+Relationships between words becomes vector math.
+
+![You remember vectors, right?](vectors-Figure_03_02_09.jpeg)
+
+::: {.notes}
+- E.g., if we calculate the direction and distance between the coordinates of the words _Paris_ and _France_, and trace this direction and distance from _London_, we should be close to the word _England_.
+:::
+
+:::
+::: column
+![Illustrative word vector arithmetic](krohn_f02_07-blur.png)
+
+![Screenshot from [Word2viz](https://lamyiowce.github.io/word2viz/)](krohn_f02_08-blur.png)
+:::
+:::
+
+::: footer
+Sources: PressBooks, [College Physics: OpenStax](https://pressbooks.bccampus.ca/collegephysics/chapter/vector-addition-and-subtraction-graphical-methods/), Chapter 17 Figure 9, and Krohn (2019), _Deep Learning Illustrated_, Figures 2-7 & 2-8 (__redacted__).
+::: 
+
+# 
+
+<h2>Pretrained word embeddings</h2>
+
+Install `gensim` library:
+```{python}
+!pip install gensim > /dev/null
+```
+
+Load word2vec embeddings trained on Google News:
+```{python}
+import gensim.downloader as api
+wv = api.load('word2vec-google-news-300')
+```
+
+When run for the first time, that downloads a huge file:
+```{python}
+!ls ~/gensim-data/
+```
+
+```{python}
+!ls -lh ~/gensim-data/word2vec-google-news-300/word2vec-google-news-300.gz
+```
+
+```{python}
+len(wv)
+```
+
+## Treat `wv` like a dictionary
+
+```{python}
+wv["pizza"]
+```
+
+```{python}
+len(wv["pizza"])
+```
+
+## Find nearby word vectors 
+
+```{python}
+wv.most_similar("Python")
+```
+
+```{python}
+wv.similarity("Python", "Java")
+```
+
+```{python}
+wv.similarity("Python", "sport")
+```
+
+```{python}
+wv.similarity("Python", "R")
+```
+
+::: footer
+Fun fact: Gensim's `most_similar` uses Spotify's `annoy` library ("Approximate Nearest Neighbors Oh Yeah")
+:::
+
+## What does 'similarity' mean?
+
+The 'similarity' scores
+```{python}
+wv.similarity("Sydney", "Melbourne")
+```
+
+are normally based on cosine distance.
+```{python}
+x = wv["Sydney"]
+y = wv["Melbourne"]
+x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))
+```
+
+```{python}
+wv.similarity("Sydney", "Aarhus")
+```
+
+## Weng's GoT Word2Vec
+
+In the GoT word embedding space, the top similar words to “king” and “queen” are:
+
+::: columns
+::: column
+```python
+model.most_similar('king')
+```
+```
+('kings', 0.897245) 
+('baratheon', 0.809675) 
+('son', 0.763614)
+('robert', 0.708522)
+('lords', 0.698684)
+('joffrey', 0.696455)
+('prince', 0.695699)
+('brother', 0.685239)
+('aerys', 0.684527)
+('stannis', 0.682932)
+```
+:::
+::: column
+```python
+model.most_similar('queen')
+```
+```
+('cersei', 0.942618)
+('joffrey', 0.933756)
+('margaery', 0.931099)
+('sister', 0.928902)
+('prince', 0.927364)
+('uncle', 0.922507)
+('varys', 0.918421)
+('ned', 0.917492)
+('melisandre', 0.915403)
+('robb', 0.915272)
+```
+:::
+:::
+
+::: footer
+Source: Lilian Weng (2017), [Learning Word Embedding](https://lilianweng.github.io/posts/2017-10-15-word-embedding/), Blog post.
+:::
+
+## Combining word vectors
+
+You can summarise a sentence by averaging the individual word vectors.
+
+```{python}
+sv = (wv["Melbourne"] + wv["has"] + wv["better"] + wv["coffee"]) / 4
+len(sv), sv[:5]
+```
+
+> As it turns out, averaging word embeddings is a surprisingly effective way to create word embeddings. It’s not perfect (as you’ll see), but it does a strong job of capturing what you might perceive to be complex relationships between words.
+
+::: footer
+Source: Trask (2019), Grokking Deep Learning, Chapter 12.
+:::
+
+## Recipe recommender
+
+::: columns
+::: {.column width="49%"}
+![Recipes are the average of the word vectors of the ingredients.](duarte-o-carmo-recipe-space-1.png)
+:::
+::: {.column width="51%"}
+![Nearest neighbours used to classify new recipes as potentially delicious.](duarte-o-carmo-recipe-space-2.png)
+:::
+:::
+
+::: footer
+Source: Duarte O.Carmo (2022), [A recipe recommendation system](https://duarteocarmo.com/blog/scandinavia-food-python-recommendation-systems), Blog post.
+:::
+
+## Analogies with word vectors
+
+Obama is to America as ___ is to Australia.
+
+::: fragment
+$$ \text{Obama} - \text{America} + \text{Australia} = ? $$
+:::
+
+::: fragment
+```{python}
+wv.most_similar(positive=["Obama", "Australia"], negative=["America"])
+```
+:::
+
+## Testing more associations 
+
+```{python}
+wv.most_similar(positive=["France", "London"], negative=["Paris"])
+```
+
+## Quickly get to bad associations
+
+```{python}
+wv.most_similar(positive=["King", "woman"], negative=["man"])
+```
+
+```{python}
+wv.most_similar(positive=["computer_programmer", "woman"], negative=["man"])
+```
+
+## Bias in NLP models {.smaller}
+
+::: columns
+::: column
+![](the-verge-banner-microsoft-tay.jpeg)
+
+The Verge (2016), [Twitter taught Microsoft's AI chatbot to be a racist a****** in less than a day](https://www.theverge.com/2016/3/24/11297050/tay-microsoft-chatbot-racist).
+:::
+::: column
+> ... there are serious questions to answer, like how are we going to teach AI using public data without incorporating the worst traits of humanity? If we create bots that mirror their users, do we care if their users are human trash? There are plenty of examples of technology embodying — either accidentally or on purpose — the prejudices of society, and Tay's adventures on Twitter show that even big corporations like Microsoft forget to take any preventative measures against these problems.
+:::
+:::
+
+## The library cheats a little bit
+
+```{python}
+wv.similar_by_vector(wv["computer_programmer"]-wv["man"]+wv["woman"])
+```
+
+To get the 'nice' analogies, the `.most_similar` ignores the input words as possible answers.
+
+```{python}
+#| eval: false
+# ignore (don't return) keys from the input
+result = [
+    (self.index_to_key[sim + clip_start], float(dists[sim]))
+    for sim in best if (sim + clip_start) not in all_keys
+]
+```
+
+::: footer
+Source: gensim, [gensim/models/keyedvectors.py](https://github.com/RaRe-Technologies/gensim/blob/eeb7e8662d5350efe68fa14db08b02d273735af9/gensim/models/keyedvectors.py#L853), lines 853-857.
+:::
+
+
+# Story Wall {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## A few comments
+
+- Expert programmers still use other people's code
+- When going through some tutorial notebook, don't just press 'run cell'
+- Try changing hyperparameters (weights in a loss function in particular)
+- Try commenting out some lines of code
+- Try removing layers from a network
+- Keep expectations low when running on your own inputs
+
+# Text Generation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Generative deep learning
+
+- Using AI as augmented intelligence rather than artificial intelligence.
+- Use of deep learning to augment creative activities such as writing, music and art, to *generate* new things.
+- Some applications: text generation, deep dreaming, neural style transfer, variational autoencoders and generative adversarial networks.
+
+## Text generation
+
+> Generating sequential data is the closest computers get to dreaming.
+
+- Generate sequence data: Train a model to predict the next token or next few tokens in a sentence, using previous tokens as input.
+- A network that models the probability of the next tokens given the previous ones is called a *language model*.
+
+::: {.notes}
+GPT-3 is a 175 billion parameter text-generation model trained by the startup OpenAI on a large text corpus of digitally available books, Wikipedia and web crawling. GPT-3 made headlines in 2020 due to its capability to generate plausible-sounding text paragraphs on virtually any topic.
+:::
+
+::: footer
+Source: Alex Graves (2013), [Generating Sequences With Recurrent Neural Networks](https://arxiv.org/abs/1308.0850).
+:::
+
+## Word-level language model
+
+![Diagram of a word-level language model.](chollet-languagemodel-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.1 (__redacted__).
+:::
+
+## Character-level language model
+
+![Diagram of a character-level language model (Char-RNN)](tensorflow-text_generation_sampling.png)
+
+::: footer
+Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
+:::
+
+## Useful for speech recognition
+
+::: {#fig-speech-recognition}
+
+| RNN output | 	Decoded Transcription |
+| --- | --- |
+| what is the weather like in bostin right now | what is the weather like in boston right now |
+| prime miniter nerenr modi	| prime minister narendra modi |
+| arther n tickets for the game | are there any tickets for the game |
+
+Examples of transcriptions directly from the RNN with errors that are fixed by addition of a language model.
+:::
+
+::: footer
+Source: Hannun et al. (2014), [Deep Speech: Scaling up end-to-end speech recognition](https://arxiv.org/pdf/1412.5567.pdf), arXiv:1412.5567, Table 1.
+:::
+
+## Generating Shakespeare I
+
+> | ROMEO:
+| Why, sir, what think you, sir?
+| 
+| AUTOLYCUS:
+| A dozen; shall I be deceased.
+| The enemy is parting with your general,
+| As bias should still combit them offend
+| That Montague is as devotions that did satisfied;
+| But not they are put your pleasure.
+
+::: footer
+Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
+:::
+
+## Generating Shakespeare II
+
+> | DUKE OF YORK:
+| Peace, sing! do you must be all the law;
+| And overmuting Mercutio slain;
+| And stand betide that blows which wretched shame;
+| Which, I, that have been complaints me older hours.
+| 
+| LUCENTIO:
+| What, marry, may shame, the forish priest-lay estimest you, sir,
+| Whom I will purchase with green limits o' the commons' ears!
+
+::: footer
+Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
+:::
+
+
+## Generating Shakespeare III
+
+> | ANTIGONUS: 
+| To be by oath enjoin'd to this. Farewell! 
+| The day frowns more and more: thou'rt like to have 
+| A lullaby too rough: I never saw 
+| The heavens so dim by day. A savage clamour! 
+|
+| [Exit, pursued by a bear]
+
+::: footer
+Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
+:::
+
+## Sampling strategy
+
+- *Greedy sampling* will choose the token with the highest probability. It makes the resulting sentence repetitive and predictable.
+- *Stochastic sampling*: if a word has probability 0.3 of being next in the sentence according to the model, we’ll choose it 30% of the time. But the result is still not interesting enough and still quite predictable.
+- Use a *softmax temperature* to control the randomness. More randomness results in more surprising and creative sentences.
+
+## Generating Laub (temp = 0.01)
+
+> _In today's lecture we will_ be different situation.
+> So, next one is what they rective that each commit to be able to learn some relationships from the course, and that is part of the image that it's very clese and black problems that you're trying to fit the neural network to do there instead of like a specific though shef series of layers mean about full of the chosen the baseline of car was in the right, but that's an important facts and it's a very small summary with very scrort by the beginning of the sentence.
+
+## Generating Laub (temp = 0.25)
+
+> _In today's lecture we will_ decreas before model that we that we have to think about it, this mightsks better, for chattely the same project, because you might use the test set because it's to be picked up the things that I wanted to heard of things that I like that even real you and you're using the same thing again now because we need to understand what it's doing the same thing but instead of putting it in particular week, and we can say that's a thing I mainly link it's three columns.
+
+## Generating Laub (temp = 0.5)
+
+> _In today's lecture we will_ probably the adw n wait lots of ngobs teulagedation to calculate the gradient and then I'll be less than one layer the next slide will br input over and over the threshow you ampaigey the one that we want to apply them quickly. So, here this is the screen here the main top kecw onct three thing to told them, and the output is a vertical variables and Marceparase of things that you're moving the blurring and that just data set is to maybe kind of categorical variants here but there's more efficiently not basically replace that with respect to the best and be the same thing.
+
+## Generating Laub (temp = 1)
+
+> _In today's lecture we will_ put it different shates to touch on last week, so I want to ask what are you object frod current.
+> They don't have any zero into it, things like that which mistakes. 10 claims that the average version was relden distever ditgs and Python for the whole term wo long right to really.
+> The name of these two options.
+> There are in that seems to be modified version. If you look at when you're putting numbers into your, that that's over.
+> And I went backwards, up, if they'rina functional pricing working with.
+
+## Generating Laub (temp = 1.5)
+
+> In today's lecture we will put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming.
+> If there was a large. It's gonua draltionation.
+> Tow many, up, would that black and 53% that's girter thankAty will get you jast typically stickK thing.
+> But maybe. Anyway, I'm going to work on this libry two, past, at shit citcs jast
+> pleming to memorize overcamples like pre pysing, why wareed to smart a one in this reportbryeccuriay.
+
+## Generate the most likely sequence
+
+![An example sequence-to-sequence chatbot model.](chatbot.png)
+
+::: footer
+Source: Payne (2021), [What is beam search](https://www.width.ai/post/what-is-beam-search), Width.ai blog.
+:::
+
+## Beam search
+
+![Illustration of a beam search.](beam-search.png)
+
+::: footer
+Source: Doshi (2021), [Foundations of NLP Explained Visually: Beam Search, How It Works](https://towardsdatascience.com/foundations-of-nlp-explained-visually-beam-search-how-it-works-1586b9849a24), towardsdatascience.com.
+:::
+
+# Image Generation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Reverse-engineering a CNN
+
+A CNN is a function $f_{\boldsymbol{\theta}}(\mathbf{x})$ that takes a vector (image) $\mathbf{x}$ and returns a vector (distribution) $\widehat{\mathbf{y}}$.
+
+Normally, we train it by modifying $\boldsymbol{\theta}$ so that 
+
+$$ \boldsymbol{\theta}^*\ =\  \underset{\boldsymbol{\theta}}{\mathrm{argmin}} \,\, \text{Loss} \bigl( f_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y} \bigr). $$
+
+However, it is possible to _not train_ the network but to modify $\mathbf{x}$, like
+
+$$ \mathbf{x}^*\ =\  \underset{\mathbf{x}}{\mathrm{argmin}} \,\, \text{Loss} \bigl( f_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y} \bigr). $$
+
+This is very slow as we do a lot more gradient descent.
+
+## Adversarial examples
+
+![A demonstration of fast adversarial example generation applied to GoogLeNet on ImageNet. By adding an imperceptibly small vector whose elements are equal to the sign of the elements of the gradient of the cost function with respect to the input, we can change GoogLeNet’s classification of the image.](adversarial-example.png)
+
+::: footer
+Source: Goodfellow et al. (2015), [Explaining and Harnessing Adversarial Examples](https://arxiv.org/pdf/1412.6572.pdf), ICLR.
+:::
+
+## Adversarial stickers
+
+![Adversarial stickers.](the-verge-adversarial_patch_.0.gif)
+
+::: footer
+Source: The Verge (2018), [These stickers make computer vision software hallucinate things that aren’t there](https://www.theverge.com/2018/1/3/16844842/ai-computer-vision-trick-adversarial-patches-google).
+:::
+
+
+## Deep Dream 
+
+![Deep Dream is an image-modification program released by Google in 2015.](deep-dream.jpeg)
+
+::: footer
+Source: Wikipedia, [DeepDream page](https://commons.wikimedia.org/wiki/File:Aurelia-aurita-3-0009.jpg).
+:::
+
+## DeepDream
+
+- Even though many deep learning models are black boxes, convnets are quite interpretable via visualization. Some visualization techniques are: visualizing convnet outputs shows how convnet layers transform the input, visualizing convnet filters shows what visual patterns or concept each filter is receptive to, etc.
+- The output of a layer is often called its activation, the output of the activation function.
+- The activations of the first few layers of the network carries more information about the visual contents, while deeper layers encode higher, more abstract concepts.
+
+## DeepDream
+
+- Each filter is receptive to a visual pattern. To visualize a convnet filter, gradient ascent is used to maximize the response of the filter. Gradient ascent maximize a loss function and moves the image in a direction that activate the filter more strongly to enhance its reading of the visual pattern. 
+- DeepDream maximizes the activation of the entire convnet layer rather than that of a specific filter, thus mixing together many visual patterns all at once.
+- DeepDream starts with an existing image, latches on to preexisting visual patterns, distorting elements of the image in a somewhat artistic fashion.
+
+## Many passes over the image 
+
+![Input images are processed at different scales (called octaves), which further improve the quality of the visualization.](chollet-deepdream2-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.6 (__redacted__).
+:::
+
+## Original
+
+![A sunny day on the Mornington peninsula.](deep-dream-melbourne-original.jpg)
+
+## Transformed
+
+![Deep-dreaming version.](deep-dream-melbourne.png)
+
+::: footer
+Generated by [Keras' Deep Dream tutorial](https://keras.io/examples/generative/deep_dream/).
+:::
+
+#
+
+<h2>Neural style transfer</h2>
+
+Applying the style of a reference image to a target image while conserving the content of the target image.
+
+![An example neural style transfer.](neuralstyletransfer.png)
+
+::: {.notes}
+- Style: textures, colors, visual patterns (blue-and-yellow circular brushstrokes in Vincent Van Gogh's Starry Night)
+- Content: the higher-level macrostructure of the image (buildings in the Tübingen photograph).
+:::
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.9.
+:::
+
+## Goal of NST
+
+What the model does:
+
+- Preserve content by maintaining similar deeper layer activations between the original image and the generated image. The convnet should “see” both the original image and the generated image as containing the same things.
+
+- Preserve style by maintaining similar correlations within activations for both low level layers and high-level layers. Feature correlations within a layer capture textures: the generated image and the style-reference image should share the same textures at different spatial scales.
+
+## A wanderer in Greenland
+
+::: columns
+::: {.column width="50%"}
+Content
+
+![Some striking young hiker in Greenland.](ninja.jpg)
+:::
+
+::: {.column width="50%"}
+Style
+
+![_Wanderer above the Sea of Fog_ by Caspar David Friedrich.](wanderer.jpg)
+:::
+:::
+
+::: footer
+Source: Laub (2018), [On Neural Style Transfer](https://pat-laub.github.io/2018/01/07/neural-style-transfer.html), Blog post.
+:::
+
+## A wanderer in Greenland II
+
+::: columns
+::: {.column width="45%"}
+![Animation of NST in progress.](ninja.gif)
+:::
+
+::: {.column width="55%"}
+![One result of NST.](ninja-wanderer.png)
+:::
+:::
+
+:::{.callout-tip}
+## Question
+
+How would you make this faster for one specific style image?
+:::
+
+::: footer
+Source: Laub (2018), [On Neural Style Transfer](https://pat-laub.github.io/2018/01/07/neural-style-transfer.html), Blog post.
+:::
+
+## A new style image
+
+![Hokusai's Great Wave off Kanagawa](wave.jpg)
+
+::: footer
+Source: Laub (2018), [On Neural Style Transfer](https://pat-laub.github.io/2018/01/07/neural-style-transfer.html), Blog post.
+:::
+
+## A new content image
+
+![The seascape in Qingdao](qingdao.jpg)
+
+::: footer
+Source: Laub (2018), [On Neural Style Transfer](https://pat-laub.github.io/2018/01/07/neural-style-transfer.html), Blog post.
+:::
+
+## Another neural style transfer
+
+![The seascape in Qingdao in the style of Hokusai's Great Wave off Kanagawa](qwave.jpg)
+
+::: footer
+Source: Laub (2018), [On Neural Style Transfer](https://pat-laub.github.io/2018/01/07/neural-style-transfer.html), Blog post.
+:::
+
+
+## Why is this important?
+
+Taking derivatives with respect to the input image can be a first step toward explainable AI for convolutional networks.
+
+- [Saliency maps](https://youtu.be/y8cwyeccuy4)
+- [Grad-CAM](https://youtu.be/xGZfAoh0xKs)
+
+# Autoencoders {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+
+## Autoencoder
+
+An autoencoder takes a data/image, maps it to a latent space via en encoder module, then decodes it back to an output with the same dimensions via a decoder module.
+
+![Schematic of an autoencoder.](chollet-autoencoder-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.16 (__redacted__).
+:::
+
+## Autoencoder II {.smaller}
+
+- An autoencoder is trained by using the same image as both the input and the target, meaning an autoencoder learns to reconstruct the original inputs. Therefore it's _not supervised learning_, but _self-supervised learning_.
+- If we impose constraints on the encoders to be low-dimensional and sparse, _the input data will be compressed_ into fewer bits of information. 
+- Latent space is a place that stores low-dimensional representation of data. It can be used for _data compression_, where data is compressed to a point in a latent space.
+- An image can be compressed into a latent representation, which can then be reconstructed back to a _slightly different image_. 
+
+::: {.notes}
+For image editing, an image can be projected onto a latent space and moved inside the latent space in a meaningful way (which means we modify its latent representation), before being mapped back to the image space. This will edit the image and allow us to generate images that have never been seen before.
+:::
+
+## Example: PSAM 
+
+```{python}
+#| echo: false
+#| output: false 
+from tensorflow.keras.utils import image_dataset_from_directory
+
+dataDir = "mandarin-split"
+batchSize = 32
+imgHeight = 80
+imgWidth = 80
+imgSize = (imgHeight, imgWidth)
+
+trainDS = image_dataset_from_directory(
+    dataDir + "/train",
+    image_size=imgSize,
+    batch_size=batchSize,
+    shuffle=False,
+    color_mode="grayscale")
+
+valDS = image_dataset_from_directory(
+    dataDir + "/val",
+    image_size=imgSize,
+    batch_size=batchSize,
+    shuffle=False,
+    color_mode="grayscale")
+
+testDS = image_dataset_from_directory(
+    dataDir + "/test",
+    image_size=imgSize,
+    batch_size=batchSize,
+    shuffle=False,
+    color_mode="grayscale")
+
+# NB: Need shuffle=False earlier for these X & y to line up.
+X_train = np.concatenate(list(trainDS.map(lambda x, y: x)))
+y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
+
+X_val = np.concatenate(list(valDS.map(lambda x, y: x)))
+y_val = np.concatenate(list(valDS.map(lambda x, y: y)))
+
+X_test = np.concatenate(list(testDS.map(lambda x, y: x)))
+y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
+```
+
+Loading the dataset off-screen (using [Lecture 6 code](https://pat-laub.github.io/DeepLearningMaterials/Lecture-6-Computer-Vision/computer-vision.html#/downloading-the-dataset)).
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_train[0], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_train[42], cmap="gray");
+```
+:::
+:::
+
+## A compression game
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_train[42], cmap="gray");
+print(imgWidth * imgHeight)
+```
+:::
+::: column
+> _A 4 with a curly foot, a flat line goes across the middle of the 4, two feet come off the bottom._
+
+96 characters
+
+> _A Dōng character, rotated counterclockwise 15 degrees._
+
+54 characters
+
+:::
+:::
+
+## Make a basic autoencoder
+
+```{python}
+numHiddenLayer = 400
+print(f"Compress from {imgHeight * imgWidth} pixels to {numHiddenLayer} latent variables.")
+```
+
+```{python}
+tf.random.set_seed(123)
+
+model = keras.models.Sequential([
+    layers.Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+    layers.Flatten(),
+    layers.Dense(numHiddenLayer, "relu"),
+    layers.Dense(imgHeight*imgWidth, "sigmoid"),
+    layers.Reshape((imgHeight, imgWidth, 1)),
+    layers.Rescaling(255),
+])
+
+model.compile("adam", "mse")
+epochs = 1_000
+es = keras.callbacks.EarlyStopping(
+    patience=5, restore_best_weights=True)
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);
+```
+
+## The model
+
+```{python}
+model.summary(print_fn=skip_empty)
+```
+
+```{python}
+print(model.evaluate(X_val, X_val, verbose=0))
+```
+
+## Some recovered image
+
+```{python}
+X_val_rec = model.predict(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+
+## Invert the images
+
+::: columns
+::: column
+```{python}
+plt.imshow(255 - X_train[0], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(255 - X_train[42], cmap="gray");
+```
+:::
+:::
+
+## Try inverting the images
+
+```{python}
+tf.random.set_seed(123)
+
+model = keras.models.Sequential([
+    layers.Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+    layers.Lambda(lambda x: 1 - x),
+    layers.Flatten(),
+    layers.Dense(numHiddenLayer, "relu"),
+    layers.Dense(imgHeight*imgWidth, "sigmoid"),
+    layers.Lambda(lambda x: 1 - x),
+    layers.Reshape((imgHeight, imgWidth, 1)),
+    layers.Rescaling(255),
+])
+
+model.compile("adam", "mse")
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);
+```
+
+## The model
+
+```{python}
+model.summary(print_fn=skip_empty)
+```
+
+```{python}
+print(model.evaluate(X_val, X_val, verbose=0))
+```
+
+
+## Some recovered image
+
+```{python}
+X_val_rec = model.predict(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+
+## CNN-enhanced encoder
+
+```{python}
+tf.random.set_seed(123)
+
+encoder = keras.models.Sequential([
+    layers.Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+    layers.Lambda(lambda x: 1 - x),
+    layers.Conv2D(16, 3, padding="same", activation="relu"),
+    layers.MaxPooling2D(),
+    layers.Conv2D(32, 3, padding="same", activation="relu"),
+    layers.MaxPooling2D(),
+    layers.Conv2D(64, 3, padding="same", activation="relu"),
+    layers.MaxPooling2D(),
+    layers.Flatten(),
+    layers.Dense(numHiddenLayer, "relu")
+])
+```
+
+## CNN-enhanced decoder
+
+```{python}
+decoder = keras.models.Sequential([
+    keras.Input(shape=(numHiddenLayer,)),
+    layers.Dense(20*20),
+    layers.Reshape((20, 20, 1)),
+    layers.Conv2D(128, 3, padding="same", activation="relu"),
+    layers.UpSampling2D(),
+    layers.Conv2D(64, 3, padding="same", activation="relu"),
+    layers.UpSampling2D(),
+    layers.Conv2D(1, 1, padding="same", activation="relu"),
+    layers.Lambda(lambda x: 1 - x),
+    layers.Rescaling(255),
+])
+
+model = keras.models.Sequential([encoder, decoder])
+model.compile("adam", "mse")
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);
+```
+
+## Encoder summary
+
+```{python}
+encoder.summary(print_fn=skip_empty)
+```
+
+## Decoder summary
+
+```{python}
+decoder.summary(print_fn=skip_empty)
+```
+
+```{python}
+print(model.evaluate(X_val, X_val, verbose=0))
+```
+
+## Some recovered image
+
+```{python}
+X_val_rec = model.predict(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+
+## Latent space vs word embedding {.smaller}
+
+- We revisit the concept of word embedding, where words in the vocabulary are mapped into vector representations. Words with similar meaning should lie close to one another in the word-embedding space.
+- Latent space contains low-dimensional representation of data. Data/Images that are similar should lie close in the latent space.
+- There are pre-trained word-embedding spaces such as those for English-language movie review, German-language legal documents, etc. Semantic relationships between words differ for different tasks. Similarly, the structure of latent spaces for different data sets (humans faces, animals, etc) are different.
+
+## Latent space vs word embedding
+
+- Given a latent space of representations, or an embedding space, certain directions in the space may encode interesting axes of variation in the original data. 
+- A **concept vector** is a direction of variation in the data. For example there may be a smile vector such that if $z$ is the latent representation of a face, then $z+s$ is the representation of the same face, smiling. We can generate an image of the person smiling from this latent representation. 
+
+## Intentionally add noise to inputs
+
+::: columns
+::: column
+```{python}
+mask = rnd.random(size=X_train.shape[1:]) < 0.5
+plt.imshow(mask * (255 - X_train[0]), cmap="gray");
+```
+:::
+::: column
+```{python}
+mask = rnd.random(size=X_train.shape[1:]) < 0.5
+plt.imshow(mask * (255 - X_train[42]) * mask, cmap="gray");
+```
+:::
+:::
+
+## Denoising autoencoder
+
+Can be used to do [feature engineering for supervised learning problems](https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629)
+
+> It is also possible to include input variables as outputs to infer missing values or just help the model “understand” the features – in fact the winning solution of a claims prediction Kaggle competition heavily used denoising autoencoders together with model stacking and ensembling – read more here.
+
+Jacky Poon
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+# {data-visibility="uncounted"}
+
+<h2>Glossary</h2>
+
+::: columns
+:::: column
+- autoencoder
+- bias
+- DeepDream
+- greedy sampling
+- GloVe
+- Grad-CAM
+- language model
+::::
+:::: column
+- latent space
+- neural style transfer
+- softmax temperature
+- stochastic sampling
+- word embeddings/vectors
+- word2vec
+::::
+:::
+
+
+<script defer>
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["compile", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>

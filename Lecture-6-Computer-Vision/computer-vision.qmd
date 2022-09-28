@@ -1,0 +1,1738 @@
+---
+title: Computer Vision
+subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+author: Dr Patrick Laub
+date: Week 7
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.2
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+```{python}
+#| echo: false
+import matplotlib
+
+import cycler
+colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
+matplotlib.pyplot.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+
+def set_square_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (2.0, 2.0)
+
+def set_rectangular_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (5.0, 2.0)
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams['figure.dpi'] = 350
+matplotlib.pyplot.rcParams['savefig.bbox'] = "tight"
+matplotlib.pyplot.rcParams['font.family'] = "serif"
+
+matplotlib.pyplot.rcParams['axes.spines.right'] = False
+matplotlib.pyplot.rcParams['axes.spines.top'] = False
+
+def squareFig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortestSide = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+
+import pandas
+# pandas.options.display.max_rows = 6
+pandas.options.display.max_rows = 8
+
+import numpy
+numpy.set_printoptions(precision=2)
+numpy.random.seed(123)
+
+import tensorflow
+tensorflow.random.set_seed(1)
+tensorflow.config.set_visible_devices([], 'GPU')
+
+def skip_empty(line):
+  if line.strip() != "":
+    print(line.strip())
+```
+
+#
+
+<h2>Lecture Outline</h2>
+
+<br>
+
+::: columns
+::: column
+  - StoryWall 5
+  - Project
+  - Batch optimisation
+  - RNN discussion
+  - Convolutional Layers
+:::
+::: column 
+  - Convolutional Neural Networks
+  - Demo: CNNs in Keras
+  - Hyperparameter tuning
+:::
+:::
+
+Slides: original draft thanks to Hang Nguyen.
+
+<br><br>
+
+## Load packages {data-visibility="uncounted"}
+
+<br>
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.utils import plot_model
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+%load_ext watermark
+%watermark -p numpy,pandas,tensorflow
+```
+
+# StoryWall {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Predicting stock prices
+
+I knew you'd want to try to predict stock prices...
+
+::: {.callout-important}
+Predicting stock prices based on short-term price trends is a _foolish foolish foolish_ thing to do. __Never__ trade on something like this.
+:::
+
+- The end of the trading day is different for each stock exchange; you needed stocks on the same exchange.
+- Many forgot to normalise the data, which led to miniscule MSE values.
+
+## Predicting stock prices II
+
+- Predicting $T$ days ahead is easier than $T=1$.
+- But... makes more sense to look at % change over the $T$ days, not % daily change $T$-days in the future.
+- Recurrent dropout is different to normal dropout.
+- Avoid using updatable links for StoryWall (Dropbox, OneDrive, Colab).
+- Potentially use log-returns instead of percentage daily change.
+- What you plot (axis width) changes your perspective on the forecasts.
+
+## Predicting stock prices III {.smaller}
+
+```{python}
+df = pd.read_csv("boq.csv")
+df["Date"] = pd.to_datetime(df["Date"], dayfirst=True)
+df["Day"] = df["Date"].dt.day_name()
+df["% Change"] = df["BOQ.AX"].pct_change()
+df[["Date", "Day", "BOQ.AX", "% Change"]]
+```
+
+## On shapes of the datasets {.smaller}
+
+Question from Nicholas N. on the Story Wall.
+
+```{python}
+from tensorflow.keras.utils import timeseries_dataset_from_array
+
+ts = range(20)
+targets = range(3, 20+3)
+numTrain = int(0.4 * len(ts)); numVal = int(0.3 * len(ts))
+numTest = len(ts) - numTrain - numVal
+print(f"# Train: {numTrain}, # Val: {numVal}, # Test: {numTest}")
+```
+
+::: columns
+::: {.column width="33%"}
+```{python}
+trainDS = \
+  timeseries_dataset_from_array(
+    ts,
+    targets=targets,
+    sequence_length=3,
+    end_index=numTrain)
+```
+:::
+::: {.column width="33%"}
+```{python}
+valDS = \
+  timeseries_dataset_from_array(
+    ts,
+    targets=targets,
+    sequence_length=3,
+    start_index=numTrain,
+    end_index=numTrain+numVal)
+```
+:::
+::: {.column width="33%"}
+```{python}
+testDS = \
+  timeseries_dataset_from_array(
+    ts,
+    targets=targets,
+    sequence_length=3,
+    start_index=numTrain+numVal)
+```
+:::
+:::
+
+::: columns
+::: {.column width="30%"}
+```{python}
+#| echo: false
+print("Training dataset")
+for inputs, targets in trainDS:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+:::
+::: {.column width="30%"}
+```{python}
+#| echo: false
+print("Validation dataset")
+for inputs, targets in valDS:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+:::
+::: {.column width="30%"}
+```{python}
+#| echo: false
+print("Test dataset")
+for inputs, targets in testDS:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+:::
+:::
+
+# Project {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## On pronouns in academic writing
+
+You can use "we" in a report _if_:
+
+::: {.incremental}
+1. You are one of multiple authors: "_We investigated the use of RNNs for..._"
+2. You are referring to both the author and the reader: "_We can see that equation (5) simplifies to..._"
+3. You are a King or Queen (the [Royal we](https://en.wikipedia.org/wiki/Royal_we)): "_We are not amused._"
+:::
+
+::: fragment
+::: {.callout-tip}
+I wrote an entire [honours thesis](https://pat-laub.github.io/pdfs/honours_thesis.pdf) avoiding "we"; there was a lot of "one can see..." and "one could ..." etc.
+:::
+:::
+
+## Project components
+
+<br>
+
+1. ~~Draft (10% pass/fail).~~ _Grades on Moodle by Friday noon_.
+2. Recorded presentation due at noon on July 22 (15%).
+3. Final report due at noon on August 1 (15%).
+
+Presentation due _next Friday_.
+
+## Presentation 
+
+Create a 3–5 minute recording covering:
+
+1. the problem you are investigating,
+2. the source of the data, 
+3. the deep learning approaches you are using, and
+4. preliminary results you have (table of metrics).
+
+**Deliverable**: YouTube link (public or unlisted) to a special StoryWall page.
+Presentations will be "public" to the class.
+
+<br>
+
+_Suggestions_: aim to be fully public and give peer feedback.
+
+## Presentation marking scheme
+
+- **Content** (6%): did you cover the four points on previous slide?
+- **Style** (6%): are your slides/figures professional and do they enhance the presentation?
+- **Delivery** (3%): is the presentation interesting and within the time limit?
+
+::: {.callout-tip}
+It is a critical skill to be able to condense a complicated project into a short pitch.
+The project report is where you will give us all the details.
+:::
+
+## Last presentation tips
+
+- Each project is different, you decide which parts to focus on. E.g. source of data may simply be "Human Mortality Database".
+- Not necessary to film yourself.
+- Nice to _briefly_ show the data (look at my lecture slides for example).
+- Don't go overboard on EDA. Mention the _most important_ 1--2 facts (if any!) about the data. E.g. imbalanced classes for classification.
+- You can avoid adding UNSW / the course code to your presentation.
+
+## Report requirements
+
+You are asked to cover the four requirements in the draft, and also:
+
+- fit two different deep learning architectures,
+- perform hyperparameter tuning,
+- write a discussion of the results and any potential ethical concerns.
+
+**Deliverable**: Report (PDF file), Jupyter Notebook, and dataset (e.g. CSV or ZIP file).
+Submission not public, probably to Moodle.
+
+## Report marking criteria
+
+- **Content** (8%): did you cover the seven points in the ML workflow?
+- **Style** (5%): does your report look professional, are your plots/tables useful and unpixelated, do you have spelling or grammar errors, are you within the page limit, and is the text easy to read? 
+- **Code** (2%): is your code clean and well-commented, have useless cells been pruned, does it give errors when the "Run All" button is pressed?
+
+Unlike StoryWall, _avoid screenshots & code in the report_.
+
+## Some comments on the report
+
+- **Focus on deep learning**: I'm most interested in seeing your ability to use and explain your neural networks.
+For example, your mastery of the Lee--Carter model is less important to demonstrate.
+- **Hyperparameter tuning**: The tuning is one significant change from the weekly StoryWall tasks.
+Add a table (for each neural network) showing (at least) two hyperparameters that you tuned.
+- **Use appendices**: If you run out of space, use appendices which are not counted in the page limit.
+E.g., the less urgent parts of your EDA can go in here.
+
+# Loss and derivatives {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Example: linear regression
+
+$$
+\hat{y}(x) = w x + b
+$$
+
+For some observation $\{ x_i, y_i \}$, the (MSE) loss is
+
+$$ 
+\text{Loss}_i = (\hat{y}(x_i) - y_i)^2
+$$
+
+For a batch of the first $n$ observations the loss is
+
+$$ 
+\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n (\hat{y}(x_i) - y_i)^2
+$$
+
+## Derivatives
+
+Since $\hat{y}(x) = w x + b$,
+
+$$
+\frac{\partial \hat{y}(x)}{\partial w} = x \text{ and }
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+As $\text{Loss}_i = (\hat{y}(x_i) - y_i)^2$, we know
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i) .
+$$
+
+## Chain rule
+
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i), \,\,
+\frac{\partial \hat{y}(x)}{\partial w} = x , \, \text{ and } \,
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+Putting this together, we have
+
+$$
+\frac{\partial \text{Loss}_i}{\partial w}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial w}
+= 2 (\hat{y}(x_i) - y_i) \, x_i 
+$$
+
+and
+$$
+\frac{\partial \text{Loss}_i}{\partial b}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial b}
+= 2 (\hat{y}(x_i) - y_i) .
+$$
+
+## Stochastic gradient descent (SGD)
+
+Start with $\boldsymbol{\theta}_0 = (w, b)^\top = (0, 0)^\top$.
+
+Randomly pick $i=5$, say $x_i = 5$ and $y_i = 5$.
+
+::: fragment
+$$
+\hat{y}(x_i) = 0 \times 5 + 0 = 0 \Rightarrow \text{Loss}_i = (0 - 5)^2 = 25.
+$$
+:::
+::: fragment
+The partial derivatives are
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_i}{\partial w} 
+&= 2 (\hat{y}(x_i) - y_i) \, x_i = 2 \cdot (0 - 5) \cdot 5 = -50, \text{ and} \\
+\frac{\partial \text{Loss}_i}{\partial b}
+&= 2 (0 - 5) = - 10.
+\end{aligned}
+$$
+The gradient is $\nabla \text{Loss}_i = (-50, -10)^\top$.
+:::
+
+## SGD, first iteration
+
+Start with $\boldsymbol{\theta}_0 = (w, b)^\top = (0, 0)^\top$.
+
+Randomly pick $i=5$, say $x_i = 5$ and $y_i = 5$.
+
+The gradient is $\nabla \text{Loss}_i = (-50, -10)^\top$.
+
+Use learning rate $\eta = 0.01$ to update 
+$$
+\begin{aligned}
+\boldsymbol{\theta}_1
+&= \boldsymbol{\theta}_0 - \eta \nabla \text{Loss}_i \\
+&= \begin{pmatrix} 0 \\ 0 \end{pmatrix} - 0.01 \begin{pmatrix} -50 \\ -10 \end{pmatrix} \\
+&= \begin{pmatrix} 0 \\ 0 \end{pmatrix} + \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix} = \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix}.
+\end{aligned}
+$$
+
+## SGD, second iteration
+
+Start with $\boldsymbol{\theta}_1 = (w, b)^\top = (0.5, 0.1)^\top$.
+
+Randomly pick $i=9$, say $x_i = 9$ and $y_i = 17$.
+
+The gradient is $\nabla \text{Loss}_i = (-223.2, -24.8)^\top$.
+
+Use learning rate $\eta = 0.01$ to update 
+$$
+\begin{aligned}
+\boldsymbol{\theta}_2
+&= \boldsymbol{\theta}_1 - \eta \nabla \text{Loss}_i \\
+&= \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix} - 0.01 \begin{pmatrix} -223.2 \\ -24.8 \end{pmatrix} \\
+&= \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix} + \begin{pmatrix} 2.232 \\ 0.248 \end{pmatrix} = \begin{pmatrix} 2.732 \\ 0.348 \end{pmatrix}.
+\end{aligned}
+$$
+
+## Batch gradient descent (BGD)
+
+For the first $n$ observations 
+$\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n \text{Loss}_i$
+so
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial w}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial w}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial w} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) \, x_i .
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial b}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial b}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial b} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) .
+\end{aligned}
+$$
+
+## BGD, first iteration ($\boldsymbol{\theta}_0 = \boldsymbol{0}$)
+
+```{python}
+#| echo: false
+numpy.random.seed(111) 
+n = 3 
+x = numpy.arange(1, n+1)
+y = 2*x - 1 + 0.01 * numpy.random.randn(n)
+
+theta_0 = numpy.array([0, 0])
+yhat = theta_0[0] * x + theta_0[1]
+
+loss = (yhat - y) ** 2
+
+dLossdw = 2 * (yhat - y) * x
+dLossdb = 2 * (yhat - y)
+
+df = pandas.DataFrame({"x": x, "y": y, "y_hat": yhat, "loss": loss, "dL/dw": dLossdw, "dL/db": dLossdb})
+```
+
+```{python}
+#| echo: false
+df.round(2)
+```
+
+So $\nabla \text{Loss}_{1:3}$ is
+```{python}
+nabla = np.array([df["dL/dw"].mean(), df["dL/db"].mean()])
+nabla 
+```
+so with $\eta = 0.1$ then $\boldsymbol{\theta}_1$ becomes
+```{python}
+theta_1 = theta_0 - 0.1 * nabla
+theta_1
+```
+
+## BGD, second iteration
+
+```{python}
+#| echo: false
+yhat = theta_1[0] * x + theta_1[1]
+loss = (yhat - y) ** 2
+dLossdw = 2 * (yhat - y) * x
+dLossdb = 2 * (yhat - y)
+
+df = pandas.DataFrame({"x": x, "y": y, "y_hat": yhat, "loss": loss, "dL/dw": dLossdw, "dL/db": dLossdb})
+```
+
+```{python}
+#| echo: false
+df.round(2)
+```
+
+So $\nabla \text{Loss}_{1:3}$ is
+```{python}
+nabla = np.array([df["dL/dw"].mean(), df["dL/db"].mean()])
+nabla 
+```
+so with $\eta = 0.1$ then $\boldsymbol{\theta}_2$ becomes
+```{python}
+theta_2 = theta_1 - 0.1 * nabla
+theta_2
+```
+
+# Recurrent Neural Networks {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+
+## Input of an RNN {.smaller}
+
+- Recurrent neural network (RNN) is used to handle input data that occurs in one-dimensional sequence.
+  - Natural language data such as sentences.
+  - Price data such as financial time series, stock prices.
+  - Temperature data.
+  - Time-stamped medical events.
+  - Weekly sales.
+  - Hourly electricity consumption.
+  - Human activity pattern.
+- We talk about time steps when discussing RNN, but it can be any steps in a sequence of ordered data.
+  
+## Applications {.smaller}
+
+- Forecasting: revenue forecast, weather forecast, predict disease rate from medical history, etc. 
+- Classification: given a time series of the activities of a visitor on a website, classify whether the visitor is a bot or a human.
+- Event detection: given a continuous data stream, identify the occurrence of a specific event. Example: Detect utterances like "Hey Alexa" from an audio stream.
+- Anomaly detection: given a continuous data stream, detect anything unusual happening. This is typically an unsupervised learning problem. Example: Detect unusual activity on the corporate network.
+
+## Recurrent neural network
+
+For a single neuron, output of a recurrent layer is:
+
+$$
+\mathbf{Y}_t = \psi\bigl( \mathbf{X}_t \mathbf{W}_x + \mathbf{Y}_{t-1} \mathbf{W}_y + \mathbf{b} \bigr) .
+$$
+
+Densely connected neural networks and convnet have no memory, which means each input is processed independently with no state (memory) kept between inputs. The recurrent neuron has a form of memory because the output at step $t$ depends on all the inputs from the previous steps. We call the part of a neural network that preserves some state across time steps a *memory cell* or a *cell*.
+
+## Recurrent neural network {.smaller}
+
+Note: the same weights are shared across the time steps of the recurrent network. A lot of resource will be required if these parameters are not shared. This also allows generalization when the model is used on a sequence of arbitrary length.
+
+::: {layout-ncol=2}
+![One layer of recurrent neurons unrolled through time.](Geron-recurrentneuronlayer-blur.png)
+
+![_Deep RNN_ unrolled through time.](Geron-recurrentneurondeep-blur.png)
+:::
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 15 (__redacted__).
+:::
+
+## Input and output sequences
+
+![Categories of recurrent neural networks: sequence to sequence, sequence to vector, vector to sequence, encoder-decoder network.](Geron-rnnType-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 15 (__redacted__).
+:::
+
+
+## Input and output sequences
+
+- Sequence to sequence: Useful for predicting time series such as using prices over the last $N$ days to output the prices shifted one day into the future (i.e. from $N-1$ days ago to tomorrow.)
+- Sequence to vector: ignore all outputs in the previous time steps except for the last one. Example: give a sentiment score to a sequence of words corresponding to a movie review.
+
+## Input and output sequences {.smaller}
+
+- Vector to sequence: feed the network the same input vector over and over at each time step and let it output a sequence. Example: given that the input is an image, find a caption for it. The image is treated as an input vector (pixels in an image do not follow a sequence). The caption is a sequence of textual description of the image. A dataset containing images and their descriptions is the input of the RNN.
+- The Encoder-Decoder: The encoder is a sequence-to-vector network. The decoder is a vector-to-sequence network. Example: Feed the network a sequence in one language. Use the encoder to convert the sentence into a single vector representation. The decoder decodes this vector into the translation of the sentence in another language.
+
+## LSTM internals
+
+![Diagram of an LSTM cell.](colah-LSTM3-chain.png)
+![Notation for the diagram.](colah-LSTM2-notation.png)
+
+::: footer
+Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
+:::
+
+## GRU internals
+
+![Diagram of a GRU cell.](colah-LSTM3-var-GRU.png)
+
+<br>
+
+::: footer
+Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
+:::
+
+# Images {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Shapes of photos
+
+![A photo is a rank 3 tensor.](rgb-channels.png)
+
+::: footer
+Source: Kim et al (2021), [Data Hiding Method for Color AMBTC Compressed Images Using Color Difference](https://www.mdpi.com/applsci/applsci-11-03418/article_deploy/html/images/applsci-11-03418-g001.png), Applied Sciences.
+:::
+
+
+## How the computer sees them {.smaller}
+
+```{python}
+#| eval: false
+from matplotlib.image import imread
+img1 = imread('pu.gif'); img2 = imread('pl.gif')
+img3 = imread('pr.gif'); img4 = imread('pg.bmp')
+print(f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}.")
+```
+
+```{python}
+#| echo: false
+from matplotlib.image import imread
+
+inds = (0, 1, 2)
+img1 = imread('pu.gif')
+img1 = img1[:, :, inds]
+
+img2 = imread('pl.gif')
+img2 = img2[:, :, inds]
+
+img3 = imread('pr.gif')
+img3 = img3[:, :, inds]
+
+img4 = imread('pg.bmp')
+
+print(f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}.")
+```
+
+::: columns
+::: {.column width="25%"}
+
+```{python}
+img1
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+img2
+```
+
+:::
+::: {.column width="25%"}
+
+```{python}
+img3
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+img4
+```
+:::
+:::
+
+
+## How we see them
+
+```{python}
+from matplotlib.pyplot import imshow
+```
+
+::: columns
+::: {.column width="25%"}
+
+```{python}
+imshow(img1);
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+imshow(img2);
+```
+
+:::
+::: {.column width="25%"}
+
+```{python}
+imshow(img3);
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+imshow(img4);
+```
+:::
+:::
+
+## Why is 255 special?
+
+Each pixel's colour intensity is stored in one byte.
+
+One byte is 8 bits, so in binary that is 00000000 to 11111111.
+
+The largest _unsigned_ number this can be is $2^8-1 = 255$.
+
+```{python}
+np.uint8(0), np.uint8(1), np.uint8(255), np.uint8(256)
+```
+
+If you had _signed_ numbers, this would go from -128 to 127.
+
+```{python}
+np.int8(-128), np.int8(0), np.int8(127), np.int8(128)
+```
+
+Alternatively, _hexidecimal_ numbers are used.
+E.g. 10100001 is split into 1010 0001, and 1010=A, 0001=1, so combined it is 0xA1.
+
+## Image editing with kernels
+
+Take a look at [https://setosa.io/ev/image-kernels/](https://setosa.io/ev/image-kernels/).
+
+
+![An example of an image kernel in action.](convolution.gif)
+
+
+::: footer
+Source: [Stanford's deep learning tutorial](http://deeplearning.stanford.edu/wiki/index.php/Feature_extraction_using_convolution) via [Stack Exchange](https://stats.stackexchange.com/a/188216).
+:::
+
+## Face detection visualised
+
+<center>
+<iframe src="https://player.vimeo.com/video/12774628?h=5f310c41f4" width="540" height="510" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+</center>
+
+::: footer
+Source: Harvey (2010), [_OpenCV Face Detection: Visualized_](https://vimeo.com/12774628), Vimeo.
+:::
+
+# Convolutional Layers {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+
+## 'Convolution' not 'complicated'
+
+<br>
+
+
+Say $X_1, X_2 \sim f_X$ are i.i.d., and we look at $S = X_1 + X_2$.
+
+The density for $S$ is then
+
+$$
+f_S(s) = \int_{x_1=-\infty}^{\infty} f_X(x_1) \, f_X(s-x_1) \,\mathrm{d}s .
+$$
+
+This is the _convolution_ operation, $f_S = f_X \star f_X$.
+
+## Tensor {.smaller}
+
+- Images are 3D tensors with height, weight and number of channel.
+
+![Example of 3D Tensor.](Glassner/16-1.png)
+
+- Slices through the channels are called elements. In RGB color images, elements are pixels.
+- Grayscale image has 1 channel. Color image has 3 channels. Each pixel of a color image contains value for: red, green and blue (RGB color). Example: if RGB values are between 0 and 1, a yellow pixel has red and green values of 1 and blue value of 0.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Example: Detecting yellow
+
+- To detect yellow color in a color image, apply a neuron to each pixel in the image. 
+
+![Applying a neuron to an image pixel.](Glassner/16-3.png)
+
+- If red/green value decreases or blue value increases, the pixel color shifts away from yellow. So we can set the weights of the neuron to be 1, 1 and -1.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Filter {.smaller}
+
+- The output is produced by *sweeping* the neuron over the input, or *scanning* the input. This is called **convolution**.
+
+::: {layout-ncol=2}
+![Scan the 3-channel input (color image) with the neuron to produce a 1-channel output (grayscale image).](Glassner/16-4.png)
+
+![The more yellow the pixel in the color image (left), the more white it is in the grayscale image.](Glassner/16-5.png)
+:::
+
+- The neuron or its weights is called a **filter**. We *convolve* the image with a filter, so the filter is a **convolutional filter**.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Weight sharing
+
+- The same neuron is used to sweep over the image, so we can store the weights in some shared memory and process the pixels in parallel.
+- We say that the neurons are *weight sharing*.
+
+## Filter input
+
+- In the previous example, the neuron only takes one pixel as input.
+- Usually a larger filter containing a *block of weights* is used to process not only a pixel but also its neighboring pixels all at once.
+- The weights are called the filter **kernels**.
+- The cluster of pixels that forms the input of a filter is called its *footprint*.
+
+## Spatial filter
+
+![Example: a 3x3 filter](Glassner/16-9.png)
+
+- Each pixel is multiplied by its corresponding weight, results are summed up and run through an activation function to obtain one *single* output value.
+- When a filter's footprint is more than one pixel, it is called a **spatial filter**.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Multidimensional convolution
+
+To process an input with multiple channels (ex: a color image), the (spatial) filter also need to have the same number of channels.
+
+![Example: a 3x3 filter with 3 channels, containing 27 weights.](Glassner/16-18.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Example {.smaller}
+
+- Input is a 3x3 footprint with 3 channels (pixels of a color image). 
+- Each channel of the filter is applied to each channel of the footprint.
+- One single output is produced for each channel. 
+- Sum them up and run through an activation function. Final output is a single grayscale image pixel.
+
+![Example of channels applied separately.](Glassner/16-19.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Input-output relationship 
+
+![Matching the original image footprints against the output location.](Glassner/16-10.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+# Convolutional Layer Options {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Padding
+
+![What happens when filters go off the edge of the input?](Glassner/16-15.png)
+ 
+ - How to avoid the filter's receptive field falling off the side of the input.
+ - If we only scan the filter over places of the input where the filter can fit perfectly, it will lead to loss of information, especially after many filters.
+ 
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Padding
+
+Add a border of extra elements around the input, called **padding**.
+Normally we place zeros in all the new elements, called **zero padding**.
+
+![Padded values can be added to the outside of the input.](Glassner/16-17.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Convolution layer
+
+  - Multiple filters are bundled together in one layer (of the CNN).
+  - The filters are applied *simultaneously* and *independently* to the input.
+  - Filters can have different footprints, but in practice we almost always use the same footprint for every filter in a convolution layer.
+  - Number of channels in the output will be the same as the number of filters (like in the previous example, 3-channel color image turns into 1-channel grayscale image when only 1 filter is applied).
+  
+## Example
+
+::: columns
+::: column
+In the image:
+
+- 6-channel input tensor
+- input pixels
+- four 3x3 filters
+- four output tensors
+- final output tensor.
+:::
+::: column
+![Example network highlighting that the number of output channels equals the number of filters.](Glassner/16-21.png)
+:::
+:::
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## 1x1 convolution and feature reduction
+
+- Feature reduction: Reduce the number of channels in the input tensor (removing correlated features) by using fewer filters than the number of channels in the input. This is because the number of channels in the output is always the same as number of filters.
+- 1x1 convolution: Convolution using 1x1 filters. 
+- When the channels are correlated, 1x1 convolution is very effective at reducing channels without loss of information.
+
+## Example of 1x1 convolution {.smaller}
+
+![Example network with 1x1 convolution.](Glassner/16-23.png)
+
+- Input tensor contains 300 channels.
+- Use 175 1x1 filters in the convolution layer (each filter obviously has 300 channels, same number as the input).
+- Each filter produces a 1-channel output.
+- Final output tensor has 175 channels.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Thought experiment / 1x1 use case
+
+- A classifier is created to identify the presence of "eyes" in a photograph.
+- A convolution layer containing 12 different filters are used to detect different kinds of eyes in the input: human eyes, cat eye, fish eyes, and so on.
+- But we only need to detect "eyes", regardless of the species. Only need 1 channel representing whether or not an eye is found.
+- We add another convolution layer containing 1 filter, then 12 channels will reduce to 1 channel.
+
+## Training CNNs
+
+- To train the network, we need to specify:
+  - number of filters,
+  - their footprints,
+  - activation functions,
+  - padding.
+- The filter weights are learned by the network (backprop).
+
+# Convolutional Neural Networks {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Definition of CNN
+
+::: columns
+::: {.column width="60%"}
+
+<br>
+<br>
+
+A neural network that uses _convolution layers_ is called a _convolutional neural network_.
+
+:::
+::: {.column width="40%"}
+![](xkcd-trained_a_neural_net_2x.png)
+:::
+:::
+
+::: footer
+Source: Randall Munroe (2019), [xkcd #2173: Trained a Neural Net](https://xkcd.com/2173/).
+:::
+
+## Architecture
+
+<br>
+<br>
+
+![Typical CNN architecture.](Geron-mls2_1411-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-11 (__redacted__).
+:::
+
+## Architecture #2
+
+![](mathworks-typical-cnn.svg)
+
+::: footer
+Source: MathWorks, [_Introducing Deep Learning with MATLAB_](https://au.mathworks.com/campaigns/offers/next/deep-learning-ebook.html), Ebook.
+:::
+
+
+## Pooling
+
+**Pooling**, or **downsampling**, is a technique to blur a tensor.
+
+![Illustration of pool operations.](Glassner/16-27.png)
+
+(a): Input tensor<br>
+(b): Subdivide input tensor into 2x2 blocks<br>
+(c): Average pooling<br>
+(d): Max pooling<br>
+(e): Icon for a pooling layer<br>
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Pooling for multiple channels {.smaller}
+
+![Pooling a multichannel input.](Glassner/16-28.png)
+
+- Input tensor: 6x6 with 1 channel, zero padding.
+- Convolution layer: Three 3x3 filters.
+- Convolution layer output: 6x6 with 3 channels.
+- Pooling layer: apply max pooling to each channel.
+- Pooling layer output: 3x3, 3 channels.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Why/why not use pooling?
+
+**Why?** Pooling *reduces the size* of tensors, therefore reduces memory usage and execution time (recall that 1x1 convolution *reduces the number of channels* in a tensor).
+
+**Why not?**
+
+<center>
+<iframe id="reddit-embed" src="https://www.redditmedia.com/r/MachineLearning/comments/2lmo0l/ama_geoffrey_hinton/clyj4jv/?depth=1&amp;showmore=false&amp;embed=true&amp;showmedia=false" sandbox="allow-scripts allow-same-origin allow-popups" style="border: none;" height="481" width="640" scrolling="no"></iframe>
+</center>
+
+::: footer
+Source: Hinton, [Reddit AMA](https://www.reddit.com/r/MachineLearning/comments/2lmo0l/comment/clyj4jv/?utm_source=share&utm_medium=web2x&context=3).
+:::
+
+## Striding
+
+When a filter scans the input, instead of making it sweep the input step by step, make it take strides larger than 1 step at a time.
+
+![Example: Use a stride of three horizontally and two vertically.](Glassner/16-29.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Choosing strides {.smaller}
+
+::: {layout-ncol=2}
+![](Glassner/16-31.png)
+
+![](Glassner/16-32.png)
+:::
+
+- When a filter scans the input step by step, it processes the same input elements multiple times. Even with larger strides, this can still happen (left image).
+- **If** we want to save time, we can choose strides that prevents input elements from being used more than once. Example (right image): 3x3 filter, stride 3 in both directions.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Why striding 
+
+- Normally the same stride is used for both axes.
+- Suppose stride is 2 for both axes: output has the same dimension as the output of  *normal* sweeping (striding by 1) and then pooling with 2x2 blocks.
+- Striding is almost as if pooling is bundled into the convolution process. Striding is faster because we evaluate the filter fewer times.
+
+## Why striding
+
+-  While two procedures result in different tensors, in practice striding proves to be as useful as convolution + pooling but much faster. However, depending on the dataset and architecture, sometimes convolution followed by pooling works better.
+- Striding also reduces the size of the tensor like pooling, so it has the same benefit of reducing memory requirement and execution time.
+- We can't take a trained network and replace pairs of convolution and pooling with strided convolution (or vice versa). We have to retrain the network.
+
+# Demo: Character Recognition {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## MNIST Dataset
+
+![The MNIST dataset.](wiki-MnistExamples.png)
+
+::: footer
+Source: Wikipedia, [MNIST database](https://en.wikipedia.org/wiki/MNIST_database).
+:::
+
+## PSAM Dataset
+
+57 poorly written Mandarin characters ($57 \times 7 = 399$).
+
+![The _Pat Sucks At Mandarin (PSAM)_ dataset.](mandarin-practice-notebook3.png)
+
+## Downloading the dataset
+
+The data is zipped (6.9 MB) and stored on my GitHub homepage.
+
+```{python}
+# Download the dataset if it hasn't already been downloaded.
+from pathlib import Path
+if not Path("mandarin").exists():
+  print("Downloading dataset...")
+  !wget https://pat-laub.github.io/data/mandarin.zip
+  !unzip mandarin.zip
+else:
+  print("Already downloaded.")
+```
+
+::: {.callout-tip}
+Remember, the Jupyter notebook associated with your final report should either download your dataset when it is run, or you should supply the data separately.
+:::
+
+## Directory structure 
+
+::: columns
+::: column
+Inspect the directory structure using the `tree` command-line tool.
+```{python}
+!tree mandarin
+```
+:::
+::: column
+```{python}
+!tree mandarin | head -n 12
+!echo ...
+!tree mandarin | tail -n 4
+```
+:::
+:::
+
+## Splitting into train/val/test sets
+
+```{python}
+!pip install split-folders > /dev/null
+```
+
+```{python}
+import splitfolders
+splitfolders.ratio("mandarin", output="mandarin-split",
+    seed=1337, ratio=(5/7, 1/7, 1/7))
+
+!tree mandarin-split -L 1
+```
+
+## Directory structure II
+
+::: columns
+::: column
+```{python}
+!tree mandarin-split
+```
+:::
+::: column
+```{python}
+#| echo: false
+!tree mandarin-split/train | head -n 7
+!echo ...
+!tree mandarin-split/val | head -n 5
+!echo ...
+!tree mandarin-split/test | head -n 5
+!echo ...
+```
+:::
+:::
+
+## Keras image dataset loading
+
+::: columns
+::: column
+
+```{python}
+from tensorflow.keras.utils import\
+  image_dataset_from_directory
+
+dataDir = "mandarin-split"
+batchSize = 32
+imgHeight = 80
+imgWidth = 80
+imgSize = (imgHeight, imgWidth)
+```
+
+:::
+::: column
+```{python}
+trainDS = image_dataset_from_directory(
+    dataDir + "/train",
+    image_size=imgSize,
+    batch_size=batchSize,
+    shuffle=False,
+    color_mode='grayscale')
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+valDS = image_dataset_from_directory(
+    dataDir + "/val",
+    image_size=imgSize,
+    batch_size=batchSize,
+    shuffle=False,
+    color_mode='grayscale')
+```
+:::
+::: column
+```{python}
+testDS = image_dataset_from_directory(
+    dataDir + "/test",
+    image_size=imgSize,
+    batch_size=batchSize,
+    shuffle=False,
+    color_mode='grayscale')
+```
+:::
+:::
+
+## Inspecting the datasets 
+
+```{python}
+print(trainDS.class_names)
+```
+
+```{python}
+# NB: Need shuffle=False earlier for these X & y to line up.
+X_train = np.concatenate(list(trainDS.map(lambda x, y: x)))
+y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
+
+X_val = np.concatenate(list(valDS.map(lambda x, y: x)))
+y_val = np.concatenate(list(valDS.map(lambda x, y: y)))
+
+X_test = np.concatenate(list(testDS.map(lambda x, y: x)))
+y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
+
+X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
+```
+
+## Plotting some characters (setup)
+
+<br>
+
+```{python}
+def plot_mandarin_characters(ds, plotCharLabel = 0):
+    numPlotted = 0
+    for images, labels in ds:
+        for i in range(images.shape[0]):
+            label = labels[i]
+            if label == plotCharLabel:
+                plt.subplot(1, 5, numPlotted + 1)
+                plt.imshow(images[i].numpy().astype("uint8"), cmap="gray")
+                plt.title(ds.class_names[label])
+                plt.axis("off")
+                numPlotted += 1
+    plt.show()
+```
+
+## Plotting some training characters {.smaller}
+```{python}
+#| echo: false
+plot_mandarin_characters(trainDS, 0)
+plot_mandarin_characters(trainDS, 1)
+```
+
+## Plotting some val/test characters
+
+::: columns
+::: column
+```{python}
+baiVal = X_val[y_val == 0][0]
+plt.imshow(baiVal, cmap="gray");
+```
+:::
+::: column
+```{python}
+baiTest = X_test[y_test == 0][0]
+plt.imshow(baiTest);
+```
+:::
+:::
+
+# 
+
+<h2>Make the CNN</h2>
+
+```{python}
+from tensorflow.keras.layers \
+  import Rescaling, Conv2D, MaxPooling2D, Flatten
+
+numClasses = np.unique(y_train).shape[0]
+tf.random.set_seed(123)
+
+model = Sequential([
+  Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+  Conv2D(16, 3, padding="same", activation="relu", name="conv1"),
+  MaxPooling2D(name="pool1"),
+  Conv2D(32, 3, padding="same", activation="relu", name="conv2"),
+  MaxPooling2D(name="pool2"),
+  Conv2D(64, 3, padding="same", activation="relu", name="conv3"),
+  MaxPooling2D(name="pool3"),
+  Flatten(), Dense(128, activation="relu"), Dense(numClasses)
+])
+```
+
+::: {.callout-tip}
+The `Rescaling` layer will rescale the intensities to [0, 1].
+:::
+
+::: footer
+Architecture inspired by [https://www.tensorflow.org/tutorials/images/classification](https://www.tensorflow.org/tutorials/images/classification).
+:::
+
+## Inspect the model
+
+```{python}
+model.summary(print_fn=skip_empty)
+```
+
+## Plot the CNN
+
+::: columns
+::: column
+```{python}
+plot_model(model, layer_range=("", "pool2"), show_shapes=True)
+```
+:::
+::: column
+```{python}
+plot_model(model, layer_range=("pool2", ""), show_shapes=True)
+```
+:::
+:::
+
+```{python}
+#| echo: false
+!rm model.png
+```
+
+## Fit the CNN
+
+```{python}
+loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+topk = tf.keras.metrics.SparseTopKCategoricalAccuracy(k=5)
+model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])
+
+epochs = 100
+es = EarlyStopping(patience=15, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+hist = model.fit(trainDS.shuffle(1000), validation_data=valDS,
+  epochs=epochs, callbacks=[es], verbose=0)
+```
+
+::: {.callout-tip}
+Instead of using softmax activation, just added `from_logits=True` to the loss function; this is more numerically stable.
+:::
+
+## Plot the loss/accuracy curves (setup)
+
+```{python}
+def plot_history(hist):
+    epochs = range(len(hist.history["loss"]))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, hist.history["accuracy"], label="Train")
+    plt.plot(epochs, hist.history["val_accuracy"], label="Val")
+    plt.legend(loc="lower right")
+    plt.title("Accuracy")
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, hist.history["loss"], label="Train")
+    plt.plot(epochs, hist.history["val_loss"], label="Val")
+    plt.legend(loc="upper right")
+    plt.title("Loss")
+    plt.show()
+```
+
+## Plot the loss/accuracy curves
+
+```{python}
+plot_history(hist)
+```
+
+## Look at the metrics
+
+```{python}
+print(model.evaluate(trainDS, verbose=0))
+print(model.evaluate(valDS, verbose=0))
+print(model.evaluate(testDS, verbose=0))
+```
+
+::: {.callout-tip}
+Feel free to try to improve on this for this week's StoryWall (instead of the cyclone damage dataset).
+If you do this, try a different architecture, and add more training examples or clean up the existing ones.
+:::
+
+## Predict on the test set
+
+```{python}
+#| eval: false
+model.predict(X_test[17]);
+```
+
+```{python}
+#| echo: false
+warn = """WARNING:tensorflow:Model was constructed with shape (None, 80, 80, 1) for input KerasTensor(type_spec=TensorSpec(shape=(None, 80, 80, 1), dtype=tf.float32, name='rescaling_input'), name='rescaling_input', description="created by layer 'rescaling_input'"), but it was called on an input with incompatible shape (None, 80, 1, 1)."""
+print(warn)
+```
+
+```{python}
+X_test[17].shape, X_test[17][np.newaxis, :].shape, X_test[[17]].shape
+```
+
+```{python}
+model.predict(X_test[[17]])
+```
+
+## Predict on the test set II
+
+```{python}
+model.predict(X_test[[17]]).argmax()
+```
+
+```{python}
+testDS.class_names[model.predict(X_test[[17]]).argmax()]
+```
+
+```{python}
+plt.imshow(X_test[17], cmap="gray");
+```
+
+#
+
+<h2>Error analysis (setup)</h2>
+
+```{python}
+def plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, classNames):
+  plt.figure(figsize=(4, 10))
+
+  numErrors = np.sum(y_pred != y_test)
+  errNum = 0
+  for i in range(X_test.shape[0]):
+      if y_pred[i] != y_test[i]:
+          ax = plt.subplot(numErrors, 2, 2*errNum + 1)
+          plt.imshow(X_test[i].astype("uint8"), cmap="gray")
+          plt.title(f"Guessed '{classNames[y_pred[i]]}' True '{classNames[y_test[i]]}'")
+          plt.axis("off")
+          
+          actualPredCharInd = np.argmax(y_test == y_pred[i])
+          ax = plt.subplot(numErrors, 2, 2*errNum + 2)
+          plt.imshow(X_val[actualPredCharInd].astype("uint8"), cmap="gray")
+          plt.title(f"A real '{classNames[y_pred[i]]}'")
+          plt.axis("off")
+          errNum += 1     
+```
+
+<br>
+
+## Error analysis I
+
+![Extract from first assessment of test errors.](error-analysis-found-data-problem.png)
+
+## Error analysis II
+
+![Extract from second assessment of test errors.](error-analysis-found-another-data-problem.png)
+
+## Error analysis III
+
+```{python}
+y_pred = model.predict(X_val).argmax(axis=1)
+plot_error_analysis(X_train, y_train, X_val, y_val, y_pred, valDS.class_names)
+```
+
+## Error analysis IV
+
+```{python}
+y_pred = model.predict(X_test).argmax(axis=1)
+plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, testDS.class_names)
+```
+
+## Confidence of predictions
+
+```{python}
+y_pred = tf.keras.activations.softmax(model(X_test)).numpy()
+y_pred_class = y_pred.argmax(axis=1)
+y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]
+
+confidenceWhenCorrect = y_pred_prob[y_pred_class == y_test]
+confidenceWhenWrong = y_pred_prob[y_pred_class != y_test]
+```
+
+::: columns
+::: column
+```{python}
+plt.hist(confidenceWhenCorrect);
+```
+:::
+::: column
+```{python}
+plt.hist(confidenceWhenWrong);
+```
+:::
+:::
+
+# Hyperparameter tuning {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Trial & error
+
+<br>
+<br>
+
+::: columns
+::: column
+
+<br>
+
+Frankly, a lot of this is just 'enlightened' trial and error...
+:::
+::: column
+
+<center>
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">One trick that I like to use when training my neural networks is to add some noise ε~Laplace(time(), sqrt(time())) to the gradients of the 13th layer at epoch 3 for batch 7.</p>&mdash; antonio vergari 💀 hiring PhD troublemakers 💥 (@tetraduzione) <a href="https://twitter.com/tetraduzione/status/1525501171221274627?ref_src=twsrc%5Etfw">May 14, 2022</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</center>
+
+:::
+:::
+
+::: footer
+Source: [Twitter](https://twitter.com/tetraduzione/status/1525501171221274627?s=20&t=ulVFesw-f7hCuG9KyaoYbQ).
+:::
+
+## Keras Tuner
+
+```{python}
+#| echo: false
+from sklearn.datasets import fetch_california_housing
+
+if not Path("california-features.csv").exists():
+  features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+  features.to_csv("california-features.csv", index=False)
+  target.to_csv("california-target.csv", index=False)
+else:
+  features = pd.read_csv("california-features.csv")
+  target = pd.read_csv("california-target.csv")
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+
+sc = StandardScaler()
+sc.fit(X_train)
+X_train_sc = sc.transform(X_train)
+X_val_sc = sc.transform(X_val)
+X_test_sc = sc.transform(X_test)
+```
+
+```{python}
+!pip install keras-tuner > /dev/null
+```
+
+```{python}
+import keras_tuner as kt
+
+def build_model(hp):
+    model = Sequential()
+    model.add(
+        Dense(
+            hp.Choice("neurons", [4, 8, 16, 32, 64, 128, 256]),
+            activation=hp.Choice("activation",
+                ["relu", "leaky_relu", "tanh"]),
+        )
+    )
+  
+    model.add(Dense(1, activation="exponential"))
+    
+    learningRate = hp.Float("lr",
+        min_value=1e-4, max_value=1e-2, sampling="log")
+    opt = tf.keras.optimizers.Adam(learning_rate=learningRate)
+
+    model.compile(optimizer=opt, loss="poisson")
+    
+    return model
+```
+
+## Do a random search
+
+```{python}
+#| echo: false
+!rm -rf random-search
+tf.get_logger().setLevel('ERROR')
+``` 
+
+::: columns
+::: {.column width="60%"}
+```{python}
+tuner = kt.RandomSearch(
+  build_model,
+  objective="val_loss",
+  max_trials=10,
+  directory="random-search")
+
+es = EarlyStopping(patience=3,
+  restore_best_weights=True)
+
+tuner.search(X_train_sc, y_train,
+  epochs=100, callbacks = [es],
+  validation_data=(X_val_sc, y_val))
+
+bestModel = tuner.get_best_models()[0]
+```
+:::
+::: {.column width="40%"}
+```{python}
+tuner.results_summary(1)
+```
+:::
+:::
+
+## Tune layers separately
+
+```{python}
+def build_model(hp):
+    model = Sequential()
+
+    for i in range(hp.Int("numHiddenLayers", 1, 3)):
+      # Tune number of units in each layer separately.
+      model.add(
+          Dense(
+              hp.Choice(f"neurons_{i}", [8, 16, 32, 64]),
+              activation="relu"
+          )
+      )
+    model.add(Dense(1, activation="exponential"))
+
+    opt = tf.keras.optimizers.Adam(learning_rate=0.0005)
+    model.compile(optimizer=opt, loss="poisson")
+    
+    return model
+```
+
+
+## Do a Bayesian search
+
+```{python}
+#| echo: false
+!rm -rf bayesian-search
+``` 
+
+::: columns
+::: {.column width="60%"}
+```{python}
+tuner = kt.BayesianOptimization(
+  build_model,
+  objective="val_loss",
+  directory="bayesian-search",
+  max_trials=20)
+
+es = EarlyStopping(patience=3,
+  restore_best_weights=True)
+
+tuner.search(X_train_sc, y_train,
+  epochs=100, callbacks = [es],
+  validation_data=(X_val_sc, y_val))
+
+bestModel = tuner.get_best_models()[0]
+```
+:::
+::: {.column width="40%"}
+```{python}
+tuner.results_summary(1)
+```
+:::
+:::
+
+# {data-visibility="uncounted"}
+
+<h2>Glossary</h2>
+
+::: columns
+::: column
+
+- channels
+- computer vision
+- convolutional layer & CNN
+- error analysis
+- filter
+
+:::
+::: column
+
+- flatten layer
+- kernel
+- max pooling
+- MNIST
+- stride
+
+:::
+:::
+
+<script defer>
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["compile", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>
