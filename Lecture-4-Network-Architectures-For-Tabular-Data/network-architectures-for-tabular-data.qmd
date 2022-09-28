@@ -1,0 +1,1675 @@
+---
+title: Network Architectures for Tabular Data 
+subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+author: Dr Patrick Laub
+date: Week 4
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.2
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+```{python}
+#| echo: false
+import matplotlib
+
+import cycler
+colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
+matplotlib.pyplot.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+
+def set_square_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (2.0, 2.0)
+
+def set_rectangular_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (5.0, 2.0)
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams['figure.dpi'] = 350
+matplotlib.pyplot.rcParams['savefig.bbox'] = "tight"
+matplotlib.pyplot.rcParams['font.family'] = "serif"
+
+matplotlib.pyplot.rcParams['axes.spines.right'] = False
+matplotlib.pyplot.rcParams['axes.spines.top'] = False
+
+def squareFig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortestSide = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+
+import pandas
+pandas.options.display.max_rows = 6
+
+import numpy
+numpy.set_printoptions(precision=2)
+numpy.random.seed(123)
+
+import tensorflow
+tensorflow.random.set_seed(1)
+tensorflow.config.set_visible_devices([], 'GPU')
+
+def skip_empty(line):
+  if line.strip() != "":
+    print(line.strip())
+```
+
+## Lecture outline
+
+<br>
+
+::: columns
+::: column
+- Project draft & StoryWall
+- Entity embeddings
+- Keras Functional API
+- Keras eager execution
+:::
+::: column
+- Regularisation
+- Combining models
+- Tutorial: Git & GitHub
+:::
+:::
+
+<br>
+
+__Next week__: Jacky Poon guest lecture on _Tuesday 13:00_.
+
+## Load packages {data-visibility="uncounted"}
+
+<br>
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import tensorflow as tf
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+%load_ext watermark
+%watermark -p numpy,pandas,sklearn,tensorflow
+```
+
+# Project and StoryWall {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Project draft (10%)
+
+Draft should show that you have:
+
+- specified your supervised learning problem,
+- collected and cleaned the data,
+- performed a basic exploratory data analysis,
+- create a simple (non-deep learning) benchmark model.
+
+Email me a PDF by **noon on July 1**, no late submissions.
+
+::: {.callout-tip}
+Later in the project you will fit two different deep learning architectures.
+Consider the _wide & deep_ architecture from later in this lecture.
+:::
+
+## StoryWall #3 Stroke Prediction {.smaller}
+
+Dataset source: [Kaggle Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset).
+
+```{python}
+data = pd.read_csv("stroke.csv")
+data.head()
+```
+
+## Split the data
+
+First, look for missing values.
+```{python}
+numberMissing = data.isna().sum()
+numberMissing[numberMissing > 0]
+```
+
+```{python}
+features = data.drop(["id", "stroke"], axis=1)
+target = data["stroke"]
+
+X_main, X_test, y_main, y_test = train_test_split(
+    features, target, test_size=0.2, random_state=7)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_main, y_main, test_size=0.25, random_state=12)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## What values do we see in the data?
+
+::: columns
+::: column
+```{python}
+X_train["gender"].value_counts()
+```
+
+```{python}
+X_train["ever_married"].value_counts()
+```
+
+```{python}
+X_train["Residence_type"].value_counts()
+```
+:::
+::: column
+```{python}
+X_train["work_type"].value_counts()
+```
+
+```{python}
+X_train["smoking_status"].value_counts()
+```
+:::
+:::
+
+## Preprocess the columns individually
+
+::: {.smaller}
+Take categorical columns $\hookrightarrow$ one-hot vectors,
+binary columns $\hookrightarrow$ do nothing, continuous columns $\hookrightarrow$ impute NaNs & standardise.
+:::
+
+```{python}
+from sklearn.compose import make_column_transformer
+from sklearn.pipeline import make_pipeline
+from sklearn.impute import SimpleImputer
+
+catVars =  ["gender", "ever_married", "Residence_type",
+    "work_type", "smoking_status"]
+
+ct = make_column_transformer(
+  (OneHotEncoder(handle_unknown="ignore"), catVars),
+  ("passthrough", ["hypertension", "heart_disease"]),
+  remainder=make_pipeline(SimpleImputer(), StandardScaler())
+)
+
+X_train_ct = ct.fit_transform(X_train)
+X_val_ct = ct.transform(X_val); X_test_ct = ct.transform(X_test)
+
+numNANs = np.sum(np.isnan(X_train_ct)) + np.sum(np.isnan(X_val_ct)) + np.sum(np.isnan(X_test_ct))
+print(f"The training set has shape {X_train_ct.shape} & there are now {numNANs} NANs in the data.")
+```
+
+## Handling unseen categories
+
+::: columns
+::: column
+```{python}
+X_train["gender"].value_counts()
+```
+:::
+::: column
+```{python}
+X_val["gender"].value_counts()
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+ind = np.argmax(X_val["gender"] == "Other")
+X_val.iloc[ind-1:ind+3][["gender"]]
+```
+:::
+::: column
+```{python}
+X_val_ct[ind-1:ind+3,:2]
+```
+
+::: {.callout-note}
+Note, when you pass a DataFrame to `sklearn`, it gives you back a `numpy` array.
+:::
+:::
+:::
+
+## Setup a binary classification model
+
+```{python}
+def create_model(seed=42):
+    tf.random.set_seed(seed)
+    model = Sequential()
+    model.add(Dense(32, "leaky_relu", input_shape=X_train_ct.shape[1:]))
+    model.add(Dense(16, "leaky_relu"))
+    model.add(Dense(1, "sigmoid"))
+    return model
+```
+
+```{python}
+model = create_model()
+model.summary(print_fn=skip_empty)
+```
+
+## Add metrics, compile, and fit
+
+```{python}
+model = create_model()
+
+pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
+model.compile(optimizer="adam", loss="BinaryCrossentropy",
+    metrics=["accuracy", "AUC", pr_auc])
+
+es = EarlyStopping(patience=50, restore_best_weights=True,
+    monitor="val_pr_auc", verbose=1)
+model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
+  validation_data=(X_val_ct, y_val));
+```
+
+::: columns
+::: column
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+:::
+::: column
+:::
+:::
+
+## Try overweighting the minority class
+
+```{python}
+model = create_model()
+
+pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
+model.compile(optimizer="adam", loss="BinaryCrossentropy",
+    metrics=["accuracy", "AUC", pr_auc])
+
+es = EarlyStopping(patience=50, restore_best_weights=True,
+    monitor="val_pr_auc", verbose=1)
+model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
+  validation_data=(X_val_ct, y_val), class_weight={0: 1, 1: 10});
+```
+
+::: columns
+::: column
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+:::
+::: column
+::: fragment
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+:::
+:::
+:::
+
+## Classification Metrics {.smaller}
+
+```{python}
+from sklearn.metrics import confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay
+y_pred = model.predict(X_test_ct)
+```
+
+::: columns
+::: column
+```{python}
+RocCurveDisplay.from_predictions(y_test, y_pred, name="");
+```
+:::
+::: column
+```{python}
+PrecisionRecallDisplay.from_predictions(y_test, y_pred, name=""); plt.legend(loc="upper right");
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+y_pred_stroke = y_pred > 0.5
+confusion_matrix(y_test, y_pred_stroke)
+```
+:::
+::: column
+```{python}
+y_pred_stroke = y_pred > 0.3
+confusion_matrix(y_test, y_pred_stroke)
+```
+:::
+:::
+
+# Ordinal Variables {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## French motor dataset
+
+```{python}
+#| echo: false
+# Download the dataset if it hasn't already been downloaded.
+from pathlib import Path
+cd = Path(".")
+if not (cd / "french-motor.csv").exists():
+    from sklearn.datasets import fetch_openml
+    freq = fetch_openml(data_id=41214, as_frame=True).frame
+    freq.to_csv("french-motor.csv", index=False)
+```
+
+Previously, we used `pd.get_dummies` to deal with the categorical variables.
+```{python}
+freq = pd.read_csv("french-motor.csv").drop("IDpol", axis=1).head(25_000)
+freq.sample(3)
+```
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(
+  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=2022)
+
+X_train = X_train.reset_index(drop=True) # Index starts at 0 again.
+X_test = X_test.reset_index(drop=True)
+```
+
+## What values do we see in the data?
+
+::: {layout-ncol=2 layout-nrow=2}
+```{python}
+X_train["Area"].value_counts()
+```
+
+```{python}
+X_train["VehBrand"].value_counts()
+```
+
+```{python}
+X_train["VehGas"].value_counts()
+```
+
+```{python}
+X_train["Region"].value_counts()
+```
+:::
+
+## Ordinal & binary categories are easy
+
+```{python}
+from sklearn.preprocessing import OrdinalEncoder
+oe = OrdinalEncoder()
+oe.fit(X_train[["Area", "VehGas"]])
+oe.categories_
+```
+
+```{python}
+for i, area in enumerate(oe.categories_[0]):
+    print(f"The Area value {area} gets turned into {i}.")
+```
+
+```{python}
+for i, gas in enumerate(oe.categories_[1]):
+    print(f"The VehGas value {gas} gets turned into {i}.")
+```
+
+## Ordinal encoded values
+
+```{python}
+X_train_ord = oe.transform(X_train[["Area", "VehGas"]])
+X_test_ord = oe.transform(X_test[["Area", "VehGas"]])
+```
+
+```{python}
+#| echo: false
+X_train_ord_df = pd.DataFrame(X_train_ord, columns=["Area", "VehGas"], index=X_train.index)
+X_test_ord_df = pd.DataFrame(X_test_ord, columns=["Area", "VehGas"], index=X_test.index)
+```
+
+::: columns
+::: column
+```{python}
+X_train[["Area", "VehGas"]].head()
+```
+:::
+::: column
+```{python}
+X_train_ord_df.head()
+```
+:::
+:::
+
+## Train on ordinal encoded values
+
+```{python}
+tf.random.set_seed(12)
+model = Sequential([
+  Dense(1, activation="exponential")
+])
+
+model.compile(optimizer="adam", loss="poisson")
+
+es = EarlyStopping(verbose=True)
+hist = model.fit(X_train_ord, y_train, epochs=100, verbose=False,
+    validation_split=0.2, callbacks=[es])
+hist.history["val_loss"][-1]
+```
+
+<br>
+
+What about adding the continuous variables back in?
+Use a sklearn _column transformer_ for that.
+
+## Preprocess ordinal & continuous
+
+```{python}
+ct = make_column_transformer(
+  (OrdinalEncoder(), ["Area", "VehGas"]),
+  ("drop", ["VehBrand", "Region"]),
+  remainder=StandardScaler()
+)
+X_train_ct = ct.fit_transform(X_train)
+```
+
+::: columns
+::: column
+```{python}
+X_train.head(3)
+```
+:::
+::: column
+```{python}
+#| echo: false
+catCols = ["Area", "VehGas", "VehBrand", "Region"]
+otherCols = [col for col in X_train.columns if col not in catCols]
+columns = catCols[:2] + otherCols
+# columns = ct.get_feature_names_out()
+X_train_ct_df = pd.DataFrame(X_train_ct, columns=columns, index=X_train.index)
+```
+
+```{python}
+X_train_ct_df.head(3)
+```
+:::
+:::
+
+# Categorical Variables & Entity Embeddings {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Entity embeddings 
+
+![Embeddings will gradually improve during training.](Geron-mls2_1304-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 13-4 (__redacted__).
+:::
+
+## Pass categorical variables to Keras
+
+```{python}
+oe = OrdinalEncoder()
+X_train_reg = oe.fit_transform(X_train[["Region"]])
+X_test_reg = oe.transform(X_test[["Region"]])
+
+for i, reg in enumerate(oe.categories_[0][:3]):
+  print(f"The Region value {reg} gets turned into {i}.")
+```
+
+```{python}
+from tensorflow.keras.layers import Embedding
+NUM_REGIONS = len(np.unique(X_train[["Region"]]))
+
+tf.random.set_seed(12)
+model = Sequential([
+  Embedding(input_dim=NUM_REGIONS, output_dim=2),
+  Dense(1, activation="exponential")
+])
+
+model.compile(optimizer="adam", loss="poisson")
+```
+
+## Fitting that model
+
+```{python}
+es = EarlyStopping(verbose=True)
+hist = model.fit(X_train_reg, y_train, epochs=100, verbose=False,
+    validation_split=0.2, callbacks=[es])
+hist.history["val_loss"][-1]
+```
+
+```{python}
+model.layers
+```
+
+## Keras' Embedding Layer
+
+::: columns
+::: column
+```{python}
+model.layers[0].get_weights()[0]
+```
+:::
+::: column
+```{python}
+X_train["Region"].head(4)
+```
+```{python}
+X_train_reg[:4]
+```
+```{python}
+model.layers[0](X_train_reg[:4]).numpy().squeeze()
+```
+:::
+:::
+
+## The learned embeddings
+
+```{python}
+points = model.layers[0].get_weights()[0]
+plt.scatter(points[:,0], points[:,1])
+for i in range(NUM_REGIONS):
+  plt.text(points[i,0]+0.01, points[i,1] , s=oe.categories_[0][i])
+```
+
+## Embeddings & other inputs
+
+![Illustration of a neural network with both continuous and categorical inputs.](nn-with-entity-embedding-diagram.png)
+
+We can't do this with Sequential models...
+
+::: footer
+Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning](https://www.lotuslabs.ai/accurate-insurance-claims-prediction-with-deep-learning/).
+:::
+
+# Keras' Functional API {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Converting Sequential models
+
+```{python}
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input
+```
+
+::: columns
+::: column
+```{python}
+tf.random.set_seed(12)
+
+model = Sequential([
+  Dense(30, "relu"),
+  Dense(1, "exponential")
+])
+
+model.compile(
+  optimizer="adam",
+  loss="poisson")
+
+hist = model.fit(
+  X_train_ord, y_train,
+  epochs=1, verbose=0,
+  validation_split=0.2)
+hist.history["val_loss"][-1]
+```
+:::
+::: column
+```{python}
+tf.random.set_seed(12)
+
+inputs = Input(shape=(2,))
+x = Dense(30, "relu")(inputs)
+out = Dense(1, "exponential")(x)
+model = Model(inputs, out)
+
+model.compile(
+  optimizer="adam",
+  loss="poisson")
+
+hist = model.fit(
+  X_train_ord, y_train,
+  epochs=1, verbose=0,
+  validation_split=0.2)
+hist.history["val_loss"][-1]
+```
+:::
+:::
+
+## One-length tuples
+
+```{python}
+usingBracketsInMath = (2 + 4) * 3
+usingBracketsToSimplify = (1 + 1 == 2)
+```
+
+```{python}
+failureOfATuple = ("Snowy")
+type(failureOfATuple)
+```
+
+```{python}
+happySoloTuple = ("Snowy",)
+type(happySoloTuple)
+```
+
+```{python}
+cheekySoloList = ["Snowy"]
+type(cheekySoloList)
+```
+
+## Wide & Deep network
+
+::: columns
+::: {.column width="45%"}
+![An illustration of the wide & deep network architecture.](Geron-mls2_1014-blur.png)
+:::
+::: {.column width="55%"}
+Add a _skip connection_ from input to output layers.
+
+```{python}
+from tensorflow.keras.layers \
+    import Concatenate
+
+inp = Input(shape=X_train.shape[1:])
+hidden1 = Dense(30, "relu")(inp)
+hidden2 = Dense(30, "relu")(hidden1)
+concat = Concatenate()(
+  [inp, hidden2])
+output = Dense(1)(concat)
+model = Model(
+    inputs=[inp],
+    outputs=[output])
+```
+:::
+:::
+
+::: footer
+Sources: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-14 (__redacted__) & code snippet.
+:::
+
+## Naming the layers
+
+<br>
+
+For complex networks, it is often useful to give meaningul names to the layers.
+
+```{python}
+input_ = Input(shape=X_train.shape[1:], name="input")
+hidden1 = Dense(30, activation="relu", name="hidden1")(input_)
+hidden2 = Dense(30, activation="relu", name="hidden2")(hidden1)
+concat = Concatenate(name="combined")([input_, hidden2])
+output = Dense(1, name="output")(concat)
+model = Model(inputs=[input_], outputs=[output])
+```
+
+## Inspecting a complex model
+
+```{python}
+from tensorflow.keras.utils import plot_model
+```
+
+::: columns
+::: {.column width="30%"}
+```{python}
+plot_model(model)
+```
+:::
+::: {.column width="70%"}
+::: {.smaller}
+```{python}
+model.summary(print_fn=skip_empty, line_length=75)
+```
+:::
+:::
+:::
+
+# French Motor Dataset with Embeddings {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## The desired architecture
+
+![Illustration of a neural network with both continuous and categorical inputs.](nn-with-entity-embedding-diagram.png)
+
+::: footer
+Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning](https://www.lotuslabs.ai/accurate-insurance-claims-prediction-with-deep-learning/).
+:::
+
+## Preprocess all French motor inputs
+
+Transform the categorical variables to integers:
+
+```{python}
+NUM_BRANDS, NUM_REGIONS = X_train.nunique()[["VehBrand", "Region"]]
+
+ct = make_column_transformer(
+  (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),
+  remainder=StandardScaler()
+)
+X_train_ct = ct.fit_transform(X_train)
+X_test_ct = ct.transform(X_test)
+```
+
+Split the brand and region data apart from the rest:
+
+```{python}
+X_train_brand = X_train_ct[:,0]; X_test_brand = X_test_ct[:,0]
+X_train_region = X_train_ct[:,1]; X_test_region = X_test_ct[:,1]
+X_train_rest = X_train_ct[:,2:]; X_test_rest = X_test_ct[:,2:]
+```
+
+## Organise the inputs
+
+Make a Keras `Input` for: vehicle brand, region, & others.
+
+```{python}
+vehBrand = Input(shape=(1,), name="vehBrand")
+region = Input(shape=(1,), name="region")
+otherInputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+```
+Create embeddings and join them with the other inputs. 
+```{python}
+from tensorflow.keras.layers import Reshape
+
+tf.random.set_seed(1337)
+vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
+    name="vehBrandEE")(vehBrand)
+vehBrandEE = Reshape(target_shape=(2,))(vehBrandEE)
+
+regionEE = Embedding(input_dim=NUM_REGIONS, output_dim=2,
+    name="regionEE")(region)
+regionEE = Reshape(target_shape=(2,))(regionEE)
+
+x = Concatenate(name="combined")([vehBrandEE, regionEE, otherInputs])
+```
+
+## Complete the model and fit it
+
+Feed the combined embeddings & continuous inputs to some normal dense layers.
+
+```{python}
+x = Dense(30, "relu", name="hidden")(x)
+out = Dense(1, "exponential", name="out")(x)
+
+model = Model([vehBrand, region, otherInputs], out)
+model.compile(optimizer="adam", loss="poisson")
+
+hist = model.fit((X_train_brand, X_train_region, X_train_rest),
+    y_train, epochs=100, verbose=0,
+    callbacks=[EarlyStopping(patience=5)], validation_split=0.2)
+np.min(hist.history["val_loss"])
+```
+
+## Plotting this model
+
+```{python}
+plot_model(model)
+```
+
+## Why we need to reshape
+
+```{python}
+plot_model(model, layer_range=("", "combined"), show_shapes=True)
+```
+
+## Just slicing up one `Input`
+
+```{python}
+tf.random.set_seed(1337)
+inputs = Input(shape=(X_train_ct.shape[1],))
+
+vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
+    name="vehBrandEE")(inputs[:,0])
+regionEE = Embedding(input_dim=NUM_REGIONS, output_dim=2,
+    name="regionEE")(inputs[:,1])
+
+x = Concatenate(name="combined")([vehBrandEE, regionEE, inputs[:,2:]])
+x = Dense(30, "relu", name="hidden")(x)
+out = Dense(1, "exponential", name="out")(x)
+
+model = Model(inputs, out)
+model.compile(optimizer="adam", loss="poisson")
+
+hist = model.fit(X_train_ct, y_train, epochs=100, verbose=0,
+    callbacks=[EarlyStopping(patience=5)], validation_split=0.2)
+np.min(hist.history["val_loss"])
+```
+
+## Plotting this model
+
+```{python}
+plot_model(model)
+```
+
+## Plotting this model {data-visibility="uncounted"}
+
+```{python}
+plot_model(model, show_shapes=True)
+```
+
+# Scale By Exposure {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Two different models
+
+Have $\{ (\mathbf{x}_i, y_i) \}_{i=1, \dots, n}$ for $\mathbf{x}_i \in \mathbb{R}^{47}$ and $y_i \in \mathbb{N}_0$.
+
+<br>
+
+**Model 1**: Say $Y_i \sim \mathsf{Poisson}(\lambda(\mathbf{x}_i))$.
+
+But, the exposures are different for each policy.
+$\lambda(\mathbf{x}_i)$ is the expected number of claims for the duration of policy $i$'s contract.
+
+<br>
+
+**Model 2**: Say $Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\mathbf{x}_i))$.
+
+Now, $\text{Exposure}_i \not\in \mathbf{x}_i$, and $\lambda(\mathbf{x}_i)$ is the rate _per year_.
+
+## Just take continuous variables
+
+```{python}
+ct = make_column_transformer(
+  ("passthrough", ["Exposure"]),
+  ("drop", ["VehBrand", "Region", "Area", "VehGas"]),
+  remainder=StandardScaler()
+)
+X_train_ct = ct.fit_transform(X_train)
+X_test_ct = ct.transform(X_test)
+```
+
+Split exposure apart from the rest:
+
+```{python}
+X_train_exp = X_train_ct[:,0]; X_test_exp = X_test_ct[:,0]
+X_train_rest = X_train_ct[:,1:]; X_test_rest = X_test_ct[:,1:]
+```
+
+Organise the inputs:
+
+```{python}
+exposure = Input(shape=(1,), name="exposure")
+otherInputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+```
+
+## Make & fit the model
+
+Feed the continuous inputs to some normal dense layers.
+
+```{python}
+tf.random.set_seed(1337)
+x = Dense(30, "relu", name="hidden1")(otherInputs)
+x = Dense(30, "relu", name="hidden2")(x)
+lambda_ = Dense(1, "exponential", name="lambda")(x)
+```
+
+```{python}
+from tensorflow.keras.layers import Multiply
+
+out = Multiply(name="out")([lambda_, exposure])
+model = Model([exposure, otherInputs], out)
+model.compile(optimizer="adam", loss="poisson")
+
+es = EarlyStopping(patience=10, restore_best_weights=True, verbose=1)
+hist = model.fit((X_train_exp, X_train_rest),
+    y_train, epochs=100, verbose=0,
+    callbacks=[es], validation_split=0.2)
+np.min(hist.history["val_loss"])
+```
+
+## Plot the model
+
+```{python}
+plot_model(model)
+```
+
+# Multi-task Learning {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Swedish third party motor insurance
+
+This example is by Jacky Poon (next week's guest lecturer).
+
+```{python}
+url = "http://www.statsci.org/data/general/motorins.txt"
+df = pd.read_csv(url, sep="\t") \
+  .assign(
+    frequency = lambda x: x.Claims / x.Insured,
+    severity = lambda x: np.where(x.Claims == 0, 0, x.Payment / x.Claims),
+    risk_premium = lambda x: x.Payment / x.Insured
+  )
+train, test = train_test_split(df, test_size=0.2, random_state=12345)
+df.head(3)
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Summarise the targets
+
+```{python}
+totals = train.loc[:, ["Insured", "Claims", "Payment"]].agg('sum')
+train_average_frequency = totals["Claims"] / totals["Insured"]
+train_average_severity = totals["Payment"] / totals["Claims"]
+train_average_risk_premium = totals["Payment"] / totals["Insured"]
+print(train_average_frequency,
+  train_average_severity,
+  train_average_risk_premium)
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Organising the inputs
+
+```{python}
+zone_input = Input(shape=(1,), name='zone_input') 
+make_input = Input(shape=(1,), name='make_input')
+
+zone_embedding = Embedding(output_dim=2, input_dim=7)(zone_input)
+zone_embedding = Reshape(target_shape=(2,))(zone_embedding)
+make_embedding = Embedding(output_dim=2, input_dim=9)(make_input)
+make_embedding = Reshape(target_shape=(2,))(make_embedding)
+
+kilometres_input = Input(shape=(1,), name='kilometres_input') 
+bonus_input = Input(shape=(1,), name='bonus_input')
+
+x = Concatenate(name="combined")(
+  [zone_embedding, make_embedding, kilometres_input, bonus_input])
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Plot the incomplete model
+
+```{python}
+model = Model([zone_input, make_input, kilometres_input, bonus_input], x)
+plot_model(model)
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Add layers & outputs, create model
+
+```{python}
+x = Dense(64, activation='relu')(x) 
+x = Dense(64, activation='relu')(x) 
+x = Dense(64, activation='relu')(x)
+
+frequency_output = Dense(1, activation='relu', name='frequency')(x) 
+severity_output = Dense(1, activation='relu', name='severity')(x) 
+risk_premium_output = Dense(1, activation='relu', name='risk_premium')(x)
+
+model = Model(
+    inputs=[zone_input, make_input, kilometres_input, bonus_input], 
+    outputs=[frequency_output, severity_output, risk_premium_output])
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Plot the model
+
+```{python}
+plot_model(model)
+```
+
+## Plot the last part of the model
+
+```{python}
+plot_model(model, layer_range=("combined", ""))
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Prepare model & data for fitting
+
+```{python}
+model.compile(optimizer='adam', 
+  loss = {
+    'risk_premium': 'mean_squared_error',
+    'frequency': 'poisson',
+    'severity': 'mean_squared_logarithmic_error'
+  }, 
+  loss_weights = {
+    'risk_premium': 1.0,
+    'frequency': 1.0,
+    'severity': 1.0
+  })
+```
+
+```{python}
+def InputDataTransformer(x):
+  return {
+  'kilometres_input': (x.Kilometres.values - 1) / 5,
+  'zone_input': x.Zone.values - 1,
+  'bonus_input': (x.Bonus.values - 1) / 7,
+  'make_input': x.Make.values - 1}
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+## Fit the data
+
+```{python}
+model.fit(
+  InputDataTransformer(train),
+  {
+    'frequency': train.frequency.values/train_average_frequency,
+    'severity': train.severity.values/train_average_severity,
+    'risk_premium': train.risk_premium.values/train_average_risk_premium
+  }, 
+  sample_weight = {
+    'frequency': train.Insured.values,
+    'severity': train.Claims.values,
+    'risk_premium': train.Insured.values
+  },
+  epochs=40, batch_size=32, verbose=0);
+```
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
+
+# Keras Eager Execution {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+```{python}
+#| echo: false
+from sklearn.datasets import fetch_california_housing
+features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+
+NUM_FEATURES = len(features.columns)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = \
+    train_test_split(features, target, random_state=42)
+
+sc = StandardScaler()
+X_train_sc = sc.fit_transform(X_train)
+X_test_sc = sc.transform(X_test)
+```
+
+## California housing with $\mathrm{e}^x$
+
+::: columns
+::: column
+
+<br>
+
+```{python}
+tf.random.set_seed(123)
+
+model = Sequential([
+    Dense(30,
+      activation="relu",
+      name="hidden"),
+    Dense(1,
+      activation="exponential")
+])
+
+model.compile("adam", "mse")
+hist = model.fit(X_train, y_train, epochs=5, verbose=0)
+hist.history["loss"]
+```
+:::
+::: column
+```{python}
+#|echo: false
+set_square_figures()
+y_pred = model.predict(X_train)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+set_rectangular_figures()
+```
+:::
+:::
+
+::: {.smaller}
+Remember in Week 2, we fit this model to the unscaled California housing dataset.
+:::
+
+## Check the initial activations
+
+```{python}
+tf.random.set_seed(123)
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1, activation="exponential")
+])
+
+y_pred = model.predict(X_train) 
+y_pred
+```
+
+```{python}
+print(f"{100*np.mean(np.isinf(y_pred)):.2f}% of predictions are inf.")
+```
+
+## Check the pre-activations
+
+```{python}
+tf.random.set_seed(123)
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1),
+])
+preActivations = model.predict(X_train) 
+plt.hist(preActivations, bins=100);
+```
+
+## Check the output of first layer
+
+```{python}
+tf.random.set_seed(123)
+model = Sequential([
+    Dense(30, activation="relu", name="hidden"),
+    Dense(1),
+])
+hiddenLayer = model.get_layer("hidden") # or simply 'model.layers[0]'
+```
+
+```{python}
+#| error: true
+hiddenLayer(X_train.head(1)) # Won't work as 'X_train' is a DataFrame.
+```
+
+```{python}
+hiddenLayer(X_train.head(1).to_numpy()) 
+```
+
+```{python}
+hiddenLayer(X_train.head(1).to_numpy()).numpy()
+```
+
+## Revisit our first ever neural network
+
+::: columns
+::: column
+
+<br>
+
+```{python}
+tf.random.set_seed(123)
+
+model = Sequential([
+    Dense(30,
+      activation="relu",
+      name="hidden"),
+    Dense(1)
+])
+
+model.compile("adam", "mse")
+hist = model.fit(X_train, y_train, epochs=5, verbose=0)
+hist.history["loss"]
+```
+:::
+::: column
+```{python}
+#|echo: false
+set_square_figures()
+y_pred = model.predict(X_train)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+set_rectangular_figures()
+```
+:::
+:::
+
+## Find dead ReLU neurons 
+
+```{python}
+#| echo: false
+numpy.set_printoptions(threshold=10);
+```
+
+```{python}
+acts = model.get_layer("hidden")(X_train.to_numpy()).numpy()
+acts[:3]
+```
+
+::: fragment
+```{python}
+acts.mean(axis=0)
+```
+:::
+
+::: columns
+::: column
+::: fragment
+```{python}
+np.sum(acts.mean(axis=0) == 0)
+```
+:::
+:::
+::: column
+::: fragment
+
+::: {.smaller}
+My reaction to finding _half_ of my neurons dead..
+:::
+
+<iframe src="https://giphy.com/embed/3ofSBfxkp3fPTgANB6" width="480" height="206" frameBorder="0" class="giphy-embed" allowFullScreen></iframe>
+
+:::
+:::
+:::
+
+```{python}
+#| echo: false
+numpy.set_printoptions(threshold=1000);
+```
+
+## Trying different seeds
+
+Create a function which counts the number of dead ReLU neurons in the first hidden layer for a given seed:
+```{python}
+def count_dead(seed):
+    tf.random.set_seed(seed)
+    hidden = Dense(30, activation="relu")
+    acts = hidden(X_train.to_numpy()).numpy()
+    return np.sum(acts.mean(axis=0) == 0)
+```
+
+Then we can try out different seeds:
+
+```{python}
+numDead = [count_dead(seed) for seed in range(1_000)]
+np.median(numDead)
+```
+
+## Look at distribution of dead ReLUs
+
+```{python}
+labels, counts = np.unique(numDead, return_counts=True)
+plt.bar(labels, counts, align='center');
+```
+
+## List comprehensions
+
+```{python}
+[x**2 for x in range(10)]
+```
+
+```{python}
+[x**2 for x in range(10) if x % 2 == 0]
+```
+
+They can get more complicated:
+```{python}
+[x*y for x in range(4) for y in range(4)]
+```
+```{python}
+[[x*y for x in range(4)] for y in range(4)]
+```
+but I'd recommend just using `for` loops at that point.
+
+# Regularisation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Traditional regularisation
+
+Say all the $m$ weights are in the vector $\boldsymbol{\theta}$.
+If we change the loss function to
+$$
+\text{Loss}_{1:n}
+= \frac{1}{n} \sum_{i=1}^n \text{Loss}_i
+  + \lambda \sum_{j=1}^{m} \left| \theta_j \right|
+$$
+
+this would be using $\ell_1$ regularisation. 
+A loss like
+
+$$
+\text{Loss}_{1:n}
+= \frac{1}{n} \sum_{i=1}^n \text{Loss}_i
+  + \lambda \sum_{j=1}^{m} \theta_j^2
+$$
+
+is called $\ell_2$ regularisation.
+
+## Regularisation in Keras
+
+```{python}
+from tensorflow.keras.regularizers import l1, l2
+
+def l1_model(regulariserStrength=0.01):
+  tf.random.set_seed(123)
+  model = Sequential([
+      Dense(30,
+        activation="leaky_relu",
+        name="hidden1"),
+      Dense(30,
+        activation="leaky_relu",
+        kernel_regularizer=l1(regulariserStrength),
+        name="hidden2"),
+      Dense(1, 
+        activation="exponential",
+        name="output")
+  ])
+
+  model.compile("adam", "mse")
+  model.fit(X_train_sc, y_train, epochs=4, verbose=0)
+  return model
+```
+
+## Weights before & after $\ell_1$
+
+```{python}
+#| echo: false
+set_square_figures()
+# print(f"Train loss: {model.history.history['loss'][-1]:.2f}")
+``` 
+
+::: columns
+::: column
+```{python}
+model = l1_model(0)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: column
+```{python}
+model = l1_model(0.1)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: 
+
+## Weights before & after $\ell_2$
+
+```{python}
+#| echo: false
+def l2_model(regulariserStrength=0.01):
+  tf.random.set_seed(123)
+  model = Sequential([
+      Dense(30,
+        activation="leaky_relu",
+        name="hidden1"),
+      Dense(30,
+        activation="leaky_relu",
+        kernel_regularizer=l2(regulariserStrength),
+        name="hidden2"),
+      Dense(1, 
+        activation="exponential",
+        name="output")
+  ])
+
+  model.compile("adam", "mse")
+  model.fit(X_train_sc, y_train, epochs=4, verbose=0)
+  return model
+```
+
+
+::: columns
+::: column
+```{python}
+model = l2_model(0)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: column
+```{python}
+model = l2_model(0.1)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: 
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+``` 
+
+# Dropout {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Early stopping & dropout
+
+::: columns
+::: {.column width=33%}
+::: {.smaller}
+Early stopping is a kind of implicit regularisation.
+:::
+![](xkcd-tax_ai_2x.png)
+:::
+::: {.column width=66%}
+![An example of neurons dropped during training.](Geron-mls2_1109-blur.png)
+:::
+:::
+
+::: footer
+Sources: Randall Munroe (2020), [xkcd #2265: Tax AI](https://xkcd.com/2265/), and
+Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, Fig. 11-9 (__redacted__).
+:::
+
+## Dropout quote #1
+
+> It's surprising at first that this destructive technique works at all.
+Would a company perform better if its employees were told to toss a coin every morning to decide whether or not to go to work?
+Well, who knows; perhaps it would!
+The company would be forced to adapt its organization; it could not rely on any single person to work the coffee machine or perform any other critical tasks, so this expertise would have to be spread across several people.
+Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366.
+:::
+
+## Dropout quote #2
+
+> The company would become much more resilient.
+If one person quit, it wouldn't make much of a difference.
+It's unclear whether this idea would actually work for companies, but it certainly does for neural networks.
+Neurons trained with dropout cannot co-adapt with their neighboring neurons; they have to be as useful as possible on their own.
+They also cannot rely excessively on just a few input neurons; they must pay attention to each of their input neurons.
+They end up being less sensitive to slight changes in the inputs.
+In the end, you get a more robust network that generalizes better.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366.
+:::
+
+## Dropout in Keras
+
+Dropout is just another layer in Keras.
+
+```{python}
+from tensorflow.keras.layers import Dropout
+
+tf.random.set_seed(123)
+model = Sequential([
+    Dense(30, activation="leaky_relu", name="hidden1"),
+    Dropout(0.2),
+    Dense(30, activation="leaky_relu", name="hidden2"),
+    Dropout(0.2),
+    Dense(1, activation="exponential", name="output")
+])
+
+model.compile("adam", "mse")
+model.fit(X_train_sc, y_train, epochs=4, verbose=0);
+```
+
+## Dropout turns off after training
+
+Making predictions is the same as any other model:
+
+::: columns
+::: column
+```{python}
+model.predict(X_test_sc[:3,:])
+```
+:::
+::: column
+```{python}
+model.predict(X_test_sc[:3,:])
+```
+:::
+:::
+
+We can make the model think it is still training:
+
+::: columns
+::: column
+```{python}
+model(X_test_sc[:3,:],
+    training=True)
+```
+:::
+::: column
+```{python}
+model(X_test_sc[:3,:],
+    training=True)
+```
+:::
+:::
+
+## Monte Carlo Dropout
+
+Intentially leave the dropout on when making predictions.
+
+```{python}
+predictions = [model(X_test_sc[:3,:], training=True) for _ in range(10)]
+predictions[0]
+```
+
+```{python}
+allPredictions = np.concatenate(predictions, axis=1)
+allPredictions
+```
+
+```{python}
+np.mean(allPredictions, axis=1)
+```
+
+# Combining models {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Fit many models to the same data
+
+<br>
+
+![Create multiple models for the same problem.](Geron-mls2_0701-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 7-1 (__redacted__).
+:::
+
+## Ensembles
+
+![Combine many models to get better predictions.](Geron-mls2_0702-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 7-2 (__redacted__).
+:::
+
+## ANN can feed into a GLM
+
+![Combining GLM & ANN.](richman-glm-and-ann.png)
+
+::: footer
+Source: Ronald Richman (2022), Mind the Gap - Safely Incorporating Deep Learning Models into the Actuarial Toolkit, IFoA seminar, Slide 14.
+:::
+
+# Preview of Recurrent Neural Networks {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Recurrent neural network
+
+The RNN processes each data in the sequence one by one, while keeping memory of what came before.
+
+![Illustration of *unrolling the network through time*.](Geron-mls2_1501-blur.png)
+
+Common RNN structures are: LSTM and GRU cells.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 15-1 (__redacted__).
+:::
+
+# {data-visibility="uncounted"} 
+
+<h2>Glossary</h2>
+
+::: columns
+:::: column
+- confusion matrix
+- dead ReLU neurons
+- dropout
+- ensemble model
+- entity embeddings
+- Input layer
+- Keras eager execution
+- Keras functional API
+::::
+:::: column
+- $\ell_1$ & $\ell_2$ regularisation
+- leaky ReLU
+- Monte Carlo dropout
+- regularisation
+- Reshape layer
+- skip connection
+- wide & deep network structure
+::::
+:::
+
+```{python}
+#| echo: false
+!rm model.png
+```
+
+<script defer>
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["compile", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>

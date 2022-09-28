@@ -1,0 +1,1881 @@
+---
+title: Natural Language Processing
+subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+author: Dr Patrick Laub
+date: Week 8
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.2
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+```{python}
+#| echo: false
+import matplotlib
+
+def set_square_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (2.0, 2.0)
+
+def set_rectangular_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (5.0, 2.0)
+
+def squareFig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortestSide = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+
+import pandas
+pandas.options.display.max_rows = 6
+
+import numpy
+numpy.set_printoptions(precision=2)
+numpy.random.seed(123)
+
+import tensorflow
+tensorflow.random.set_seed(1)
+tensorflow.config.set_visible_devices([], 'GPU')
+
+def skip_empty(line):
+  if line.strip() != "":
+    print(line.strip())
+```
+
+## Lecture Outline
+
+::: columns
+::: column
+
+- Project draft feedback & report/figure style
+- Temperature forecasting with RNNs & CNNs
+- Transfer learning & convolutional neural networks
+- Natural language processing
+
+:::
+::: column
+
+![All the projects are progressing well.](poorly-drawn-lines-plan.jpg)
+
+:::
+:::
+
+Thanks Hang Nguyen & Michael Jacinto for draft slides.
+
+## Load packages {data-visibility="uncounted"}
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.random as rnd
+import pandas as pd
+import tensorflow as tf
+
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.metrics import SparseTopKCategoricalAccuracy
+from tensorflow.keras.models import Sequential
+
+%load_ext watermark
+%watermark -p matplotlib,numpy,pandas,tensorflow
+```
+
+#
+
+<h2>CNN Story Wall</h2>
+
+::: columns
+::: {.column width="70%"}
+
+- Inspect the inputs first
+- Use the GPU for convolutional models
+- Binary classification $\Rightarrow$ sigmoid & BinaryCrossentropy.
+- Change from "adam" to "sgd" (or "rmsprop")
+- Keras recommends `from_logits=True`
+:::
+::: {.column width="30%"}
+
+<img src="cyclone-undamaged-32605.jpeg" data-lazy-loaded="" style="height: 255px; padding: 0px">
+<img src="cyclone-damaged-5493.jpeg" data-lazy-loaded="" style="height: 255px; padding: 0px">
+
+:::
+:::
+
+::: footer
+Source: Cao & Choe (2018), [Building Damage Annotation on Post-Hurricane Satellite Imagery Based on Convolutional Neural Networks](https://arxiv.org/pdf/1807.01688.pdf), arXiv:1807.01688 [[__code__](https://github.com/qcao10/DamageDetection)].
+:::
+
+<br><br><br><br>
+
+## Project draft comments
+
+::: columns
+::: column
+- A pass is a pass is a pass
+- Model comparison on the _validation set_
+- How different are different networks? See Wide & deep with embeddings $\rightarrow$
+- Disable regularisation in scikit-learn's logistic regression
+:::
+::: column
+```{python}
+#| echo: false
+#| eval: false 
+# Download the dataset if it hasn't already been downloaded.
+from pathlib import Path
+from sklearn.preprocessing import OrdinalEncoder
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Reshape, Embedding, Input, Concatenate
+from tensorflow.keras.utils import plot_model
+
+if not Path("french-motor.csv").exists():
+    print("Downloading dataset")
+    from sklearn.datasets import fetch_openml
+    freq = fetch_openml(data_id=41214, as_frame=True).frame
+    freq.to_csv("french-motor.csv", index=False)
+
+freq = pd.read_csv("french-motor.csv").drop("IDpol", axis=1).head(100)
+
+X_train, X_test, y_train, y_test = train_test_split(
+  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=2022)
+
+X_train = X_train.reset_index(drop=True) # Index starts at 0 again.
+# X_test = X_test.reset_index(drop=True)
+
+NUM_BRANDS, NUM_REGIONS = X_train.nunique()[["VehBrand", "Region"]]
+
+ct = make_column_transformer(
+  (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),
+  remainder=StandardScaler()
+)
+X_train_ct = ct.fit_transform(X_train)
+# X_test_ct = ct.transform(X_test)
+
+X_train_brand = X_train_ct[:,0]
+# X_test_brand = X_test_ct[:,0]
+X_train_region = X_train_ct[:,1]
+# X_test_region = X_test_ct[:,1]
+X_train_rest = X_train_ct[:,2:]
+# X_test_rest = X_test_ct[:,2:]
+
+vehBrand = Input(shape=(1,), name="vehBrand")
+region = Input(shape=(1,), name="region")
+otherInputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+
+tf.random.set_seed(1337)
+vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
+    name="vehBrandEE")(vehBrand)
+vehBrandEE = Reshape(target_shape=(2,))(vehBrandEE)
+
+regionEE = Embedding(input_dim=NUM_REGIONS, output_dim=2,
+    name="regionEE")(region)
+regionEE = Reshape(target_shape=(2,))(regionEE)
+
+wide = Concatenate(name="wide")([vehBrandEE, regionEE, otherInputs])
+
+x = Dense(30, "relu", name="hidden1")(wide)
+x = Dense(30, "relu", name="hidden2")(x)
+deep = Dense(30, "relu", name="deep")(x)
+
+wideAndDeep = Concatenate(name="wide-and-deep")([wide, deep])
+
+out = Dense(1, "exponential", name="out")(wideAndDeep)
+
+model = Model([vehBrand, region, otherInputs], out)
+model.compile(optimizer="adam", loss="poisson")
+
+# hist = model.fit((X_train_brand, X_train_region, X_train_rest),
+#  y_train, epochs=1, verbose=0)
+
+plot_model(model)
+```
+
+![](wide-and-deep-with-embeddings.png)
+
+:::
+:::
+
+## Basic ML workflow
+
+![Splitting the data.](wiki-ML_dataset_training_validation_test_sets.png)
+
+1. For each model, fit it to the _training set_.
+2. Compute the error for each model on the _validation set_.
+3. Select the model with the lowest validation error.
+4. Compute the error of the final model on the _test set_.
+
+::: footer
+Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ML_dataset_training_validation_test_sets.png#filelinks).
+:::
+
+## Slightly more advanced workflow
+
+1. For each model, fit it to the _training set_.
+2. Compute the error for each model on the _validation set_.
+3. Select the model with the lowest validation error.
+4. Fit the selected architecture to the combined _training & validation sets_. 
+5. Compute the error of the final fitted model on the _test set_.
+
+# Figures {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Figures in reports
+
+- Figures are numbered and captioned. Subfigures are enumerated by letters.
+- Figures are not pixelated.
+- Each figure has readable text.
+- Each figure has a point.
+- All figures are referred to in the text (preferably on the same page or nearby).
+
+##
+
+<img class="quarto-figure-center" src="cusum-figure1.png" style="max-height: 85%;max-width: 85%;" data-lazy-loaded="">
+
+::: footer
+Source: Laub et al. (2020), [Quickest detection in practice in presence of seasonality: An illustration with call center data](https://arxiv.org/pdf/2006.04576.pdf), Insurance Data Analytics.
+:::
+
+##
+
+<img class="quarto-figure-center" src="cusum-figure2.png" style="max-height: 95%;max-width: 90%;" data-lazy-loaded="">
+
+::: footer
+Source: Laub et al. (2020), [Quickest detection in practice in presence of seasonality: An illustration with call center data](https://arxiv.org/abs/2006.04576), Insurance Data Analytics [[__code__](https://github.com/Pat-Laub/SeasonalCUSUM/blob/master/detection.ipynb)].
+:::
+
+## Saving directly from Python
+
+Note that `plt.show()` empties the current figure.
+
+::: columns
+::: column
+```{python}
+#| output: false
+plt.plot([0, 1], [1, 2])
+plt.savefig("success.png")
+plt.show()
+```
+
+```{python}
+!du -h success.png
+```
+:::
+::: column
+```{python}
+#| output: false
+plt.plot([0, 1], [1, 2])
+plt.show()
+plt.savefig("fail.png")
+```
+
+```{python}
+!du -h fail.png
+```
+:::
+:::
+
+```{python}
+#| echo: false
+! rm success.png fail.png
+```
+
+## Point process example
+
+![A point process.](example-plot-1.png)
+
+## Point process example
+
+![A point process.](example-plot-2.png)
+
+```{python}
+#| eval: false
+plt.rcParams["figure.dpi"] = 500
+plt.rcParams["font.size"] = 12
+```
+
+## Point process example
+
+![A point process.](example-plot-3.png)
+
+## Point process example
+
+![A point process.](example-plot-4.png)
+
+```{python}
+plt.rcParams['axes.spines.right'] = False
+plt.rcParams['axes.spines.top'] = False 
+```
+
+## Point process example
+
+![A point process.](example-plot-5.png)
+
+```{python}
+#| eval: false
+fig, axs = plt.subplots(2, 1)
+```
+
+## Point process example
+
+![A point process.](example-plot-6.png)
+
+```{python}
+#| eval: false
+fig, axs = plt.subplots(2, 1, tight_layout=True)
+```
+
+## Point process example
+
+![A point process.](example-plot-7.png)
+
+```{python}
+#| eval: false
+fig, axs = plt.subplots(2, 1, tight_layout=True, figsize=(6, 4))
+```
+
+## Point process example
+
+![A point process.](example-plot-8.png)
+
+:::{.callout-tip}
+Play with the aspect ratio! Try wide figures.
+:::
+
+## An aside on colours
+
+```{python}
+print(plt.rcParams["axes.prop_cycle"])
+```
+
+```{python}
+# This is the default colour scheme.
+colours = [
+    "tab:blue", "tab:orange", "tab:green", "tab:red",
+    "tab:purple", "tab:brown", "tab:pink","tab:gray",
+    "tab:olive", "tab:cyan",
+]
+colours.remove("tab:orange")
+
+# Set the default color scheme so that this orange is skipped.
+import cycler
+plt.rcParams["axes.prop_cycle"] = cycler.cycler(color=colours)
+```
+
+:::{.callout-tip}
+Don't accept default colours, fonts, styles.
+:::
+
+## Point process example
+
+![A point process.](example-plot-9.png)
+
+```{python}
+#| eval: false
+fig.text(0.095, 0.95, "$\\lambda_t$", **targs)
+```
+
+## Point process example
+
+![A point process.](example-plot-10.png)
+
+## Point process example
+
+![A point process.](example-plot-11.png)
+
+## Point process example
+
+![A point process.](example-plot-12.png)
+
+## Point process example
+
+![Figure 1: An example realization of an extrinsic stress-release process, with $\lambda_0 = 1$, $\beta = 1.5$, $\rho = 2$, and $X_i \sim \mathsf{Exp}(1)$ and $Y_j \sim \mathsf{Exp}(2)$. Note that $N$ is càdlàg while $\lambda$ is càglàd.](example-plot-13.png)
+
+## Point process example
+
+![Figure 1: An example realization of an extrinsic stress-release process, with $\lambda_0 = 1$, $\beta = 1.5$, $\rho = 2$, and $X_i \sim \mathsf{Exp}(1)$ and $Y_j \sim \mathsf{Exp}(2)$. Note that $N$ is càdlàg while $\lambda$ is càglàd.](example-plot-14.png)
+
+::: footer
+Source: Lee et al. (2022), [Exact simulation of extrinsic stress-release processes](https://arxiv.org/pdf/2106.14415.pdf), Journal of Applied Probability [[__code__](https://github.com/Pat-Laub/exact-simulation-of-extrinsic-stress-release-processes)].
+:::
+
+## Image file types
+
+Raster formats (need to set DPI):
+
+- PNG (normally used for diagrams)
+- JPEG (normally used for photographs)
+
+Vector formats:
+
+- PDF (with Word)
+- PGF (with $\LaTeX$)
+- SVG (for the web)
+
+## PGF and TikZ
+
+![Example TikZ diagram](wiki-Neighbourhood_definition2.svg)
+
+::: footer
+Source: Wikipedia, [PGF/TikZ page](https://commons.wikimedia.org/wiki/File:Neighbourhood_definition2.svg).
+:::
+
+## PGF file
+
+```latex
+\begin{tikzpicture}[scale=.8,every node/.style={minimum size=1cm},on grid]
+%
+   \begin{scope}[
+           yshift=-83,every node/.append style={
+           yslant=0.5,xslant=-1},yslant=0.5,xslant=-1
+           ]
+       \draw[step=4mm, black] (0,0) grid (5,5); 
+       \draw[black,thick] (0,0) rectangle (5,5);%borders
+       \fill[greenMW] (2.05,2.05) rectangle (2.35,2.35); % center pixel
+       \fill[greenMW] (1.65,2.05) rectangle (1.95,2.35); %left
+       \fill[greenMW] (2.45,2.05) rectangle (2.75,2.35); %right
+       \fill[greenMW] (2.05,2.45) rectangle (2.35,2.75); %top
+       \fill[greenMW] (2.05,1.95) rectangle (2.35,1.65); %bottom
+% 8 -pixel setting
+       \fill[greenMW] (1.65,2.45) rectangle (1.95,2.75); %top-left
+       \fill[greenMW] (2.45,2.45) rectangle (2.75,2.75); %top-right
+       \fill[greenMW] (2.75,1.95) rectangle (2.45,1.65); %bottom-right
+       \fill[greenMW] (1.65,1.95) rectangle (1.95,1.65); %bottom-left
+% 2. ring
+       \fill[greenMW] (1.25,1.55) rectangle (1.55,1.25); %bottom-left
+       \fill[greenMW] (0.85,1.55) rectangle (1.15,1.25); %bottom-left
+       \fill[greenMW] (0.85,1.15) rectangle (1.15,0.85); %bottom-left
+       \fill[greenMW] (1.25,0.75) rectangle (1.55,0.45); %bottom-left
+   \end{scope}
+%
+   \begin{scope}[
+           yshift=0,every node/.append style={
+           yslant=0.5,xslant=-1},yslant=0.5,xslant=-1
+           ]
+       \fill[white,fill opacity=0.9] (0,0) rectangle (5,5);
+       \draw[step=4mm, black] (0,0) grid (5,5); %grid definition
+       \draw[black,thick] (0,0) rectangle (5,5);%borders
+       \fill[greenMW] (2.05,2.05) rectangle (2.35,2.35); % center pixel
+       \fill[greenMW] (1.65,2.05) rectangle (1.95,2.35); %left
+       \fill[greenMW] (2.45,2.05) rectangle (2.75,2.35); % right
+       \fill[greenMW] (2.05,2.45) rectangle (2.35,2.75); % top
+       \fill[greenMW] (2.05,1.95) rectangle (2.35,1.65); % bottom
+% 4 -pixel setting
+       \fill[greenMW] (1.65,2.45) rectangle (1.95,2.75); %top-left
+       \fill[greenMW] (2.45,2.45) rectangle (2.75,2.75); %top-right
+       \fill[greenMW] (2.75,1.95) rectangle (2.45,1.65); %bottom-right
+       \fill[greenMW] (1.65,1.95) rectangle (1.95,1.65); %bottom-left
+% 2. ring
+       \fill[orange] (1.25,1.55) rectangle (1.55,1.25); 
+       \fill[orange] (0.85,1.55) rectangle (1.15,1.25); 
+       \fill[orange] (0.85,1.15) rectangle (1.15,0.85); 
+       \fill[blue] (1.25,0.75) rectangle (1.55,0.45); 
+   \end{scope}
+%
+% draw annotations
+%
+   \draw[-latex,thick,orange](-3,5)node[left]{ }
+       to[out=0,in=90] (-.4,1.4);
+   \draw[-latex,thick,blue](-3,5)node[left]{ }
+       to[out=0,in=90] (0.8,1.15);
+   \draw[-latex,thick,greenMW](-3,5)node[left]{3 patches}
+       to[out=0,in=90] (0,2.8);
+%
+   \draw[-latex,thick,greenMW](-3,-2)node[left]{1 patch}
+       to[out=0,in=200] (-1,-.9);
+   \draw[thick,gray!70!black](6,4) node {4 neighbourhood rule};
+   \draw[thick,gray!70!black](6,-2) node {8 neighbourhood rule};
+%
+\end{tikzpicture}
+```
+
+
+# Writing & typography {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Math typography
+
+<br>
+
+_Please_ make sure to use maths & text modes appropriately.
+
+![Words aren't italicised inside equations.](tex-math-text.png)
+
+```latex
+\[ Area of Circle = \pi * Radius^2 \]
+\[ \text{Area of Circle} = \pi \cdot \text{Radius}^2 \]
+```
+
+## Math typography II
+
+<br><br>
+
+![Take care with maths and text fonts while inline.](tex-math-mode-inline.png)
+
+```latex
+Here x and y are elements of $X_{train}$ and $y_{train}$.
+Here $x$ and $y$ are elements of $X_{\text{Train}}$ and $y_{\text{Train}}$.
+```
+
+## Math typography III
+
+There are other cases when individual letters need to be in upright/roman font.
+
+![When two italicised letters are beside each other, that means they are multipled.](tex-math-roman.png)
+
+```latex
+\[ \int e^x dx , \, \int \mathrm{e}^x \, \mathrm{d}x \]
+```
+
+## Text in $\LaTeX$
+
+<br><br>
+
+![Make sure to match left & right apostrophes/quotes.](tex-apostrophes.png)
+
+```latex
+Some text in 'apostrophes' and in "quotation marks." 
+Some text in `apostrophes' and in ``quotation marks.''
+```
+
+## Text in $\LaTeX$ II
+
+<br><br>
+
+![Escape spaces after period which aren't the end of sentence.](tex-escape-space.png)
+
+```latex
+There are many encodings, e.g. one-hot encoding, entity embeddings, etc.
+There are many encodings, e.g.\ one-hot encoding, entity embeddings, etc.
+```
+
+## Text in $\LaTeX$ III
+
+<br><br>
+
+![Use hyphens, en-dashes & em-dashes correctly.](tex-dashes.png)
+
+```latex
+It is a five-step procedure to fit the Lee-Carter model - depending on how you count - so \dots
+It is a five-step procedure to fit the Lee--Carter model --- depending on how you count --- so \dots
+```
+
+## Use lots of fonts
+
+<br><br>
+
+![Use a serif/teletype font for the columns in a dataset.](tex-teletype-font.png)
+
+```latex
+Looking at the \emph{NumAccidents} column\dots
+Looking at the \texttt{NumAccidents} column\dots
+```
+
+## Using `kpfonts` package
+
+![Default computer modern font.](tex-computer-modern.png)
+
+![After `\usepackage{kpfonts}`.](tex-kpfonts.png)
+
+```latex
+For each $x$ in the set $\mathcal{X}$, where  $X \sim \mathsf{Poisson}(\mu)$ we calculate 
+\[ \mathbb{P}(X \le x) = \mathscr{L}^{-1}\{ f_X \}(x) / x . \]
+```
+ 
+::: footer
+See Laub et al. (2020), [Quickest detection in practice in presence of seasonality: An illustration with call center data](https://arxiv.org/pdf/2006.04576.pdf), Insurance Data Analytics.
+:::
+
+```{python}
+#| echo: false
+import cycler
+colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
+matplotlib.pyplot.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams['figure.dpi'] = 350
+matplotlib.pyplot.rcParams['savefig.bbox'] = "tight"
+matplotlib.pyplot.rcParams['font.family'] = "serif"
+
+matplotlib.pyplot.rcParams['axes.spines.right'] = False
+matplotlib.pyplot.rcParams['axes.spines.top'] = False
+``` 
+
+
+# RNNs & CNNs For Time Series {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## The temperature in Jena, Germany
+
+Temperature recorded every 10 minutes over 2009-2016 (8 years), which gives 420,551 data points.
+
+::: {layout-ncol=2}
+![All temperature data, yearly periodicity is observed.](chollet-temperatureall-blur.png)
+
+![10-day data shows some daily periodicity.](chollet-temperature10days-blur.png)
+:::
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figures 10.1 & 10.2 (__redacted__).
+::: 
+
+## A temperature-forecasting example
+
+Given a few months of data, predict the average temperature for the next month. This is an easy problem due to the reliable year-scale periodicity of the data.
+
+Given hourly temperature data of the previous 5 days, predict the temperature in 24 hours. This is a harder problem because on a daily scale, data is more chaotic.
+
+## The baseline model
+
+Build a model for 24-hour temperature forecast: Use a baseline model to evaluate the performance of the models that we build. 
+
+For our forecast model, the baseline model is to set the temperature 24 hours from now to be equal to the temperature right now. The validation error (mean absolute error) of this model is then 2.44 degrees Celsius, and the test error is 2.62 degrees.
+
+## A 24-hour forecast 
+
+Neither the densely connected network or the 1D convnet work well.
+Their validation errors are higher than the baseline model.
+
+::: {layout-ncol=2}
+![Using a densely connected network.](chollet-feedforwardresult-blur.png)
+
+![Using a 1D convolutional network.](chollet-convoresult-blur.png)
+:::
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figures 10.3 & 10.4 (__redacted__).
+::: 
+
+## Why the dense model doesn't work
+
+For the 2-layer densely connected neural network, even though a good solution technically exists where the neural network finds the baseline solution and improves on it, finding such solution in the hypothesis space of all possible 2-layer neural network with the configuration we defined is sometimes like finding a needle in the haystack. Good feature engineering and relevant network architecture is important in that case: you need to tell the model precisely what it should be looking for.
+
+## Why the CNN doesn't work
+
+Order of data in the sequence (such as a time series) matters a lot. For temperature forecast, recent data is more informative for predicting the next day's temperature. 
+
+Convnet is unable to preserve order. In the pooling layer such as max pooling, the max value from a grid is retrieved while discarding information about the exact location of the max value in the grid. By losing positional information, the network fails to capture information about the spatial or temporal relation between the inputs.
+
+## Going forward & backwards in time
+
+::: {layout-ncol=2}
+![Using a dropout-regularised LSTM.](chollet-10-11-blur.png)
+
+![Using an LSTM on reversed sequences.](chollet-10-13-blur.png)
+:::
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figures 10.11 & 10.13 (__redacted__).
+::: 
+
+## Why the backwards direction fails
+
+> The reversed-order LSTM strongly underperforms even the common-sense baseline, indicating that in this case, chronological processing is important to the success of the approach. This makes perfect sense: the underlying LSTM layer will typically be better at remembering the recent past than the distant past, and naturally the more recent weather data points are more predictive than older data points for the problem (that’s what makes the common-sense baseline fairly strong). Thus the chronological version of the layer is bound to outperform the reversed-order version.
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Chapter 10.
+::: 
+
+## Bidirectional RNN
+
+::: columns
+::: {.column width="40%"}
+![Illustration of a bidirectional RNN.](chollet-10-14-blur.png)
+:::
+::: {.column width="60%"}
+Wrap a normal RNN layer inside the `Bidirectional` layer to get Keras to go forward & backwards in time.
+
+```python
+from tensorflow.keras.layers \
+    import Bidirectional
+
+inputs = Input(shape=inpShape)
+x = Bidirectional(LSTM(16))(inputs)
+outputs = Dense(1)(x)
+model = Model(inputs, outputs) 
+```
+:::
+:::
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Chapter 10 (__redacted__).
+:::
+
+# Transfer Learning {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Demo: Object classification
+
+::: columns
+::: column
+![Example object classification run.](teach-images.png)
+:::
+::: column
+![Example of object classification.](https://info.deeplearning.ai/hs-fs/hubfs/NOCODE.gif?width=1200&upscale=true&name=NOCODE.gif)
+:::
+:::
+
+::: footer
+Source: Teachable Machine, [https://teachablemachine.withgoogle.com/](https://teachablemachine.withgoogle.com/).
+:::
+
+## How does that work?
+
+> ... these models use a technique called transfer learning. There’s a pretrained neural network, and when you create your own classes, you can sort of picture that your classes are becoming the last layer or step of the neural net. Specifically, both the image and pose models are learning off of pretrained mobilenet models ...
+
+[Teachable Machine FAQ](https://teachablemachine.withgoogle.com/faq#Diving-Deeper)
+
+## Benchmarks
+
+[CIFAR-10 / CIFAR-100 dataset](https://www.cs.toronto.edu/~kriz/cifar.html) from Canadian Institute for Advanced Research
+
+- 10 classes: 60000 32x32 colour images
+- 100 classes: 60000 32x32 colour images
+
+[ImageNet](https://www.image-net.org/index.php) and the _ImageNet Large Scale Visual Recognition Challenge (ILSVRC)_; originally [1,000 synsets](https://image-net.org/challenges/LSVRC/2014/browse-synsets).
+
+- In 2022: 14,197,122 labelled images from 21,841 synsets.
+- See [Keras applications](https://keras.io/api/applications/) for downloadable models.
+
+## LeNet-5 (1998) {.smaller}
+
+| Layer | Type            | Channels | Size    | Kernel size | Stride | Activation |
+|-------|-----------------|------|---------|-------------|--------|------------|
+| In    | Input           | 1    | 32×32 | –           | –      | –          |
+| C1    | Convolution     | 6    | 28×28 | 5×5       | 1      | tanh       |
+| S2    | Avg pooling     | 6    | 14×14 | 2×2       | 2      | tanh       |
+| C3    | Convolution     | 16   | 10×10 | 5×5       | 1      | tanh       |
+| S4    | Avg pooling     | 16   | 5×5   | 2×2       | 2      | tanh       |
+| C5    | Convolution     | 120  | 1×1   | 5×5       | 1      | tanh       |
+| F6    | Fully connected | –    | 84      | –           | –      | tanh       |
+| Out   | Fully connected | –    | 10      | –           | –      | RBF        |
+
+::: {.callout-note}
+MNIST images are 28×28 pixels, and with zero-padding (for a 5×5 kernel) that becomes 32×32.
+:::
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 14.
+:::
+
+## AlexNet (2012) {.smaller}
+
+| Layer | Type            | Channels    | Size      | Kernel | Stride | Padding | Activation |
+|-------|-----------------|---------|-----------|-------------|--------|---------|------------|
+| In    | Input           | 3       | 227×227 | –           | –      | –       | –          |
+| C1    | Convolution     | 96      | 55×55   | 11×11     | 4      | valid   | ReLU       |
+| S2    | Max pool     | 96      | 27×27   | 3×3       | 2      | valid   | –          |
+| C3    | Convolution     | 256     | 27×27   | 5×5       | 1      | same    | ReLU       |
+| S4    | Max pool     | 256     | 13×13   | 3×3       | 2      | valid   | –          |
+| C5    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| C6    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| C7    | Convolution     | 256     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| S8    | Max pool     | 256     | 6×6     | 3×3       | 2      | valid   | –          |
+| F9    | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
+| F10   | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
+| Out   | Fully conn. | –       | 1,000     | –           | –      | –       | Softmax    |
+
+::: footer
+Winner of the ILSVRC 2012 challenge (top-five error 17%), developed by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton.
+:::
+
+## Data Augmentation
+
+![Examples of data augmentation.](data-augmentation.png)
+
+::: footer
+Source: Buah et al. (2020), _Can Artificial Intelligence Assist Project Developers in Long-Term Management of Energy Projects? The Case of CO2 Capture and Storage_.
+:::
+
+## Inception module (2014)
+
+Used in ILSVRC 2014 winning solution (top-5 error < 7%).
+
+::: columns
+::: {.column width="60%"}
+![](inception-module-fig-2b.png)
+:::
+::: {.column width="40%"}
+
+<br>
+
+![](inception-meme.jpeg)
+:::
+:::
+
+VGGNet was the runner-up.
+
+::: footer
+Source: Szegedy, C. et al. (2015), [_Going deeper with convolutions_](https://arxiv.org/pdf/1409.4842.pdf)
+and [KnowYourMeme.com](https://knowyourmeme.com/memes/we-need-to-go-deeper).
+:::
+
+## GoogLeNet / Inception_v1 (2014)
+
+![Schematic of the GoogLeNet architecture.](Geron-mls2_1414-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-14 (__redacted__).
+:::
+
+## Depth is important for image tasks
+
+![Deeper models aren't just better because they have more parameters. Model depth given in the legend. Accuracy is on the Street View House Numbers dataset.](goodfellow-depth-matters.png)
+
+::: footer
+Source: Goodfellow et al. (2016), [Deep Learning](http://www.deeplearningbook.org), Figure 6.7.
+:::
+
+## Residual connection
+
+![Illustration of a residual connection.](Geron-mls2_1415-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-15 (__redacted__).
+:::
+
+## ResNet (2015)
+
+ResNet won the ILSVRC 2015 challenge (top-5 error 3.6%), developed by [Kaiming He et al.](https://arxiv.org/abs/1512.03385)
+
+![Diagram of the ResNet architecture.](Geron-mls2_1417-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-17 (__redacted__).
+:::
+
+## Pretrained model
+
+```{python}
+#| output: false
+from tensorflow.keras.applications import mobilenet
+from PIL import Image
+
+model = mobilenet.MobileNet(weights="imagenet")
+
+imageFilenames = ["patrick-0.jpg", "umbrella-0.jpg", "hand-15.jpg"]
+images = [np.asarray(Image.open(name)) for name in imageFilenames]
+
+images_resized = tf.image.resize(images, [224, 224])
+inputs = mobilenet.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = mobilenet.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+
+## Predicted classes (MobileNet)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="patrick-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="umbrella-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="hand-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Predicted classes (MobileNetV2)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+from tensorflow.keras.applications import mobilenet_v2
+
+model = mobilenet_v2.MobileNetV2(weights="imagenet")
+inputs = mobilenet_v2.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = mobilenet_v2.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="patrick-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="umbrella-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="hand-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Predicted classes (InceptionV3)
+
+::: columns
+::: {.column width="15%"}
+:::
+::: {.column width="50%"}
+
+<br><br>
+
+```{python}
+#| echo: false
+from tensorflow.keras.applications import inception_v3
+
+model = inception_v3.InceptionV3(weights="imagenet")
+
+images_resized = tf.image.resize(images, [299, 299])
+inputs = inception_v3.preprocess_input(images_resized)
+
+Y_proba = model.predict(inputs, verbose=0)
+top_K = inception_v3.decode_predictions(Y_proba, top=3)
+
+for image_index in range(len(images)):
+    print(f"Image #{image_index}:")
+    for class_id, name, y_proba in top_K[image_index]:
+        print(f" {class_id} - {name} {int(y_proba*100)}%")
+    print()
+```
+:::
+::: {.column width="20%"}
+
+<img src="patrick-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="umbrella-0.jpg" data-lazy-loaded="" style="padding: 0px; margin: 0px">
+<img src="hand-15.jpg" data-lazy-loaded="" style="padding: 0px; margin=0px">
+
+:::
+::: {.column width="15%"}
+:::
+:::
+
+## Transfer learning
+
+```python
+# Pull in the base model we are transferring from.
+base_model = keras.applications.Xception(
+    weights='imagenet',  # Load weights pre-trained on ImageNet.
+    input_shape=(150, 150, 3),
+    include_top=False)  # Discard the ImageNet classifier at the top.
+
+# Tell it not to update its weights.
+base_model.trainable = False
+
+# Make our new model on top of the base model.
+inputs = keras.Input(shape=(150, 150, 3))
+x = base_model(inputs, training=False)
+x = keras.layers.GlobalAveragePooling2D()(x)
+outputs = keras.layers.Dense(1)(x)
+model = keras.Model(inputs, outputs)
+
+# Compile and fit on our data.
+model.compile(optimizer=keras.optimizers.Adam(),
+              loss=keras.losses.BinaryCrossentropy(from_logits=True),
+              metrics=[keras.metrics.BinaryAccuracy()])
+model.fit(new_dataset, epochs=20, callbacks=..., validation_data=...)
+```
+
+::: footer
+Source: François Chollet (2020), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
+:::
+
+## Fine-tuning
+
+```python
+# Unfreeze the base model
+base_model.trainable = True
+
+# It's important to recompile your model after you make any changes
+# to the `trainable` attribute of any inner layer, so that your changes
+# are take into account
+model.compile(
+    optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
+    loss=keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=[keras.metrics.BinaryAccuracy()])
+
+# Train end-to-end. Be careful to stop before you overfit!
+model.fit(new_dataset, epochs=10, callbacks=..., validation_data=...)
+```
+
+::: {.callout-caution}
+Keep the learning rate low, otherwise you may accidentally throw away the useful information in the base model.
+:::
+
+::: footer
+Source: François Chollet (2020), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
+:::
+
+## What do the CNN layers learn?
+
+![](distill-feature-visualisation.png)
+
+::: footer
+Source: Distill article, [Feature Visualization](https://distill.pub/2017/feature-visualization/).
+:::
+
+# Natural Language Processing {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+::: footer
+Source: Krohn (2019), _Deep Learning Illustrated_, Chapter 2.
+:::
+
+## What is NLP?
+
+A field of research at the intersection of computer science, linguistics, and artificial intelligence that takes the __naturally spoken or written language__ of humans and __processes it with machines__ to automate or help in certain tasks
+
+## How the computer sees text
+
+Spot the odd one out:
+
+```{python}
+#| echo: false
+print([ord(x) for x in "patrick laub"])
+```
+
+```{python}
+#| echo: false
+print([ord(x) for x in "PATRICK LAUB"])
+```
+```{python}
+#| echo: false
+print([ord(x) for x in "Levi Ackerman"])
+```
+
+::: fragment
+Generated by:
+```{python}
+#| eval: false
+print([ord(x) for x in "patrick laub"])
+print([ord(x) for x in "PATRICK LAUB"])
+print([ord(x) for x in "Levi Ackerman"])
+```
+
+The `ord` built-in turns characters into their ASCII form.
+
+:::{.callout-tip}
+## Question
+
+The largest value for a character is 127, can you guess why?
+:::
+:::
+
+## ASCII
+
+::: columns
+::: {.column width="60%"}
+![American Standard Code for Information Interchange](wiki-ASCII-Table-wide.svg)
+:::
+::: {.column width="40%"}
+![Americans when asked how non-English characters get encoded in ASCII](awkward-look-monkey-puppet.png)
+
+Unicode is the new standard.
+:::
+:::
+
+::: footer
+Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ASCII-Table-wide.svg).
+:::
+
+## Random strings
+
+The built-in `chr` function turns numbers into characters.
+
+```{python}
+rnd.seed(1)
+```
+```{python}
+chars = [chr(rnd.randint(32, 127)) for _ in range(10)]
+chars
+```
+
+```{python}
+" ".join(chars)
+```
+
+```{python}
+"".join([chr(rnd.randint(32, 127)) for _ in range(50)])
+```
+
+```{python}
+"".join([chr(rnd.randint(0, 128)) for _ in range(50)])
+```
+
+## Applications of NLP in Industry
+
+__1) Classifying documents__: Using the language within a body of text to classify it into a particular category, e.g.:
+
+- Grouping emails into high and low urgency
+- Movie reviews into positive and negative sentiment (i.e. _sentiment analysis_)
+- Company news into bullish (positive) and bearish (negative) statements
+
+__2) Machine translation__: Assisting language translators with machine-generated suggestions from a source language (e.g. English) to a target language
+
+## Applications of NLP in Industry
+
+__3) Search engine__ functions, including:
+
+- Autocomplete
+- Predicting what information or website user is seeking
+
+__4) Speech recognition__: Interpreting voice commands to provide information or take action. Used in virtual assistants such as Alexa, Siri, and Cortana
+
+## Deep learning & NLP?
+
+Simple NLP applications such as spell checkers and synonym suggesters __do not require deep learning__ and can be solved with __deterministic, rules-based code__ with a dictionary/thesaurus.
+
+More complex NLP applications such as classifying documents, search engine word prediction, and chatbots are complex enough to be solved using deep learning methods.
+
+## NLP in 1966-1973 #1
+
+>A typical story occurred in early machine translation efforts, which were generously funded by the U.S. National Research Council in an attempt to speed up the translation of Russian scientific papers in the wake of the Sputnik launch in 1957.
+> It was thought initially that simple syntactic transformations, based on the grammars of Russian and English, and word replacement from an electronic dictionary, would suffice to preserve the exact meanings of sentences.
+
+::: footer
+Source: Russell and Norvig (2016), _Artificial Intelligence: A Modern Approach_, Third Edition, p. 21.
+:::
+
+## NLP in 1966-1973 #2
+
+> The fact is that accurate translation requires background knowledge in order to resolve ambiguity and establish the content of the sentence.
+> The famous retranslation of **“the spirit is willing but the flesh is weak”** as **“the vodka is good but the meat is rotten”** illustrates the difficulties encountered.
+> In 1966, a report by an advisory committee found that “there has been no machine translation of general scientific text, and none is in immediate prospect.”
+> All U.S. government funding for academic translation projects was canceled.
+
+::: footer
+Source: Russell and Norvig (2016), _Artificial Intelligence: A Modern Approach_, Third Edition, p. 21.
+:::
+
+## High-level history of deep learning
+
+<br>
+
+<center><img data-src="krohn_f02_03-blur.png"></center>
+<p class="caption">A brief history of deep learning.</p>
+
+::: footer
+Source: Krohn (2019), _Deep Learning Illustrated_, Figure 2-3 (__redacted__).
+::: 
+
+# Car Crash Police Reports {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Downloading the dataset
+
+Look at the (U.S.) National Highway Traffic Safety Administration's (NHTSA) [National Motor Vehicle Crash Causation Survey](https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/812506) (NMVCCS) dataset.
+
+```{python}
+from pathlib import Path
+
+if not Path("NHTSA_NMVCCS_extract.parquet.gzip").exists():
+    print("Downloading dataset")
+    !wget https://github.com/JSchelldorfer/ActuarialDataScience/raw/master/12%20-%20NLP%20Using%20Transformers/NHTSA_NMVCCS_extract.parquet.gzip
+
+df = pd.read_parquet("NHTSA_NMVCCS_extract.parquet.gzip")
+print(f"shape of DataFrame: {df.shape}")
+```
+
+## Features {.smaller}
+
+- `level_0`, `index`, `SCASEID`: all useless row numbers
+- `SUMMARY_EN` and `SUMMARY_GE`: summaries of the accident
+- `NUMTOTV`: total number of vehicles involved in the accident
+- `WEATHER1` to `WEATHER8`: 
+    - `WEATHER1`: cloudy
+    - `WEATHER2`: snow
+    - `WEATHER3`: fog, smog, smoke
+    - `WEATHER4`: rain
+    - `WEATHER5`: sleet, hail (freezing drizzle or rain)
+    - `WEATHER6`: blowing snow
+    - `WEATHER7`: severe crosswinds
+    - `WEATHER8`: other
+- `INJSEVA` and `INJSEVB`: injury severity & (binary) presence of bodily injury
+
+::: footer
+Source: [JSchelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
+:::
+
+## Crash summaries
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 6
+```
+
+```{python}
+df["SUMMARY_EN"]
+```
+
+```{python}
+df["SUMMARY_EN"].map(lambda summary: len(summary)).hist(grid=False);
+```
+
+## A crash summary
+
+```{python}
+df["SUMMARY_EN"].iloc[1]
+```
+
+## Target
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 10
+```
+
+::: columns
+::: column
+Predict number of vehicles in the crash.
+
+```{python}
+df["NUMTOTV"].value_counts()\
+    .sort_index()
+```
+
+```{python}
+np.sum(df["NUMTOTV"] > 3)
+```
+:::
+::: column
+Simplify the target to just:
+
+- 1 vehicle
+- 2 vehicles
+- 3+ vehicles
+
+```{python}
+df["NUM_VEHICLES"] = \
+  df["NUMTOTV"].map(lambda x: \
+    str(x) if x <= 2 else "3+")
+df["NUM_VEHICLES"].value_counts()\
+  .sort_index()
+```
+:::
+:::
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 6
+```
+
+## Convert $y$ to integers & split the data
+
+```{python}
+from sklearn.preprocessing import LabelEncoder
+targetLabels = df["NUM_VEHICLES"]
+target = LabelEncoder().fit_transform(targetLabels)
+target
+```
+
+```{python}
+weatherCols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df[["SUMMARY_EN"] + weatherCols]
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+```{python}
+print([np.mean(y_train == y) for y in [0, 1, 2]])
+```
+
+# Bag Of Words {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Grab the start of a few summaries
+
+```{python}
+firstSummaries = X_train["SUMMARY_EN"].iloc[:3]
+firstSummaries
+```
+
+```{python}
+firstWords = firstSummaries.map(lambda txt: txt.split(" ")[:7])
+firstWords
+```
+
+```{python}
+startOfSummaries = firstWords.map(lambda txt: " ".join(txt))
+startOfSummaries
+```
+
+## Count words in the first summaries
+
+```{python}
+from sklearn.feature_extraction.text import CountVectorizer
+
+vect = CountVectorizer()
+counts = vect.fit_transform(startOfSummaries)
+vocab = vect.get_feature_names_out()
+print(len(vocab), vocab)
+```
+
+```{python}
+counts
+```
+
+```{python}
+counts.todense()
+```
+
+## Encode new sentences to BoW
+
+```{python}
+vect.transform([
+    "first car hit second car in a crash",
+    "ipad os 16 beta released",
+])
+```
+
+```{python}
+vect.transform([
+    "first car hit second car in a crash",
+    "ipad os 16 beta released",
+]).todense()
+```
+
+## Bag of $n$-grams
+
+```{python}
+vect = CountVectorizer(ngram_range=(1, 2))
+counts = vect.fit_transform(startOfSummaries)
+vocab = vect.get_feature_names_out()
+print(len(vocab), vocab)
+```
+
+```{python}
+counts.todense()
+```
+
+See: [Google Books  Ngram Viewer](https://books.google.com/ngrams)
+
+## Count words in all the summaries
+
+```{python}
+vect = CountVectorizer()
+vect.fit(X_train["SUMMARY_EN"])
+vocab = list(vect.get_feature_names_out())
+len(vocab)
+```
+
+```{python}
+vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:]
+```
+
+## Create the $X$ matrices
+
+```{python}
+def vectorise_dataset(X, vect, txtCol="SUMMARY_EN", dataframe=False):
+    X_vects = vect.transform(X[txtCol]).todense()
+    X_other = X.drop(txtCol, axis=1)
+
+    if not dataframe:
+        return np.concatenate([X_vects, X_other], axis=1)
+    else:
+        # Add column names and indices to the combined dataframe.
+        vocab = list(vect.get_feature_names_out())
+        X_vects_df = pd.DataFrame(X_vects, columns=vocab, index=X.index)
+        return pd.concat([X_vects_df, X_other], axis=1)
+```
+
+```{python}
+X_train_ct = vectorise_dataset(X_train, vect)
+X_val_ct = vectorise_dataset(X_val, vect)
+X_test_ct = vectorise_dataset(X_test, vect)
+```
+
+## Check the input matrix
+
+```{python}
+vectorise_dataset(X_train, vect, dataframe=True)
+```
+
+## Make a simple dense model
+
+```{python}
+numFeatures = X_train_ct.shape[1]
+numCats = 3 # 1, 2, 3+ vehicles
+
+def build_model(numFeatures, numCats):
+    tf.random.set_seed(42)
+    
+    model = Sequential([
+        Dense(1_000, input_dim=numFeatures, activation="relu"),
+        Dense(numCats, activation="softmax")
+    ])
+    
+    topk = SparseTopKCategoricalAccuracy(k=2, name="topk")
+    model.compile("adam", "SparseCategoricalCrossentropy",
+        metrics=["accuracy", topk])
+    
+    return model
+```
+
+## Inspect the model
+
+```{python}
+model = build_model(numFeatures, numCats)
+model.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate the model
+
+```{python}
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+%time hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+```
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+
+# Limiting The Vocabulary {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## The `max_features` value
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=10)
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab)
+```
+
+## Remove stop words
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=10, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab)
+```
+
+## Keep 1,000 most frequent words 
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
+```
+
+Create the $X$ matrices:
+
+```{python}
+X_train_ct = vectorise_dataset(X_train, vect)
+X_val_ct = vectorise_dataset(X_val, vect)
+X_test_ct = vectorise_dataset(X_test, vect)
+```
+
+## Check the input matrix
+
+```{python}
+vectorise_dataset(X_train, vect, dataframe=True)
+```
+
+## Make & inspect the model
+
+```{python}
+numFeatures = X_train_ct.shape[1]
+model = build_model(numFeatures, numCats)
+model.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate the model
+
+```{python}
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+%time hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+```
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+
+# Intelligently Limit The Vocabulary {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Keep 1,000 most frequent words 
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
+```
+
+## Install spacy
+
+```{python}
+!conda install spacy > /dev/null
+!python -m spacy download en_core_web_sm > /dev/null
+```
+
+```{python}
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+doc = nlp("Apple is looking at buying U.K. startup for $1 billion")
+for token in doc:
+    print(token.text, token.pos_, token.dep_)
+```
+
+## Lemmatize the text 
+
+```{python}
+def lemmatize(txt):
+    doc = nlp(txt)
+    goodTokens = [token.lemma_.lower() for token in doc \
+        if not token.like_num and \
+           not token.is_punct and \
+           not token.is_space and \
+           not token.is_currency and \
+           not token.is_stop]
+    return " ".join(goodTokens)
+```
+
+```{python}
+testStr = "Incident at 100kph and '10 incidents -13.3%' are incidental?\t $5"
+lemmatize(testStr)
+```
+
+```{python}
+testStr = "I interviewed 5-years ago, 150 interviews every year at 10:30 are.."
+lemmatize(testStr)
+```
+
+## Apply to the whole dataset
+
+```{python}
+#| eval: false
+df["SUMMARY_EN_LEMMA"] = df["SUMMARY_EN"].map(lemmatize)
+```
+
+```{python}
+#| include: false
+if Path("lemmas.csv").exists():
+    lemmas = pandas.read_csv("lemmas.csv")
+    lemmas.index = df.index
+    df["SUMMARY_EN_LEMMA"] = lemmas["SUMMARY_EN_LEMMA"]
+else:
+    print("Generating lemmas")
+    df["SUMMARY_EN_LEMMA"] = df["SUMMARY_EN"].map(lemmatize)
+    df["SUMMARY_EN_LEMMA"].to_csv("lemmas.csv")
+```
+
+```{python}
+weatherCols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df[["SUMMARY_EN_LEMMA"] + weatherCols]
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## Keep 1,000 most frequent lemmas
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN_LEMMA"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
+```
+
+Create the $X$ matrices:
+
+```{python}
+X_train_ct = vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA")
+X_val_ct = vectorise_dataset(X_val, vect, "SUMMARY_EN_LEMMA")
+X_test_ct = vectorise_dataset(X_test, vect, "SUMMARY_EN_LEMMA")
+```
+
+## Check the input matrix
+
+```{python}
+vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", dataframe=True)
+```
+
+## Make & inspect the model
+
+```{python}
+numFeatures = X_train_ct.shape[1]
+model = build_model(numFeatures, numCats)
+model.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate the model
+
+```{python}
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+%time hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+```
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+
+# Interrogate The Model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Permutation importance algorithm {.smaller}
+
+Taken directly from scikit-learn documentation: 
+
+- Inputs: fitted predictive model $m$, tabular dataset (training or
+  validation) $D$.
+- Compute the reference score $s$ of the model $m$ on data
+  $D$ (for instance the accuracy for a classifier or the $R^2$ for
+  a regressor).
+- For each feature $j$ (column of $D$):
+
+  - For each repetition $k$ in ${1, \dots, K}$:
+
+    - Randomly shuffle column $j$ of dataset $D$ to generate a
+      corrupted version of the data named $\tilde{D}_{k,j}$.
+    - Compute the score $s_{k,j}$ of model $m$ on corrupted data
+      $\tilde{D}_{k,j}$.
+
+  - Compute importance $i_j$ for feature $f_j$ defined as:
+
+    $$ i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} $$
+
+::: footer
+Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
+:::
+
+## Find important inputs
+
+```{python}
+def permutation_test(model, X, y, numReps=1, seed=42):
+    """
+    Run the permutation test for variable importance.
+    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
+    """
+    rnd.seed(seed)
+    scores = []    
+
+    for j in range(X.shape[1]):
+        originalColumn = np.copy(X[:, j])
+        colScores = []
+
+        for r in range(numReps):
+            rnd.shuffle(X[:,j])
+            colScores.append(model.evaluate(X, y, verbose=0))
+
+        scores.append(np.mean(colScores, axis=0))
+        X[:,j] = originalColumn
+    
+    return np.array(scores)
+```
+
+::: footer
+Note: I updated this function after the lecture to make it more robust.
+:::
+
+## Run the permutation test
+
+<br>
+
+```{python}
+permScores = permutation_test(model, X_val_ct, y_val)[:,1]
+plt.plot(permScores);
+plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
+```
+
+## Find the most significant inputs
+
+<br>
+
+```{python}
+inputCols = \
+    vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", True).columns
+bestInputInds = np.argsort(permScores)[:50]
+bestInputs = list(inputCols[bestInputInds])
+print(bestInputs)
+```
+
+## How about a simple decision tree?
+
+<br>
+
+```{python}
+from sklearn import tree
+clf = tree.DecisionTreeClassifier(random_state=0, max_depth=2)
+clf.fit(X_train_ct[:, bestInputInds], y_train);
+```
+
+```{python}
+print(clf.score(X_train_ct[:, bestInputInds], y_train))
+print(clf.score(X_val_ct[:, bestInputInds], y_val))
+print(clf.score(X_test_ct[:, bestInputInds], y_test))
+```
+
+## Decision tree 
+
+```{python}
+tree.plot_tree(clf);
+```
+
+
+```{python}
+print(np.where(clf.feature_importances_ > 0)[0])
+[bestInputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
+```
+
+
+#  {data-visibility="uncounted"}
+
+<h2>Glossary</h2>
+
+::: columns
+:::: column
+
+- AlexNet
+- bag of words
+- CIFAR-10 / CIFAR-100
+- GoogLeNet & Inception
+- ImageNet
+
+::::
+:::: column
+
+- fine-tuning
+- lemmatization
+- one-hot embedding
+- transfer learning
+- vocabulary
+
+::::
+:::
+
+<script defer>
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["compile", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>

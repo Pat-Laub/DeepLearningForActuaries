@@ -1,0 +1,1837 @@
+---
+title: AI & Python
+subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+author: Dr Patrick Laub
+date: Week 1
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.12
+    width: 1000
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+
+## Lecture Outline
+
+<br>
+
+- Course Overview
+- Artificial Intelligence
+- Python
+- Demo: Chess AI
+
+# Course Overview {background-image="unsw-yellow-shape.png"}
+
+## Course objectives
+
+<br>
+
+Artificial intelligence and _deep learning_ for actuaries.
+
+You will be able to:
+
+- explain common neural network architectures,
+- create deep learning models (in Keras) to solve actuarial data science problems,
+- gain experience with practical computational tools (e.g. Python).
+
+## AI vs ML vs DL
+
+![The Venn diagram of AI, ML, and DL.](AI-vs-ML-vs-Deep-Learning.png)
+
+::: footer
+Source: Edureka (2020), [AI Vs Machine Learning Vs Deep Learning Edureka](https://www.edureka.co/blog/ai-vs-machine-learning-vs-deep-learning).
+:::
+
+## Lecture plans
+
+::: columns
+::: column
+
+1. Artificial Intelligence
+2. Deep Learning with Keras
+3. (**PH**) Mathematics of Deep Learning
+4. Regularisation and Hyperparameter Tuning
+5. **Guest lecture** & Recurrent Neural Networks
+
+:::
+::: column
+
+6. _Away for flexibility week_
+7. Computer Vision
+8. Natural Language Processing
+9. Generative Networks
+10. Deep Reinforcement Learning
+
+In Week 3, attend/watch on Tuesday.
+:::
+:::
+
+## Contact hours
+
+<br>
+
+The lectures are scheduled as 2.5 hours each week.
+This is a 2 hour traditional lecture, and a 0.5 hour tutorial.
+
+<br>
+
+The tutorials will cover practical Python and computational topics which are useful for deep learning.
+
+<br>
+
+Office hours can be arranged if needed.
+
+## Assessment & StoryWall
+
+1. StoryWall (30%)
+2. Project (40%)
+3. Exam (30%)
+
+StoryWall #0 is a introduction due on June 3 worth 2%.
+
+StoryWall #1 to #9 are 4% each, with the best 7 of 9 being counted.
+Each is pass/fail.
+
+Questions released on a Monday and *normally* due the following Monday.
+
+## A complete deep learning project
+
+Individual project over the term.
+You will:
+
+- specify a *supervised learning* problem,
+- collect and clean the data,
+- perform an exploratory data analysis (EDA),
+- create a simple (non-deep learning) benchmark model,
+- fit two different deep learning architectures,
+- perform hyperparameter tuning,
+- write a discussion of the results.
+
+## The template {auto-animate=true}
+
+Richman & Wüthrich (2019), [Lee and Carter go Machine Learning: Recurrent Neural Networks](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3441030), SSRN
+
+Problem: predict Swiss mortality rates.
+
+::: columns
+::: column
+
+Data collection: Human mortality database.
+
+Benchmark: Lee-Carter model.
+
+DL models: RNNs (LSTM & GRU).
+
+:::
+::: column
+
+![](lee-carter-go-ml-raw-mortality.png)
+
+:::
+:::
+
+## Modify the template {auto-animate=true}
+
+Richman & Wüthrich (2019), [Lee and Carter go Machine Learning: Recurrent Neural Networks](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3441030), SSRN
+
+Problem: predict ~~Swiss~~ _another country's_ mortality rates.
+
+::: columns
+::: column
+
+Data collection: Human mortality database.
+
+Benchmark: Lee-Carter model.
+
+DL models: ~~RNNs (LSTM & GRU)~~ _FC & RNN_, or _FC & CNN_ etc.
+
+:::
+::: column
+
+![](lee-carter-go-ml-raw-mortality.png)
+
+:::
+:::
+
+## Project deliverables
+
+<br>
+
+The deliverables for the project will include:
+
+1. draft due at noon on July 1 (10%),
+2. recorded presentation due at noon on July 22 (15%),
+3. final report due at noon on August 1 (15%).
+
+
+## Exam
+
+The exam will test the concepts presented in the lectures.
+For example, you will be expected to:
+
+- provide definitions for various deep learning terminology,
+- suggest neural network designs to solve risk and actuarial problems,
+- give advice to mock deep learning engineers whose projects have hit common roadblocks,
+- find/explain common bugs in deep learning Python code.
+
+## Copying code...
+
+::: columns
+::: {.column width="70%"}
+
+If you copy, tag it:
+```python
+# Suppress endless warnings from Keras.
+# Source: https://stackoverflow.com/a/38645250
+import tensorflow as tf
+tf.get_logger().setLevel('INFO')
+```
+
+Even if you then edit it a little:
+```python
+# Create a basic Convolutional Network.
+# Adapted from: https://www.tensorflow.org/tutorials/images/cnn
+model = models.Sequential()
+model.add(layers.Conv2D(32, (3, 3),
+    activation='relu', input_shape=(32, 32, 3)))
+model.add(layers.MaxPooling2D((2, 2)))
+model.add(layers.Flatten())
+model.add(layers.Dense(64, activation='relu'))
+model.add(layers.Dense(10))
+```
+:::
+::: {.column width="30%"}
+![Recommended reading.](copying-pasting-stack-overflow.png)
+:::
+:::
+
+::: footer
+Source: Anonymous (2016), [Essential Copying and Pasting from Stack Overflow](https://github.com/dmnhut/read/raw/master/essential-copying-and-pasting-from-stack-overflow.pdf).
+:::
+
+## Moodle & Ed Forum
+
+Three Moodle pages (ACTL3143, ACTL5111, and combined).
+
+This will store links to:
+
+- lecture recordings,
+- assessment,
+- the Leganto readings,
+- Ed/EdStem forums.
+
+Please ask questions on the Ed forum.
+
+If it is something confidential, then email me.
+
+# Artificial Intelligence {background-image="unsw-yellow-shape.png"}
+
+## Different goals of AI {.smaller}
+
+Artificial intelligence describes an agent which is capable of:
+
+----------------     -----------------------
+Thinking humanly     Thinking rationally
+Acting humanly       Acting rationally 
+----------------     -----------------------
+
+::: columns
+::: {.column width="33%"}
+
+![Turing test (Imitation Game).](Turing_test_diagram.png)
+
+:::
+
+::: {.column width="33%"}
+
+<br><br>
+
+>Socrates is a human
+>
+>All humans are mortal
+>
+>$\therefore$ Socrates is mortal.
+:::
+
+::: {.column width="33%"}
+
+![A step-by-step answer from Wolfram Alpha.](wolfram-alpha-step-by-step.png)
+
+:::
+:::
+
+::: footer
+Sources: Russell and Norvig (2002), _Artificial Intelligence: A Modern Approach_, Chapter 1, and [Wikipedia](https://en.wikipedia.org/wiki/Turing_test#/media/File:Turing_test_diagram.png), and [Wolfram Alpha](https://www.wolframalpha.com/input?i=derivative+of+x%5E4+%2B+9x%5E3+%2B+7x+-+2).
+:::
+
+## AI is a combination of ...
+
+- philosophy,
+- mathematics,
+- economics,
+- neuroscience and psychology,
+- computer science,
+- computer engineering,
+- control theory and cybernetics,
+- linguistics,
+- ...
+
+## Early enthusiasm
+
+<br>
+
+> The early years of AI [1952-1969] were full of successes—in a limited way.
+> Given the primitive computers and programming tools of the time and the fact that only a few years earlier computers were seen as things that could do arithmetic and no more, **it was astonishing whenever a computer did anything remotely clever**.
+
+<br>
+
+::: footer
+Source: Russell and Norvig (2002), _Artificial Intelligence: A Modern Approach_, p. 18.
+:::
+
+
+## Samuel's checkers program
+
+> Starting in 1952, Arthur Samuel wrote a series of programs for checkers (draughts) that eventually learned to play at a strong amateur level.
+> Along the way, he disproved the idea that computers can do only what they are told to: **his program quickly learned to play a better game than its creator**.
+> The program was demonstrated on television in February 1956, creating a strong impression.
+
+::: footer
+Source: Russell and Norvig (2002), _Artificial Intelligence: A Modern Approach_, pp. 18-19.
+:::
+
+## The minimax algorithm
+
+![Illustration of minimax on a game of Chess.](sebastian-lague-minimax.png)
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+## Deep Blue (1997)
+
+::: columns
+::: {.column width="68%"}
+![Gary Kasparov playing Deep Blue.](deep-blue.jpeg)
+:::
+::: {.column width="28%"}
+![Cartoon of the match.](deep-blue-cartoon.l2005-6.telegraph1131746-matt-pritchett.jpeg)
+:::
+:::
+
+::: footer
+Sources: Mark Robert Anderson (2017), [Twenty years on from Deep Blue vs Kasparov](https://theconversation.com/twenty-years-on-from-deep-blue-vs-kasparov-how-a-chess-match-started-the-big-data-revolution-76882), The Conversation article, and [Computer History Museum](https://www.computerhistory.org/chess/stl-431e1a079ea63/).
+:::
+
+## False optimism
+
+> It is not my aim to surprise or shock you—but the simplest way I can summarize is to say that there are now in the world machines that think, that learn and that create.
+> Moreover, their ability to do these things is going to increase rapidly until—in a visible future—the range of problems they can handle will be **coextensive with the range to which the human mind has been applied**.
+
+::: fragment
+Herbert Simon (1957)
+:::
+
+::: footer
+Source: Russell and Norvig (2002), _Artificial Intelligence: A Modern Approach_, Chapter 1.
+:::
+
+## False optimism
+
+::: columns
+::: {.column width="65%"}
+
+Claimed that in 10 years AI would:
+
+- beat a chess grandmaster (took 40),
+- prove a significant mathematical theorem (took 19).
+
+![Map of USA in four colours.](Map_of_United_States_accessible_colors_shown.svg){width="40%"}
+
+:::
+::: {.column width="30%"}
+![xkcd #1425: Tasks.](xkcd-tasks_2x.png)
+:::
+:::
+
+::: footer
+Sources: Wikipedia page for the [Four colour theorem](https://en.wikipedia.org/wiki/File:Map_of_United_States_accessible_colors_shown.svg), and Randall Munroe (2014), [xkcd #1425: Tasks](https://xkcd.com/1425/).
+:::
+
+## AlphaGo (2016)
+
+::: columns
+::: {.column width="68%"}
+![Lee Sedol plays AlphaGo.](New-Yorker-House-Alpha-Go-2.jpeg)
+:::
+::: {.column width="28%"}
+
+<br>
+
+Deep Blue was a win for AI.
+
+<br>
+
+AlphaGo was a win for ML/DL.
+:::
+:::
+
+::: footer
+Source: Patrick House (2016), [AlphaGo, Lee Sedol, and the Reassuring Future of Humans and Machines](https://www.newyorker.com/tech/annals-of-technology/alphago-lee-sedol-and-the-reassuring-future-of-humans-and-machines), New Yorker article.
+:::
+
+# Data Science & Python {background-image="unsw-yellow-shape.png"}
+
+## About Python
+
+::: columns
+::: {.column width="40%"}
+![Free book [Automate the Boring Stuff with Python](https://automatetheboringstuff.com/)](automate-the-boring-stuff-with-python.jpeg)
+:::
+
+::: {.column width="60%"}
+It is _general purpose_ language
+
+Python powers:
+
+- Instagram
+- Spotify
+- Netflix
+- Uber
+- Reddit...
+
+Python is on Mars.
+
+:::
+:::
+
+::: footer
+Sources: [Blog post](https://learn.onemonth.com/10-famous-websites-built-using-python/) and [Github](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/personalizing-your-profile#list-of-qualifying-repositories-for-mars-2020-helicopter-contributor-badge).
+:::
+
+
+## Stack Overflow [2021 Dev. Survey](https://insights.stackoverflow.com/survey/2021)
+
+::: columns
+::: {.column width="55%"}
+
+- Python is [3rd most popular language](https://insights.stackoverflow.com/survey/2021#section-most-popular-technologies-programming-scripting-and-markup-languages)
+- Python is the [most wanted language](https://insights.stackoverflow.com/survey/2021#section-most-loved-dreaded-and-wanted-programming-scripting-and-markup-languages)
+- In 'Other frameworks and libraries', they note that ["several data science libraries for Python make strong showings"](https://insights.stackoverflow.com/survey/2021#section-most-popular-technologies-other-frameworks-and-libraries
+).
+
+:::
+::: {.column width="38%"}
+
+![Popular languages.](so-popular-languages-all.png)
+
+:::
+:::
+
+## Github's [2021 State of the Octoverse](https://octoverse.github.com/#top-languages-over-the-years)
+
+![Top languages over the years](github-programming-languages.svg)
+
+
+::: footer
+Source: Kaggle (2021), [State of Machine Learning and Data Science](https://www.kaggle.com/kaggle-survey-2021).
+:::
+
+```{python}
+#| echo: false
+#| eval: false
+from IPython.display import display, HTML
+
+html = '<div class="r-stack">'
+
+html += f'<img src="kaggle/kaggle-0.png" width="1000px">'
+
+for i in range(1, 18):
+    if i in [1, 2, 6, 13, 14, 15, 16]:
+        continue
+    html += f'<img src="kaggle/kaggle-{i}.png" class="fragment" width="1000px">'
+
+html += "</div>"
+
+display(HTML(html))
+``` 
+
+## Python and machine learning
+
+> ...[T]he entire machine learning and data science industry has been dominated by these two approaches: **deep learning** and **gradient boosted trees**...
+> Users of gradient boosted trees tend to use Scikit-learn, XGBoost, or LightGBM. Meanwhile, most practitioners of deep learning use Keras, often in combination with its parent framework TensorFlow.
+The common point of these tools is **they're all Python libraries**: Python is by far the most widely used language for machine learning and data science.
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python, Second Edition_, Section 1.2.7.
+:::
+
+## Python for data science
+
+::: columns
+::: {.column width="50%"}
+In R you can run:
+```r
+pchisq(3, 10)
+```
+:::
+::: {.column width="50%"}
+In Python it is
+```python
+from scipy import stats
+stats.chi2(10).cdf(3)
+```
+:::
+:::
+
+![In Leganto](python-data-analysis.jpeg)
+
+## Google Colaboratory
+
+![An example notebook in Google Colaboratory.](google-colab.png)
+
+[http://colab.research.google.com](http://colab.research.google.com)
+
+# Python Data Types {background-image="unsw-yellow-shape.png"}
+
+## Variables and basic types
+
+<br>
+
+::: columns
+::: {.column width="50%"}
+```{python}
+1+2
+```
+
+```{python}
+x = 1
+x+2.0
+```
+
+```{python}
+type(2.0)
+```
+
+```{python}
+type(1), type(x)
+```
+
+:::
+::: {.column width="50%"}
+
+```{python}
+doesMathWork = 1 + 1 == 2
+print(doesMathWork)
+type(doesMathWork)
+```
+
+```{python}
+contradiction = (1 != 1)
+contradiction
+```
+
+:::
+:::
+
+## Shorthand assignments
+
+If we want to add 2 to a variable `x`:
+
+::: columns
+::: {.column width="50%"}
+```{python}
+x = 1
+x = x + 2
+x
+```
+:::
+
+::: {.column width="50%"}
+```{python}
+x = 1
+x += 2
+x
+```
+:::
+:::
+
+Same for:
+
+- `x -= 2` : take 2 from the current value of `x` ,
+- `x *= 2` : double the current value of `x`,
+- `x /= 2` : halve the current value of `x`.
+
+## Strings
+
+```{python}
+name = "Patrick"
+surname = 'Laub'
+```
+
+```{python}
+coffee = "This is Patrick's coffee"
+quote = 'And then he said "I need a coffee!"'
+```
+
+```{python}
+name + surname
+```
+
+```{python}
+greeting = f"Hello {name} {surname}"
+greeting
+```
+
+```{python}
+"Patrick" in greeting
+```
+
+## `and` & `or`
+
+```{python}
+name = "Patrick"
+surname = "Laub"
+name.istitle() and surname.istitle()
+```
+
+```{python}
+fullName = "Dr Patrick Laub"
+fullName.startswith("Dr ") or fullName.endswith(" PhD")
+```
+
+::: {.callout-important}
+The dot is used denote methods, it can't be used inside a variable name.
+```{python}
+#| error: true
+i.am.an.unfortunate.R.users = True
+```
+:::
+
+## `help` to get more details
+
+```{python}
+help(name.istitle)
+```
+
+## f-strings
+
+```{python}
+print(f"Five squared is {5*5} and five cubed is {5**3}")
+print("Five squared is {5*5} and five cubed is {5**3}")
+```
+
+::: {.callout-aside}
+Use f-strings and avoid the older alternatives:
+```{python}
+print(f"Hello {name} {surname}")
+print("Hello " + name + " " + surname)
+print("Hello {} {}".format(name, surname))
+print("Hello %s %s" % (name, surname))
+```
+:::
+
+## Converting types
+
+```{python}
+digit = 3
+digit
+```
+
+```{python}
+type(digit)
+```
+
+```{python}
+num = float(digit)
+num
+```
+
+```{python}
+type(num)
+```
+
+```{python}
+numStr = str(num)
+numStr
+```
+
+## Quiz
+
+What is the output of:
+
+```{python}
+#| eval: false
+x = 1
+y = 1.0
+print(f"{x == y} and {type(x) == type(y)}")
+```
+
+::: fragment
+```{python}
+#| echo: false
+x = 1
+y = 1.0
+print(f"{x == y} and {type(x) == type(y)}")
+```
+:::
+
+::: fragment
+What would you add before line 3 to get "True and True"?
+:::
+
+::: fragment
+```{python}
+x = 1
+y = 1.0
+x = float(x) # or y = int(y)
+print(f"{x == y} and {type(x) == type(y)}")
+```
+:::
+
+# Collections {background-image="unsw-yellow-shape.png"}
+
+## Lists
+
+```{python}
+desires = ["Coffee", "Cake", "Sleep"]
+desires
+```
+
+```{python}
+len(desires)
+```
+
+```{python}
+desires[0]
+```
+
+```{python}
+desires[-1]
+```
+
+```{python}
+desires[2] = "Nap"
+desires
+```
+
+## Slicing lists
+
+```{python}
+print([0,1,2])
+desires
+```
+
+```{python}
+desires[0:2]
+```
+
+```{python}
+desires[0:1]
+```
+
+```{python}
+desires[:2]
+```
+
+## A common indexing  error
+
+```{python}
+#| error: true
+desires[1.0]
+```
+
+```{python}
+#| error: true
+desires[:len(desires)/2]
+```
+
+```{python}
+len(desires)/2, len(desires)//2
+```
+
+```{python}
+desires[:len(desires)//2]
+```
+
+## Editing lists
+
+```{python}
+desires = ["Coffee", "Cake", "Sleep"]
+desires.append("Gadget")
+desires
+```
+
+```{python}
+desires.pop()
+```
+
+```{python}
+desires
+```
+
+```{python}
+desires.sort()
+desires
+```
+
+```{python}
+#| error: true
+desires[3] = "Croissant" # From a question in the ACTL5111 lecture
+```
+
+## `None`
+
+```{python}
+desires = ["Coffee", "Cake", "Sleep", "Gadget"]
+sortedList = desires.sort()
+sortedList
+```
+
+```{python}
+type(sortedList)
+```
+
+```{python}
+sortedList is None
+```
+
+```{python}
+bool(sortedList)
+```
+
+```{python}
+desires = ["Coffee", "Cake", "Sleep", "Gadget"]
+sortedList = sorted(desires)
+print(desires)
+sortedList
+```
+
+## Tuples ('immutable' lists)
+
+```{python}
+weather = ("Sunny", "Cloudy", "Rainy")
+print(type(weather))
+print(len(weather))
+weather[-1]
+```
+
+```{python}
+#| error: true
+weather.append("Snowy")
+```
+
+```{python}
+#| error: true
+weather[2] = "Snowy"
+```
+
+## Dictionaries
+
+```{python}
+phoneBook = {"Patrick": "+61412 456 789",
+             "Coffee shop": "(02) 1234 4321"}
+phoneBook["Patrick"]
+```
+
+```{python}
+phoneBook["Coffee shop"] = "+61400 000 000"
+phoneBook
+```
+
+```{python}
+phoneBook.keys()
+```
+
+```{python}
+phoneBook.values()
+```
+
+```{python}
+factorial = {0:1, 1:1, 2:2, 3:6, 4:24, 5:120, 6:720, 7:5040}
+factorial[4]
+```
+
+## Quiz
+
+```{python}
+#| eval: false
+animals = ["dog", "cat", "bird"]
+animals.append("teddy bear")
+animals.pop()
+animals.pop()
+animals.append("koala")
+animals.append("kangaroo")
+print(f"{len(animals)} and {len(animals[-2])}")
+```
+
+::: fragment
+```{python}
+#| echo: false
+animals = ["dog", "cat", "bird"]
+animals.append("teddy bear")
+animals.pop()
+animals.pop()
+animals.append("koala")
+animals.append("kangaroo")
+print(f"{len(animals)} and {len(animals[-2])}")
+```
+:::
+
+# Control Flow {background-image="unsw-yellow-shape.png"}
+
+## `if` and `else`
+
+```{python}
+age = 50
+```
+
+```{python}
+if age >= 30:
+    print("Gosh you're old")
+```
+
+```{python}
+if age >= 30:
+    print("Gosh you're old")
+else:
+    print("You're still young")
+```
+
+## The weird part about Python...
+
+```{python}
+#| error: true
+if age >= 30:
+    print("Gosh you're old")
+else:
+print("You're still young")
+```
+
+::: {.callout-warning}
+Watch out for mixing tabs and spaces!
+:::
+
+## An example of aging
+
+```{python}
+age = 16
+
+if age < 18:
+    fridayEveningSchedule = "School things"
+if age < 30:
+    fridayEveningSchedule = "Party 🥳🍾"
+if age >= 30:
+    fridayEveningSchedule = "Work"
+```
+
+::: fragment
+```{python}
+print(fridayEveningSchedule)
+```
+:::
+
+## Using `elif` {auto-animate=true}
+
+```{python}
+age = 16
+
+if age < 18:
+    fridayEveningSchedule = "School things"
+elif age < 30:
+    fridayEveningSchedule = "Party 🥳🍾"
+else:
+    fridayEveningSchedule = "Work"
+
+print(fridayEveningSchedule)
+```
+
+## `for` Loops
+
+```{python}
+desires = ["coffee", "cake", "sleep"]
+for desire in desires:
+    print(f"Patrick really wants a {desire}.")
+```
+
+::: columns
+::: {.column width="50%"}
+```{python}
+for i in range(3):
+    print(i)
+```
+
+```{python}
+for i in range(3, 6):
+    print(i)
+```
+
+:::
+::: {.column width="50%"}
+
+```{python}
+range(5)
+```
+
+```{python}
+type(range(5))
+```
+
+```{python}
+list(range(5))
+```
+
+:::
+:::
+
+## Advanced `for` loops
+
+```{python}
+for i, desire in enumerate(desires):
+    print(f"Patrick wants a {desire}, it is priority #{i+1}.")
+```
+
+```{python}
+desires = ["coffee", "cake", "nap"]
+times = ["in the morning", "at lunch", "during a boring lecture"]
+
+for desire, time in zip(desires, times):
+    print(f"Patrick enjoys a {desire} {time}.")
+```
+
+
+## While Loops
+
+```{python}
+#| echo: false
+import numpy.random as rnd
+rnd.seed(1234)
+simulate_pareto = lambda: rnd.pareto(1)
+```
+
+Say that we want to simulate $(X \,\mid\, X \ge 100)$ where $X \sim \mathrm{Pareto}(1)$.
+Assuming we have `simulate_pareto`,
+a function to generate $\mathrm{Pareto}(1)$ variables:
+```{python}
+samples = []
+while len(samples) < 5:
+    x = simulate_pareto()
+    if x >= 100:
+        samples.append(x)
+
+samples
+```
+
+## Breaking out of a loop
+
+```{python}
+#| eval: false
+while True:
+    userInput = input(">> What would you like to do? ")
+
+    if userInput == "order cake":
+        print("Here's your cake! 🎂")
+
+    elif userInput == "order coffee":
+        print("Here's your coffee! ☕️")
+
+    elif userInput == "quit":
+        break
+```
+
+```{python}
+#| include: false
+%%writefile user-input-loop.py
+while True:
+    userInput = input(">> What would you like to do? ")
+    print(userInput)
+    if userInput == "order cake":
+        print("Here's your cake! 🎂")
+
+    elif userInput == "order coffee":
+        print("Here's your coffee! ☕️")
+
+    elif userInput == "quit":
+        break
+```
+
+```{python}
+#| include: false
+%%writefile user-input.txt
+order cake
+order coffee
+order cake
+quit
+```
+
+```{python}
+#| echo: false
+!python user-input-loop.py < user-input.txt
+```
+
+## Quiz
+
+What does this print out?
+
+```{python}
+#| eval: false
+if 1/3 + 1/3 + 1/3 == 1:
+    if 2**3 == 6:
+        print("Math really works!")
+    else:
+        print("Math sometimes works..")
+else:
+    print("Math doesn't work")
+```
+
+::: fragment
+```{python}
+#| echo: false
+if 1/3 + 1/3 + 1/3 == 1:
+    if 2**3 == 6:
+        print("Math really works!")
+    else:
+        print("Math sometimes works..")
+else:
+    print("Math doesn't work")
+```
+:::
+
+What does this print out?
+
+```{python}
+#| eval: false
+count = 0
+for i in range(1, 10):
+    count += i
+    if i > 3:
+        break
+print(count)
+```
+
+::: fragment
+```{python}
+#| echo: false
+count = 0
+for i in range(1, 10):
+    count += i
+    if i > 3:
+        break
+print(count)
+```
+:::
+
+## Debugging the quiz code
+
+```{python}
+count = 0
+for i in range(1, 10):
+    count += i
+    print(f"After i={i} count={count}")
+    if i > 3:
+        break
+```
+
+# Python Functions {background-image="unsw-yellow-shape.png"}
+
+## Making a function
+
+```{python}
+def addOne(x):
+    return x + 1
+
+addOne(10)
+```
+
+```{python}
+def greet_a_student(name):
+    print(f"Hi {name}, welcome to the AI class!")
+
+greet_a_student("Josephine")
+```
+
+```{python}
+greet_a_student("Joseph")
+```
+
+::: {.callout-aside}
+Here, `name` is a _parameter_ and the value supplied is an _argument_.
+:::
+
+## Default arguments
+
+```{python}
+#| echo: false
+import numpy.random as rnd
+rnd.seed(1234)
+simulate_standard_normal = rnd.normal
+```
+
+Assuming we have `simulate_standard_normal`,
+a function to generate $\mathrm{Normal}(0, 1)$ variables:
+```{python}
+def simulate_normal(mean=0, std=1):
+    return mean + std * simulate_standard_normal()
+```
+
+```{python}
+simulate_normal() # same as 'simulate_normal(0, 1)'
+```
+
+```{python}
+simulate_normal(1_000) # same as 'simulate_normal(1_000, 1)'
+```
+
+::: {.callout-note}
+We'll cover random numbers next week (using `numpy`).
+:::
+
+## Use explicit parameter name
+
+```{python}
+simulate_normal(mean=1_000)  # same as 'simulate_normal(1_000, 1)'
+```
+
+```{python}
+simulate_normal(std=1_000)  # same as 'simulate_normal(0, 1_000)'
+```
+
+```{python}
+simulate_normal(10, std=0.001)  # same as 'simulate_normal(10, 0.001)'
+```
+
+```{python}
+#| error: true
+simulate_normal(std=10, 1_000)
+```
+
+## Why would we need that?
+
+E.g. to fit a Keras model, we use the `.fit` method:
+
+```{python}
+#| eval: false
+model.fit(x=None, y=None, batch_size=None, epochs=1, verbose='auto',
+        callbacks=None, validation_split=0.0, validation_data=None,
+        shuffle=True, class_weight=None, sample_weight=None,
+        initial_epoch=0, steps_per_epoch=None, validation_steps=None,
+        validation_batch_size=None, validation_freq=1,
+        max_queue_size=10, workers=1, use_multiprocessing=False)
+```
+
+Say we want all the defaults except changing `use_multiprocessing=True`:
+
+```{python}
+#| eval: false
+model.fit(None, None, None, 1, 'auto', None, 0.0, None, True, None,
+        None, 0, None, None, None, 1, 10, 1, True)
+```
+
+but it is _much nicer_ to just have:
+```{python}
+#| eval: false
+model.fit(use_multiprocessing=True)
+```
+
+## Quiz
+
+What does the following print out?
+
+```{python}
+#| eval: false
+def get_half_of_list(numbers, first=True):
+    if first:
+        return numbers[:len(numbers)//2]
+    else:
+        return numbers[len(numbers)//2:]
+
+numbers = [1, 2, 3, 4, 5, 6]
+firstHalf = get_half_of_list(numbers, False)
+secondHalf = get_half_of_list(firstHalf)
+print(secondHalf)
+```
+
+::: fragment
+```{python}
+#| echo: false
+def get_half_of_list(numbers, first=True):
+    if first:
+        return numbers[:len(numbers)//2]
+    else:
+        return numbers[len(numbers)//2:]
+
+numbers = [1, 2, 3, 4, 5, 6]
+firstHalf = get_half_of_list(numbers, False)
+secondHalf = get_half_of_list(firstHalf)
+print(secondHalf)
+```
+:::
+
+::: fragment
+```{python}
+print(f"'numbers' gets broken into {numbers[:len(numbers)//2]} and {numbers[len(numbers)//2:]}")
+print(f"'firstHalf' gets broken into {firstHalf[:len(firstHalf)//2]} and {firstHalf[len(firstHalf)//2:]}")
+```
+:::
+
+
+# Chess AI {background-image="unsw-yellow-shape.png"}
+
+## Install a package for chess
+
+```{python}
+#| include: false
+!pip install chess
+```
+
+```{python}
+#| eval: false
+!pip install chess
+```
+
+```{python}
+import chess
+board = chess.Board()
+board
+```
+
+## The names of the squares
+
+![Algebraic notation.](wiki-SCD_algebraic_notation.svg)
+
+::: footer
+Source: [Wikipedia](https://upload.wikimedia.org/wikipedia/commons/b/b6/SCD_algebraic_notation.svg).
+:::
+
+## What moves are available?
+
+```{python}
+list(board.legal_moves)[:6]
+```
+
+```{python}
+[board.san(move) for move in board.legal_moves][:6]
+```
+
+## Make moves
+
+::: columns
+::: column
+```{python}
+move = chess.Move.from_uci("e2e4")
+board.push(move)
+board
+```
+
+:::
+::: column
+```{python}
+move = chess.Move.from_uci("e7e5")
+board.push(move)
+board
+```
+:::
+:::
+
+## Take back moves
+
+::: columns
+::: column
+```{python}
+board.pop()
+board
+```
+
+:::
+::: column
+```{python}
+board.pop()
+board
+```
+:::
+:::
+
+
+## What first moves are available? {auto-animate=true}
+
+::: columns
+::: column
+
+```{python}
+#| eval: false
+from IPython.display \
+  import clear_output, display
+import time
+
+board = chess.Board()
+
+for move in board.legal_moves:
+    board.push(move)
+
+    display(board)
+    time.sleep(0.5)
+    clear_output(wait=True)
+    
+    board.pop()
+```
+:::
+::: column
+```{python}
+#| echo: false
+!mkdir -p chess-first-move
+from IPython.display import display, HTML
+
+html = '<div class="r-stack" data-id="board">'
+board = chess.Board()
+
+# Draw the board before any moves
+b = board._repr_svg_()
+with open(f"chess-first-move/move-0.svg", "w") as f:
+    f.write(b)
+html += f'<img src="chess-first-move/move-0.svg" width="500">'
+
+for i, move in enumerate(board.legal_moves):
+    board.push(move)
+    b = board._repr_svg_()
+    with open(f"chess-first-move/move-{i+1}.svg", "w") as f:
+        f.write(b)
+    board.pop()
+
+    html += f'<img src="chess-first-move/move-{i+1}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+:::
+:::
+
+
+## What if there were no pawns? {auto-animate=true}
+
+::: columns
+::: column
+
+```{python}
+#| eval: false
+board = chess.Board()
+
+# Remove the pawns
+for i in range(8):
+    board.remove_piece_at( \
+      chess.square(i, 1))
+    board.remove_piece_at( \
+      chess.square(i, 6))
+
+for move in board.legal_moves:
+    board.push(move)
+
+    display(board)
+    time.sleep(0.5)
+    clear_output(wait=True)
+    
+    board.pop()
+```
+:::
+::: column
+```{python}
+#| echo: false
+!mkdir -p chess-no-pawn-move
+from IPython.display import display, HTML
+
+html = '<div class="r-stack" data-id="board">'
+board = chess.Board()
+
+for i in range(8):
+    board.remove_piece_at(chess.square(i, 1))
+    board.remove_piece_at(chess.square(i, 6))
+
+# Draw the board before any moves
+b = board._repr_svg_()
+with open(f"chess-no-pawn-move/move-0.svg", "w") as f:
+    f.write(b)
+html += f'<img src="chess-no-pawn-move/move-0.svg" width="500">'
+
+for i, move in enumerate(board.legal_moves):
+    board.push(move)
+    b = board._repr_svg_()
+    with open(f"chess-no-pawn-move/move-{i+1}.svg", "w") as f:
+        f.write(b)
+    board.pop()
+
+    html += f'<img src="chess-no-pawn-move/move-{i+1}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+:::
+:::
+
+## Making random moves
+
+::: columns
+::: column
+
+```{python}
+#| eval: false
+import random
+
+def choose_move(board):
+    options = list(board.legal_moves)
+    return random.choice(options)
+
+random.seed(42)
+board = chess.Board()
+display(board)
+
+for i in range(20):
+    move = choose_move(board)
+    board.push(move)
+
+    clear_output(wait=True)
+    display(board)
+    time.sleep(0.5)    
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+!mkdir -p random-moves
+
+import random
+
+def choose_move(board):
+    options = list(board.legal_moves)
+    return random.choice(options)
+
+random.seed(42)
+from IPython.display import display, HTML
+
+html = '<div class="r-stack" data-id="board">'
+board = chess.Board()
+
+# Draw the board before any moves
+b = board._repr_svg_()
+with open(f"random-moves/move-0.svg", "w") as f:
+    f.write(b)
+html += f'<img src="random-moves/move-0.svg" width="500">'
+
+for i in range(20):
+    move = choose_move(board)
+    board.push(move)
+    b = board._repr_svg_()
+    with open(f"random-moves/move-{i+1}.svg", "w") as f:
+        f.write(b)
+
+    html += f'<img src="random-moves/move-{i+1}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+:::
+:::
+
+## AI would choose rational moves
+
+The rough idea for a rational move selection:
+
+```{python}
+#| eval: false
+def choose_move(board):
+    options = list(board.legal_moves)
+
+    scores = []
+    for move in options:
+        board.push(move)
+        scores.append(minimax(board)) # TODO
+        board.pop()
+    
+    if board.turn == chess.WHITE:
+        bestScore = max(scores)
+    else:
+        bestScore = min(scores)
+    
+    for move, score in zip(options, scores):
+        if score == bestScore:
+            return move
+```
+
+## The minimax algorithm #2
+
+![Illustration of minimax on a game of Chess.](sebastian-lague-minimax.png)
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+## Evaluating a board
+
+::: columns
+::: {.column width="50%"}
+
+::: figure
+```{python}
+#| echo: false
+board = chess.Board("2r3k1/p3bp1p/2Bp1np1/4p3/1r6/B1R5/P1PP1P1P/R5K1 b - - 0 1")
+
+fig = f"""
+<center>
+<figure class="tightCaption">
+{chess.svg.board(board)}
+<figcaption aria-hidden="true">A random game.</figcaption>
+</figure>
+</center>
+"""
+
+HTML(fig)
+```
+:::
+
+:::
+::: {.column width="50%"}
+```{python}
+#| echo: false
+PIECES = ["P", "N", "B", "R", "Q", "K"]
+STANDARD_PIECE_VALUES = {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9, "K": 0}
+
+
+def count_piece(board, piece, white=True):
+    count = 0
+    for square in chess.SQUARES:
+        p = board.piece_at(square)
+        if p and p.symbol() == piece:
+            count += 1
+    return count
+
+table = "<table><tbody>"
+
+total = 0
+vals = []
+
+for piece in PIECES:
+    table += "<tr>"
+
+    svg = chess.svg.piece(chess.Piece.from_symbol(piece), size="50px") 
+    numPiece = count_piece(board, piece)
+    valPiece = STANDARD_PIECE_VALUES[piece]
+    total += numPiece * valPiece
+    if numPiece * valPiece > 0:
+        vals.append(str(numPiece * valPiece))
+    table += f'<td style="text-align: center">{svg}</td>'
+    table += f'<td style="text-align: center">{numPiece} &times {valPiece} = {numPiece * valPiece}</td>'
+    table += "</tr>"
+
+table += f'<td style="text-align: center">White</td>'
+# table += f'<td style="text-align: center">{" + ".join(vals)} = {total}</td>'
+table += f'<td style="text-align: center">{total}</td>'
+table += "</tr>"
+
+table += "</tbody></table>"
+
+HTML(table)
+```
+:::
+:::
+
+
+## Evaluating a board #2
+
+::: columns
+::: {.column width="50%"}
+
+::: figure
+```{python}
+#| echo: false
+board = chess.Board("2r3k1/p3bp1p/2Bp1np1/4p3/1r6/B1R5/P1PP1P1P/R5K1 b - - 0 1")
+
+fig = f"""
+<center>
+<figure class="tightCaption">
+{chess.svg.board(board)}
+<figcaption aria-hidden="true">A random game.</figcaption>
+</figure>
+</center>
+"""
+
+HTML(fig)
+```
+:::
+
+:::
+::: {.column width="50%"}
+```{python}
+#| echo: false
+def count_piece(board, piece, white=True):
+    count = 0
+    for square in chess.SQUARES:
+        p = board.piece_at(square)
+        if p and p.symbol() == piece:
+            count += 1
+    return count
+
+table = "<table><tbody>"
+
+total = 0
+vals = []
+
+for piece in PIECES:
+    table += "<tr>"
+
+    piece = piece.lower()
+    svg = chess.svg.piece(chess.Piece.from_symbol(piece), size="50px") 
+    numPiece = count_piece(board, piece)
+    valPiece = STANDARD_PIECE_VALUES[piece.upper()]
+    total += numPiece * valPiece
+    if numPiece * valPiece > 0:
+        vals.append(str(numPiece * valPiece))
+    table += f'<td style="text-align: center">{svg}</td>'
+    table += f'<td style="text-align: center">{numPiece} &times {valPiece} = {numPiece * valPiece}</td>'
+    table += "</tr>"
+
+table += f'<td style="text-align: center">Black</td>'
+# table += f'<td style="text-align: center">{" + ".join(vals)} = {total}</td>'
+table += f'<td style="text-align: center">{total}</td>'
+table += "</tr>"
+
+table += "</tbody></table>"
+
+HTML(table)
+```
+
+:::
+:::
+
+
+::: fragment
+Overall: 21 &minus; 22 = &minus;1.
+:::
+
+## The static evaluation function
+
+```{python}
+STANDARD_PIECE_VALUES = {"P": 1, "N": 3, "B": 3,
+                         "R": 5, "Q": 9, "K": 0}
+
+def static_evaluation(board):
+    if board.is_game_over():
+        outcome = board.outcome()
+        if outcome.winner == chess.WHITE:
+            return 1_000_000
+        elif outcome.winner == chess.BLACK:
+            return -1_000_000
+        else:
+            return 0
+
+    pointsBalance = 0
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece:
+          pieceValue = STANDARD_PIECE_VALUES[piece.symbol().upper()]
+          if piece.symbol().isupper():
+              pointsBalance += pieceValue
+          else:
+              pointsBalance -= pieceValue
+
+    return pointsBalance
+```
+
+## Minimax pseudocode
+
+![Pseudocode for the minimax algorithm.](sebastian-lague-minimax-pseudocode.png)
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+## StoryWall: alpha-beta pruning
+
+::: columns
+::: column
+
+![Pseudocode for minimax with alpha-beta pruning.](sebastian-lague-minimax-alpha-beta-pruning-pseudocode.png)
+
+:::
+::: column
+
+![Illustration of alpha-beta pruning.](sebastian-lague-tree-shearing.png)
+
+:::
+:::
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+# {data-visibility="uncounted"}
+
+<h2>Glossary</h2>
+
+::: columns
+::: column
+
+- artificial intelligence
+- Deep Blue
+- default arguments
+- dictionaries
+- f-strings
+- function definitions
+- Google Colaboratory
+- `help`
+- list
+
+:::
+::: column
+
+- minimax algorithm
+- `pip install ...`
+- pseudocode
+- `range`
+- slicing
+- tuple
+- `type`
+- whitespace indentation
+- zero-indexing
+
+:::
+:::
+
+<script defer>
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>

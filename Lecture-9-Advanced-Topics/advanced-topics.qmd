@@ -1,0 +1,1960 @@
+---
+title: Advanced Topics & Revision
+subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+author: Dr Patrick Laub
+date: Week 10
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.2
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+```{python}
+#| echo: false
+import matplotlib
+
+def set_square_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (2.0, 2.0)
+
+def set_rectangular_figures():
+  matplotlib.pyplot.rcParams['figure.figsize'] = (5.0, 2.0)
+
+def squareFig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams['figure.dpi'] = 350
+matplotlib.pyplot.rcParams['savefig.bbox'] = "tight"
+matplotlib.pyplot.rcParams['font.family'] = "serif"
+
+matplotlib.pyplot.rcParams['axes.spines.right'] = False
+matplotlib.pyplot.rcParams['axes.spines.top'] = False
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortestSide = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+
+import pandas
+pandas.options.display.max_rows = 6
+
+import numpy
+numpy.set_printoptions(precision=4)
+numpy.random.seed(123)
+
+import tensorflow
+tensorflow.random.set_seed(1)
+tensorflow.config.set_visible_devices([], 'GPU')
+
+tensorflow.get_logger().setLevel('ERROR')
+
+def skip_empty(line):
+  if line.strip() != "":
+    print(line.strip())
+```
+
+# 
+
+<h2>Lecture Outline</h2>
+
+<br>
+
+- Dissecting `model.fit`
+- Object oriented programming & PyTorch
+- Generative adversarial networks
+- Exam preparation
+
+<br><br><br>
+
+## Announcements
+
+- Previous StoryWall was quite successful.
+- Young Data Analytics Working Group podcast opportunity.
+- Project marks will go on Moodle next week.
+- Final Story Wall is due __this Friday at noon__.
+
+## Exam details
+
+- Thursday 18th Aug 2 pm - 4 pm (14:00-16:00)
+- Exam is a Moodle quiz
+- Open book (if you see "No Exam Materials permitted" just ignore it)
+- Link at the top of the Moodle page for the course
+- Exam open for 2 hours, but __you have 1.5 hours__ to complete
+- Complete the IT preparation checklist (MFA, speed test, read policies)
+
+## DALL-E 2 
+
+![DALL-E 2 example: "Teddy bears working on new AI research on the moon in the 1980s"](dall-e-2-teddy-bears-on-moon.jpeg)
+
+::: footer
+Source: OpenAI, [DALL-E 2](https://openai.com/dall-e-2/).
+:::
+
+## DALL-E 2 Beta {.smaller}
+
+_A painting of a penguin in a library studying a textbook while eating sushi and drinking a strawberry milkshake_
+
+::: columns
+::: column
+![](DALL-E/DALL·E 2022-07-28 08.55.22 - A painting of a penguin in a library studying a textbook while eating sushi and drinking a strawberry milkshake .png)
+::: 
+::: column
+![](DALL-E/DALL·E 2022-07-28 08.55.28 - A painting of a penguin in a library studying a textbook while eating sushi and drinking a strawberry milkshake .png)
+::: 
+::: 
+
+## DALL-E 2 Beta II {.smaller}
+
+_A painting of a penguin in a library studying a textbook while eating sushi and drinking a strawberry milkshake_
+
+::: columns
+::: column
+![](DALL-E/DALL·E 2022-07-28 08.55.34 - A painting of a penguin in a library studying a textbook while eating sushi and drinking a strawberry milkshake .png)
+::: 
+::: column
+![](DALL-E/DALL·E 2022-07-28 08.55.40 - A painting of a penguin in a library studying a textbook while eating sushi and drinking a strawberry milkshake .png)
+::: 
+::: 
+
+## Load packages {data-visibility="uncounted"}
+
+<br>
+
+```{python}
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
+%load_ext watermark
+%watermark -p matplotlib,numpy,pandas,tensorflow
+```
+
+## Load MNIST dataset
+
+```{python}
+(X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+
+# Reserve 10,000 samples for validation.
+X_val = X_train[-10000:]
+y_val = y_train[-10000:]
+X_train = X_train[:-10000]
+y_train = y_train[:-10000]
+
+# Prepare the training dataset.
+batch_size = 64
+train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+# train_dataset = train_dataset.shuffle(buffer_size=1024)
+train_dataset = train_dataset.batch(batch_size)
+
+# Prepare the validation dataset.
+val_dataset = tf.data.Dataset.from_tensor_slices((X_val, y_val))
+val_dataset = val_dataset.batch(batch_size)
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## A basic MNIST model
+
+```{python}
+def build_model(seed=42):
+  tf.random.set_seed(seed)
+  return keras.Sequential([
+    layers.Flatten(input_shape=(28, 28)),
+    layers.Dense(128, activation="relu"),
+    layers.Dense(10)
+  ])
+
+firstModel = build_model()
+firstModel.summary(print_fn=skip_empty)
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+# Dissecting `model.fit` {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+<br>
+<center>
+<blockquote class="twitter-tweet" data-theme="light"><p lang="en" dir="ltr">Spoiler: it&#39;s going to be a 20-lines Python script that calls model.fіt()<a href="https://t.co/AqLZSQ0kwD">https://t.co/AqLZSQ0kwD</a></p>&mdash; François Chollet (@fchollet) <a href="https://twitter.com/fchollet/status/1518702623892799488?ref_src=twsrc%5Etfw">April 25, 2022</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</center>
+
+::: footer
+Source: [Twitter](https://twitter.com/fchollet/status/1518702623892799488?s=20&t=RZyyrUzgI5VhGfq730ynBg)
+:::
+
+## Fitting like normal
+
+Specify fitting requirements.
+```{python}
+epochs = 2
+lr = 1e-2
+optimizer = keras.optimizers.SGD(learning_rate=lr)
+loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+```
+
+Create a model & run `model.fit`.
+```{python}
+firstModel = build_model()
+firstModel.compile(optimizer, loss_fn)
+%time firstFit = firstModel.fit(train_dataset, epochs=epochs, \
+        validation_data=val_dataset, verbose=0);
+firstFit.history["loss"]
+```
+
+## Going through the epochs
+
+Create a new model:
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+```
+
+Repeatedly call `model.fit`:
+
+```{python}
+# Go through all the training data multiple times.
+for epoch in range(epochs):
+    model.fit(train_dataset, epochs=1, verbose=0)
+```
+
+::: {.callout-warning}
+Reusing the same optimiser works here because SGD is stateless.
+In contrast, RMSprop & Adam have internal state (e.g. to calculate/store momentum).
+:::
+
+## Are they _exactly_ the same?
+
+::: columns
+::: column
+```{python}
+firstModel.layers[-1].get_weights()[0][:3,:3]
+```
+:::
+::: column
+```{python}
+model.layers[-1].get_weights()[0][:3,:3]
+```
+:::
+:::
+
+```{python}
+def same_last_layer(model1, model2):
+    weights1 = model1.layers[-1].get_weights()[0]
+    weights2 = model2.layers[-1].get_weights()[0]
+    return np.max(np.abs(weights1 - weights2)) == 0
+
+same_last_layer(firstModel, model)
+```
+
+## Going through the batches
+
+Create a new model:
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+```
+
+Repeatedly call `train_on_batch`:
+
+```{python}
+# Go through all the training data multiple times.
+for epoch in range(epochs):
+
+    # Go through the entire training dataset in batches.
+    for (X_batch_train, y_batch_train) in train_dataset:
+
+        # Update weights & biases to make this batch's predictions better.
+        model.train_on_batch(X_batch_train, y_batch_train)
+
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## What is `model.fit()` really doing?
+
+```{python}
+%%time
+model = build_model() # No model.compile!
+
+# Go through all the training data multiple times.
+for epoch in range(epochs):
+    # Go through the entire training dataset in batches.
+    for (X_batch_train, y_batch_train) in train_dataset:
+        # Calculate the loss, while keeping track of gradients.
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch_train, training=True)
+            loss_value = loss_fn(y_batch_train, y_pred)
+
+        # Calculate the gradients & take a SGD step.
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## What about `optimizer` stuff?
+
+$$
+\boldsymbol{\theta}_i = \boldsymbol{\theta}_{i-1} - \eta \nabla \text{LossOnBatch} \\
+$$
+
+```{python}
+model = build_model()
+for epoch in range(epochs):
+    for (X_batch_train, y_batch_train) in train_dataset:
+        # Calculate the loss, while keeping track of gradients.
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch_train, training=True)
+            loss_value = loss_fn(y_batch_train, y_pred)
+
+        # Calculate the gradients & take a SGD step.
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        for grad, weight in zip(grads, model.trainable_weights):
+            # Take a small negative step in the direction of the gradient.
+            weight.assign(weight - lr * grad) 
+
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## Inspecting the gradients
+
+```{python}
+grads
+```
+
+```{python}
+[np.mean(np.abs(grad.numpy())) for grad in grads]
+```
+
+## Calculating training losses
+
+```{python}
+firstFit.history["loss"]
+```
+
+```{python}
+model = build_model()
+
+for epoch in range(epochs):
+    loss_history = []
+    for (X_batch_train, y_batch_train) in train_dataset:
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch_train, training=True)
+            loss_value = loss_fn(y_batch_train, y_pred)
+            loss_history.append(loss_value.numpy())
+
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+    print(f"[Epoch {epoch}] Loss avg {np.mean(loss_history)}")
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## Calculating validation losses
+
+```{python}
+firstFit.history["val_loss"]
+```
+
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+
+for epoch in range(epochs):
+    model.fit(train_dataset, epochs=1, verbose=0)
+
+    val_losses = []
+    for (X_batch_val, y_batch_val) in val_dataset:
+        y_pred = model(X_batch_val)
+        val_losses.append(loss_fn(y_batch_val, y_pred))
+
+    print(f"[Epoch {epoch}] Val loss avg {np.mean(val_losses)}")
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## Comparable training & val. losses
+
+```{python}
+print(firstFit.history["loss"])
+print(firstFit.history["val_loss"])
+```
+
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+
+for epoch in range(epochs):
+    model.fit(train_dataset, epochs=1, verbose=0)
+
+    # Now the epoch is over and the model isn't being updated,
+    # calculate the losses on train and validation data.
+    train_loss = model.evaluate(train_dataset, verbose=0)
+    val_loss = model.evaluate(val_dataset, verbose=0)
+    print(f"[Epoch {epoch}] Train loss {train_loss} Val loss {val_loss}")
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## How to use losses
+
+A common strategy is to:
+
+1. Keep fitting bigger and bigger models until training error is $\approx 0$. _This will likely produce a huge error on the validation set, called generalisation error, due to overfitting_.
+2. Apply regularisation/dropout/early stopping to reduce the generalisation error.
+3. Watch out for _overfitting the validation set_ by looking at the test loss.
+
+## What is this `with` syntax?
+
+Example, opening a file:
+
+::: columns
+::: column
+Most basic way is:
+```{python}
+f = open("haiku1.txt", "r")
+print(f.read())
+f.close()
+```
+
+:::
+::: column
+Instead, use:
+```{python}
+with open("haiku2.txt", "r") as f:
+    print(f.read())
+```
+:::
+:::
+
+::: footer
+Haikus from http://www.libertybasicuniversity.com/lbnews/nl107/haiku.htm
+:::
+
+## What is `GradientTape()`?
+
+```{python}
+x = tf.Variable(3.0)
+
+with tf.GradientTape() as tape:
+  y = x**2
+
+dy_dx = tape.gradient(y, x)
+dy_dx.numpy()
+```
+
+::: footer
+Source: Tensorflow (2022), [Introduction to gradients and automatic differentiation](https://www.tensorflow.org/guide/autodiff), Tensorflow docs.
+:::
+
+
+# Computation Graphs & Automatic Differentiation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Compile using graph mode
+
+```{python}
+model = build_model()
+
+@tf.function
+def train_step(X, y):
+    with tf.GradientTape() as tape:
+        y_pred = model(X, training=True)
+        loss_value = loss_fn(y, y_pred)
+    grads = tape.gradient(loss_value, model.trainable_weights)
+    optimizer.apply_gradients(zip(grads, model.trainable_weights))
+    return loss_value
+```
+
+```{python}
+%%time
+for epoch in range(epochs):
+    for (X_batch_train, y_batch_train) in train_dataset:
+        loss_value = train_step(X_batch_train, y_batch_train)
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## Example computational graph
+
+![Each basic equation is broken down to its core components.](Geron-mlst_0901-blur.png)
+
+::: footer
+Source: Aurélien Géron (2017), _Hands-On Machine Learning with Scikit-Learn & TensorFlow_, 1st Edition, Figure 9.1 (__redacted__).
+:::
+
+## Why?
+
+![Tensorflow figures out the smartest way to evaluate your equations.](Geron-mlst_0902-blur.png)
+
+::: footer
+Source: Aurélien Géron (2017), _Hands-On Machine Learning with Scikit-Learn & TensorFlow_, 1st Edition, Figure 9.2 (__redacted__).
+:::
+
+## Example: linear regression
+
+$$
+\hat{y}(x) = w x + b
+$$
+
+For some observation $\{ x_i, y_i \}$, the (MSE) loss is
+
+$$ 
+\text{Loss}_i = (\hat{y}(x_i) - y_i)^2
+$$
+
+For a batch of the first $n$ observations the loss is
+
+$$ 
+\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n (\hat{y}(x_i) - y_i)^2
+$$
+
+## Derivatives
+
+Since $\hat{y}(x) = w x + b$,
+
+$$
+\frac{\partial \hat{y}(x)}{\partial w} = x \text{ and }
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+As $\text{Loss}_i = (\hat{y}(x_i) - y_i)^2$, we know
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i) .
+$$
+
+## Chain rule
+
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i), \,\,
+\frac{\partial \hat{y}(x)}{\partial w} = x , \, \text{ and } \,
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+Putting this together, we have
+
+$$
+\frac{\partial \text{Loss}_i}{\partial w}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial w}
+= 2 (\hat{y}(x_i) - y_i) \, x_i 
+$$
+
+and
+$$
+\frac{\partial \text{Loss}_i}{\partial b}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial b}
+= 2 (\hat{y}(x_i) - y_i) .
+$$
+
+
+## Backpropagation
+
+::: columns
+::: column
+
+<iframe width="560" height="560" src="https://www.youtube.com/embed/Ilg3gGewQ5U" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+:::
+::: column
+
+<iframe width="560" height="560" src="https://www.youtube.com/embed/tIeHLnjs5U8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+:::
+:::
+
+## Linear regression graph
+
+<br>
+
+```{mermaid}
+%%| echo: false
+%%| fig-width: 10
+%%{init: {'themeVariables': {'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
+graph LR
+    x[x]:::data --> times(( <sup>.</sup> ))
+    w[w]:::param --> times
+    times -->|z| plus(( + ))
+    b[b]:::param --> plus
+    plus -->|yp| minus(( - ))
+    y[y]:::data --> minus
+    minus --> loss[loss]
+    
+    classDef data fill:aqua,stroke-width:0px
+    classDef param fill:lightGreen,stroke-width:0px
+    style loss fill:white,stroke-width:0px
+```
+
+## Forward pass
+
+<br><br>
+
+```{mermaid}
+%%| echo: false
+%%| fig-width: 10
+%%{init: {'themeVariables': { 'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
+graph LR
+    x[x = 2]:::data --> times(( <sup>.</sup> ))
+    w[w = 3]:::param --> times
+    times -->|z = 6| plus(( + ))
+    b[b = 1]:::param --> plus
+    plus -->|yp = 7| minus(( - ))
+    y[y = 4]:::data --> minus
+    minus --> loss[loss = 3]
+    
+    classDef data fill:aqua,stroke-width:0px
+    classDef param fill:lightGreen,stroke-width:0px
+    style loss fill:white,stroke-width:0px
+```
+
+## Backward pass
+
+```{mermaid}
+%%| echo: false
+%%| fig-width: 10
+%%{init: {'themeVariables': { 'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
+graph LR
+    x[x = 2]:::data --- times(( <sup>.</sup> ))
+    w[w = 3]:::param ---|"grad(z, w) = 2"| times
+    times ---|"z=6<br>grad(yp, z) = 1"| plus(( + ))
+    b[b = 1]:::param ---|"grad(yp, b) = 1"| plus
+    plus ---|"yp = 7<br>grad(loss, yp) = 1"| minus(( - ))
+    y[y = 4]:::data --- minus
+    minus --- loss[loss = 3]
+    
+    classDef data fill:aqua,stroke-width:0px
+    classDef param fill:lightGreen,stroke-width:0px
+    style loss fill:white,stroke-width:0px
+```
+
+::: fragment
+```{python}
+x = tf.constant(2.0); y = tf.constant(4.0)
+w = tf.Variable(3.0); b = tf.Variable(1.0)
+with tf.GradientTape() as tape:
+  yp = w*x + b
+  loss = tf.abs(yp - y)
+tape.gradient(loss, [w, b])
+```
+:::
+
+## That's it
+
+> And with that, you just saw backpropagation in action! Backpropagation is simply the application of the chain rule to a computation graph. There’s nothing more to it. Backpropagation starts with the final loss value and works backward from the top layers to the bottom layers, computing the contribution that each parameter had in the loss value. That’s where the name “backpropagation” comes from: we “back propagate” the loss contributions of different nodes in a computation graph.
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Chapter 2.
+:::
+
+## Batch gradient descent
+
+For the first $n$ observations 
+$\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n \text{Loss}_i$
+so
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial w}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial w}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial w} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) \, x_i .
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial b}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial b}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial b} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) .
+\end{aligned}
+$$
+
+## Bespoke derivatives vs. autodiff
+
+```{python}
+#| echo: false
+numpy.random.seed(111) 
+n = 3 
+x = numpy.arange(1, n+1, dtype=np.float32)
+y = 2*x - 1 + 0.01 * numpy.random.randn(n)
+y = y.astype(np.float32)
+```
+
+::: columns
+::: {.column width="60%"}
+```{python}
+w = 0; b = 0;
+y_pred = w * x + b
+loss = (y_pred - y) ** 2
+
+dL_dw = 2 * (y_pred - y) * x
+dL_db = 2 * (y_pred - y)
+
+nabla = [dL_dw.mean(), dL_db.mean()]
+print(np.array(nabla))
+```
+:::
+::: {.column width="40%"}
+```{python}
+#| echo: false
+df = pandas.DataFrame({"x": x, "y": y, "y_hat": y_pred, "loss": loss, "dL/dw": dL_dw, "dL/db": dL_db})
+df[["x", "y", "dL/dw"]].round(2)
+```
+:::
+:::
+
+```{python}
+w = tf.Variable(0.0); b = tf.Variable(0.0)
+x = tf.constant(x); y = tf.constant(y)
+
+with tf.GradientTape() as tape:
+  y_pred = w * x + b
+  loss = tf.reduce_mean((y_pred - y) ** 2)
+
+dL_dw, dL_db = tape.gradient(loss, [w, b])
+print(np.array([dL_dw, dL_db]))
+```
+
+## The magic of autodiff
+
+```{python}
+#| echo: false
+tf.random.set_seed(111) 
+n = 100_000_000
+x = tf.range(1, n+1, dtype=tf.float32)
+y = 2*x - 1 + 0.01 * tf.random.normal([n])
+```
+
+```{python}
+from tensorflow.keras.metrics import mean_squared_error as mse
+```
+
+::: columns
+::: column
+```{python}
+%%timeit
+y_pred = w*x + b
+res = y_pred - y
+dL_db = tf.reduce_mean(2*res)
+```
+
+```{python}
+%%timeit
+with tf.GradientTape() as tape:
+  loss = mse(y, w*x + b)
+tape.gradient(loss, b)
+```
+:::
+::: column
+```{python}
+%%timeit
+res = (w*x + b) - y
+dL_dw = tf.reduce_mean(2*res*x)
+dL_db = tf.reduce_mean(2*res)
+```
+
+```{python}
+%%timeit
+with tf.GradientTape() as tape:
+  loss = mse(y, w*x + b)
+tape.gradient(loss, [w, b])
+```
+:::
+:::
+
+
+
+# Object-oriented programming {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Remember this class?
+
+```{python}
+COURSE_CREDITS = {"ACTL3143": 6, "ACTL5001": 12}
+
+class Student:
+  def __init__(self, name, zID, grades):
+    self.name = name
+    self.zID = zID
+    self.grades = grades
+
+  def wam(self):
+    """
+    Calculate the weighted average mark for this student.
+    """
+    total_credits = 0
+    total_grade = 0
+    for course, grade in self.grades.items():
+      total_credits += COURSE_CREDITS[course]
+      total_grade += grade * COURSE_CREDITS[course]
+    return total_grade / total_credits
+```
+
+## Calling the `wam` method
+
+Now every student object can calculate its own WAM.
+
+```{python}
+don = Student("Don Quixote", 111222,
+    {"ACTL3143": 100, "ACTL5001": 50})
+
+zhuge = Student("Zhuge Liang", 123456, 
+    {"ACTL3143": 100, "ACTL5001": 100})
+```
+
+```{python}
+don.wam()
+```
+
+```{python}
+zhuge.wam()
+```
+
+## Customising an existing class
+
+```{python}
+class PhDStudent(Student):
+  def __init__(self, name, zID, grades, supervisor):
+    super().__init__(name, zID, grades)
+    self.supervisor = supervisor
+    self.timeTillGraduation = np.inf
+    self.chanceToFindFreeFood = 0.999
+```
+
+```{python}
+mei = PhDStudent("Mei Changsu", 123456, 
+    {"ACTL3143": 100, "ACTL5001": 100},
+    "Lin Chen")
+
+mei.supervisor
+```
+
+```{python}
+mei.wam()
+```
+
+## Example: Monte Carlo dropout
+
+```{python}
+tf.random.set_seed(42)
+model = keras.Sequential([
+    layers.Flatten(input_shape=[28, 28]),
+    layers.Dropout(rate=0.2),
+    layers.Dense(300, activation="relu"),
+    layers.Dropout(rate=0.2),
+    layers.Dense(100, activation="relu"),
+    layers.Dropout(rate=0.2),
+    layers.Dense(10, activation="softmax")
+])
+```
+
+```{python}
+#| echo: false
+numpy.set_printoptions(precision=2)
+```
+
+::: columns
+::: column
+```{python}
+model.predict(X_train[[0]])
+```
+```{python}
+model(X_train[[0]], training=True).numpy()
+```
+:::
+::: column
+```{python}
+model.predict(X_train[[0]])
+```
+```{python}
+model(X_train[[0]], training=True).numpy()
+```
+
+:::
+:::
+
+## Custom `MCDropout` layer
+
+```{python}
+class MCDropout(layers.Dropout):
+  def call(self, inputs):
+    return super().call(inputs, training=True)
+```
+
+```{python}
+tf.random.set_seed(42)
+model = keras.Sequential([
+    layers.Flatten(input_shape=[28, 28]),
+    MCDropout(rate=0.2),
+    layers.Dense(300, activation="relu"),
+    MCDropout(rate=0.2),
+    layers.Dense(100, activation="relu"),
+    MCDropout(rate=0.2),
+    layers.Dense(10, activation="softmax")
+])
+```
+
+::: columns
+::: column
+```{python}
+model.predict(X_train[[0]])
+```
+:::
+::: column
+```{python}
+model.predict(X_train[[0]])
+```
+:::
+:::
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 370 & p. 367
+:::
+
+## Encouraging callbacks
+
+[Callback](https://github.com/keras-team/keras/blob/v2.9.0/keras/callbacks.py#L575-L881) is a Keras class that is meant to be subclassed.
+
+```{python}
+class EncouragingCallback(keras.callbacks.Callback):
+  def on_epoch_end(self, epoch, logs):
+    phrases = ["Great work!", "Nearly there", "加油"]
+    encourage = phrases[epoch%len(phrases)]
+    print(f"Epoch {epoch}: loss={logs['loss']}, {encourage}")
+```
+
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+ec = EncouragingCallback()
+model = model.fit(train_dataset, epochs=3, 
+        callbacks = [ec], verbose=0);
+```
+
+::: footer
+Inspired by: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 10.
+:::
+
+## Keras-tuner 
+
+```{python}
+import keras_tuner as kt
+
+def build_model(hp):
+  numHidden = hp.Int("units", min_value=32, max_value=512, step=32)
+  model = keras.Sequential([
+    layers.Flatten(),
+    layers.Dense(numHidden, "relu"),
+    layers.Dense(10, activation="softmax")
+  ])
+  model.compile("adam", "sparse_categorical_crossentropy",
+      metrics=["accuracy"])
+  return model
+
+tuner = kt.RandomSearch(build_model, objective="val_accuracy",
+    max_trials=3, seed=42, project_name="optimise-num-hidden-units")
+tuner.search(X_train, y_train, epochs=2, validation_data=(X_val, y_val))
+tuner.get_best_hyperparameters()[0].get("units")
+```
+
+::: footer
+Adapted from: Invernizzi et al. (2021), [Getting started with KerasTuner](https://keras.io/guides/keras_tuner/getting_started/), Keras docs.
+:::
+
+## Tune fitting hyperparameters
+
+```{python}
+class MyHyperModel(kt.HyperModel):
+  def build(self, hp):
+    numHidden = hp.Int("units", min_value=32, max_value=512, step=32)
+    model = keras.Sequential([
+      layers.Flatten(),
+      layers.Dense(numHidden, "relu"),
+      layers.Dense(10, activation="softmax")
+    ])
+    model.compile("adam", "sparse_categorical_crossentropy",
+        metrics=["accuracy"])
+    return model
+
+  def fit(self, hp, model, *args, **kwargs):
+    batchSize = hp.Int("batchSize", min_value=32, max_value=512, step=32)
+    return model.fit(*args, batch_size = batchSize, **kwargs)
+
+tuner = kt.RandomSearch(MyHyperModel(), objective="val_accuracy",
+  max_trials=3, seed=123, project_name="optimise-batch-size")
+tuner.search(X_train, y_train, epochs=2, validation_data=(X_val, y_val))
+tuner.get_best_hyperparameters()[0].get("batchSize")
+```
+
+::: footer
+Source code for [keras-tuner.HyperModel](https://github.com/keras-team/keras-tuner/blob/1.1.3/keras_tuner/engine/hypermodel.py#L17).
+:::
+
+# PyTorch {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Why?
+
+![Fraction of ML papers using PyTorch.](pytorch-papers-of-total.svg)
+
+::: footer
+Source: Horace He (2022), [pytorch-vs-tensorflow](http://horace.io/pytorch-vs-tensorflow/).
+:::
+
+## Load up FashionMNIST
+
+```{python}
+import torch
+import torchvision
+import torch.nn.functional as F
+from torch import nn
+from torch.utils.data import DataLoader
+%watermark -p torch,torchvision
+```
+
+```{python}
+training_data = torchvision.datasets.FashionMNIST(
+    root="data", train=True, download=True,
+    transform=torchvision.transforms.ToTensor())
+
+test_data = torchvision.datasets.FashionMNIST(
+    root="data", train=False, download=True,
+    transform=torchvision.transforms.ToTensor())
+
+classes = [
+    "T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", 
+    "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot",
+]
+```
+
+::: footer
+Adapted from: PyTorch (2022), [Quickstart](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html), PyTorch docs.
+:::
+
+## Take a look at the data
+
+::: columns
+::: {.column width="33%"}
+```{python}
+x, y = training_data[5]
+plt.imshow(x[0])
+plt.title(classes[y]);
+```
+:::
+::: {.column width="33%"}
+```{python}
+x, y = training_data[25]
+plt.imshow(x[0])
+plt.title(classes[y]);
+```
+:::
+::: {.column width="33%"}
+```{python}
+x, y = training_data[30]
+plt.imshow(x[0])
+plt.title(classes[y]);
+```
+:::
+:::
+
+::: footer
+Adapted from: PyTorch (2022), [Quickstart](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html), PyTorch docs.
+:::
+
+## Batch up the data
+
+```{python}
+batch_size = 64
+
+# Create data loaders.
+train_dataloader = DataLoader(training_data, batch_size=batch_size)
+test_dataloader = DataLoader(test_data, batch_size=batch_size)
+
+for X, y in test_dataloader:
+    print(f"Shape of X [N, C, H, W]: {X.shape}")
+    print(f"Shape of y: {y.shape} {y.dtype}")
+    break
+
+# Get cpu or gpu device for training.
+device = "cuda" if torch.cuda.is_available() else "cpu" # Normally..
+device = "mps" # But I'm on a Mac.
+```
+
+::: footer
+Adapted from: PyTorch (2022), [Quickstart](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html), PyTorch docs.
+:::
+
+## Make a sequential model
+
+```{python}
+torch.manual_seed(0)
+model = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(28*28, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, 10)
+        )
+model = model.to(device)
+print(model)
+```
+
+```{python}
+epochs = 3
+loss_fn = nn.CrossEntropyLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+```
+
+## Run a train loop
+
+```{python}
+%%time
+model.train()
+for t in range(epochs):    
+    for X, y in train_dataloader:
+        X, y = X.to(device), y.to(device)
+
+        # Compute prediction error
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    print(f"Epoch {t} Loss: {loss.item()}")
+```
+
+::: footer
+Adapted from: PyTorch (2022), [Quickstart](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html), PyTorch docs.
+:::
+
+## Far more common to subclass
+
+```{python}
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear1 = nn.Linear(28*28, 512)
+        self.linear2 = nn.Linear(512, 512)
+        self.linear3 = nn.Linear(512, 10)
+        
+    def forward(self, x):
+        x = F.relu(self.linear1(x.flatten(1)))
+        x = F.relu(self.linear2(x))
+        return self.linear3(x)
+        
+torch.manual_seed(0)
+classyModel = NeuralNetwork().to(device)
+classyModel
+```
+
+::: footer
+Adapted from: PyTorch (2022), [Quickstart](https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html), PyTorch docs.
+:::
+
+## Evaluate the fit
+
+```{python}
+model.eval()
+
+num_correct = 0
+test_size = 0
+for X, y in test_dataloader:
+    with torch.no_grad():
+        pred = model(X.to(device))
+        num_correct += torch.sum(y.to(device) == pred.argmax(1)).item()
+        test_size += len(y)
+
+print(f"Test accuracy: {100*num_correct/test_size:.2f}%")
+```
+
+## Predict new data
+
+```{python}
+X, y = next(iter(test_dataloader))
+with torch.no_grad():
+    pred = model(X.to(device))
+
+predictedClasses = [classes[ind] for ind in pred.argmax(1)]
+actualClasses = [classes[ind] for ind in y]
+```
+
+::: columns
+::: {.column width="33%"}
+```{python}
+#| echo: false
+i = 0
+title = f'Predicted: "{predictedClasses[i]}"\nActual: "{actualClasses[i]}"'
+plt.imshow(X[i][0])
+plt.title(title);
+```
+:::
+::: {.column width="33%"}
+```{python}
+#| echo: false
+i = 3
+title = f'Predicted: "{predictedClasses[i]}"\nActual: "{actualClasses[i]}"'
+plt.imshow(X[i][0])
+plt.title(title);
+```
+:::
+::: {.column width="33%"}
+```{python}
+#| echo: false
+i = 4
+title = f'Predicted: "{predictedClasses[i]}"\nActual: "{actualClasses[i]}"'
+plt.imshow(X[i][0])
+plt.title(title);
+```
+:::
+:::
+
+
+# Variational Autoencoders {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Variational autoencoder
+
+::: {.notes}
+A slightly different sample from the distribution in the latent space will be decoded to a slightly different image. The stochasticity of this process improves robustness and forces the latent space to encode meaningful representation everywhere: every point in the latent space is decoded to a valid output. So the latent spaces of VAEs are continuous and highly-structured.
+:::
+
+![Schematic of a variational autoencoder.](chollet-VAE-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.17 (__redacted__).
+:::
+
+## VAE schematic process
+
+![Keras code for a VAE.](chollet-VAEcode-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Unnumbered listing in Chapter 12 (__redacted__).
+:::
+
+## Focus on the decoder
+
+![Sampling new artificial images from the latent space.](chollet-latentspace-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.13 (__redacted__).
+:::
+
+## Exploring the MNIST latent space
+
+![Example of MNIST-like images generated from the latent space.](chollet-VAEdecoded-blur.png)
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.18 (__redacted__).
+:::
+
+# Generative Adversarial Networks {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## GAN faces
+
+::: columns
+::: column
+![](fakeface1.jpeg)
+:::
+::: column
+![](fakeface2.jpeg)
+:::
+:::
+
+Try out [https://www.whichfaceisreal.com](https://www.whichfaceisreal.com).
+
+::: footer
+Source: [https://thispersondoesnotexist.com](https://thispersondoesnotexist.com).
+:::
+
+## GAN structure
+
+![A schematic of a generative adversarial network.](gan-diagram.png)
+
+::: footer
+Source: Thales Silva (2018), [An intuitive introduction to Generative Adversarial Networks (GANs)](https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394), freeCodeCamp.
+:::
+
+## GAN intuition
+
+![](google-devs-bad_gan.svg)
+![](google-devs-ok_gan.svg)
+![](google-devs-good_gan.svg)
+
+::: footer
+Source: Google Developers, [Overview of GAN Structure](https://developers.google.com/machine-learning/gan/gan_structure), Google Machine Learning Education.
+:::
+
+
+## StyleGAN2-ADA
+
+<br>
+
+Training times on V100s (1024x1024 resolution):
+
+| GPUs | 1000 kimg | 25000 kimg | sec / kimg          | GPU mem | CPU mem
+| :-: | :---------: | :--------: | :----: | :------: | :---------:
+| 1    | 1d 20h    | 46d 03h    | 158 | 8.1 GB  | 5.3 GB
+| 2    | 23h 09m   | 24d 02h    | 83   | 8.6 GB  | 11.9 GB
+| 4    | 11h 36m   | 12d 02h    | 40   | 8.4 GB  | 21.9 GB
+| 8    | 5h 54m    | 6d 03h     | 20   | 8.3 GB  | 44.7 GB
+
+
+::: footer
+Source: NVIDIA's Github, [StyleGAN2-ADA — Official PyTorch implementation](https://github.com/NVlabs/stylegan2-ada-pytorch/).
+:::
+
+## Discriminator
+
+```{python}
+lrelu = layers.LeakyReLU(alpha=0.2)
+
+discriminator = keras.Sequential([
+    keras.Input(shape=(28, 28, 1)),
+    layers.Conv2D(64, 3, strides=2, padding="same", activation=lrelu),
+    layers.Conv2D(128, 3, strides=2, padding="same", activation=lrelu),
+    layers.GlobalMaxPooling2D(),
+    layers.Dense(1)])
+
+discriminator.summary(print_fn=skip_empty)
+```
+
+## Generator
+
+```{python}
+latent_dim = 128
+generator = keras.Sequential([
+    layers.Dense(7 * 7 * 128, input_dim=latent_dim, activation=lrelu),
+    layers.Reshape((7, 7, 128)),
+    layers.Conv2DTranspose(128, 4, strides=2, padding="same", activation=lrelu),
+    layers.Conv2DTranspose(128, 4, strides=2, padding="same", activation=lrelu),
+    layers.Conv2D(1, 7, padding="same", activation="sigmoid")])
+generator.summary(print_fn=skip_empty)
+```
+
+## Advanced image layers {.smaller}
+
+::: {.absolute top=120 left=250}
+Conv2D
+:::
+
+::: {.absolute top=270 left=60}
+GlobalMaxPool2D
+:::
+
+::: {.absolute top=270 right=100}
+Conv2DTranspose
+:::
+
+![](2d_global_max_pooling_pa1.png){.absolute bottom=0 left=0 width="550"}
+
+![](conv2d.gif){.absolute top=75 left=350 width="300"}
+
+![](conv2dTranspose.gif){.absolute bottom=0 right=50 width="300"}
+
+::: footer
+Sources: Pröve (2017), [An Introduction to different Types of Convolutions in Deep Learning](https://towardsdatascience.com/types-of-convolutions-in-deep-learning-717013397f4d), and Peltarion Knowledge Center, [Global max pooling 2D](https://peltarion.com/knowledge-center/documentation/modeling-view/build-an-ai-model/blocks/global-max-pooling-2d).
+:::
+
+## Train step
+
+```{python}
+# Separate optimisers for discriminator and generator.
+d_optimizer = keras.optimizers.Adam(learning_rate=0.0003)
+g_optimizer = keras.optimizers.Adam(learning_rate=0.0004)
+
+# Instantiate a loss function.
+loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)
+
+@tf.function
+def train_step(real_images):
+  # Sample random points in the latent space
+  random_latent_vectors = tf.random.normal(shape=(batch_size, latent_dim))
+  # Decode them to fake images
+  generated_images = generator(random_latent_vectors)
+  # Combine them with real images
+  combined_images = tf.concat([generated_images, real_images], axis=0)
+
+  # Assemble labels discriminating real from fake images
+  labels = tf.concat([
+    tf.ones((batch_size, 1)),
+    tf.zeros((real_images.shape[0], 1))], axis=0)
+
+  # Add random noise to the labels - important trick!
+  labels += 0.05 * tf.random.uniform(labels.shape)
+
+  # Train the discriminator
+  with tf.GradientTape() as tape:
+    predictions = discriminator(combined_images)
+    d_loss = loss_fn(labels, predictions)
+  grads = tape.gradient(d_loss, discriminator.trainable_weights)
+  d_optimizer.apply_gradients(zip(grads, discriminator.trainable_weights))
+
+  # Sample random points in the latent space
+  random_latent_vectors = tf.random.normal(shape=(batch_size, latent_dim))
+
+  # Assemble labels that say "all real images"
+  misleading_labels = tf.zeros((batch_size, 1))
+
+  # Train the generator (note that we should *not* update the weights
+  # of the discriminator)!
+  with tf.GradientTape() as tape:
+    predictions = discriminator(generator(random_latent_vectors))
+    g_loss = loss_fn(misleading_labels, predictions)
+
+  grads = tape.gradient(g_loss, generator.trainable_weights)
+  g_optimizer.apply_gradients(zip(grads, generator.trainable_weights))
+  return d_loss, g_loss, generated_images
+```
+
+## Grab the data
+
+```{python}
+# Prepare the dataset.
+# We use both the training & test MNIST digits.
+batch_size = 64
+(x_train, _), (x_test, _) = keras.datasets.mnist.load_data()
+all_digits = np.concatenate([x_train, x_test])
+all_digits = all_digits.astype("float32") / 255.0
+all_digits = np.reshape(all_digits, (-1, 28, 28, 1))
+dataset = tf.data.Dataset.from_tensor_slices(all_digits)
+dataset = dataset.shuffle(buffer_size=1024).batch(batch_size)
+
+# In practice you need at least 20 epochs to generate nice digits.
+epochs = 1
+save_dir = "./"
+```
+
+## Train the GAN
+```{python}
+%%time
+for epoch in range(epochs):
+  for step, real_images in enumerate(dataset):
+    # Train the discriminator & generator on one batch of real images.
+    d_loss, g_loss, generated_images = train_step(real_images)
+
+    # Logging.
+    if step % 200 == 0:
+      # Print metrics
+      print(f"Discriminator loss at step {step}: {d_loss:.2f}")
+      print(f"Adversarial loss at step {step}: {g_loss:.2f}")
+      break # Remove this if really training the GAN
+```
+
+:::{.callout-warning}
+Converges to a Nash equilibrium.. if at all.
+:::
+
+## Mode collapse {.smaller}
+
+::: columns
+:::{.column width=50%"}
+![Example of mode collapse](gan-mode-collapse.png)
+:::
+:::{.column width="50%"}
+![](xkcd-random_number.png)
+
+- Dongyu Liu (2021), [TadGAN: Time Series Anomaly Detection Using Generative Adversarial Networks](https://youtu.be/jIDj2dhU99k)
+- Jeff Heaton (2022), [GANs for Tabular Synthetic Data Generation (7.5)](https://youtu.be/yujdA46HKwA)
+- Jeff Heaton (2022), [GANs to Enhance Old Photographs Deoldify (7.4)](https://youtu.be/0OTd5GlHRx4)
+- Jeff Heaton (2021), [Training a GAN from your Own Images: StyleGAN2](https://youtu.be/kbDd5lW6rkM)
+
+:::
+:::
+
+::: footer
+Source: Metz et al. (2017), [Unrolled Generative Adversarial Networks](https://arxiv.org/pdf/1611.02163.pdf) and Randall Munroe (2007), [xkcd #221: Random Number](https://xkcd.com/221/).
+:::
+
+# Other Useful Packages {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Tensorflow Probability
+
+```{python}
+#| echo: false
+from pathlib import Path
+from sklearn.datasets import fetch_openml
+from sklearn.model_selection import train_test_split
+from sklearn.compose import make_column_transformer
+from sklearn.preprocessing import MinMaxScaler
+
+if Path("freq_data.csv").exists():
+    freq = pd.read_csv("freq_data.csv")
+else:
+    freq = fetch_openml(data_id=41214, as_frame=True).frame
+    freq.to_csv("freq_data.csv", index=False)
+
+# Remove the column named 'IDpol'.
+freq = freq.drop("IDpol", axis=1)
+
+# Convert categorical variables to numeric.
+freq = pd.get_dummies(freq, columns=["VehGas", "Area", "VehBrand", "Region"])
+
+features = freq.drop("ClaimNb", axis=1)
+target = freq["ClaimNb"]
+
+X_main, X_test, y_main, y_test = train_test_split(features, target, random_state=2022)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, random_state=2022)
+
+ctsCols = ["Exposure", "VehPower", "VehAge", "DrivAge", "BonusMalus", "Density"]
+
+ct = make_column_transformer(
+  (MinMaxScaler(), ctsCols),
+  remainder="passthrough"
+)
+
+X_train = ct.fit_transform(X_train)
+X_val = ct.transform(X_val)
+X_test = ct.transform(X_test)
+```
+
+```{python}
+import tensorflow_probability as tfp
+tfd = tfp.distributions
+```
+
+```{python}
+tf.random.set_seed(123)
+model = keras.Sequential([
+  layers.Dense(24, "leaky_relu", input_dim=X_train.shape[1]),
+  layers.Dense(1, "exponential"),
+  tfp.layers.DistributionLambda(tfd.Poisson)
+])
+
+def NLL(y_true, y_hat):
+  return -y_hat.log_prob(y_true)
+
+model.compile(loss=NLL)
+model.fit(X_train, y_train, epochs=3, verbose=0);
+```
+
+:::{.callout-tip}
+## Suggested viewing
+
+Josh Dylan (2019), [TensorFlow Probability: Learning with confidence](https://youtu.be/BrwKURU-wpk), TF Dev Summit '19, YouTube (14 mins).
+:::
+
+## Predictions are then distributions
+
+```{python}
+y_pred = model(X_val)
+type(y_pred)
+```
+
+```{python}
+y_pred.mean()[:3]
+```
+
+```{python}
+y_pred.stddev()[:3]
+```
+
+
+## Zero-inflated Poisson
+
+```{python}
+def zero_inf(out): 
+  rate = tf.squeeze(tf.math.exp(out[:,0:1]))
+  s = tf.math.sigmoid(out[:,1:2])
+  probs = tf.concat([1-s, s], axis=1)
+  return tfd.Mixture(
+    cat=tfd.Categorical(probs=probs),
+    components=[
+      tfd.Deterministic(loc=tf.zeros_like(rate)),
+      tfd.Poisson(rate=rate),
+    ])
+```
+
+```{python}
+tf.random.set_seed(123)
+
+zipModel = keras.Sequential([
+  layers.Dense(24, "leaky_relu", input_dim=X_train.shape[1]),
+  layers.Dense(2),
+  tfp.layers.DistributionLambda(zero_inf)
+])
+
+def NLL(y_true, y_hat):
+  return -y_hat.log_prob(y_true)
+
+zipModel.compile(loss=NLL)
+```
+
+## Evaluations are then likelihoods
+
+```{python}
+zipModel.fit(X_train, y_train, epochs=3, verbose=0);
+```
+
+```{python}
+model.evaluate(X_val, y_val, verbose=0)
+```
+
+```{python}
+zipModel.evaluate(X_val, y_val, verbose=0)
+```
+
+:::{.smaller}
+> In statistics, sometimes we only use a single data set. To still be able to evaluate the performance of the developed prediction model on the same data, sophisticated methods have developed over a long period of time and are still in use in some parts of the statistics community. These methods account for the fact that the model saw the data during fitting and applied corrections to account for that. These methods include, for example, the Akaike Information Criterion (AIC) or the Bayesian Information Criterion (BIC). Don’t get confused. If you have a validation set, you don’t need these methods.
+:::
+
+::: footer
+Source: Sic & Duerr (2020), Probabilistic Deep Learning, Chapter 5.
+:::
+
+## HuggingFace's Transformers
+
+```{python}
+import transformers
+from transformers import pipeline
+generator = pipeline(task="text-generation")
+```
+
+```{python}
+transformers.set_seed(1)
+print(generator("It's the holidays so I'm going to enjoy")[0]["generated_text"])
+```
+
+```{python}
+transformers.set_seed(1337)
+print(generator("It's the holidays so I'm going to enjoy")[0]["generated_text"])
+```
+
+## Reading the course profile
+
+```{python}
+context = """
+StoryWall Formative Discussions: An initial StoryWall, worth 2%, is due by noon on June 3. The following StoryWalls are worth 4% each (taking the best 7 of 9) and are due at noon on the following dates:
+The project will be submitted in stages: draft due at noon on July 1 (10%), recorded presentation due at noon on July 22 (15%), final report due at noon on August 1 (15%).
+
+As a student at UNSW you are expected to display academic integrity in your work and interactions. Where a student breaches the UNSW Student Code with respect to academic integrity, the University may take disciplinary action under the Student Misconduct Procedure. To assure academic integrity, you may be required to demonstrate reasoning, research and the process of constructing work submitted for assessment.
+To assist you in understanding what academic integrity means, and how to ensure that you do comply with the UNSW Student Code, it is strongly recommended that you complete the Working with Academic Integrity module before submitting your first assessment task. It is a free, online self-paced Moodle module that should take about one hour to complete.
+
+StoryWall (30%)
+
+The StoryWall format will be used for small weekly questions. Each week of questions will be released on a Monday, and most of them will be due the following Monday at midday (see assessment table for exact dates). Students will upload their responses to the question sets, and give comments on another student's submission. Each week will be worth 4%, and the grading is pass/fail, with the best 7 of 9 being counted. The first week's basic 'introduction' StoryWall post is counted separately and is worth 2%.
+
+Project (40%)
+
+Over the term, students will complete an individual project. There will be a selection of deep learning topics to choose from (this will be outlined during Week 1).
+
+The deliverables for the project will include: a draft/progress report mid-way through the term, a presentation (recorded), a final report including a written summary of the project and the relevant Python code (Jupyter notebook).
+
+Exam (30%)
+
+The exam will test the concepts presented in the lectures. For example, students will be expected to: provide definitions for various deep learning terminology, suggest neural network designs to solve risk and actuarial problems, give advice to mock deep learning engineers whose projects have hit common roadblocks, find/explain common bugs in deep learning Python code.
+"""
+```
+
+## Question answering 
+```{python}
+qa = pipeline("question-answering")
+```
+
+```{python}
+qa(question="What weight is the exam?", context=context)
+```
+
+```{python}
+qa(question="What topics are in the exam?", context=context)
+```
+
+```{python}
+qa(question="When is the presentation due?", context=context)
+```
+
+```{python}
+qa(question="How many StoryWall tasks are there?", context=context)
+```
+
+## Recommended reading {.smaller}
+
+- The Verge (2022), [The Great Fiction of AI: The strange world of high-speed semi-automated genre fiction](https://www.theverge.com/c/23194235/ai-fiction-writing-amazon-kindle-sudowrite-jasper)
+- Vaswani et al. (2017), [Attention Is All You Need](https://arxiv.org/pdf/1706.03762.pdf), NeurIPS
+- Bommasani et al. (2021), [On the Opportunities and Risks of Foundation Models](https://arxiv.org/pdf/2108.07258.pdf)
+- Gary Marcus (2022), [Deep Learning Is Hitting a Wall](https://nautil.us/deep-learning-is-hitting-a-wall-14467/), Nautilus article
+- SDS 564, [Clem Delangue on Hugging Face and Transformers](https://podcasts.apple.com/au/podcast/super-data-science/id1163599059?i=1000556643700)
+- SDS 559, [GPT-3 for Natural Language Processing](https://podcasts.apple.com/au/podcast/super-data-science/id1163599059?i=1000554847681)
+- Computerphile (2019), [AI Language Models & Transformers](https://youtu.be/rURRYI66E54) (20m)
+- Computerphile (2020), [GPT3: An Even Bigger Language Model](https://youtu.be/_8yVOC4ciXc) (25m)
+- Nicholas Renotte (2021), [AI Blog Post Summarization with Hugging Face Transformers...](https://youtu.be/JctmnczWg0U) (33m)
+- Seattle Applied Deep Learning (2019), [LSTM is dead. Long Live Transformers!](https://youtu.be/S27pHKBEp30) (28m)
+
+# Revision {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Lecture 1: AI
+
+::: columns
+::: column
+- artificial intelligence
+- ~~Deep Blue~~
+- default arguments
+- dictionaries
+- f-strings
+- function definitions
+- ~~Google Colaboratory~~
+- ~~`help`~~
+- list
+:::
+::: column
+- ~~minimax algorithm~~
+- ~~`pip install ...`~~
+- **pseudocode**
+- `range`
+- slicing
+- tuple
+- ~~`type`~~
+- whitespace indentation
+- zero-indexing
+:::
+:::
+
+## Lecture 2: Deep Learning {.smaller}
+
+::: columns
+::: column
+- **activations, activation function**
+- artificial intelligence vs machine learning
+- artificial neural network
+- biases (in neurons)
+- classification problem
+- **cost/loss function**
+- deep network, network depth
+- dense or fully-connected layer
+- epoch
+- feed-forward neural network
+- ~~Keras, Tensorflow, PyTorch~~
+:::
+::: column
+- labelled/unlabelled data
+- machine learning
+- ~~matplotlib, seaborn~~
+- **neural network architecture**
+- perceptron
+- ReLU
+- representation learning
+- sigmoid activation function
+- targets
+- ~~training/test split~~
+- universal approximation theorem
+- weights (in a neuron)
+:::
+:::
+
+## Lecture 3: Math of Deep Learning
+
+::: columns
+::: column
+- accuracy
+- batches, batch size
+- callbacks
+- cross-entropy loss
+- **early stopping**
+- gradient-based learning, hill-climbing
+:::
+::: column
+- metrics
+- **overfitting**
+- shallow neural network
+- stochastic (mini-batch) gradient descent
+- **training/validation/test split**
+:::
+:::
+
+:::{.callout-tip}
+See this set of slides for an example of [calculating the output of a dense layer](https://pat-laub.github.io/DeepLearningMaterials/Lecture-5-Recurrent-Neural-Networks-And-Time-Series/rnns-and-time-series.html#/dense-layers-in-matrices).
+:::
+
+## Lecture 4: Tabular Data
+
+::: columns
+:::: column
+- confusion matrix
+- dead ReLU neurons
+- dropout
+- ensemble model
+- **entity embeddings**
+- Input layer
+- Keras eager execution
+- Keras functional API
+::::
+:::: column
+- $\ell_1$ & $\ell_2$ regularisation
+- leaky ReLU
+- Monte Carlo dropout
+- regularisation
+- Reshape layer
+- skip connection
+- wide & deep network structure
+::::
+:::
+
+## Lecture 5: RNNs
+
+- dimensions (tensor)
+- GRU
+- LSTM
+- rank (tensor)
+- recurrent neural networks
+- SimpleRNN
+
+## Lecture 6: CNNs
+
+::: columns
+::: column
+- channels
+- computer vision
+- convolutional layer & CNN
+- error analysis
+- filter
+:::
+::: column
+- flatten layer
+- kernel
+- max pooling
+- MNIST
+- stride
+:::
+:::
+
+## Lecture 7: NLP
+
+::: columns
+:::: column
+- ~~AlexNet~~
+- bag of words
+- ~~CIFAR-10 / CIFAR-100~~
+- ~~GoogLeNet & Inception~~
+- ImageNet
+::::
+:::: column
+- fine-tuning
+- lemmatization
+- one-hot embedding
+- **transfer learning**
+- vocabulary
+::::
+:::
+
+## Lecture 8: Generative Networks
+
+::: columns
+:::: column
+- autoencoder
+- bias
+- ~~DeepDream~~
+- greedy sampling
+- ~~GloVe~~
+- ~~Grad-CAM~~
+- language model
+::::
+:::: column
+- latent space
+- ~~neural style transfer~~
+- ~~softmax temperature~~
+- stochastic sampling
+- **word embeddings/vectors**
+- word2vec
+::::
+:::
+
+## Lecture 9
+
+- **Dissecting `model.fit`**
+- ~~Object oriented programming & PyTorch~~
+- Generative adversarial networks
+
+## StoryWalls {.smaller}
+
+1. Chess AI: Basic Python
+2. French motor #1: Basic feed-forward networks
+3. Stroke prediction: Classification network, preprocessing (one-hot encoding)
+4. __French motor #2__: Entity embeddings
+5. __Stock price prediction__: Recurrent neural networks
+6. [__Hurricane damage__](https://colab.research.google.com/drive/1WX3UQ9pLfHYiUXZ8o5DcAOQj6-AGdo5M?usp=sharing): Convolutional neural networks and hyperparameter tuning
+7. __Police reports__: NLP with bag-of-words, TF-IDF.
+8. Generative networks experimenting
+9. Reflection
+
+<script defer>
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["abs", "compile", "eval", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>
