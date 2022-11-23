@@ -1,0 +1,219 @@
+
+# Generative Adversarial Networks {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## GAN faces
+
+::: columns
+::: column
+![](fakeface1.jpeg)
+:::
+::: column
+![](fakeface2.jpeg)
+:::
+:::
+
+Try out [https://www.whichfaceisreal.com](https://www.whichfaceisreal.com).
+
+::: footer
+Source: [https://thispersondoesnotexist.com](https://thispersondoesnotexist.com).
+:::
+
+## GAN structure
+
+![A schematic of a generative adversarial network.](gan-diagram.png)
+
+::: footer
+Source: Thales Silva (2018), [An intuitive introduction to Generative Adversarial Networks (GANs)](https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394), freeCodeCamp.
+:::
+
+## GAN intuition
+
+![](google-devs-bad_gan.svg)
+![](google-devs-ok_gan.svg)
+![](google-devs-good_gan.svg)
+
+::: footer
+Source: Google Developers, [Overview of GAN Structure](https://developers.google.com/machine-learning/gan/gan_structure), Google Machine Learning Education.
+:::
+
+
+## StyleGAN2-ADA
+
+<br>
+
+Training times on V100s (1024x1024 resolution):
+
+| GPUs | 1000 kimg | 25000 kimg | sec / kimg          | GPU mem | CPU mem
+| :-: | :---------: | :--------: | :----: | :------: | :---------:
+| 1    | 1d 20h    | 46d 03h    | 158 | 8.1 GB  | 5.3 GB
+| 2    | 23h 09m   | 24d 02h    | 83   | 8.6 GB  | 11.9 GB
+| 4    | 11h 36m   | 12d 02h    | 40   | 8.4 GB  | 21.9 GB
+| 8    | 5h 54m    | 6d 03h     | 20   | 8.3 GB  | 44.7 GB
+
+
+::: footer
+Source: NVIDIA's Github, [StyleGAN2-ADA — Official PyTorch implementation](https://github.com/NVlabs/stylegan2-ada-pytorch/).
+:::
+
+## Discriminator
+
+```{python}
+lrelu = layers.LeakyReLU(alpha=0.2)
+
+discriminator = keras.Sequential([
+    keras.Input(shape=(28, 28, 1)),
+    layers.Conv2D(64, 3, strides=2, padding="same", activation=lrelu),
+    layers.Conv2D(128, 3, strides=2, padding="same", activation=lrelu),
+    layers.GlobalMaxPooling2D(),
+    layers.Dense(1)])
+
+discriminator.summary(print_fn=skip_empty)
+```
+
+## Generator
+
+```{python}
+latent_dim = 128
+generator = keras.Sequential([
+    layers.Dense(7 * 7 * 128, input_dim=latent_dim, activation=lrelu),
+    layers.Reshape((7, 7, 128)),
+    layers.Conv2DTranspose(128, 4, strides=2, padding="same", activation=lrelu),
+    layers.Conv2DTranspose(128, 4, strides=2, padding="same", activation=lrelu),
+    layers.Conv2D(1, 7, padding="same", activation="sigmoid")])
+generator.summary(print_fn=skip_empty)
+```
+
+## Advanced image layers {.smaller}
+
+::: {.absolute top=120 left=250}
+Conv2D
+:::
+
+::: {.absolute top=270 left=60}
+GlobalMaxPool2D
+:::
+
+::: {.absolute top=270 right=100}
+Conv2DTranspose
+:::
+
+![](2d_global_max_pooling_pa1.png){.absolute bottom=0 left=0 width="550"}
+
+![](conv2d.gif){.absolute top=75 left=350 width="300"}
+
+![](conv2dTranspose.gif){.absolute bottom=0 right=50 width="300"}
+
+::: footer
+Sources: Pröve (2017), [An Introduction to different Types of Convolutions in Deep Learning](https://towardsdatascience.com/types-of-convolutions-in-deep-learning-717013397f4d), and Peltarion Knowledge Center, [Global max pooling 2D](https://peltarion.com/knowledge-center/documentation/modeling-view/build-an-ai-model/blocks/global-max-pooling-2d).
+:::
+
+## Train step
+
+```{python}
+# Separate optimisers for discriminator and generator.
+d_optimizer = keras.optimizers.Adam(learning_rate=0.0003)
+g_optimizer = keras.optimizers.Adam(learning_rate=0.0004)
+
+# Instantiate a loss function.
+loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)
+
+@tf.function
+def train_step(real_images):
+  # Sample random points in the latent space
+  random_latent_vectors = tf.random.normal(shape=(batch_size, latent_dim))
+  # Decode them to fake images
+  generated_images = generator(random_latent_vectors)
+  # Combine them with real images
+  combined_images = tf.concat([generated_images, real_images], axis=0)
+
+  # Assemble labels discriminating real from fake images
+  labels = tf.concat([
+    tf.ones((batch_size, 1)),
+    tf.zeros((real_images.shape[0], 1))], axis=0)
+
+  # Add random noise to the labels - important trick!
+  labels += 0.05 * tf.random.uniform(labels.shape)
+
+  # Train the discriminator
+  with tf.GradientTape() as tape:
+    predictions = discriminator(combined_images)
+    d_loss = loss_fn(labels, predictions)
+  grads = tape.gradient(d_loss, discriminator.trainable_weights)
+  d_optimizer.apply_gradients(zip(grads, discriminator.trainable_weights))
+
+  # Sample random points in the latent space
+  random_latent_vectors = tf.random.normal(shape=(batch_size, latent_dim))
+
+  # Assemble labels that say "all real images"
+  misleading_labels = tf.zeros((batch_size, 1))
+
+  # Train the generator (note that we should *not* update the weights
+  # of the discriminator)!
+  with tf.GradientTape() as tape:
+    predictions = discriminator(generator(random_latent_vectors))
+    g_loss = loss_fn(misleading_labels, predictions)
+
+  grads = tape.gradient(g_loss, generator.trainable_weights)
+  g_optimizer.apply_gradients(zip(grads, generator.trainable_weights))
+  return d_loss, g_loss, generated_images
+```
+
+## Grab the data
+
+```{python}
+# Prepare the dataset.
+# We use both the training & test MNIST digits.
+batch_size = 64
+(x_train, _), (x_test, _) = keras.datasets.mnist.load_data()
+all_digits = np.concatenate([x_train, x_test])
+all_digits = all_digits.astype("float32") / 255.0
+all_digits = np.reshape(all_digits, (-1, 28, 28, 1))
+dataset = tf.data.Dataset.from_tensor_slices(all_digits)
+dataset = dataset.shuffle(buffer_size=1024).batch(batch_size)
+
+# In practice you need at least 20 epochs to generate nice digits.
+epochs = 1
+save_dir = "./"
+```
+
+## Train the GAN
+```{python}
+%%time
+for epoch in range(epochs):
+  for step, real_images in enumerate(dataset):
+    # Train the discriminator & generator on one batch of real images.
+    d_loss, g_loss, generated_images = train_step(real_images)
+
+    # Logging.
+    if step % 200 == 0:
+      # Print metrics
+      print(f"Discriminator loss at step {step}: {d_loss:.2f}")
+      print(f"Adversarial loss at step {step}: {g_loss:.2f}")
+      break # Remove this if really training the GAN
+```
+
+:::{.callout-warning}
+Converges to a Nash equilibrium.. if at all.
+:::
+
+## Mode collapse {.smaller}
+
+::: columns
+:::{.column width=50%"}
+![Example of mode collapse](gan-mode-collapse.png)
+:::
+:::{.column width="50%"}
+![](xkcd-random_number.png)
+
+- Dongyu Liu (2021), [TadGAN: Time Series Anomaly Detection Using Generative Adversarial Networks](https://youtu.be/jIDj2dhU99k)
+- Jeff Heaton (2022), [GANs for Tabular Synthetic Data Generation (7.5)](https://youtu.be/yujdA46HKwA)
+- Jeff Heaton (2022), [GANs to Enhance Old Photographs Deoldify (7.4)](https://youtu.be/0OTd5GlHRx4)
+- Jeff Heaton (2021), [Training a GAN from your Own Images: StyleGAN2](https://youtu.be/kbDd5lW6rkM)
+
+:::
+:::
+
+::: footer
+Source: Metz et al. (2017), [Unrolled Generative Adversarial Networks](https://arxiv.org/pdf/1611.02163.pdf) and Randall Munroe (2007), [xkcd #221: Random Number](https://xkcd.com/221/).
+:::
+

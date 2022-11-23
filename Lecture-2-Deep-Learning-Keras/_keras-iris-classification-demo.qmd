@@ -1,0 +1,318 @@
+# Classification {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+```{python}
+#| echo: false
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.callbacks import EarlyStopping
+from sklearn.model_selection import train_test_split
+
+pandas.options.display.max_rows = 4
+```
+
+## Iris dataset
+
+```{python}
+from sklearn.datasets import load_iris
+iris = load_iris()
+names = ["SepalLength", "SepalWidth", "PetalLength", "PetalWidth"]
+features = pd.DataFrame(iris.data, columns = names)
+features
+```
+
+## Target variable
+
+::: columns
+::: column
+
+```{python}
+iris.target_names
+```
+
+```{python}
+iris.target[:8]
+```
+
+```{python}
+target = iris.target
+target = target.reshape(-1, 1)
+target[:8]
+```
+:::
+::: column
+```{python}
+classes, counts = np.unique(
+        target,
+        return_counts=True
+)
+print(classes)
+print(counts)
+```
+
+```{python}
+iris.target_names[
+  target[[0, 30, 60]]
+]
+```
+:::
+:::
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 6
+```
+
+
+## Split the data into train and test {.smaller}
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(features, target, random_state=24)
+X_train
+```
+
+```{python}
+X_test.shape, y_test.shape
+```
+
+<!-- Add baseline of guessing the average class labels! -->
+
+## A basic classifier network
+
+![A basic network for classifying into three categories.](Geron-mls2_1009-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-09.
+:::
+
+## Create a classifier model
+
+```{python}
+NUM_FEATURES = len(features.columns)
+NUM_CATS = len(np.unique(target))
+
+print("Number of features:", NUM_FEATURES)
+print("Number of categories:", NUM_CATS)
+```
+
+Make a function to return a Keras model:
+```{python}
+def build_model(seed=42):
+    random.seed(seed)
+    return Sequential([
+        Dense(30, activation="relu"),
+        Dense(NUM_CATS, activation="softmax")
+    ])
+```
+
+## Fit the model
+
+```{python}
+model = build_model()
+model.compile("adam", "SparseCategoricalCrossentropy")
+
+model.fit(X_train, y_train, epochs=5, verbose=2);
+```
+
+## Track accuracy as the model trains
+
+```{python}
+model = build_model()
+model.compile("adam", "SparseCategoricalCrossentropy", \
+        metrics=["accuracy"])
+model.fit(X_train, y_train, epochs=5, verbose=2);
+```
+
+## Run a long fit
+
+```{python}
+
+model = build_model()
+model.compile("adam", "SparseCategoricalCrossentropy", \
+        metrics=["accuracy"])
+%time hist = model.fit(X_train, y_train, epochs=500, \
+        validation_split=0.25, verbose=False)
+```
+
+Evaluation now returns both _loss_ and _accuracy_.
+```{python}
+model.evaluate(X_test, y_test, verbose=False)
+```
+
+## Add early stopping
+
+```{python}
+model = build_model()
+model.compile("adam", "SparseCategoricalCrossentropy", \
+        metrics=["accuracy"])
+
+es = EarlyStopping(restore_best_weights=True, patience=50,
+        monitor="val_accuracy")
+%time histES = model.fit(X_train, y_train, epochs=500, \
+        validation_split=0.25, callbacks=[es], verbose=False);
+
+print(f"Stopped after {len(histES.history['loss'])} epochs.")
+```
+
+Evaluation on test set:
+```{python}
+model.evaluate(X_test, y_test, verbose=False)
+```
+
+## Fitting metrics
+
+::: columns
+::: column
+```{python}
+#| echo: false
+matplotlib.pyplot.rcParams["figure.figsize"] = (2.5, 2.95)
+plt.subplot(2, 1, 1)
+plt.plot(hist.history["loss"])
+plt.plot(hist.history["val_loss"])
+plt.title("Loss")
+plt.legend(["Training", "Validation"]);
+
+plt.subplot(2, 1, 2)
+plt.plot(histES.history["loss"])
+plt.plot(histES.history["val_loss"])
+plt.xlabel("Epoch");
+```
+:::
+::: column
+```{python}
+#| echo: false
+matplotlib.pyplot.rcParams["figure.figsize"] = (2.5, 3.25) 
+plt.subplot(2, 1, 1)
+plt.plot(hist.history["accuracy"])
+plt.plot(hist.history["val_accuracy"])
+plt.title("Accuracy")
+
+plt.subplot(2, 1, 2)
+plt.plot(histES.history["accuracy"])
+plt.plot(histES.history["val_accuracy"])
+plt.xlabel("Epoch");
+```
+:::
+:::
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+```
+
+
+## What is the softmax activation?
+
+It creates a "probability" vector: $\text{Softmax}(\boldsymbol{x}) = \frac{\mathrm{e}^x_i}{\sum_j \mathrm{e}^x_j} \,.$
+
+In NumPy:
+```{python}
+out = np.array([5, -1, 6])
+(np.exp(out) / np.exp(out).sum()).round(3)
+```
+
+In TensorFlow:
+```{python}
+out = tf.constant([[5.0, -1.0, 6.0]])
+tf.keras.activations.softmax(out).numpy().round(3)
+```
+
+## Prediction using classifiers
+
+```{python}
+y_test[:4]
+```
+
+```{python}
+y_pred = model.predict(X_test.head(4), verbose=0)
+y_pred
+```
+
+```{python}
+# Add 'keepdims=True' to get a column vector.
+np.argmax(y_pred, axis=1)
+```
+
+```{python}
+iris.target_names[np.argmax(y_pred, axis=1)]
+```
+
+## Why use cross-entropy loss?
+
+```{python}
+p = np.linspace(0, 1, 100)
+plt.plot(p, (1-p)**2)
+plt.plot(p, -np.log(p))
+plt.legend(["MSE", "Cross-entropy"]);
+```
+
+## One-hot encoding
+
+```{python}
+from sklearn.preprocessing import OneHotEncoder
+
+enc = OneHotEncoder()
+enc.fit(y_train) # May need .reshape(-1, 1)
+y_train_oh = enc.transform(y_train)
+y_test_oh = enc.transform(y_test)
+```
+
+::: columns
+::: column
+```{python}
+y_train[:5]
+```
+:::
+::: column
+```{python}
+y_train_oh[:5]
+```
+:::
+:::
+
+## One-hot encoding {data-visibility="uncounted"}
+
+```{python}
+from sklearn.preprocessing import OneHotEncoder
+
+enc = OneHotEncoder(sparse=False)
+
+y_train_oh = enc.fit_transform(y_train)
+y_test_oh = enc.transform(y_test)
+```
+
+::: columns
+::: column
+```{python}
+y_train[:5]
+```
+:::
+::: column
+```{python}
+y_train_oh[:5]
+```
+:::
+:::
+
+## Classifier given one-hot outputs
+
+<br>
+
+Create the model (_new loss function_):
+```{python}
+#| code-line-numbers: "|3"
+model = build_model()
+model.compile("adam", "CategoricalCrossentropy", \
+    metrics=["accuracy"])
+```
+
+Fit the model (_new target variables_):
+```{python}
+model.fit(X_train, y_train_oh, epochs=100, verbose=False);
+```
+
+Evaluate the model (_new target variables_):
+```{python}
+model.evaluate(X_test, y_test_oh, verbose=False)
+```

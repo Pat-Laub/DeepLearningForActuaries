@@ -1,8 +1,7 @@
 ---
 title: Network Architectures for Tabular Data 
-subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+subtitle: ACTL3143 & ACTL5111 Deep Learning for Actuaries
 author: Dr Patrick Laub
-date: Week 4
 format:
   revealjs:
     theme: [serif, custom.scss]
@@ -100,13 +99,12 @@ def skip_empty(line):
 
 <br>
 
-__Next week__: Jacky Poon guest lecture on _Tuesday 13:00_.
-
 ## Load packages {data-visibility="uncounted"}
 
 <br>
 
 ```{python}
+import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -123,248 +121,6 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 %load_ext watermark
 %watermark -p numpy,pandas,sklearn,tensorflow
 ```
-
-# Project and StoryWall {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Project draft (10%)
-
-Draft should show that you have:
-
-- specified your supervised learning problem,
-- collected and cleaned the data,
-- performed a basic exploratory data analysis,
-- create a simple (non-deep learning) benchmark model.
-
-Email me a PDF by **noon on July 1**, no late submissions.
-
-::: {.callout-tip}
-Later in the project you will fit two different deep learning architectures.
-Consider the _wide & deep_ architecture from later in this lecture.
-:::
-
-## StoryWall #3 Stroke Prediction {.smaller}
-
-Dataset source: [Kaggle Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset).
-
-```{python}
-data = pd.read_csv("stroke.csv")
-data.head()
-```
-
-## Split the data
-
-First, look for missing values.
-```{python}
-numberMissing = data.isna().sum()
-numberMissing[numberMissing > 0]
-```
-
-```{python}
-features = data.drop(["id", "stroke"], axis=1)
-target = data["stroke"]
-
-X_main, X_test, y_main, y_test = train_test_split(
-    features, target, test_size=0.2, random_state=7)
-X_train, X_val, y_train, y_val = train_test_split(
-    X_main, y_main, test_size=0.25, random_state=12)
-
-X_train.shape, X_val.shape, X_test.shape
-```
-
-## What values do we see in the data?
-
-::: columns
-::: column
-```{python}
-X_train["gender"].value_counts()
-```
-
-```{python}
-X_train["ever_married"].value_counts()
-```
-
-```{python}
-X_train["Residence_type"].value_counts()
-```
-:::
-::: column
-```{python}
-X_train["work_type"].value_counts()
-```
-
-```{python}
-X_train["smoking_status"].value_counts()
-```
-:::
-:::
-
-## Preprocess the columns individually
-
-::: {.smaller}
-Take categorical columns $\hookrightarrow$ one-hot vectors,
-binary columns $\hookrightarrow$ do nothing, continuous columns $\hookrightarrow$ impute NaNs & standardise.
-:::
-
-```{python}
-from sklearn.compose import make_column_transformer
-from sklearn.pipeline import make_pipeline
-from sklearn.impute import SimpleImputer
-
-catVars =  ["gender", "ever_married", "Residence_type",
-    "work_type", "smoking_status"]
-
-ct = make_column_transformer(
-  (OneHotEncoder(handle_unknown="ignore"), catVars),
-  ("passthrough", ["hypertension", "heart_disease"]),
-  remainder=make_pipeline(SimpleImputer(), StandardScaler())
-)
-
-X_train_ct = ct.fit_transform(X_train)
-X_val_ct = ct.transform(X_val); X_test_ct = ct.transform(X_test)
-
-numNANs = np.sum(np.isnan(X_train_ct)) + np.sum(np.isnan(X_val_ct)) + np.sum(np.isnan(X_test_ct))
-print(f"The training set has shape {X_train_ct.shape} & there are now {numNANs} NANs in the data.")
-```
-
-## Handling unseen categories
-
-::: columns
-::: column
-```{python}
-X_train["gender"].value_counts()
-```
-:::
-::: column
-```{python}
-X_val["gender"].value_counts()
-```
-:::
-:::
-
-::: columns
-::: column
-```{python}
-ind = np.argmax(X_val["gender"] == "Other")
-X_val.iloc[ind-1:ind+3][["gender"]]
-```
-:::
-::: column
-```{python}
-X_val_ct[ind-1:ind+3,:2]
-```
-
-::: {.callout-note}
-Note, when you pass a DataFrame to `sklearn`, it gives you back a `numpy` array.
-:::
-:::
-:::
-
-## Setup a binary classification model
-
-```{python}
-def create_model(seed=42):
-    tf.random.set_seed(seed)
-    model = Sequential()
-    model.add(Dense(32, "leaky_relu", input_shape=X_train_ct.shape[1:]))
-    model.add(Dense(16, "leaky_relu"))
-    model.add(Dense(1, "sigmoid"))
-    return model
-```
-
-```{python}
-model = create_model()
-model.summary(print_fn=skip_empty)
-```
-
-## Add metrics, compile, and fit
-
-```{python}
-model = create_model()
-
-pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
-model.compile(optimizer="adam", loss="BinaryCrossentropy",
-    metrics=["accuracy", "AUC", pr_auc])
-
-es = EarlyStopping(patience=50, restore_best_weights=True,
-    monitor="val_pr_auc", verbose=1)
-model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
-  validation_data=(X_val_ct, y_val));
-```
-
-::: columns
-::: column
-```{python}
-model.evaluate(X_val_ct, y_val, verbose=0)
-```
-:::
-::: column
-:::
-:::
-
-## Try overweighting the minority class
-
-```{python}
-model = create_model()
-
-pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
-model.compile(optimizer="adam", loss="BinaryCrossentropy",
-    metrics=["accuracy", "AUC", pr_auc])
-
-es = EarlyStopping(patience=50, restore_best_weights=True,
-    monitor="val_pr_auc", verbose=1)
-model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
-  validation_data=(X_val_ct, y_val), class_weight={0: 1, 1: 10});
-```
-
-::: columns
-::: column
-```{python}
-model.evaluate(X_val_ct, y_val, verbose=0)
-```
-:::
-::: column
-::: fragment
-```{python}
-model.evaluate(X_test_ct, y_test, verbose=0)
-```
-:::
-:::
-:::
-
-## Classification Metrics {.smaller}
-
-```{python}
-from sklearn.metrics import confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay
-y_pred = model.predict(X_test_ct)
-```
-
-::: columns
-::: column
-```{python}
-RocCurveDisplay.from_predictions(y_test, y_pred, name="");
-```
-:::
-::: column
-```{python}
-PrecisionRecallDisplay.from_predictions(y_test, y_pred, name=""); plt.legend(loc="upper right");
-```
-:::
-:::
-
-::: columns
-::: column
-```{python}
-y_pred_stroke = y_pred > 0.5
-confusion_matrix(y_test, y_pred_stroke)
-```
-:::
-::: column
-```{python}
-y_pred_stroke = y_pred > 0.3
-confusion_matrix(y_test, y_pred_stroke)
-```
-:::
-:::
 
 # Ordinal Variables {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
 
@@ -463,7 +219,7 @@ X_train_ord_df.head()
 ## Train on ordinal encoded values
 
 ```{python}
-tf.random.set_seed(12)
+random.seed(12)
 model = Sequential([
   Dense(1, activation="exponential")
 ])
@@ -484,6 +240,8 @@ Use a sklearn _column transformer_ for that.
 ## Preprocess ordinal & continuous
 
 ```{python}
+from sklearn.compose import make_column_transformer
+
 ct = make_column_transformer(
   (OrdinalEncoder(), ["Area", "VehGas"]),
   ("drop", ["VehBrand", "Region"]),
@@ -521,7 +279,7 @@ X_train_ct_df.head(3)
 ![Embeddings will gradually improve during training.](Geron-mls2_1304-blur.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 13-4 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 13-4.
 :::
 
 ## Pass categorical variables to Keras
@@ -539,7 +297,7 @@ for i, reg in enumerate(oe.categories_[0][:3]):
 from tensorflow.keras.layers import Embedding
 NUM_REGIONS = len(np.unique(X_train[["Region"]]))
 
-tf.random.set_seed(12)
+random.seed(12)
 model = Sequential([
   Embedding(input_dim=NUM_REGIONS, output_dim=2),
   Dense(1, activation="exponential")
@@ -613,7 +371,7 @@ from tensorflow.keras.layers import Input
 ::: columns
 ::: column
 ```{python}
-tf.random.set_seed(12)
+random.seed(12)
 
 model = Sequential([
   Dense(30, "relu"),
@@ -633,7 +391,7 @@ hist.history["val_loss"][-1]
 :::
 ::: column
 ```{python}
-tf.random.set_seed(12)
+random.seed(12)
 
 inputs = Input(shape=(2,))
 x = Dense(30, "relu")(inputs)
@@ -702,7 +460,7 @@ model = Model(
 :::
 
 ::: footer
-Sources: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-14 (__redacted__) & code snippet.
+Sources: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-14 & code snippet.
 :::
 
 ## Naming the layers
@@ -787,7 +545,7 @@ Create embeddings and join them with the other inputs.
 ```{python}
 from tensorflow.keras.layers import Reshape
 
-tf.random.set_seed(1337)
+random.seed(1337)
 vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
     name="vehBrandEE")(vehBrand)
 vehBrandEE = Reshape(target_shape=(2,))(vehBrandEE)
@@ -831,7 +589,7 @@ plot_model(model, layer_range=("", "combined"), show_shapes=True)
 ## Just slicing up one `Input`
 
 ```{python}
-tf.random.set_seed(1337)
+random.seed(1337)
 inputs = Input(shape=(X_train_ct.shape[1],))
 
 vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
@@ -913,7 +671,7 @@ otherInputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
 Feed the continuous inputs to some normal dense layers.
 
 ```{python}
-tf.random.set_seed(1337)
+random.seed(1337)
 x = Dense(30, "relu", name="hidden1")(otherInputs)
 x = Dense(30, "relu", name="hidden2")(x)
 lambda_ = Dense(1, "exponential", name="lambda")(x)
@@ -1123,7 +881,7 @@ X_test_sc = sc.transform(X_test)
 <br>
 
 ```{python}
-tf.random.set_seed(123)
+random.seed(123)
 
 model = Sequential([
     Dense(30,
@@ -1142,7 +900,7 @@ hist.history["loss"]
 ```{python}
 #|echo: false
 set_square_figures()
-y_pred = model.predict(X_train)
+y_pred = model.predict(X_train, verbose=0)
 plt.scatter(y_pred, y_train)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
@@ -1160,13 +918,13 @@ Remember in Week 2, we fit this model to the unscaled California housing dataset
 ## Check the initial activations
 
 ```{python}
-tf.random.set_seed(123)
+random.seed(123)
 model = Sequential([
     Dense(30, activation="relu"),
     Dense(1, activation="exponential")
 ])
 
-y_pred = model.predict(X_train) 
+y_pred = model.predict(X_train, verbose=0) 
 y_pred
 ```
 
@@ -1177,19 +935,19 @@ print(f"{100*np.mean(np.isinf(y_pred)):.2f}% of predictions are inf.")
 ## Check the pre-activations
 
 ```{python}
-tf.random.set_seed(123)
+random.seed(123)
 model = Sequential([
     Dense(30, activation="relu"),
     Dense(1),
 ])
-preActivations = model.predict(X_train) 
+preActivations = model.predict(X_train, verbose=0) 
 plt.hist(preActivations, bins=100);
 ```
 
 ## Check the output of first layer
 
 ```{python}
-tf.random.set_seed(123)
+random.seed(123)
 model = Sequential([
     Dense(30, activation="relu", name="hidden"),
     Dense(1),
@@ -1218,7 +976,7 @@ hiddenLayer(X_train.head(1).to_numpy()).numpy()
 <br>
 
 ```{python}
-tf.random.set_seed(123)
+random.seed(123)
 
 model = Sequential([
     Dense(30,
@@ -1236,7 +994,7 @@ hist.history["loss"]
 ```{python}
 #|echo: false
 set_square_figures()
-y_pred = model.predict(X_train)
+y_pred = model.predict(X_train, verbose=0)
 plt.scatter(y_pred, y_train)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
@@ -1296,7 +1054,7 @@ numpy.set_printoptions(threshold=1000);
 Create a function which counts the number of dead ReLU neurons in the first hidden layer for a given seed:
 ```{python}
 def count_dead(seed):
-    tf.random.set_seed(seed)
+    random.seed(seed)
     hidden = Dense(30, activation="relu")
     acts = hidden(X_train.to_numpy()).numpy()
     return np.sum(acts.mean(axis=0) == 0)
@@ -1364,7 +1122,7 @@ is called $\ell_2$ regularisation.
 from tensorflow.keras.regularizers import l1, l2
 
 def l1_model(regulariserStrength=0.01):
-  tf.random.set_seed(123)
+  random.seed(123)
   model = Sequential([
       Dense(30,
         activation="leaky_relu",
@@ -1415,7 +1173,7 @@ plt.hist(weights, bins=100);
 ```{python}
 #| echo: false
 def l2_model(regulariserStrength=0.01):
-  tf.random.set_seed(123)
+  random.seed(123)
   model = Sequential([
       Dense(30,
         activation="leaky_relu",
@@ -1477,7 +1235,7 @@ Early stopping is a kind of implicit regularisation.
 
 ::: footer
 Sources: Randall Munroe (2020), [xkcd #2265: Tax AI](https://xkcd.com/2265/), and
-Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, Fig. 11-9 (__redacted__).
+Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, Fig. 11-9.
 :::
 
 ## Dropout quote #1
@@ -1489,7 +1247,7 @@ The company would be forced to adapt its organization; it could not rely on any 
 Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366.
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
 :::
 
 ## Dropout quote #2
@@ -1503,7 +1261,7 @@ They end up being less sensitive to slight changes in the inputs.
 In the end, you get a more robust network that generalizes better.
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366.
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
 :::
 
 ## Dropout in Keras
@@ -1513,7 +1271,7 @@ Dropout is just another layer in Keras.
 ```{python}
 from tensorflow.keras.layers import Dropout
 
-tf.random.set_seed(123)
+random.seed(123)
 model = Sequential([
     Dense(30, activation="leaky_relu", name="hidden1"),
     Dropout(0.2),
@@ -1533,12 +1291,12 @@ Making predictions is the same as any other model:
 ::: columns
 ::: column
 ```{python}
-model.predict(X_test_sc[:3,:])
+model.predict(X_test_sc[:3,:], verbose=0)
 ```
 :::
 ::: column
 ```{python}
-model.predict(X_test_sc[:3,:])
+model.predict(X_test_sc[:3,:], verbose=0)
 ```
 :::
 :::
@@ -1587,7 +1345,7 @@ np.mean(allPredictions, axis=1)
 ![Create multiple models for the same problem.](Geron-mls2_0701-blur.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 7-1 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 7-1.
 :::
 
 ## Ensembles
@@ -1595,7 +1353,7 @@ Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, K
 ![Combine many models to get better predictions.](Geron-mls2_0702-blur.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 7-2 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 7-2.
 :::
 
 ## ANN can feed into a GLM
@@ -1604,20 +1362,6 @@ Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, K
 
 ::: footer
 Source: Ronald Richman (2022), Mind the Gap - Safely Incorporating Deep Learning Models into the Actuarial Toolkit, IFoA seminar, Slide 14.
-:::
-
-# Preview of Recurrent Neural Networks {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Recurrent neural network
-
-The RNN processes each data in the sequence one by one, while keeping memory of what came before.
-
-![Illustration of *unrolling the network through time*.](Geron-mls2_1501-blur.png)
-
-Common RNN structures are: LSTM and GRU cells.
-
-::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 15-1 (__redacted__).
 :::
 
 # {data-visibility="uncounted"} 

@@ -2,7 +2,9 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import cycler
 
-from pyodide import create_proxy
+# from pyodide import create_proxy
+from js import document
+from pyodide.ffi.wrappers import add_event_listener #.create_proxy
 import numpy as np
 
 mpl.rcParams['axes.spines.right'] = False
@@ -52,10 +54,6 @@ def _tentative_guess(*args):
     tentativeGuess = float(document.getElementById("new_guess").value)
     redraw()
 
-make_a_guess = create_proxy(_make_a_guess)
-tentative_guess = create_proxy(_tentative_guess)
-document.getElementById("new_guess").addEventListener("input", tentative_guess)
-document.getElementById("new_guess").addEventListener("change", make_a_guess)
 
 def redraw():
     plt.clf()
@@ -74,7 +72,9 @@ def redraw():
         plt.axvline(tentativeGuess, color="black", ls="--")
 
     # Pyscript.write apparently deprecated & will be removed at some point..
+    # Check: https://jeff.glass/post/whats-new-pyscript-2022-09-1/
     pyscript.write("mpl", plt.gcf())
+    # document.; 
 
 
 def show_derivatives(*args):
@@ -86,5 +86,12 @@ def reveal_function(*args):
     global showFunction
     showFunction = not showFunction
     redraw()
+
+# make_a_guess = create_proxy(_make_a_guess)
+# tentative_guess = create_proxy(_tentative_guess)
+add_event_listener(document.getElementById("new_guess"), "input", _tentative_guess)
+add_event_listener(document.getElementById("new_guess"), "change", _make_a_guess)
+# document.getElementById("new_guess").addEventListener("input", tentative_guess)
+# document.getElementById("new_guess").addEventListener("change", make_a_guess)
 
 redraw()

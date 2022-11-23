@@ -7,7 +7,7 @@
 <link href="advanced-topics_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="advanced-topics_files/libs/quarto-html/quarto-html.min.css" rel="stylesheet" data-mode="light">
 <link href="advanced-topics_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
-  <meta name="generator" content="quarto-1.1.251">
+  <meta name="generator" content="quarto-1.2.269">
 
   <meta name="author" content="Dr Patrick Laub">
   <title>Advanced Topics &amp; Revision</title>
@@ -384,22 +384,25 @@
       margin-right: 0; 
     }
   </style>
-  <script src="advanced-topics_files/libs/quarto-diagram/mermaid.min.js"></script>
-  <script src="advanced-topics_files/libs/quarto-diagram/mermaid-init.js"></script>
-  <link href="advanced-topics_files/libs/quarto-diagram/mermaid.css" rel="stylesheet">
 </head>
 <body class="quarto-light">
 <div class="line right"></div>
   <div class="reveal">
     <div class="slides">
 
-<section id="title-slide" data-background-image="unsw-yellow-shape.png" data-background-size="contain !important" class="center">
+<section id="title-slide" data-background-image="unsw-yellow-shape.png" data-background-size="contain !important" class="quarto-title-block center">
   <h1 class="title">Advanced Topics &amp; Revision</h1>
-  <p class="subtitle">ACTL3143/5111: Deep Learning for Actuaries</p>
-  <p class="author">Dr Patrick Laub</p>
-  <p class="date">Week 10</p>
-</section>
+  <p class="subtitle">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
 
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Dr Patrick Laub 
+</div>
+</div>
+</div>
+
+</section>
 <section>
 <section id="section" class="title-slide slide level1 center">
 <h1></h1>
@@ -468,1122 +471,23 @@ Lecture Outline
 <h2>Load packages</h2>
 <p><br></p>
 <div class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-2"><a href="#cb1-2"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-3"><a href="#cb1-3"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-4"><a href="#cb1-4"></a><span class="im">import</span> tensorflow <span class="im">as</span> tf</span>
-<span id="cb1-5"><a href="#cb1-5"></a><span class="im">from</span> tensorflow <span class="im">import</span> keras</span>
-<span id="cb1-6"><a href="#cb1-6"></a><span class="im">from</span> tensorflow.keras <span class="im">import</span> layers</span>
-<span id="cb1-7"><a href="#cb1-7"></a></span>
-<span id="cb1-8"><a href="#cb1-8"></a><span class="op">%</span>load_ext watermark</span>
-<span id="cb1-9"><a href="#cb1-9"></a><span class="op">%</span>watermark <span class="op">-</span>p matplotlib,numpy,pandas,tensorflow</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="im">import</span> tensorflow <span class="im">as</span> tf</span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="im">from</span> tensorflow <span class="im">import</span> keras</span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="im">from</span> tensorflow.keras <span class="im">import</span> layers</span>
+<span id="cb1-8"><a href="#cb1-8"></a></span>
+<span id="cb1-9"><a href="#cb1-9"></a><span class="op">%</span>load_ext watermark</span>
+<span id="cb1-10"><a href="#cb1-10"></a><span class="op">%</span>watermark <span class="op">-</span>p matplotlib,numpy,pandas,tensorflow</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>matplotlib: 3.5.2
-numpy     : 1.21.5
-pandas    : 1.4.4
-tensorflow: 2.8.0
+<pre><code>matplotlib: 3.6.2
+numpy     : 1.23.4
+pandas    : 1.5.1
+tensorflow: 2.10.0
 </code></pre>
 </div>
-</div>
-</section>
-<section id="load-mnist-dataset" class="slide level2">
-<h2>Load MNIST dataset</h2>
-<div class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1"></a>(X_train, y_train), (X_test, y_test) <span class="op">=</span> keras.datasets.mnist.load_data()</span>
-<span id="cb3-2"><a href="#cb3-2"></a>X_train <span class="op">=</span> X_train.astype(<span class="st">"float32"</span>) <span class="op">/</span> <span class="fl">255.0</span></span>
-<span id="cb3-3"><a href="#cb3-3"></a>X_test <span class="op">=</span> X_test.astype(<span class="st">"float32"</span>) <span class="op">/</span> <span class="fl">255.0</span></span>
-<span id="cb3-4"><a href="#cb3-4"></a></span>
-<span id="cb3-5"><a href="#cb3-5"></a><span class="co"># Reserve 10,000 samples for validation.</span></span>
-<span id="cb3-6"><a href="#cb3-6"></a>X_val <span class="op">=</span> X_train[<span class="op">-</span><span class="dv">10000</span>:]</span>
-<span id="cb3-7"><a href="#cb3-7"></a>y_val <span class="op">=</span> y_train[<span class="op">-</span><span class="dv">10000</span>:]</span>
-<span id="cb3-8"><a href="#cb3-8"></a>X_train <span class="op">=</span> X_train[:<span class="op">-</span><span class="dv">10000</span>]</span>
-<span id="cb3-9"><a href="#cb3-9"></a>y_train <span class="op">=</span> y_train[:<span class="op">-</span><span class="dv">10000</span>]</span>
-<span id="cb3-10"><a href="#cb3-10"></a></span>
-<span id="cb3-11"><a href="#cb3-11"></a><span class="co"># Prepare the training dataset.</span></span>
-<span id="cb3-12"><a href="#cb3-12"></a>batch_size <span class="op">=</span> <span class="dv">64</span></span>
-<span id="cb3-13"><a href="#cb3-13"></a>train_dataset <span class="op">=</span> tf.data.Dataset.from_tensor_slices((X_train, y_train))</span>
-<span id="cb3-14"><a href="#cb3-14"></a><span class="co"># train_dataset = train_dataset.shuffle(buffer_size=1024)</span></span>
-<span id="cb3-15"><a href="#cb3-15"></a>train_dataset <span class="op">=</span> train_dataset.batch(batch_size)</span>
-<span id="cb3-16"><a href="#cb3-16"></a></span>
-<span id="cb3-17"><a href="#cb3-17"></a><span class="co"># Prepare the validation dataset.</span></span>
-<span id="cb3-18"><a href="#cb3-18"></a>val_dataset <span class="op">=</span> tf.data.Dataset.from_tensor_slices((X_val, y_val))</span>
-<span id="cb3-19"><a href="#cb3-19"></a>val_dataset <span class="op">=</span> val_dataset.batch(batch_size)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="a-basic-mnist-model" class="slide level2">
-<h2>A basic MNIST model</h2>
-<div class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">def</span> build_model(seed<span class="op">=</span><span class="dv">42</span>):</span>
-<span id="cb4-2"><a href="#cb4-2"></a>  tf.random.set_seed(seed)</span>
-<span id="cb4-3"><a href="#cb4-3"></a>  <span class="cf">return</span> keras.Sequential([</span>
-<span id="cb4-4"><a href="#cb4-4"></a>    layers.Flatten(input_shape<span class="op">=</span>(<span class="dv">28</span>, <span class="dv">28</span>)),</span>
-<span id="cb4-5"><a href="#cb4-5"></a>    layers.Dense(<span class="dv">128</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb4-6"><a href="#cb4-6"></a>    layers.Dense(<span class="dv">10</span>)</span>
-<span id="cb4-7"><a href="#cb4-7"></a>  ])</span>
-<span id="cb4-8"><a href="#cb4-8"></a></span>
-<span id="cb4-9"><a href="#cb4-9"></a>firstModel <span class="op">=</span> build_model()</span>
-<span id="cb4-10"><a href="#cb4-10"></a>firstModel.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Model: "sequential"
-_________________________________________________________________
-Layer (type)                Output Shape              Param #
-=================================================================
-flatten (Flatten)           (None, 784)               0
-dense (Dense)               (None, 128)               100480
-dense_1 (Dense)             (None, 10)                1290
-=================================================================
-Total params: 101,770
-Trainable params: 101,770
-Non-trainable params: 0
-_________________________________________________________________</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section></section>
-<section>
-<section id="dissecting-model.fit" class="title-slide slide level1 center" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
-<h1>Dissecting <code>model.fit</code></h1>
-<br>
-<center>
-<blockquote class="twitter-tweet" data-theme="light">
-<p lang="en" dir="ltr">
-Spoiler: it's going to be a 20-lines Python script that calls model.fіt()<a href="https://t.co/AqLZSQ0kwD">https://t.co/AqLZSQ0kwD</a>
-</p>
-— François Chollet (<span class="citation" data-cites="fchollet">@fchollet</span>) <a href="https://twitter.com/fchollet/status/1518702623892799488?ref_src=twsrc%5Etfw">April 25, 2022</a>
-</blockquote>
-<script async="" src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-</center>
-<div class="footer">
-<p>Source: <a href="https://twitter.com/fchollet/status/1518702623892799488?s=20&amp;t=RZyyrUzgI5VhGfq730ynBg">Twitter</a></p>
-</div>
-</section>
-<section id="fitting-like-normal" class="slide level2">
-<h2>Fitting like normal</h2>
-<p>Specify fitting requirements.</p>
-<div class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1"></a>epochs <span class="op">=</span> <span class="dv">2</span></span>
-<span id="cb6-2"><a href="#cb6-2"></a>lr <span class="op">=</span> <span class="fl">1e-2</span></span>
-<span id="cb6-3"><a href="#cb6-3"></a>optimizer <span class="op">=</span> keras.optimizers.SGD(learning_rate<span class="op">=</span>lr)</span>
-<span id="cb6-4"><a href="#cb6-4"></a>loss_fn <span class="op">=</span> keras.losses.SparseCategoricalCrossentropy(from_logits<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Create a model &amp; run <code>model.fit</code>.</p>
-<div class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1"></a>firstModel <span class="op">=</span> build_model()</span>
-<span id="cb7-2"><a href="#cb7-2"></a>firstModel.<span class="bu">compile</span>(optimizer, loss_fn)</span>
-<span id="cb7-3"><a href="#cb7-3"></a><span class="op">%</span>time firstFit <span class="op">=</span> firstModel.fit(train_dataset, epochs<span class="op">=</span>epochs, <span class="op">\</span></span>
-<span id="cb7-4"><a href="#cb7-4"></a>        validation_data<span class="op">=</span>val_dataset, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span>
-<span id="cb7-5"><a href="#cb7-5"></a>firstFit.history[<span class="st">"loss"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 2.05 s, sys: 382 ms, total: 2.43 s
-Wall time: 1.3 s</code></pre>
-</div>
-<div class="cell-output cell-output-display" data-execution_count="6">
-<pre><code>[0.973278820514679, 0.455027312040329]</code></pre>
-</div>
-</div>
-</section>
-<section id="going-through-the-epochs" class="slide level2">
-<h2>Going through the epochs</h2>
-<p>Create a new model:</p>
-<div class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb10-2"><a href="#cb10-2"></a>model.<span class="bu">compile</span>(optimizer, loss_fn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Repeatedly call <code>model.fit</code>:</p>
-<div class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1"></a><span class="co"># Go through all the training data multiple times.</span></span>
-<span id="cb11-2"><a href="#cb11-2"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb11-3"><a href="#cb11-3"></a>    model.fit(train_dataset, epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="callout callout-warning callout-captioned callout-style-default">
-<div class="callout-body">
-<div class="callout-caption">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Warning</strong></p>
-</div>
-<div class="callout-content">
-<p>Reusing the same optimiser works here because SGD is stateless. In contrast, RMSprop &amp; Adam have internal state (e.g.&nbsp;to calculate/store momentum).</p>
-</div>
-</div>
-</div>
-</section>
-<section id="are-they-exactly-the-same" class="slide level2">
-<h2>Are they <em>exactly</em> the same?</h2>
-<div class="columns">
-<div class="column">
-<div class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1"></a>firstModel.layers[<span class="op">-</span><span class="dv">1</span>].get_weights()[<span class="dv">0</span>][:<span class="dv">3</span>,:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="9">
-<pre><code>array([[ 0.0982, -0.0743,  0.2274],
-       [-0.1007,  0.0848, -0.2163],
-       [-0.2138, -0.197 ,  0.035 ]], dtype=float32)</code></pre>
-</div>
-</div>
-</div><div class="column">
-<div class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1"></a>model.layers[<span class="op">-</span><span class="dv">1</span>].get_weights()[<span class="dv">0</span>][:<span class="dv">3</span>,:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="10">
-<pre><code>array([[ 0.0982, -0.0743,  0.2274],
-       [-0.1007,  0.0848, -0.2163],
-       [-0.2138, -0.197 ,  0.035 ]], dtype=float32)</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1"></a><span class="kw">def</span> same_last_layer(model1, model2):</span>
-<span id="cb16-2"><a href="#cb16-2"></a>    weights1 <span class="op">=</span> model1.layers[<span class="op">-</span><span class="dv">1</span>].get_weights()[<span class="dv">0</span>]</span>
-<span id="cb16-3"><a href="#cb16-3"></a>    weights2 <span class="op">=</span> model2.layers[<span class="op">-</span><span class="dv">1</span>].get_weights()[<span class="dv">0</span>]</span>
-<span id="cb16-4"><a href="#cb16-4"></a>    <span class="cf">return</span> np.<span class="bu">max</span>(np.<span class="bu">abs</span>(weights1 <span class="op">-</span> weights2)) <span class="op">==</span> <span class="dv">0</span></span>
-<span id="cb16-5"><a href="#cb16-5"></a></span>
-<span id="cb16-6"><a href="#cb16-6"></a>same_last_layer(firstModel, model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="11">
-<pre><code>True</code></pre>
-</div>
-</div>
-</section>
-<section id="going-through-the-batches" class="slide level2">
-<h2>Going through the batches</h2>
-<p>Create a new model:</p>
-<div class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb18-2"><a href="#cb18-2"></a>model.<span class="bu">compile</span>(optimizer, loss_fn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Repeatedly call <code>train_on_batch</code>:</p>
-<div class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1"></a><span class="co"># Go through all the training data multiple times.</span></span>
-<span id="cb19-2"><a href="#cb19-2"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb19-3"><a href="#cb19-3"></a></span>
-<span id="cb19-4"><a href="#cb19-4"></a>    <span class="co"># Go through the entire training dataset in batches.</span></span>
-<span id="cb19-5"><a href="#cb19-5"></a>    <span class="cf">for</span> (X_batch_train, y_batch_train) <span class="kw">in</span> train_dataset:</span>
-<span id="cb19-6"><a href="#cb19-6"></a></span>
-<span id="cb19-7"><a href="#cb19-7"></a>        <span class="co"># Update weights &amp; biases to make this batch's predictions better.</span></span>
-<span id="cb19-8"><a href="#cb19-8"></a>        model.train_on_batch(X_batch_train, y_batch_train)</span>
-<span id="cb19-9"><a href="#cb19-9"></a></span>
-<span id="cb19-10"><a href="#cb19-10"></a><span class="bu">print</span>(same_last_layer(firstModel, model))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>True</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="what-is-model.fit-really-doing" class="slide level2">
-<h2>What is <code>model.fit()</code> really doing?</h2>
-<div class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1"></a><span class="op">%%</span>time</span>
-<span id="cb21-2"><a href="#cb21-2"></a>model <span class="op">=</span> build_model() <span class="co"># No model.compile!</span></span>
-<span id="cb21-3"><a href="#cb21-3"></a></span>
-<span id="cb21-4"><a href="#cb21-4"></a><span class="co"># Go through all the training data multiple times.</span></span>
-<span id="cb21-5"><a href="#cb21-5"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb21-6"><a href="#cb21-6"></a>    <span class="co"># Go through the entire training dataset in batches.</span></span>
-<span id="cb21-7"><a href="#cb21-7"></a>    <span class="cf">for</span> (X_batch_train, y_batch_train) <span class="kw">in</span> train_dataset:</span>
-<span id="cb21-8"><a href="#cb21-8"></a>        <span class="co"># Calculate the loss, while keeping track of gradients.</span></span>
-<span id="cb21-9"><a href="#cb21-9"></a>        <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb21-10"><a href="#cb21-10"></a>            y_pred <span class="op">=</span> model(X_batch_train, training<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb21-11"><a href="#cb21-11"></a>            loss_value <span class="op">=</span> loss_fn(y_batch_train, y_pred)</span>
-<span id="cb21-12"><a href="#cb21-12"></a></span>
-<span id="cb21-13"><a href="#cb21-13"></a>        <span class="co"># Calculate the gradients &amp; take a SGD step.</span></span>
-<span id="cb21-14"><a href="#cb21-14"></a>        grads <span class="op">=</span> tape.gradient(loss_value, model.trainable_weights)</span>
-<span id="cb21-15"><a href="#cb21-15"></a>        optimizer.apply_gradients(<span class="bu">zip</span>(grads, model.trainable_weights))</span>
-<span id="cb21-16"><a href="#cb21-16"></a></span>
-<span id="cb21-17"><a href="#cb21-17"></a><span class="bu">print</span>(same_last_layer(firstModel, model))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>True
-CPU times: user 3.56 s, sys: 331 ms, total: 3.89 s
-Wall time: 3.01 s</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="what-about-optimizer-stuff" class="slide level2">
-<h2>What about <code>optimizer</code> stuff?</h2>
-<p><span class="math display">\[
-\boldsymbol{\theta}_i = \boldsymbol{\theta}_{i-1} - \eta \nabla \text{LossOnBatch} \\
-\]</span></p>
-<div class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb23-2"><a href="#cb23-2"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb23-3"><a href="#cb23-3"></a>    <span class="cf">for</span> (X_batch_train, y_batch_train) <span class="kw">in</span> train_dataset:</span>
-<span id="cb23-4"><a href="#cb23-4"></a>        <span class="co"># Calculate the loss, while keeping track of gradients.</span></span>
-<span id="cb23-5"><a href="#cb23-5"></a>        <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb23-6"><a href="#cb23-6"></a>            y_pred <span class="op">=</span> model(X_batch_train, training<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb23-7"><a href="#cb23-7"></a>            loss_value <span class="op">=</span> loss_fn(y_batch_train, y_pred)</span>
-<span id="cb23-8"><a href="#cb23-8"></a></span>
-<span id="cb23-9"><a href="#cb23-9"></a>        <span class="co"># Calculate the gradients &amp; take a SGD step.</span></span>
-<span id="cb23-10"><a href="#cb23-10"></a>        grads <span class="op">=</span> tape.gradient(loss_value, model.trainable_weights)</span>
-<span id="cb23-11"><a href="#cb23-11"></a>        <span class="cf">for</span> grad, weight <span class="kw">in</span> <span class="bu">zip</span>(grads, model.trainable_weights):</span>
-<span id="cb23-12"><a href="#cb23-12"></a>            <span class="co"># Take a small negative step in the direction of the gradient.</span></span>
-<span id="cb23-13"><a href="#cb23-13"></a>            weight.assign(weight <span class="op">-</span> lr <span class="op">*</span> grad) </span>
-<span id="cb23-14"><a href="#cb23-14"></a></span>
-<span id="cb23-15"><a href="#cb23-15"></a><span class="bu">print</span>(same_last_layer(firstModel, model))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>True</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="inspecting-the-gradients" class="slide level2">
-<h2>Inspecting the gradients</h2>
-<div class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1"></a>grads</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="16">
-<pre><code>[&lt;tf.Tensor: shape=(784, 128), dtype=float32, numpy=
- array([[0., 0., 0., ..., 0., 0., 0.],
-        [0., 0., 0., ..., 0., 0., 0.],
-        [0., 0., 0., ..., 0., 0., 0.],
-        ...,
-        [0., 0., 0., ..., 0., 0., 0.],
-        [0., 0., 0., ..., 0., 0., 0.],
-        [0., 0., 0., ..., 0., 0., 0.]], dtype=float32)&gt;,
- &lt;tf.Tensor: shape=(128,), dtype=float32, numpy=
- array([ 3.0360e-02, -3.0921e-02,  1.2238e-02,  1.7940e-03,  1.3904e-02,
-         1.9477e-03,  3.3881e-02,  2.9056e-02,  2.5945e-02,  4.2920e-02,
-         1.7383e-02, -3.8926e-02,  2.5133e-02, -3.1567e-03, -1.0122e-02,
-        -1.1740e-02,  9.4486e-03, -2.3212e-02, -3.2686e-03,  2.9088e-03,
-         7.8852e-03,  9.4453e-03, -1.7209e-02, -1.6564e-02, -2.1614e-02,
-         4.4864e-02,  0.0000e+00,  4.2568e-02, -1.6856e-02,  0.0000e+00,
-         1.7898e-02,  1.2590e-02, -4.1752e-02,  4.2497e-02,  5.1698e-02,
-         1.3341e-02, -1.1867e-02, -1.2916e-02, -2.9950e-03,  2.5390e-02,
-        -1.5389e-02, -2.0011e-02, -4.7447e-03,  7.1656e-03,  2.9904e-02,
-        -3.9028e-02,  2.4499e-02, -1.8957e-02,  7.0073e-02, -4.6733e-03,
-        -6.2825e-02, -1.1439e-02,  2.7188e-03, -3.5783e-02, -6.5961e-03,
-        -2.5142e-02,  0.0000e+00,  1.2887e-02, -3.5036e-02,  6.9635e-02,
-         2.0950e-02,  4.1346e-02, -2.3510e-02,  1.2610e-02,  6.8104e-03,
-         0.0000e+00,  4.1232e-03, -3.6927e-04,  2.8907e-03, -2.5114e-02,
-        -1.6823e-02, -9.1659e-03, -3.2145e-04,  1.1823e-02,  4.5568e-03,
-         2.0118e-02,  3.6144e-02,  2.1522e-02, -6.2480e-04, -1.0185e-02,
-        -3.9899e-03,  3.2229e-02, -2.8387e-02, -2.4063e-02,  3.9055e-02,
-         8.1349e-03,  0.0000e+00,  2.1982e-03,  6.5691e-03,  1.1468e-02,
-        -7.3067e-02, -3.5447e-02,  4.1712e-02,  0.0000e+00,  0.0000e+00,
-        -1.2898e-02, -7.6021e-02, -4.8762e-03, -2.2640e-03, -5.4343e-03,
-        -1.4178e-02, -5.3009e-02,  5.9933e-03, -1.6995e-02, -7.1337e-03,
-        -2.4793e-02,  3.4487e-03,  8.7715e-03,  4.2343e-03, -7.9992e-03,
-        -3.0582e-02,  6.7091e-03, -2.3130e-02, -6.9053e-05,  8.7078e-03,
-        -6.9982e-03, -2.4844e-04, -1.1759e-03,  2.2047e-02,  3.2849e-02,
-         4.1823e-02,  7.4070e-02,  3.9271e-02, -9.8804e-03,  0.0000e+00,
-        -3.4394e-03,  3.5277e-02,  3.6637e-02], dtype=float32)&gt;,
- &lt;tf.Tensor: shape=(128, 10), dtype=float32, numpy=
- array([[-8.2953e-02,  1.1690e-03,  1.3262e-01, ...,  4.3149e-03,
-          3.7797e-02,  1.9627e-02],
-        [-3.4308e-02,  2.3726e-03,  5.8461e-02, ...,  2.9720e-03,
-          8.9332e-03,  4.8369e-03],
-        [-8.2968e-02,  3.7370e-03,  6.4873e-02, ...,  1.1627e-04,
-         -4.0694e-03,  1.1197e-02],
-        ...,
-        [-3.3582e-02,  2.2347e-03,  2.7756e-02, ..., -1.9675e-03,
-         -9.1139e-03,  1.4606e-02],
-        [-7.5606e-02,  4.6353e-03,  3.9845e-02, ...,  2.5930e-03,
-         -1.5467e-02,  1.3436e-02],
-        [-1.0268e-01,  5.5425e-03,  1.1661e-01, ...,  2.8978e-03,
-         -1.6526e-02,  2.3900e-02]], dtype=float32)&gt;,
- &lt;tf.Tensor: shape=(10,), dtype=float32, numpy=
- array([-0.0911,  0.0039,  0.0746, -0.0119, -0.0295, -0.0706,  0.1077,
-         0.0018, -0.0024,  0.0175], dtype=float32)&gt;]</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1"></a>[np.mean(np.<span class="bu">abs</span>(grad.numpy())) <span class="cf">for</span> grad <span class="kw">in</span> grads]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="17">
-<pre><code>[0.003485533, 0.01930479, 0.029289845, 0.041103397]</code></pre>
-</div>
-</div>
-</section>
-<section id="calculating-training-losses" class="slide level2">
-<h2>Calculating training losses</h2>
-<div class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1"></a>firstFit.history[<span class="st">"loss"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="18">
-<pre><code>[0.973278820514679, 0.455027312040329]</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb31-2"><a href="#cb31-2"></a></span>
-<span id="cb31-3"><a href="#cb31-3"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb31-4"><a href="#cb31-4"></a>    loss_history <span class="op">=</span> []</span>
-<span id="cb31-5"><a href="#cb31-5"></a>    <span class="cf">for</span> (X_batch_train, y_batch_train) <span class="kw">in</span> train_dataset:</span>
-<span id="cb31-6"><a href="#cb31-6"></a>        <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb31-7"><a href="#cb31-7"></a>            y_pred <span class="op">=</span> model(X_batch_train, training<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb31-8"><a href="#cb31-8"></a>            loss_value <span class="op">=</span> loss_fn(y_batch_train, y_pred)</span>
-<span id="cb31-9"><a href="#cb31-9"></a>            loss_history.append(loss_value.numpy())</span>
-<span id="cb31-10"><a href="#cb31-10"></a></span>
-<span id="cb31-11"><a href="#cb31-11"></a>        grads <span class="op">=</span> tape.gradient(loss_value, model.trainable_weights)</span>
-<span id="cb31-12"><a href="#cb31-12"></a>        optimizer.apply_gradients(<span class="bu">zip</span>(grads, model.trainable_weights))</span>
-<span id="cb31-13"><a href="#cb31-13"></a></span>
-<span id="cb31-14"><a href="#cb31-14"></a>    <span class="bu">print</span>(<span class="ss">f"[Epoch </span><span class="sc">{</span>epoch<span class="sc">}</span><span class="ss">] Loss avg </span><span class="sc">{</span>np<span class="sc">.</span>mean(loss_history)<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[Epoch 0] Loss avg 0.9733172059059143</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[Epoch 1] Loss avg 0.4553719162940979</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="calculating-validation-losses" class="slide level2">
-<h2>Calculating validation losses</h2>
-<div class="cell" data-execution_count="20">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1"></a>firstFit.history[<span class="st">"val_loss"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="20">
-<pre><code>[0.48505955934524536, 0.3652433753013611]</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="21">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb36-2"><a href="#cb36-2"></a>model.<span class="bu">compile</span>(optimizer, loss_fn)</span>
-<span id="cb36-3"><a href="#cb36-3"></a></span>
-<span id="cb36-4"><a href="#cb36-4"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb36-5"><a href="#cb36-5"></a>    model.fit(train_dataset, epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb36-6"><a href="#cb36-6"></a></span>
-<span id="cb36-7"><a href="#cb36-7"></a>    val_losses <span class="op">=</span> []</span>
-<span id="cb36-8"><a href="#cb36-8"></a>    <span class="cf">for</span> (X_batch_val, y_batch_val) <span class="kw">in</span> val_dataset:</span>
-<span id="cb36-9"><a href="#cb36-9"></a>        y_pred <span class="op">=</span> model(X_batch_val)</span>
-<span id="cb36-10"><a href="#cb36-10"></a>        val_losses.append(loss_fn(y_batch_val, y_pred))</span>
-<span id="cb36-11"><a href="#cb36-11"></a></span>
-<span id="cb36-12"><a href="#cb36-12"></a>    <span class="bu">print</span>(<span class="ss">f"[Epoch </span><span class="sc">{</span>epoch<span class="sc">}</span><span class="ss">] Val loss avg </span><span class="sc">{</span>np<span class="sc">.</span>mean(val_losses)<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[Epoch 0] Val loss avg 0.48449423909187317</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[Epoch 1] Val loss avg 0.3643719255924225</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="comparable-training-val.-losses" class="slide level2">
-<h2>Comparable training &amp; val. losses</h2>
-<div class="cell" data-execution_count="22">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1"></a><span class="bu">print</span>(firstFit.history[<span class="st">"loss"</span>])</span>
-<span id="cb39-2"><a href="#cb39-2"></a><span class="bu">print</span>(firstFit.history[<span class="st">"val_loss"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[0.973278820514679, 0.455027312040329]
-[0.48505955934524536, 0.3652433753013611]</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="23">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb41-2"><a href="#cb41-2"></a>model.<span class="bu">compile</span>(optimizer, loss_fn)</span>
-<span id="cb41-3"><a href="#cb41-3"></a></span>
-<span id="cb41-4"><a href="#cb41-4"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb41-5"><a href="#cb41-5"></a>    model.fit(train_dataset, epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb41-6"><a href="#cb41-6"></a></span>
-<span id="cb41-7"><a href="#cb41-7"></a>    <span class="co"># Now the epoch is over and the model isn't being updated,</span></span>
-<span id="cb41-8"><a href="#cb41-8"></a>    <span class="co"># calculate the losses on train and validation data.</span></span>
-<span id="cb41-9"><a href="#cb41-9"></a>    train_loss <span class="op">=</span> model.evaluate(train_dataset, verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb41-10"><a href="#cb41-10"></a>    val_loss <span class="op">=</span> model.evaluate(val_dataset, verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb41-11"><a href="#cb41-11"></a>    <span class="bu">print</span>(<span class="ss">f"[Epoch </span><span class="sc">{</span>epoch<span class="sc">}</span><span class="ss">] Train loss </span><span class="sc">{</span>train_loss<span class="sc">}</span><span class="ss"> Val loss </span><span class="sc">{</span>val_loss<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[Epoch 0] Train loss 0.53240567445755 Val loss 0.48505955934524536</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[Epoch 1] Train loss 0.4036087989807129 Val loss 0.3652433753013611</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="how-to-use-losses" class="slide level2">
-<h2>How to use losses</h2>
-<p>A common strategy is to:</p>
-<ol type="1">
-<li>Keep fitting bigger and bigger models until training error is <span class="math inline">\(\approx 0\)</span>. <em>This will likely produce a huge error on the validation set, called generalisation error, due to overfitting</em>.</li>
-<li>Apply regularisation/dropout/early stopping to reduce the generalisation error.</li>
-<li>Watch out for <em>overfitting the validation set</em> by looking at the test loss.</li>
-</ol>
-</section>
-<section id="what-is-this-with-syntax" class="slide level2">
-<h2>What is this <code>with</code> syntax?</h2>
-<p>Example, opening a file:</p>
-<div class="columns">
-<div class="column">
-<p>Most basic way is:</p>
-<div class="cell" data-execution_count="24">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1"></a>f <span class="op">=</span> <span class="bu">open</span>(<span class="st">"haiku1.txt"</span>, <span class="st">"r"</span>)</span>
-<span id="cb44-2"><a href="#cb44-2"></a><span class="bu">print</span>(f.read())</span>
-<span id="cb44-3"><a href="#cb44-3"></a>f.close()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Chaos reigns within.
-Reflect, repent, and reboot.
-Order shall return.</code></pre>
-</div>
-</div>
-</div><div class="column">
-<p>Instead, use:</p>
-<div class="cell" data-execution_count="25">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1"></a><span class="cf">with</span> <span class="bu">open</span>(<span class="st">"haiku2.txt"</span>, <span class="st">"r"</span>) <span class="im">as</span> f:</span>
-<span id="cb46-2"><a href="#cb46-2"></a>    <span class="bu">print</span>(f.read())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>The Web site you seek
-Cannot be located, but
-Countless more exist.</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="footer">
-<p>Haikus from http://www.libertybasicuniversity.com/lbnews/nl107/haiku.htm</p>
-</div>
-</section>
-<section id="what-is-gradienttape" class="slide level2">
-<h2>What is <code>GradientTape()</code>?</h2>
-<div class="cell" data-execution_count="26">
-<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1"></a>x <span class="op">=</span> tf.Variable(<span class="fl">3.0</span>)</span>
-<span id="cb48-2"><a href="#cb48-2"></a></span>
-<span id="cb48-3"><a href="#cb48-3"></a><span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb48-4"><a href="#cb48-4"></a>  y <span class="op">=</span> x<span class="op">**</span><span class="dv">2</span></span>
-<span id="cb48-5"><a href="#cb48-5"></a></span>
-<span id="cb48-6"><a href="#cb48-6"></a>dy_dx <span class="op">=</span> tape.gradient(y, x)</span>
-<span id="cb48-7"><a href="#cb48-7"></a>dy_dx.numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="26">
-<pre><code>6.0</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Source: Tensorflow (2022), <a href="https://www.tensorflow.org/guide/autodiff">Introduction to gradients and automatic differentiation</a>, Tensorflow docs.</p>
-</div>
-</section></section>
-<section>
-<section id="computation-graphs-automatic-differentiation" class="title-slide slide level1 center" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
-<h1>Computation Graphs &amp; Automatic Differentiation</h1>
-
-</section>
-<section id="compile-using-graph-mode" class="slide level2">
-<h2>Compile using graph mode</h2>
-<div class="cell" data-execution_count="27">
-<div class="sourceCode cell-code" id="cb50"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb50-2"><a href="#cb50-2"></a></span>
-<span id="cb50-3"><a href="#cb50-3"></a><span class="at">@tf.function</span></span>
-<span id="cb50-4"><a href="#cb50-4"></a><span class="kw">def</span> train_step(X, y):</span>
-<span id="cb50-5"><a href="#cb50-5"></a>    <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb50-6"><a href="#cb50-6"></a>        y_pred <span class="op">=</span> model(X, training<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb50-7"><a href="#cb50-7"></a>        loss_value <span class="op">=</span> loss_fn(y, y_pred)</span>
-<span id="cb50-8"><a href="#cb50-8"></a>    grads <span class="op">=</span> tape.gradient(loss_value, model.trainable_weights)</span>
-<span id="cb50-9"><a href="#cb50-9"></a>    optimizer.apply_gradients(<span class="bu">zip</span>(grads, model.trainable_weights))</span>
-<span id="cb50-10"><a href="#cb50-10"></a>    <span class="cf">return</span> loss_value</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell" data-execution_count="28">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1"></a><span class="op">%%</span>time</span>
-<span id="cb51-2"><a href="#cb51-2"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb51-3"><a href="#cb51-3"></a>    <span class="cf">for</span> (X_batch_train, y_batch_train) <span class="kw">in</span> train_dataset:</span>
-<span id="cb51-4"><a href="#cb51-4"></a>        loss_value <span class="op">=</span> train_step(X_batch_train, y_batch_train)</span>
-<span id="cb51-5"><a href="#cb51-5"></a><span class="bu">print</span>(same_last_layer(firstModel, model))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>True
-CPU times: user 1.59 s, sys: 312 ms, total: 1.9 s
-Wall time: 992 ms</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Chollet (2020), <a href="https://keras.io/guides/writing_a_training_loop_from_scratch/">Writing a training loop from scratch</a>, Keras docs.</p>
-</div>
-</section>
-<section id="example-computational-graph" class="slide level2">
-<h2>Example computational graph</h2>
-
-<img data-src="Geron-mlst_0901-blur.png" class="r-stretch quarto-figure-center"><p class="caption">Each basic equation is broken down to its core components.</p><div class="footer">
-<p>Source: Aurélien Géron (2017), <em>Hands-On Machine Learning with Scikit-Learn &amp; TensorFlow</em>, 1st Edition, Figure 9.1 (<strong>redacted</strong>).</p>
-</div>
-</section>
-<section id="why" class="slide level2">
-<h2>Why?</h2>
-
-<img data-src="Geron-mlst_0902-blur.png" class="r-stretch quarto-figure-center"><p class="caption">Tensorflow figures out the smartest way to evaluate your equations.</p><div class="footer">
-<p>Source: Aurélien Géron (2017), <em>Hands-On Machine Learning with Scikit-Learn &amp; TensorFlow</em>, 1st Edition, Figure 9.2 (<strong>redacted</strong>).</p>
-</div>
-</section>
-<section id="example-linear-regression" class="slide level2">
-<h2>Example: linear regression</h2>
-<p><span class="math display">\[
-\hat{y}(x) = w x + b
-\]</span></p>
-<p>For some observation <span class="math inline">\(\{ x_i, y_i \}\)</span>, the (MSE) loss is</p>
-<p><span class="math display">\[
-\text{Loss}_i = (\hat{y}(x_i) - y_i)^2
-\]</span></p>
-<p>For a batch of the first <span class="math inline">\(n\)</span> observations the loss is</p>
-<p><span class="math display">\[
-\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n (\hat{y}(x_i) - y_i)^2
-\]</span></p>
-</section>
-<section id="derivatives" class="slide level2">
-<h2>Derivatives</h2>
-<p>Since <span class="math inline">\(\hat{y}(x) = w x + b\)</span>,</p>
-<p><span class="math display">\[
-\frac{\partial \hat{y}(x)}{\partial w} = x \text{ and }
-\frac{\partial \hat{y}(x)}{\partial b} = 1 .
-\]</span></p>
-<p>As <span class="math inline">\(\text{Loss}_i = (\hat{y}(x_i) - y_i)^2\)</span>, we know <span class="math display">\[
-\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i) .
-\]</span></p>
-</section>
-<section id="chain-rule" class="slide level2">
-<h2>Chain rule</h2>
-<p><span class="math display">\[
-\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i), \,\,
-\frac{\partial \hat{y}(x)}{\partial w} = x , \, \text{ and } \,
-\frac{\partial \hat{y}(x)}{\partial b} = 1 .
-\]</span></p>
-<p>Putting this together, we have</p>
-<p><span class="math display">\[
-\frac{\partial \text{Loss}_i}{\partial w}
-= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
-  \times \frac{\partial \hat{y}(x_i)}{\partial w}
-= 2 (\hat{y}(x_i) - y_i) \, x_i
-\]</span></p>
-<p>and <span class="math display">\[
-\frac{\partial \text{Loss}_i}{\partial b}
-= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
-  \times \frac{\partial \hat{y}(x_i)}{\partial b}
-= 2 (\hat{y}(x_i) - y_i) .
-\]</span></p>
-</section>
-<section id="backpropagation" class="slide level2">
-<h2>Backpropagation</h2>
-<div class="columns">
-<div class="column">
-<iframe width="560" height="560" src="https://www.youtube.com/embed/Ilg3gGewQ5U" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="">
-</iframe>
-</div><div class="column">
-<iframe width="560" height="560" src="https://www.youtube.com/embed/tIeHLnjs5U8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="">
-</iframe>
-</div>
-</div>
-</section>
-<section id="linear-regression-graph" class="slide level2">
-<h2>Linear regression graph</h2>
-<p><br></p>
-<div class="cell" data-reveal="true" data-fig-width="10">
-<div class="cell-output-display">
-<div>
-<p>
-</p><pre class="mermaid" data-tooltip-selector="#mermaid-tooltip-1">%%{init: {'themeVariables': {'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
-graph LR
-    x[x]:::data --&gt; times(( &lt;sup&gt;.&lt;/sup&gt; ))
-    w[w]:::param --&gt; times
-    times --&gt;|z| plus(( + ))
-    b[b]:::param --&gt; plus
-    plus --&gt;|yp| minus(( - ))
-    y[y]:::data --&gt; minus
-    minus --&gt; loss[loss]
-    
-    classDef data fill:aqua,stroke-width:0px
-    classDef param fill:lightGreen,stroke-width:0px
-    style loss fill:white,stroke-width:0px
-</pre>
-<div id="mermaid-tooltip-1" class="mermaidTooltip">
-
-</div>
-<p></p>
-</div>
-</div>
-</div>
-</section>
-<section id="forward-pass" class="slide level2">
-<h2>Forward pass</h2>
-<p><br><br></p>
-<div class="cell" data-reveal="true" data-fig-width="10">
-<div class="cell-output-display">
-<div>
-<p>
-</p><pre class="mermaid" data-tooltip-selector="#mermaid-tooltip-2">%%{init: {'themeVariables': { 'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
-graph LR
-    x[x = 2]:::data --&gt; times(( &lt;sup&gt;.&lt;/sup&gt; ))
-    w[w = 3]:::param --&gt; times
-    times --&gt;|z = 6| plus(( + ))
-    b[b = 1]:::param --&gt; plus
-    plus --&gt;|yp = 7| minus(( - ))
-    y[y = 4]:::data --&gt; minus
-    minus --&gt; loss[loss = 3]
-    
-    classDef data fill:aqua,stroke-width:0px
-    classDef param fill:lightGreen,stroke-width:0px
-    style loss fill:white,stroke-width:0px
-</pre>
-<div id="mermaid-tooltip-2" class="mermaidTooltip">
-
-</div>
-<p></p>
-</div>
-</div>
-</div>
-</section>
-<section id="backward-pass" class="slide level2">
-<h2>Backward pass</h2>
-<div class="cell" data-reveal="true" data-fig-width="10">
-<div class="cell-output-display">
-<div>
-<p>
-</p><pre class="mermaid" data-tooltip-selector="#mermaid-tooltip-3">%%{init: {'themeVariables': { 'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
-graph LR
-    x[x = 2]:::data --- times(( &lt;sup&gt;.&lt;/sup&gt; ))
-    w[w = 3]:::param ---|"grad(z, w) = 2"| times
-    times ---|"z=6&lt;br&gt;grad(yp, z) = 1"| plus(( + ))
-    b[b = 1]:::param ---|"grad(yp, b) = 1"| plus
-    plus ---|"yp = 7&lt;br&gt;grad(loss, yp) = 1"| minus(( - ))
-    y[y = 4]:::data --- minus
-    minus --- loss[loss = 3]
-    
-    classDef data fill:aqua,stroke-width:0px
-    classDef param fill:lightGreen,stroke-width:0px
-    style loss fill:white,stroke-width:0px
-</pre>
-<div id="mermaid-tooltip-3" class="mermaidTooltip">
-
-</div>
-<p></p>
-</div>
-</div>
-</div>
-<div class="fragment">
-<div class="cell" data-execution_count="29">
-<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1"></a>x <span class="op">=</span> tf.constant(<span class="fl">2.0</span>)<span class="op">;</span> y <span class="op">=</span> tf.constant(<span class="fl">4.0</span>)</span>
-<span id="cb53-2"><a href="#cb53-2"></a>w <span class="op">=</span> tf.Variable(<span class="fl">3.0</span>)<span class="op">;</span> b <span class="op">=</span> tf.Variable(<span class="fl">1.0</span>)</span>
-<span id="cb53-3"><a href="#cb53-3"></a><span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb53-4"><a href="#cb53-4"></a>  yp <span class="op">=</span> w<span class="op">*</span>x <span class="op">+</span> b</span>
-<span id="cb53-5"><a href="#cb53-5"></a>  loss <span class="op">=</span> tf.<span class="bu">abs</span>(yp <span class="op">-</span> y)</span>
-<span id="cb53-6"><a href="#cb53-6"></a>tape.gradient(loss, [w, b])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="29">
-<pre><code>[&lt;tf.Tensor: shape=(), dtype=float32, numpy=2.0&gt;,
- &lt;tf.Tensor: shape=(), dtype=float32, numpy=1.0&gt;]</code></pre>
-</div>
-</div>
-</div>
-</section>
-<section id="thats-it" class="slide level2">
-<h2>That’s it</h2>
-<blockquote>
-<p>And with that, you just saw backpropagation in action! Backpropagation is simply the application of the chain rule to a computation graph. There’s nothing more to it. Backpropagation starts with the final loss value and works backward from the top layers to the bottom layers, computing the contribution that each parameter had in the loss value. That’s where the name “backpropagation” comes from: we “back propagate” the loss contributions of different nodes in a computation graph.</p>
-</blockquote>
-<div class="footer">
-<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Chapter 2.</p>
-</div>
-</section>
-<section id="batch-gradient-descent" class="slide level2">
-<h2>Batch gradient descent</h2>
-<p>For the first <span class="math inline">\(n\)</span> observations <span class="math inline">\(\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n \text{Loss}_i\)</span> so</p>
-<p><span class="math display">\[
-\begin{aligned}
-\frac{\partial \text{Loss}_{1:n}}{\partial w}
-&amp;= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial w}
-= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial w} \\
-&amp;= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) \, x_i .
-\end{aligned}
-\]</span></p>
-<p><span class="math display">\[
-\begin{aligned}
-\frac{\partial \text{Loss}_{1:n}}{\partial b}
-&amp;= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial b}
-= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial b} \\
-&amp;= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) .
-\end{aligned}
-\]</span></p>
-</section>
-<section id="bespoke-derivatives-vs.-autodiff" class="slide level2">
-<h2>Bespoke derivatives vs.&nbsp;autodiff</h2>
-<div class="columns">
-<div class="column" style="width:60%;">
-<div class="cell" data-execution_count="31">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1"></a>w <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> b <span class="op">=</span> <span class="dv">0</span><span class="op">;</span></span>
-<span id="cb55-2"><a href="#cb55-2"></a>y_pred <span class="op">=</span> w <span class="op">*</span> x <span class="op">+</span> b</span>
-<span id="cb55-3"><a href="#cb55-3"></a>loss <span class="op">=</span> (y_pred <span class="op">-</span> y) <span class="op">**</span> <span class="dv">2</span></span>
-<span id="cb55-4"><a href="#cb55-4"></a></span>
-<span id="cb55-5"><a href="#cb55-5"></a>dL_dw <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> (y_pred <span class="op">-</span> y) <span class="op">*</span> x</span>
-<span id="cb55-6"><a href="#cb55-6"></a>dL_db <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> (y_pred <span class="op">-</span> y)</span>
-<span id="cb55-7"><a href="#cb55-7"></a></span>
-<span id="cb55-8"><a href="#cb55-8"></a>nabla <span class="op">=</span> [dL_dw.mean(), dL_db.mean()]</span>
-<span id="cb55-9"><a href="#cb55-9"></a><span class="bu">print</span>(np.array(nabla))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[-14.6942  -6.005 ]</code></pre>
-</div>
-</div>
-</div><div class="column" style="width:40%;">
-<div class="cell" data-execution_count="32">
-<div class="cell-output cell-output-display" data-execution_count="32">
-
-<div>
-<style scoped="">
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>x</th>
-      <th>y</th>
-      <th>dL/dw</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>1.0</td>
-      <td>0.99</td>
-      <td>-1.98</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>2.0</td>
-      <td>3.00</td>
-      <td>-12.02</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>3.0</td>
-      <td>5.01</td>
-      <td>-30.09</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="cell" data-execution_count="33">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1"></a>w <span class="op">=</span> tf.Variable(<span class="fl">0.0</span>)<span class="op">;</span> b <span class="op">=</span> tf.Variable(<span class="fl">0.0</span>)</span>
-<span id="cb57-2"><a href="#cb57-2"></a>x <span class="op">=</span> tf.constant(x)<span class="op">;</span> y <span class="op">=</span> tf.constant(y)</span>
-<span id="cb57-3"><a href="#cb57-3"></a></span>
-<span id="cb57-4"><a href="#cb57-4"></a><span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb57-5"><a href="#cb57-5"></a>  y_pred <span class="op">=</span> w <span class="op">*</span> x <span class="op">+</span> b</span>
-<span id="cb57-6"><a href="#cb57-6"></a>  loss <span class="op">=</span> tf.reduce_mean((y_pred <span class="op">-</span> y) <span class="op">**</span> <span class="dv">2</span>)</span>
-<span id="cb57-7"><a href="#cb57-7"></a></span>
-<span id="cb57-8"><a href="#cb57-8"></a>dL_dw, dL_db <span class="op">=</span> tape.gradient(loss, [w, b])</span>
-<span id="cb57-9"><a href="#cb57-9"></a><span class="bu">print</span>(np.array([dL_dw, dL_db]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[-14.6942  -6.005 ]</code></pre>
-</div>
-</div>
-</section>
-<section id="the-magic-of-autodiff" class="slide level2">
-<h2>The magic of autodiff</h2>
-<div class="cell" data-execution_count="35">
-<div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1"></a><span class="im">from</span> tensorflow.keras.metrics <span class="im">import</span> mean_squared_error <span class="im">as</span> mse</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="columns">
-<div class="column">
-<div class="cell" data-execution_count="36">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1"></a><span class="op">%%</span>timeit</span>
-<span id="cb60-2"><a href="#cb60-2"></a>y_pred <span class="op">=</span> w<span class="op">*</span>x <span class="op">+</span> b</span>
-<span id="cb60-3"><a href="#cb60-3"></a>res <span class="op">=</span> y_pred <span class="op">-</span> y</span>
-<span id="cb60-4"><a href="#cb60-4"></a>dL_db <span class="op">=</span> tf.reduce_mean(<span class="dv">2</span><span class="op">*</span>res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>63.2 ms ± 364 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="37">
-<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1"></a><span class="op">%%</span>timeit</span>
-<span id="cb62-2"><a href="#cb62-2"></a><span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb62-3"><a href="#cb62-3"></a>  loss <span class="op">=</span> mse(y, w<span class="op">*</span>x <span class="op">+</span> b)</span>
-<span id="cb62-4"><a href="#cb62-4"></a>tape.gradient(loss, b)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>163 ms ± 414 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)</code></pre>
-</div>
-</div>
-</div><div class="column">
-<div class="cell" data-execution_count="38">
-<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1"></a><span class="op">%%</span>timeit</span>
-<span id="cb64-2"><a href="#cb64-2"></a>res <span class="op">=</span> (w<span class="op">*</span>x <span class="op">+</span> b) <span class="op">-</span> y</span>
-<span id="cb64-3"><a href="#cb64-3"></a>dL_dw <span class="op">=</span> tf.reduce_mean(<span class="dv">2</span><span class="op">*</span>res<span class="op">*</span>x)</span>
-<span id="cb64-4"><a href="#cb64-4"></a>dL_db <span class="op">=</span> tf.reduce_mean(<span class="dv">2</span><span class="op">*</span>res)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>98.9 ms ± 1.39 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="39">
-<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1"></a><span class="op">%%</span>timeit</span>
-<span id="cb66-2"><a href="#cb66-2"></a><span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb66-3"><a href="#cb66-3"></a>  loss <span class="op">=</span> mse(y, w<span class="op">*</span>x <span class="op">+</span> b)</span>
-<span id="cb66-4"><a href="#cb66-4"></a>tape.gradient(loss, [w, b])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>163 ms ± 242 µs per loop (mean ± std. dev. of 7 runs, 10 loops each)</code></pre>
-</div>
-</div>
-</div>
-</div>
-</section></section>
-<section>
-<section id="object-oriented-programming" class="title-slide slide level1 center" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
-<h1>Object-oriented programming</h1>
-
-</section>
-<section id="remember-this-class" class="slide level2">
-<h2>Remember this class?</h2>
-<div class="cell" data-execution_count="40">
-<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1"></a>COURSE_CREDITS <span class="op">=</span> {<span class="st">"ACTL3143"</span>: <span class="dv">6</span>, <span class="st">"ACTL5001"</span>: <span class="dv">12</span>}</span>
-<span id="cb68-2"><a href="#cb68-2"></a></span>
-<span id="cb68-3"><a href="#cb68-3"></a><span class="kw">class</span> Student:</span>
-<span id="cb68-4"><a href="#cb68-4"></a>  <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name, zID, grades):</span>
-<span id="cb68-5"><a href="#cb68-5"></a>    <span class="va">self</span>.name <span class="op">=</span> name</span>
-<span id="cb68-6"><a href="#cb68-6"></a>    <span class="va">self</span>.zID <span class="op">=</span> zID</span>
-<span id="cb68-7"><a href="#cb68-7"></a>    <span class="va">self</span>.grades <span class="op">=</span> grades</span>
-<span id="cb68-8"><a href="#cb68-8"></a></span>
-<span id="cb68-9"><a href="#cb68-9"></a>  <span class="kw">def</span> wam(<span class="va">self</span>):</span>
-<span id="cb68-10"><a href="#cb68-10"></a>    <span class="co">"""</span></span>
-<span id="cb68-11"><a href="#cb68-11"></a><span class="co">    Calculate the weighted average mark for this student.</span></span>
-<span id="cb68-12"><a href="#cb68-12"></a><span class="co">    """</span></span>
-<span id="cb68-13"><a href="#cb68-13"></a>    total_credits <span class="op">=</span> <span class="dv">0</span></span>
-<span id="cb68-14"><a href="#cb68-14"></a>    total_grade <span class="op">=</span> <span class="dv">0</span></span>
-<span id="cb68-15"><a href="#cb68-15"></a>    <span class="cf">for</span> course, grade <span class="kw">in</span> <span class="va">self</span>.grades.items():</span>
-<span id="cb68-16"><a href="#cb68-16"></a>      total_credits <span class="op">+=</span> COURSE_CREDITS[course]</span>
-<span id="cb68-17"><a href="#cb68-17"></a>      total_grade <span class="op">+=</span> grade <span class="op">*</span> COURSE_CREDITS[course]</span>
-<span id="cb68-18"><a href="#cb68-18"></a>    <span class="cf">return</span> total_grade <span class="op">/</span> total_credits</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
-<section id="calling-the-wam-method" class="slide level2">
-<h2>Calling the <code>wam</code> method</h2>
-<p>Now every student object can calculate its own WAM.</p>
-<div class="cell" data-execution_count="41">
-<div class="sourceCode cell-code" id="cb69"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1"></a>don <span class="op">=</span> Student(<span class="st">"Don Quixote"</span>, <span class="dv">111222</span>,</span>
-<span id="cb69-2"><a href="#cb69-2"></a>    {<span class="st">"ACTL3143"</span>: <span class="dv">100</span>, <span class="st">"ACTL5001"</span>: <span class="dv">50</span>})</span>
-<span id="cb69-3"><a href="#cb69-3"></a></span>
-<span id="cb69-4"><a href="#cb69-4"></a>zhuge <span class="op">=</span> Student(<span class="st">"Zhuge Liang"</span>, <span class="dv">123456</span>, </span>
-<span id="cb69-5"><a href="#cb69-5"></a>    {<span class="st">"ACTL3143"</span>: <span class="dv">100</span>, <span class="st">"ACTL5001"</span>: <span class="dv">100</span>})</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell" data-execution_count="42">
-<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1"></a>don.wam()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="42">
-<pre><code>66.66666666666667</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="43">
-<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1"></a>zhuge.wam()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="43">
-<pre><code>100.0</code></pre>
-</div>
-</div>
-</section>
-<section id="customising-an-existing-class" class="slide level2">
-<h2>Customising an existing class</h2>
-<div class="cell" data-execution_count="44">
-<div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1"></a><span class="kw">class</span> PhDStudent(Student):</span>
-<span id="cb74-2"><a href="#cb74-2"></a>  <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, name, zID, grades, supervisor):</span>
-<span id="cb74-3"><a href="#cb74-3"></a>    <span class="bu">super</span>().<span class="fu">__init__</span>(name, zID, grades)</span>
-<span id="cb74-4"><a href="#cb74-4"></a>    <span class="va">self</span>.supervisor <span class="op">=</span> supervisor</span>
-<span id="cb74-5"><a href="#cb74-5"></a>    <span class="va">self</span>.timeTillGraduation <span class="op">=</span> np.inf</span>
-<span id="cb74-6"><a href="#cb74-6"></a>    <span class="va">self</span>.chanceToFindFreeFood <span class="op">=</span> <span class="fl">0.999</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell" data-execution_count="45">
-<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1"></a>mei <span class="op">=</span> PhDStudent(<span class="st">"Mei Changsu"</span>, <span class="dv">123456</span>, </span>
-<span id="cb75-2"><a href="#cb75-2"></a>    {<span class="st">"ACTL3143"</span>: <span class="dv">100</span>, <span class="st">"ACTL5001"</span>: <span class="dv">100</span>},</span>
-<span id="cb75-3"><a href="#cb75-3"></a>    <span class="st">"Lin Chen"</span>)</span>
-<span id="cb75-4"><a href="#cb75-4"></a></span>
-<span id="cb75-5"><a href="#cb75-5"></a>mei.supervisor</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="45">
-<pre><code>'Lin Chen'</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="46">
-<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a href="#cb77-1"></a>mei.wam()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="46">
-<pre><code>100.0</code></pre>
-</div>
-</div>
-</section>
-<section id="example-monte-carlo-dropout" class="slide level2">
-<h2>Example: Monte Carlo dropout</h2>
-<div class="cell" data-execution_count="47">
-<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a href="#cb79-1"></a>tf.random.set_seed(<span class="dv">42</span>)</span>
-<span id="cb79-2"><a href="#cb79-2"></a>model <span class="op">=</span> keras.Sequential([</span>
-<span id="cb79-3"><a href="#cb79-3"></a>    layers.Flatten(input_shape<span class="op">=</span>[<span class="dv">28</span>, <span class="dv">28</span>]),</span>
-<span id="cb79-4"><a href="#cb79-4"></a>    layers.Dropout(rate<span class="op">=</span><span class="fl">0.2</span>),</span>
-<span id="cb79-5"><a href="#cb79-5"></a>    layers.Dense(<span class="dv">300</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb79-6"><a href="#cb79-6"></a>    layers.Dropout(rate<span class="op">=</span><span class="fl">0.2</span>),</span>
-<span id="cb79-7"><a href="#cb79-7"></a>    layers.Dense(<span class="dv">100</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb79-8"><a href="#cb79-8"></a>    layers.Dropout(rate<span class="op">=</span><span class="fl">0.2</span>),</span>
-<span id="cb79-9"><a href="#cb79-9"></a>    layers.Dense(<span class="dv">10</span>, activation<span class="op">=</span><span class="st">"softmax"</span>)</span>
-<span id="cb79-10"><a href="#cb79-10"></a>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="columns">
-<div class="column">
-<div class="cell" data-execution_count="49">
-<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1"></a>model.predict(X_train[[<span class="dv">0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="49">
-<pre><code>array([[0.23, 0.16, 0.05, 0.05, 0.05, 0.16, 0.11, 0.05, 0.07, 0.07]],
-      dtype=float32)</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="50">
-<div class="sourceCode cell-code" id="cb82"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1"></a>model(X_train[[<span class="dv">0</span>]], training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="50">
-<pre><code>array([[0.18, 0.15, 0.04, 0.06, 0.05, 0.31, 0.03, 0.04, 0.08, 0.06]],
-      dtype=float32)</code></pre>
-</div>
-</div>
-</div><div class="column">
-<div class="cell" data-execution_count="51">
-<div class="sourceCode cell-code" id="cb84"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1"></a>model.predict(X_train[[<span class="dv">0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="51">
-<pre><code>array([[0.23, 0.16, 0.05, 0.05, 0.05, 0.16, 0.11, 0.05, 0.07, 0.07]],
-      dtype=float32)</code></pre>
-</div>
-</div>
-<div class="cell" data-execution_count="52">
-<div class="sourceCode cell-code" id="cb86"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1"></a>model(X_train[[<span class="dv">0</span>]], training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="52">
-<pre><code>array([[0.15, 0.19, 0.04, 0.06, 0.05, 0.12, 0.12, 0.04, 0.09, 0.14]],
-      dtype=float32)</code></pre>
-</div>
-</div>
-</div>
-</div>
-</section>
-<section id="custom-mcdropout-layer" class="slide level2">
-<h2>Custom <code>MCDropout</code> layer</h2>
-<div class="cell" data-execution_count="53">
-<div class="sourceCode cell-code" id="cb88"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb88-1"><a href="#cb88-1"></a><span class="kw">class</span> MCDropout(layers.Dropout):</span>
-<span id="cb88-2"><a href="#cb88-2"></a>  <span class="kw">def</span> call(<span class="va">self</span>, inputs):</span>
-<span id="cb88-3"><a href="#cb88-3"></a>    <span class="cf">return</span> <span class="bu">super</span>().call(inputs, training<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell" data-execution_count="54">
-<div class="sourceCode cell-code" id="cb89"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1"></a>tf.random.set_seed(<span class="dv">42</span>)</span>
-<span id="cb89-2"><a href="#cb89-2"></a>model <span class="op">=</span> keras.Sequential([</span>
-<span id="cb89-3"><a href="#cb89-3"></a>    layers.Flatten(input_shape<span class="op">=</span>[<span class="dv">28</span>, <span class="dv">28</span>]),</span>
-<span id="cb89-4"><a href="#cb89-4"></a>    MCDropout(rate<span class="op">=</span><span class="fl">0.2</span>),</span>
-<span id="cb89-5"><a href="#cb89-5"></a>    layers.Dense(<span class="dv">300</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb89-6"><a href="#cb89-6"></a>    MCDropout(rate<span class="op">=</span><span class="fl">0.2</span>),</span>
-<span id="cb89-7"><a href="#cb89-7"></a>    layers.Dense(<span class="dv">100</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb89-8"><a href="#cb89-8"></a>    MCDropout(rate<span class="op">=</span><span class="fl">0.2</span>),</span>
-<span id="cb89-9"><a href="#cb89-9"></a>    layers.Dense(<span class="dv">10</span>, activation<span class="op">=</span><span class="st">"softmax"</span>)</span>
-<span id="cb89-10"><a href="#cb89-10"></a>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="columns">
-<div class="column">
-<div class="cell" data-execution_count="55">
-<div class="sourceCode cell-code" id="cb90"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb90-1"><a href="#cb90-1"></a>model.predict(X_train[[<span class="dv">0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="55">
-<pre><code>array([[0.28, 0.13, 0.04, 0.03, 0.03, 0.23, 0.1 , 0.06, 0.05, 0.05]],
-      dtype=float32)</code></pre>
-</div>
-</div>
-</div><div class="column">
-<div class="cell" data-execution_count="56">
-<div class="sourceCode cell-code" id="cb92"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb92-1"><a href="#cb92-1"></a>model.predict(X_train[[<span class="dv">0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="56">
-<pre><code>array([[0.11, 0.19, 0.04, 0.07, 0.04, 0.19, 0.07, 0.07, 0.12, 0.1 ]],
-      dtype=float32)</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="footer">
-<p>Source: Aurélien Géron (2019), <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow</em>, 2nd Edition, p.&nbsp;370 &amp; p.&nbsp;367</p>
-</div>
-</section>
-<section id="encouraging-callbacks" class="slide level2">
-<h2>Encouraging callbacks</h2>
-<p><a href="https://github.com/keras-team/keras/blob/v2.9.0/keras/callbacks.py#L575-L881">Callback</a> is a Keras class that is meant to be subclassed.</p>
-<div class="cell" data-execution_count="57">
-<div class="sourceCode cell-code" id="cb94"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb94-1"><a href="#cb94-1"></a><span class="kw">class</span> EncouragingCallback(keras.callbacks.Callback):</span>
-<span id="cb94-2"><a href="#cb94-2"></a>  <span class="kw">def</span> on_epoch_end(<span class="va">self</span>, epoch, logs):</span>
-<span id="cb94-3"><a href="#cb94-3"></a>    phrases <span class="op">=</span> [<span class="st">"Great work!"</span>, <span class="st">"Nearly there"</span>, <span class="st">"加油"</span>]</span>
-<span id="cb94-4"><a href="#cb94-4"></a>    encourage <span class="op">=</span> phrases[epoch<span class="op">%</span><span class="bu">len</span>(phrases)]</span>
-<span id="cb94-5"><a href="#cb94-5"></a>    <span class="bu">print</span>(<span class="ss">f"Epoch </span><span class="sc">{</span>epoch<span class="sc">}</span><span class="ss">: loss=</span><span class="sc">{</span>logs[<span class="st">'loss'</span>]<span class="sc">}</span><span class="ss">, </span><span class="sc">{</span>encourage<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell" data-execution_count="58">
-<div class="sourceCode cell-code" id="cb95"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1"></a>model <span class="op">=</span> build_model()</span>
-<span id="cb95-2"><a href="#cb95-2"></a>model.<span class="bu">compile</span>(optimizer, loss_fn)</span>
-<span id="cb95-3"><a href="#cb95-3"></a>ec <span class="op">=</span> EncouragingCallback()</span>
-<span id="cb95-4"><a href="#cb95-4"></a>model <span class="op">=</span> model.fit(train_dataset, epochs<span class="op">=</span><span class="dv">3</span>, </span>
-<span id="cb95-5"><a href="#cb95-5"></a>        callbacks <span class="op">=</span> [ec], verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Epoch 0: loss=0.973278820514679, Great work!</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Epoch 1: loss=0.455027312040329, Nearly there</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Epoch 2: loss=0.37771159410476685, 加油</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Inspired by: Aurélien Géron (2019), <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow</em>, 2nd Edition, Chapter 10.</p>
-</div>
-</section>
-<section id="keras-tuner" class="slide level2">
-<h2>Keras-tuner</h2>
-<div class="cell" data-execution_count="59">
-<div class="sourceCode cell-code" id="cb99"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1"></a><span class="im">import</span> keras_tuner <span class="im">as</span> kt</span>
-<span id="cb99-2"><a href="#cb99-2"></a></span>
-<span id="cb99-3"><a href="#cb99-3"></a><span class="kw">def</span> build_model(hp):</span>
-<span id="cb99-4"><a href="#cb99-4"></a>  numHidden <span class="op">=</span> hp.Int(<span class="st">"units"</span>, min_value<span class="op">=</span><span class="dv">32</span>, max_value<span class="op">=</span><span class="dv">512</span>, step<span class="op">=</span><span class="dv">32</span>)</span>
-<span id="cb99-5"><a href="#cb99-5"></a>  model <span class="op">=</span> keras.Sequential([</span>
-<span id="cb99-6"><a href="#cb99-6"></a>    layers.Flatten(),</span>
-<span id="cb99-7"><a href="#cb99-7"></a>    layers.Dense(numHidden, <span class="st">"relu"</span>),</span>
-<span id="cb99-8"><a href="#cb99-8"></a>    layers.Dense(<span class="dv">10</span>, activation<span class="op">=</span><span class="st">"softmax"</span>)</span>
-<span id="cb99-9"><a href="#cb99-9"></a>  ])</span>
-<span id="cb99-10"><a href="#cb99-10"></a>  model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"sparse_categorical_crossentropy"</span>,</span>
-<span id="cb99-11"><a href="#cb99-11"></a>      metrics<span class="op">=</span>[<span class="st">"accuracy"</span>])</span>
-<span id="cb99-12"><a href="#cb99-12"></a>  <span class="cf">return</span> model</span>
-<span id="cb99-13"><a href="#cb99-13"></a></span>
-<span id="cb99-14"><a href="#cb99-14"></a>tuner <span class="op">=</span> kt.RandomSearch(build_model, objective<span class="op">=</span><span class="st">"val_accuracy"</span>,</span>
-<span id="cb99-15"><a href="#cb99-15"></a>    max_trials<span class="op">=</span><span class="dv">3</span>, seed<span class="op">=</span><span class="dv">42</span>, project_name<span class="op">=</span><span class="st">"optimise-num-hidden-units"</span>)</span>
-<span id="cb99-16"><a href="#cb99-16"></a>tuner.search(X_train, y_train, epochs<span class="op">=</span><span class="dv">2</span>, validation_data<span class="op">=</span>(X_val, y_val))</span>
-<span id="cb99-17"><a href="#cb99-17"></a>tuner.get_best_hyperparameters()[<span class="dv">0</span>].get(<span class="st">"units"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="59">
-<pre><code>352</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Adapted from: Invernizzi et al.&nbsp;(2021), <a href="https://keras.io/guides/keras_tuner/getting_started/">Getting started with KerasTuner</a>, Keras docs.</p>
-</div>
-</section>
-<section id="tune-fitting-hyperparameters" class="slide level2">
-<h2>Tune fitting hyperparameters</h2>
-<div class="cell" data-execution_count="60">
-<div class="sourceCode cell-code" id="cb101"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1"></a><span class="kw">class</span> MyHyperModel(kt.HyperModel):</span>
-<span id="cb101-2"><a href="#cb101-2"></a>  <span class="kw">def</span> build(<span class="va">self</span>, hp):</span>
-<span id="cb101-3"><a href="#cb101-3"></a>    numHidden <span class="op">=</span> hp.Int(<span class="st">"units"</span>, min_value<span class="op">=</span><span class="dv">32</span>, max_value<span class="op">=</span><span class="dv">512</span>, step<span class="op">=</span><span class="dv">32</span>)</span>
-<span id="cb101-4"><a href="#cb101-4"></a>    model <span class="op">=</span> keras.Sequential([</span>
-<span id="cb101-5"><a href="#cb101-5"></a>      layers.Flatten(),</span>
-<span id="cb101-6"><a href="#cb101-6"></a>      layers.Dense(numHidden, <span class="st">"relu"</span>),</span>
-<span id="cb101-7"><a href="#cb101-7"></a>      layers.Dense(<span class="dv">10</span>, activation<span class="op">=</span><span class="st">"softmax"</span>)</span>
-<span id="cb101-8"><a href="#cb101-8"></a>    ])</span>
-<span id="cb101-9"><a href="#cb101-9"></a>    model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"sparse_categorical_crossentropy"</span>,</span>
-<span id="cb101-10"><a href="#cb101-10"></a>        metrics<span class="op">=</span>[<span class="st">"accuracy"</span>])</span>
-<span id="cb101-11"><a href="#cb101-11"></a>    <span class="cf">return</span> model</span>
-<span id="cb101-12"><a href="#cb101-12"></a></span>
-<span id="cb101-13"><a href="#cb101-13"></a>  <span class="kw">def</span> fit(<span class="va">self</span>, hp, model, <span class="op">*</span>args, <span class="op">**</span>kwargs):</span>
-<span id="cb101-14"><a href="#cb101-14"></a>    batchSize <span class="op">=</span> hp.Int(<span class="st">"batchSize"</span>, min_value<span class="op">=</span><span class="dv">32</span>, max_value<span class="op">=</span><span class="dv">512</span>, step<span class="op">=</span><span class="dv">32</span>)</span>
-<span id="cb101-15"><a href="#cb101-15"></a>    <span class="cf">return</span> model.fit(<span class="op">*</span>args, batch_size <span class="op">=</span> batchSize, <span class="op">**</span>kwargs)</span>
-<span id="cb101-16"><a href="#cb101-16"></a></span>
-<span id="cb101-17"><a href="#cb101-17"></a>tuner <span class="op">=</span> kt.RandomSearch(MyHyperModel(), objective<span class="op">=</span><span class="st">"val_accuracy"</span>,</span>
-<span id="cb101-18"><a href="#cb101-18"></a>  max_trials<span class="op">=</span><span class="dv">3</span>, seed<span class="op">=</span><span class="dv">123</span>, project_name<span class="op">=</span><span class="st">"optimise-batch-size"</span>)</span>
-<span id="cb101-19"><a href="#cb101-19"></a>tuner.search(X_train, y_train, epochs<span class="op">=</span><span class="dv">2</span>, validation_data<span class="op">=</span>(X_val, y_val))</span>
-<span id="cb101-20"><a href="#cb101-20"></a>tuner.get_best_hyperparameters()[<span class="dv">0</span>].get(<span class="st">"batchSize"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="60">
-<pre><code>64</code></pre>
-</div>
-</div>
-<div class="footer">
-<p>Source code for <a href="https://github.com/keras-team/keras-tuner/blob/1.1.3/keras_tuner/engine/hypermodel.py#L17">keras-tuner.HyperModel</a>.</p>
 </div>
 </section></section>
 <section>
@@ -1591,7 +495,7 @@ graph LR
 <h1>PyTorch</h1>
 
 </section>
-<section id="why-1" class="slide level2">
+<section id="why" class="slide level2">
 <h2>Why?</h2>
 
 <img data-src="pytorch-papers-of-total.svg" class="r-stretch quarto-figure-center"><p class="caption">Fraction of ML papers using PyTorch.</p><div class="footer">
@@ -1600,32 +504,32 @@ graph LR
 </section>
 <section id="load-up-fashionmnist" class="slide level2">
 <h2>Load up FashionMNIST</h2>
-<div class="cell" data-execution_count="61">
-<div class="sourceCode cell-code" id="cb103"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb103-1"><a href="#cb103-1"></a><span class="im">import</span> torch</span>
-<span id="cb103-2"><a href="#cb103-2"></a><span class="im">import</span> torchvision</span>
-<span id="cb103-3"><a href="#cb103-3"></a><span class="im">import</span> torch.nn.functional <span class="im">as</span> F</span>
-<span id="cb103-4"><a href="#cb103-4"></a><span class="im">from</span> torch <span class="im">import</span> nn</span>
-<span id="cb103-5"><a href="#cb103-5"></a><span class="im">from</span> torch.utils.data <span class="im">import</span> DataLoader</span>
-<span id="cb103-6"><a href="#cb103-6"></a><span class="op">%</span>watermark <span class="op">-</span>p torch,torchvision</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1"></a><span class="im">import</span> torch</span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="im">import</span> torchvision</span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="im">import</span> torch.nn.functional <span class="im">as</span> F</span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="im">from</span> torch <span class="im">import</span> nn</span>
+<span id="cb3-5"><a href="#cb3-5"></a><span class="im">from</span> torch.utils.data <span class="im">import</span> DataLoader</span>
+<span id="cb3-6"><a href="#cb3-6"></a><span class="op">%</span>watermark <span class="op">-</span>p torch,torchvision</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>torch      : 1.12.1
-torchvision: 0.13.1
+<pre><code>torch      : 1.13.0+cu117
+torchvision: 0.14.0+cu117
 </code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="62">
-<div class="sourceCode cell-code" id="cb105"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb105-1"><a href="#cb105-1"></a>training_data <span class="op">=</span> torchvision.datasets.FashionMNIST(</span>
-<span id="cb105-2"><a href="#cb105-2"></a>    root<span class="op">=</span><span class="st">"data"</span>, train<span class="op">=</span><span class="va">True</span>, download<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb105-3"><a href="#cb105-3"></a>    transform<span class="op">=</span>torchvision.transforms.ToTensor())</span>
-<span id="cb105-4"><a href="#cb105-4"></a></span>
-<span id="cb105-5"><a href="#cb105-5"></a>test_data <span class="op">=</span> torchvision.datasets.FashionMNIST(</span>
-<span id="cb105-6"><a href="#cb105-6"></a>    root<span class="op">=</span><span class="st">"data"</span>, train<span class="op">=</span><span class="va">False</span>, download<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb105-7"><a href="#cb105-7"></a>    transform<span class="op">=</span>torchvision.transforms.ToTensor())</span>
-<span id="cb105-8"><a href="#cb105-8"></a></span>
-<span id="cb105-9"><a href="#cb105-9"></a>classes <span class="op">=</span> [</span>
-<span id="cb105-10"><a href="#cb105-10"></a>    <span class="st">"T-shirt/top"</span>, <span class="st">"Trouser"</span>, <span class="st">"Pullover"</span>, <span class="st">"Dress"</span>, <span class="st">"Coat"</span>, </span>
-<span id="cb105-11"><a href="#cb105-11"></a>    <span class="st">"Sandal"</span>, <span class="st">"Shirt"</span>, <span class="st">"Sneaker"</span>, <span class="st">"Bag"</span>, <span class="st">"Ankle boot"</span>,</span>
-<span id="cb105-12"><a href="#cb105-12"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1"></a>training_data <span class="op">=</span> torchvision.datasets.FashionMNIST(</span>
+<span id="cb5-2"><a href="#cb5-2"></a>    root<span class="op">=</span><span class="st">"data"</span>, train<span class="op">=</span><span class="va">True</span>, download<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb5-3"><a href="#cb5-3"></a>    transform<span class="op">=</span>torchvision.transforms.ToTensor())</span>
+<span id="cb5-4"><a href="#cb5-4"></a></span>
+<span id="cb5-5"><a href="#cb5-5"></a>test_data <span class="op">=</span> torchvision.datasets.FashionMNIST(</span>
+<span id="cb5-6"><a href="#cb5-6"></a>    root<span class="op">=</span><span class="st">"data"</span>, train<span class="op">=</span><span class="va">False</span>, download<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb5-7"><a href="#cb5-7"></a>    transform<span class="op">=</span>torchvision.transforms.ToTensor())</span>
+<span id="cb5-8"><a href="#cb5-8"></a></span>
+<span id="cb5-9"><a href="#cb5-9"></a>classes <span class="op">=</span> [</span>
+<span id="cb5-10"><a href="#cb5-10"></a>    <span class="st">"T-shirt/top"</span>, <span class="st">"Trouser"</span>, <span class="st">"Pullover"</span>, <span class="st">"Dress"</span>, <span class="st">"Coat"</span>, </span>
+<span id="cb5-11"><a href="#cb5-11"></a>    <span class="st">"Sandal"</span>, <span class="st">"Shirt"</span>, <span class="st">"Sneaker"</span>, <span class="st">"Bag"</span>, <span class="st">"Ankle boot"</span>,</span>
+<span id="cb5-12"><a href="#cb5-12"></a>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="footer">
 <p>Adapted from: PyTorch (2022), <a href="https://pytorch.org/tutorials/beginner/basics/quickstart_tutorial.html">Quickstart</a>, PyTorch docs.</p>
@@ -1635,30 +539,30 @@ torchvision: 0.13.1
 <h2>Take a look at the data</h2>
 <div class="columns">
 <div class="column" style="width:33%;">
-<div class="cell" data-execution_count="63">
-<div class="sourceCode cell-code" id="cb106"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb106-1"><a href="#cb106-1"></a>x, y <span class="op">=</span> training_data[<span class="dv">5</span>]</span>
-<span id="cb106-2"><a href="#cb106-2"></a>plt.imshow(x[<span class="dv">0</span>])</span>
-<span id="cb106-3"><a href="#cb106-3"></a>plt.title(classes[y])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1"></a>x, y <span class="op">=</span> training_data[<span class="dv">5</span>]</span>
+<span id="cb6-2"><a href="#cb6-2"></a>plt.imshow(x[<span class="dv">0</span>])</span>
+<span id="cb6-3"><a href="#cb6-3"></a>plt.title(classes[y])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-<p><img data-src="advanced-topics_files/figure-revealjs/cell-64-output-1.png"></p>
+<p><img data-src="advanced-topics_files/figure-revealjs/cell-6-output-1.png"></p>
 </div>
 </div>
 </div><div class="column" style="width:33%;">
-<div class="cell" data-execution_count="64">
-<div class="sourceCode cell-code" id="cb107"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb107-1"><a href="#cb107-1"></a>x, y <span class="op">=</span> training_data[<span class="dv">25</span>]</span>
-<span id="cb107-2"><a href="#cb107-2"></a>plt.imshow(x[<span class="dv">0</span>])</span>
-<span id="cb107-3"><a href="#cb107-3"></a>plt.title(classes[y])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1"></a>x, y <span class="op">=</span> training_data[<span class="dv">25</span>]</span>
+<span id="cb7-2"><a href="#cb7-2"></a>plt.imshow(x[<span class="dv">0</span>])</span>
+<span id="cb7-3"><a href="#cb7-3"></a>plt.title(classes[y])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-<p><img data-src="advanced-topics_files/figure-revealjs/cell-65-output-1.png"></p>
+<p><img data-src="advanced-topics_files/figure-revealjs/cell-7-output-1.png"></p>
 </div>
 </div>
 </div><div class="column" style="width:33%;">
-<div class="cell" data-execution_count="65">
-<div class="sourceCode cell-code" id="cb108"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb108-1"><a href="#cb108-1"></a>x, y <span class="op">=</span> training_data[<span class="dv">30</span>]</span>
-<span id="cb108-2"><a href="#cb108-2"></a>plt.imshow(x[<span class="dv">0</span>])</span>
-<span id="cb108-3"><a href="#cb108-3"></a>plt.title(classes[y])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1"></a>x, y <span class="op">=</span> training_data[<span class="dv">30</span>]</span>
+<span id="cb8-2"><a href="#cb8-2"></a>plt.imshow(x[<span class="dv">0</span>])</span>
+<span id="cb8-3"><a href="#cb8-3"></a>plt.title(classes[y])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
-<p><img data-src="advanced-topics_files/figure-revealjs/cell-66-output-1.png"></p>
+<p><img data-src="advanced-topics_files/figure-revealjs/cell-8-output-1.png"></p>
 </div>
 </div>
 </div>
@@ -1669,21 +573,26 @@ torchvision: 0.13.1
 </section>
 <section id="batch-up-the-data" class="slide level2">
 <h2>Batch up the data</h2>
-<div class="cell" data-execution_count="66">
-<div class="sourceCode cell-code" id="cb109"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb109-1"><a href="#cb109-1"></a>batch_size <span class="op">=</span> <span class="dv">64</span></span>
-<span id="cb109-2"><a href="#cb109-2"></a></span>
-<span id="cb109-3"><a href="#cb109-3"></a><span class="co"># Create data loaders.</span></span>
-<span id="cb109-4"><a href="#cb109-4"></a>train_dataloader <span class="op">=</span> DataLoader(training_data, batch_size<span class="op">=</span>batch_size)</span>
-<span id="cb109-5"><a href="#cb109-5"></a>test_dataloader <span class="op">=</span> DataLoader(test_data, batch_size<span class="op">=</span>batch_size)</span>
-<span id="cb109-6"><a href="#cb109-6"></a></span>
-<span id="cb109-7"><a href="#cb109-7"></a><span class="cf">for</span> X, y <span class="kw">in</span> test_dataloader:</span>
-<span id="cb109-8"><a href="#cb109-8"></a>    <span class="bu">print</span>(<span class="ss">f"Shape of X [N, C, H, W]: </span><span class="sc">{</span>X<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb109-9"><a href="#cb109-9"></a>    <span class="bu">print</span>(<span class="ss">f"Shape of y: </span><span class="sc">{</span>y<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>y<span class="sc">.</span>dtype<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb109-10"><a href="#cb109-10"></a>    <span class="cf">break</span></span>
-<span id="cb109-11"><a href="#cb109-11"></a></span>
-<span id="cb109-12"><a href="#cb109-12"></a><span class="co"># Get cpu or gpu device for training.</span></span>
-<span id="cb109-13"><a href="#cb109-13"></a>device <span class="op">=</span> <span class="st">"cuda"</span> <span class="cf">if</span> torch.cuda.is_available() <span class="cf">else</span> <span class="st">"cpu"</span> <span class="co"># Normally..</span></span>
-<span id="cb109-14"><a href="#cb109-14"></a>device <span class="op">=</span> <span class="st">"mps"</span> <span class="co"># But I'm on a Mac.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1"></a>batch_size <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a></span>
+<span id="cb9-3"><a href="#cb9-3"></a><span class="co"># Create data loaders.</span></span>
+<span id="cb9-4"><a href="#cb9-4"></a>train_dataloader <span class="op">=</span> DataLoader(training_data, batch_size<span class="op">=</span>batch_size)</span>
+<span id="cb9-5"><a href="#cb9-5"></a>test_dataloader <span class="op">=</span> DataLoader(test_data, batch_size<span class="op">=</span>batch_size)</span>
+<span id="cb9-6"><a href="#cb9-6"></a></span>
+<span id="cb9-7"><a href="#cb9-7"></a><span class="cf">for</span> X, y <span class="kw">in</span> test_dataloader:</span>
+<span id="cb9-8"><a href="#cb9-8"></a>    <span class="bu">print</span>(<span class="ss">f"Shape of X [N, C, H, W]: </span><span class="sc">{</span>X<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-9"><a href="#cb9-9"></a>    <span class="bu">print</span>(<span class="ss">f"Shape of y: </span><span class="sc">{</span>y<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> </span><span class="sc">{</span>y<span class="sc">.</span>dtype<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb9-10"><a href="#cb9-10"></a>    <span class="cf">break</span></span>
+<span id="cb9-11"><a href="#cb9-11"></a></span>
+<span id="cb9-12"><a href="#cb9-12"></a><span class="co"># Get cpu or gpu device for training.</span></span>
+<span id="cb9-13"><a href="#cb9-13"></a><span class="co"># Get cpu or gpu device for training.</span></span>
+<span id="cb9-14"><a href="#cb9-14"></a><span class="cf">if</span> torch.cuda.is_available():</span>
+<span id="cb9-15"><a href="#cb9-15"></a>    device <span class="op">=</span> <span class="st">"cuda"</span></span>
+<span id="cb9-16"><a href="#cb9-16"></a><span class="cf">elif</span> torch.backends.mps.is_available():</span>
+<span id="cb9-17"><a href="#cb9-17"></a>    device <span class="op">=</span> <span class="st">"mps"</span> <span class="co"># If on a Mac</span></span>
+<span id="cb9-18"><a href="#cb9-18"></a><span class="cf">else</span>:</span>
+<span id="cb9-19"><a href="#cb9-19"></a>    device <span class="op">=</span> <span class="st">"cpu"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Shape of X [N, C, H, W]: torch.Size([64, 1, 28, 28])
 Shape of y: torch.Size([64]) torch.int64</code></pre>
@@ -1695,18 +604,18 @@ Shape of y: torch.Size([64]) torch.int64</code></pre>
 </section>
 <section id="make-a-sequential-model" class="slide level2">
 <h2>Make a sequential model</h2>
-<div class="cell" data-execution_count="67">
-<div class="sourceCode cell-code" id="cb111"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb111-1"><a href="#cb111-1"></a>torch.manual_seed(<span class="dv">0</span>)</span>
-<span id="cb111-2"><a href="#cb111-2"></a>model <span class="op">=</span> nn.Sequential(</span>
-<span id="cb111-3"><a href="#cb111-3"></a>            nn.Flatten(),</span>
-<span id="cb111-4"><a href="#cb111-4"></a>            nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>, <span class="dv">512</span>),</span>
-<span id="cb111-5"><a href="#cb111-5"></a>            nn.ReLU(),</span>
-<span id="cb111-6"><a href="#cb111-6"></a>            nn.Linear(<span class="dv">512</span>, <span class="dv">512</span>),</span>
-<span id="cb111-7"><a href="#cb111-7"></a>            nn.ReLU(),</span>
-<span id="cb111-8"><a href="#cb111-8"></a>            nn.Linear(<span class="dv">512</span>, <span class="dv">10</span>)</span>
-<span id="cb111-9"><a href="#cb111-9"></a>        )</span>
-<span id="cb111-10"><a href="#cb111-10"></a>model <span class="op">=</span> model.to(device)</span>
-<span id="cb111-11"><a href="#cb111-11"></a><span class="bu">print</span>(model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1"></a>torch.manual_seed(<span class="dv">0</span>)</span>
+<span id="cb11-2"><a href="#cb11-2"></a>model <span class="op">=</span> nn.Sequential(</span>
+<span id="cb11-3"><a href="#cb11-3"></a>            nn.Flatten(),</span>
+<span id="cb11-4"><a href="#cb11-4"></a>            nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>, <span class="dv">512</span>),</span>
+<span id="cb11-5"><a href="#cb11-5"></a>            nn.ReLU(),</span>
+<span id="cb11-6"><a href="#cb11-6"></a>            nn.Linear(<span class="dv">512</span>, <span class="dv">512</span>),</span>
+<span id="cb11-7"><a href="#cb11-7"></a>            nn.ReLU(),</span>
+<span id="cb11-8"><a href="#cb11-8"></a>            nn.Linear(<span class="dv">512</span>, <span class="dv">10</span>)</span>
+<span id="cb11-9"><a href="#cb11-9"></a>        )</span>
+<span id="cb11-10"><a href="#cb11-10"></a>model <span class="op">=</span> model.to(device)</span>
+<span id="cb11-11"><a href="#cb11-11"></a><span class="bu">print</span>(model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Sequential(
   (0): Flatten(start_dim=1, end_dim=-1)
@@ -1718,41 +627,41 @@ Shape of y: torch.Size([64]) torch.int64</code></pre>
 )</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="68">
-<div class="sourceCode cell-code" id="cb113"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb113-1"><a href="#cb113-1"></a>epochs <span class="op">=</span> <span class="dv">3</span></span>
-<span id="cb113-2"><a href="#cb113-2"></a>loss_fn <span class="op">=</span> nn.CrossEntropyLoss()</span>
-<span id="cb113-3"><a href="#cb113-3"></a>optimizer <span class="op">=</span> torch.optim.SGD(model.parameters(), lr<span class="op">=</span><span class="fl">1e-3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1"></a>epochs <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a>loss_fn <span class="op">=</span> nn.CrossEntropyLoss()</span>
+<span id="cb13-3"><a href="#cb13-3"></a>optimizer <span class="op">=</span> torch.optim.SGD(model.parameters(), lr<span class="op">=</span><span class="fl">1e-3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="run-a-train-loop" class="slide level2">
 <h2>Run a train loop</h2>
-<div class="cell" data-execution_count="69">
-<div class="sourceCode cell-code" id="cb114"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb114-1"><a href="#cb114-1"></a><span class="op">%%</span>time</span>
-<span id="cb114-2"><a href="#cb114-2"></a>model.train()</span>
-<span id="cb114-3"><a href="#cb114-3"></a><span class="cf">for</span> t <span class="kw">in</span> <span class="bu">range</span>(epochs):    </span>
-<span id="cb114-4"><a href="#cb114-4"></a>    <span class="cf">for</span> X, y <span class="kw">in</span> train_dataloader:</span>
-<span id="cb114-5"><a href="#cb114-5"></a>        X, y <span class="op">=</span> X.to(device), y.to(device)</span>
-<span id="cb114-6"><a href="#cb114-6"></a></span>
-<span id="cb114-7"><a href="#cb114-7"></a>        <span class="co"># Compute prediction error</span></span>
-<span id="cb114-8"><a href="#cb114-8"></a>        pred <span class="op">=</span> model(X)</span>
-<span id="cb114-9"><a href="#cb114-9"></a>        loss <span class="op">=</span> loss_fn(pred, y)</span>
-<span id="cb114-10"><a href="#cb114-10"></a></span>
-<span id="cb114-11"><a href="#cb114-11"></a>        <span class="co"># Backpropagation</span></span>
-<span id="cb114-12"><a href="#cb114-12"></a>        optimizer.zero_grad()</span>
-<span id="cb114-13"><a href="#cb114-13"></a>        loss.backward()</span>
-<span id="cb114-14"><a href="#cb114-14"></a>        optimizer.step()</span>
-<span id="cb114-15"><a href="#cb114-15"></a></span>
-<span id="cb114-16"><a href="#cb114-16"></a>    <span class="bu">print</span>(<span class="ss">f"Epoch </span><span class="sc">{</span>t<span class="sc">}</span><span class="ss"> Loss: </span><span class="sc">{</span>loss<span class="sc">.</span>item()<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1"></a><span class="op">%%</span>time</span>
+<span id="cb14-2"><a href="#cb14-2"></a>model.train()</span>
+<span id="cb14-3"><a href="#cb14-3"></a><span class="cf">for</span> t <span class="kw">in</span> <span class="bu">range</span>(epochs):    </span>
+<span id="cb14-4"><a href="#cb14-4"></a>    <span class="cf">for</span> X, y <span class="kw">in</span> train_dataloader:</span>
+<span id="cb14-5"><a href="#cb14-5"></a>        X, y <span class="op">=</span> X.to(device), y.to(device)</span>
+<span id="cb14-6"><a href="#cb14-6"></a></span>
+<span id="cb14-7"><a href="#cb14-7"></a>        <span class="co"># Compute prediction error</span></span>
+<span id="cb14-8"><a href="#cb14-8"></a>        pred <span class="op">=</span> model(X)</span>
+<span id="cb14-9"><a href="#cb14-9"></a>        loss <span class="op">=</span> loss_fn(pred, y)</span>
+<span id="cb14-10"><a href="#cb14-10"></a></span>
+<span id="cb14-11"><a href="#cb14-11"></a>        <span class="co"># Backpropagation</span></span>
+<span id="cb14-12"><a href="#cb14-12"></a>        optimizer.zero_grad()</span>
+<span id="cb14-13"><a href="#cb14-13"></a>        loss.backward()</span>
+<span id="cb14-14"><a href="#cb14-14"></a>        optimizer.step()</span>
+<span id="cb14-15"><a href="#cb14-15"></a></span>
+<span id="cb14-16"><a href="#cb14-16"></a>    <span class="bu">print</span>(<span class="ss">f"Epoch </span><span class="sc">{</span>t<span class="sc">}</span><span class="ss"> Loss: </span><span class="sc">{</span>loss<span class="sc">.</span>item()<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Epoch 0 Loss: 2.158100128173828</code></pre>
+<pre><code>Epoch 0 Loss: 2.1581003665924072</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Epoch 1 Loss: 1.9045133590698242</code></pre>
+<pre><code>Epoch 1 Loss: 1.9045145511627197</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Epoch 2 Loss: 1.5597727298736572
-CPU times: user 10.3 s, sys: 5.91 s, total: 16.2 s
-Wall time: 11.2 s</code></pre>
+<pre><code>Epoch 2 Loss: 1.559773325920105
+CPU times: total: 3.41 s
+Wall time: 15.1 s</code></pre>
 </div>
 </div>
 <div class="footer">
@@ -1761,23 +670,23 @@ Wall time: 11.2 s</code></pre>
 </section>
 <section id="far-more-common-to-subclass" class="slide level2">
 <h2>Far more common to subclass</h2>
-<div class="cell" data-execution_count="70">
-<div class="sourceCode cell-code" id="cb118"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb118-1"><a href="#cb118-1"></a><span class="kw">class</span> NeuralNetwork(nn.Module):</span>
-<span id="cb118-2"><a href="#cb118-2"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
-<span id="cb118-3"><a href="#cb118-3"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
-<span id="cb118-4"><a href="#cb118-4"></a>        <span class="va">self</span>.linear1 <span class="op">=</span> nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>, <span class="dv">512</span>)</span>
-<span id="cb118-5"><a href="#cb118-5"></a>        <span class="va">self</span>.linear2 <span class="op">=</span> nn.Linear(<span class="dv">512</span>, <span class="dv">512</span>)</span>
-<span id="cb118-6"><a href="#cb118-6"></a>        <span class="va">self</span>.linear3 <span class="op">=</span> nn.Linear(<span class="dv">512</span>, <span class="dv">10</span>)</span>
-<span id="cb118-7"><a href="#cb118-7"></a>        </span>
-<span id="cb118-8"><a href="#cb118-8"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
-<span id="cb118-9"><a href="#cb118-9"></a>        x <span class="op">=</span> F.relu(<span class="va">self</span>.linear1(x.flatten(<span class="dv">1</span>)))</span>
-<span id="cb118-10"><a href="#cb118-10"></a>        x <span class="op">=</span> F.relu(<span class="va">self</span>.linear2(x))</span>
-<span id="cb118-11"><a href="#cb118-11"></a>        <span class="cf">return</span> <span class="va">self</span>.linear3(x)</span>
-<span id="cb118-12"><a href="#cb118-12"></a>        </span>
-<span id="cb118-13"><a href="#cb118-13"></a>torch.manual_seed(<span class="dv">0</span>)</span>
-<span id="cb118-14"><a href="#cb118-14"></a>classyModel <span class="op">=</span> NeuralNetwork().to(device)</span>
-<span id="cb118-15"><a href="#cb118-15"></a>classyModel</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="70">
+<div class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1"></a><span class="kw">class</span> NeuralNetwork(nn.Module):</span>
+<span id="cb18-2"><a href="#cb18-2"></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>):</span>
+<span id="cb18-3"><a href="#cb18-3"></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb18-4"><a href="#cb18-4"></a>        <span class="va">self</span>.linear1 <span class="op">=</span> nn.Linear(<span class="dv">28</span><span class="op">*</span><span class="dv">28</span>, <span class="dv">512</span>)</span>
+<span id="cb18-5"><a href="#cb18-5"></a>        <span class="va">self</span>.linear2 <span class="op">=</span> nn.Linear(<span class="dv">512</span>, <span class="dv">512</span>)</span>
+<span id="cb18-6"><a href="#cb18-6"></a>        <span class="va">self</span>.linear3 <span class="op">=</span> nn.Linear(<span class="dv">512</span>, <span class="dv">10</span>)</span>
+<span id="cb18-7"><a href="#cb18-7"></a>        </span>
+<span id="cb18-8"><a href="#cb18-8"></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb18-9"><a href="#cb18-9"></a>        x <span class="op">=</span> F.relu(<span class="va">self</span>.linear1(x.flatten(<span class="dv">1</span>)))</span>
+<span id="cb18-10"><a href="#cb18-10"></a>        x <span class="op">=</span> F.relu(<span class="va">self</span>.linear2(x))</span>
+<span id="cb18-11"><a href="#cb18-11"></a>        <span class="cf">return</span> <span class="va">self</span>.linear3(x)</span>
+<span id="cb18-12"><a href="#cb18-12"></a>        </span>
+<span id="cb18-13"><a href="#cb18-13"></a>torch.manual_seed(<span class="dv">0</span>)</span>
+<span id="cb18-14"><a href="#cb18-14"></a>classyModel <span class="op">=</span> NeuralNetwork().to(device)</span>
+<span id="cb18-15"><a href="#cb18-15"></a>classyModel</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
 <pre><code>NeuralNetwork(
   (linear1): Linear(in_features=784, out_features=512, bias=True)
   (linear2): Linear(in_features=512, out_features=512, bias=True)
@@ -1791,18 +700,18 @@ Wall time: 11.2 s</code></pre>
 </section>
 <section id="evaluate-the-fit" class="slide level2">
 <h2>Evaluate the fit</h2>
-<div class="cell" data-execution_count="71">
-<div class="sourceCode cell-code" id="cb120"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb120-1"><a href="#cb120-1"></a>model.<span class="bu">eval</span>()</span>
-<span id="cb120-2"><a href="#cb120-2"></a></span>
-<span id="cb120-3"><a href="#cb120-3"></a>num_correct <span class="op">=</span> <span class="dv">0</span></span>
-<span id="cb120-4"><a href="#cb120-4"></a>test_size <span class="op">=</span> <span class="dv">0</span></span>
-<span id="cb120-5"><a href="#cb120-5"></a><span class="cf">for</span> X, y <span class="kw">in</span> test_dataloader:</span>
-<span id="cb120-6"><a href="#cb120-6"></a>    <span class="cf">with</span> torch.no_grad():</span>
-<span id="cb120-7"><a href="#cb120-7"></a>        pred <span class="op">=</span> model(X.to(device))</span>
-<span id="cb120-8"><a href="#cb120-8"></a>        num_correct <span class="op">+=</span> torch.<span class="bu">sum</span>(y.to(device) <span class="op">==</span> pred.argmax(<span class="dv">1</span>)).item()</span>
-<span id="cb120-9"><a href="#cb120-9"></a>        test_size <span class="op">+=</span> <span class="bu">len</span>(y)</span>
-<span id="cb120-10"><a href="#cb120-10"></a></span>
-<span id="cb120-11"><a href="#cb120-11"></a><span class="bu">print</span>(<span class="ss">f"Test accuracy: </span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span>num_correct<span class="op">/</span>test_size<span class="sc">:.2f}</span><span class="ss">%"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1"></a>model.<span class="bu">eval</span>()</span>
+<span id="cb20-2"><a href="#cb20-2"></a></span>
+<span id="cb20-3"><a href="#cb20-3"></a>num_correct <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb20-4"><a href="#cb20-4"></a>test_size <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb20-5"><a href="#cb20-5"></a><span class="cf">for</span> X, y <span class="kw">in</span> test_dataloader:</span>
+<span id="cb20-6"><a href="#cb20-6"></a>    <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb20-7"><a href="#cb20-7"></a>        pred <span class="op">=</span> model(X.to(device))</span>
+<span id="cb20-8"><a href="#cb20-8"></a>        num_correct <span class="op">+=</span> torch.<span class="bu">sum</span>(y.to(device) <span class="op">==</span> pred.argmax(<span class="dv">1</span>)).item()</span>
+<span id="cb20-9"><a href="#cb20-9"></a>        test_size <span class="op">+=</span> <span class="bu">len</span>(y)</span>
+<span id="cb20-10"><a href="#cb20-10"></a></span>
+<span id="cb20-11"><a href="#cb20-11"></a><span class="bu">print</span>(<span class="ss">f"Test accuracy: </span><span class="sc">{</span><span class="dv">100</span><span class="op">*</span>num_correct<span class="op">/</span>test_size<span class="sc">:.2f}</span><span class="ss">%"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Test accuracy: 61.30%</code></pre>
 </div>
@@ -1810,384 +719,34 @@ Wall time: 11.2 s</code></pre>
 </section>
 <section id="predict-new-data" class="slide level2">
 <h2>Predict new data</h2>
-<div class="cell" data-execution_count="72">
-<div class="sourceCode cell-code" id="cb122"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb122-1"><a href="#cb122-1"></a>X, y <span class="op">=</span> <span class="bu">next</span>(<span class="bu">iter</span>(test_dataloader))</span>
-<span id="cb122-2"><a href="#cb122-2"></a><span class="cf">with</span> torch.no_grad():</span>
-<span id="cb122-3"><a href="#cb122-3"></a>    pred <span class="op">=</span> model(X.to(device))</span>
-<span id="cb122-4"><a href="#cb122-4"></a></span>
-<span id="cb122-5"><a href="#cb122-5"></a>predictedClasses <span class="op">=</span> [classes[ind] <span class="cf">for</span> ind <span class="kw">in</span> pred.argmax(<span class="dv">1</span>)]</span>
-<span id="cb122-6"><a href="#cb122-6"></a>actualClasses <span class="op">=</span> [classes[ind] <span class="cf">for</span> ind <span class="kw">in</span> y]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1"></a>X, y <span class="op">=</span> <span class="bu">next</span>(<span class="bu">iter</span>(test_dataloader))</span>
+<span id="cb22-2"><a href="#cb22-2"></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb22-3"><a href="#cb22-3"></a>    pred <span class="op">=</span> model(X.to(device))</span>
+<span id="cb22-4"><a href="#cb22-4"></a></span>
+<span id="cb22-5"><a href="#cb22-5"></a>predictedClasses <span class="op">=</span> [classes[ind] <span class="cf">for</span> ind <span class="kw">in</span> pred.argmax(<span class="dv">1</span>)]</span>
+<span id="cb22-6"><a href="#cb22-6"></a>actualClasses <span class="op">=</span> [classes[ind] <span class="cf">for</span> ind <span class="kw">in</span> y]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="columns">
 <div class="column" style="width:33%;">
-<div class="cell" data-execution_count="73">
+<div class="cell" data-execution_count="15">
 <div class="cell-output cell-output-display">
-<p><img data-src="advanced-topics_files/figure-revealjs/cell-74-output-1.png"></p>
+<p><img data-src="advanced-topics_files/figure-revealjs/cell-16-output-1.png"></p>
 </div>
 </div>
 </div><div class="column" style="width:33%;">
-<div class="cell" data-execution_count="74">
+<div class="cell" data-execution_count="16">
 <div class="cell-output cell-output-display">
-<p><img data-src="advanced-topics_files/figure-revealjs/cell-75-output-1.png"></p>
+<p><img data-src="advanced-topics_files/figure-revealjs/cell-17-output-1.png"></p>
 </div>
 </div>
 </div><div class="column" style="width:33%;">
-<div class="cell" data-execution_count="75">
+<div class="cell" data-execution_count="17">
 <div class="cell-output cell-output-display">
-<p><img data-src="advanced-topics_files/figure-revealjs/cell-76-output-1.png"></p>
+<p><img data-src="advanced-topics_files/figure-revealjs/cell-18-output-1.png"></p>
 </div>
 </div>
 </div>
-</div>
-</section></section>
-<section>
-<section id="variational-autoencoders" class="title-slide slide level1 center" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
-<h1>Variational Autoencoders</h1>
-
-</section>
-<section id="variational-autoencoder" class="slide level2">
-<h2>Variational autoencoder</h2>
-<aside class="notes">
-<p>A slightly different sample from the distribution in the latent space will be decoded to a slightly different image. The stochasticity of this process improves robustness and forces the latent space to encode meaningful representation everywhere: every point in the latent space is decoded to a valid output. So the latent spaces of VAEs are continuous and highly-structured.</p>
-<style type="text/css">
-        span.MJX_Assistive_MathML {
-          position:absolute!important;
-          clip: rect(1px, 1px, 1px, 1px);
-          padding: 1px 0 0 0!important;
-          border: 0!important;
-          height: 1px!important;
-          width: 1px!important;
-          overflow: hidden!important;
-          display:block!important;
-      }</style></aside>
-
-<img data-src="chollet-VAE-blur.png" class="r-stretch quarto-figure-center"><p class="caption">Schematic of a variational autoencoder.</p><div class="footer">
-<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.17 (<strong>redacted</strong>).</p>
-</div>
-</section>
-<section id="vae-schematic-process" class="slide level2">
-<h2>VAE schematic process</h2>
-
-<img data-src="chollet-VAEcode-blur.png" class="r-stretch quarto-figure-center"><p class="caption">Keras code for a VAE.</p><div class="footer">
-<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Unnumbered listing in Chapter 12 (<strong>redacted</strong>).</p>
-</div>
-</section>
-<section id="focus-on-the-decoder" class="slide level2">
-<h2>Focus on the decoder</h2>
-
-<img data-src="chollet-latentspace-blur.png" class="r-stretch quarto-figure-center"><p class="caption">Sampling new artificial images from the latent space.</p><div class="footer">
-<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.13 (<strong>redacted</strong>).</p>
-</div>
-</section>
-<section id="exploring-the-mnist-latent-space" class="slide level2">
-<h2>Exploring the MNIST latent space</h2>
-
-<img data-src="chollet-VAEdecoded-blur.png" class="r-stretch quarto-figure-center"><p class="caption">Example of MNIST-like images generated from the latent space.</p><div class="footer">
-<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.18 (<strong>redacted</strong>).</p>
-</div>
-</section></section>
-<section>
-<section id="generative-adversarial-networks" class="title-slide slide level1 center" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
-<h1>Generative Adversarial Networks</h1>
-
-</section>
-<section id="gan-faces" class="slide level2">
-<h2>GAN faces</h2>
-<div class="columns">
-<div class="column">
-<p><img data-src="fakeface1.jpeg"></p>
-</div><div class="column">
-<p><img data-src="fakeface2.jpeg"></p>
-</div>
-</div>
-<p>Try out <a href="https://www.whichfaceisreal.com">https://www.whichfaceisreal.com</a>.</p>
-<div class="footer">
-<p>Source: <a href="https://thispersondoesnotexist.com">https://thispersondoesnotexist.com</a>.</p>
-</div>
-</section>
-<section id="gan-structure" class="slide level2">
-<h2>GAN structure</h2>
-
-<img data-src="gan-diagram.png" class="r-stretch quarto-figure-center"><p class="caption">A schematic of a generative adversarial network.</p><div class="footer">
-<p>Source: Thales Silva (2018), <a href="https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394">An intuitive introduction to Generative Adversarial Networks (GANs)</a>, freeCodeCamp.</p>
-</div>
-</section>
-<section id="gan-intuition" class="slide level2">
-<h2>GAN intuition</h2>
-<p><img data-src="google-devs-bad_gan.svg"> <img data-src="google-devs-ok_gan.svg"> <img data-src="google-devs-good_gan.svg"></p>
-<div class="footer">
-<p>Source: Google Developers, <a href="https://developers.google.com/machine-learning/gan/gan_structure">Overview of GAN Structure</a>, Google Machine Learning Education.</p>
-</div>
-</section>
-<section id="stylegan2-ada" class="slide level2">
-<h2>StyleGAN2-ADA</h2>
-<p><br></p>
-<p>Training times on V100s (1024x1024 resolution):</p>
-<table>
-<colgroup>
-<col style="width: 6%">
-<col style="width: 22%">
-<col style="width: 20%">
-<col style="width: 12%">
-<col style="width: 16%">
-<col style="width: 22%">
-</colgroup>
-<thead>
-<tr class="header">
-<th style="text-align: center;">GPUs</th>
-<th style="text-align: center;">1000 kimg</th>
-<th style="text-align: center;">25000 kimg</th>
-<th style="text-align: center;">sec / kimg</th>
-<th style="text-align: center;">GPU mem</th>
-<th style="text-align: center;">CPU mem</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center;">1</td>
-<td style="text-align: center;">1d 20h</td>
-<td style="text-align: center;">46d 03h</td>
-<td style="text-align: center;">158</td>
-<td style="text-align: center;">8.1 GB</td>
-<td style="text-align: center;">5.3 GB</td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">2</td>
-<td style="text-align: center;">23h 09m</td>
-<td style="text-align: center;">24d 02h</td>
-<td style="text-align: center;">83</td>
-<td style="text-align: center;">8.6 GB</td>
-<td style="text-align: center;">11.9 GB</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center;">4</td>
-<td style="text-align: center;">11h 36m</td>
-<td style="text-align: center;">12d 02h</td>
-<td style="text-align: center;">40</td>
-<td style="text-align: center;">8.4 GB</td>
-<td style="text-align: center;">21.9 GB</td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">8</td>
-<td style="text-align: center;">5h 54m</td>
-<td style="text-align: center;">6d 03h</td>
-<td style="text-align: center;">20</td>
-<td style="text-align: center;">8.3 GB</td>
-<td style="text-align: center;">44.7 GB</td>
-</tr>
-</tbody>
-</table>
-<div class="footer">
-<p>Source: NVIDIA’s Github, <a href="https://github.com/NVlabs/stylegan2-ada-pytorch/">StyleGAN2-ADA — Official PyTorch implementation</a>.</p>
-</div>
-</section>
-<section id="discriminator" class="slide level2">
-<h2>Discriminator</h2>
-<div class="cell" data-execution_count="76">
-<div class="sourceCode cell-code" id="cb123"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb123-1"><a href="#cb123-1"></a>lrelu <span class="op">=</span> layers.LeakyReLU(alpha<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb123-2"><a href="#cb123-2"></a></span>
-<span id="cb123-3"><a href="#cb123-3"></a>discriminator <span class="op">=</span> keras.Sequential([</span>
-<span id="cb123-4"><a href="#cb123-4"></a>    keras.Input(shape<span class="op">=</span>(<span class="dv">28</span>, <span class="dv">28</span>, <span class="dv">1</span>)),</span>
-<span id="cb123-5"><a href="#cb123-5"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
-<span id="cb123-6"><a href="#cb123-6"></a>    layers.Conv2D(<span class="dv">128</span>, <span class="dv">3</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
-<span id="cb123-7"><a href="#cb123-7"></a>    layers.GlobalMaxPooling2D(),</span>
-<span id="cb123-8"><a href="#cb123-8"></a>    layers.Dense(<span class="dv">1</span>)])</span>
-<span id="cb123-9"><a href="#cb123-9"></a></span>
-<span id="cb123-10"><a href="#cb123-10"></a>discriminator.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Model: "sequential_15"
-_________________________________________________________________
-Layer (type)                Output Shape              Param #
-=================================================================
-conv2d (Conv2D)             (None, 14, 14, 64)        640
-conv2d_1 (Conv2D)           (None, 7, 7, 128)         73856
-global_max_pooling2d (Globa  (None, 128)              0
-lMaxPooling2D)
-dense_32 (Dense)            (None, 1)                 129
-=================================================================
-Total params: 74,625
-Trainable params: 74,625
-Non-trainable params: 0
-_________________________________________________________________</code></pre>
-</div>
-</div>
-</section>
-<section id="generator" class="slide level2">
-<h2>Generator</h2>
-<div class="cell" data-execution_count="77">
-<div class="sourceCode cell-code" id="cb125"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb125-1"><a href="#cb125-1"></a>latent_dim <span class="op">=</span> <span class="dv">128</span></span>
-<span id="cb125-2"><a href="#cb125-2"></a>generator <span class="op">=</span> keras.Sequential([</span>
-<span id="cb125-3"><a href="#cb125-3"></a>    layers.Dense(<span class="dv">7</span> <span class="op">*</span> <span class="dv">7</span> <span class="op">*</span> <span class="dv">128</span>, input_dim<span class="op">=</span>latent_dim, activation<span class="op">=</span>lrelu),</span>
-<span id="cb125-4"><a href="#cb125-4"></a>    layers.Reshape((<span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">128</span>)),</span>
-<span id="cb125-5"><a href="#cb125-5"></a>    layers.Conv2DTranspose(<span class="dv">128</span>, <span class="dv">4</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
-<span id="cb125-6"><a href="#cb125-6"></a>    layers.Conv2DTranspose(<span class="dv">128</span>, <span class="dv">4</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
-<span id="cb125-7"><a href="#cb125-7"></a>    layers.Conv2D(<span class="dv">1</span>, <span class="dv">7</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"sigmoid"</span>)])</span>
-<span id="cb125-8"><a href="#cb125-8"></a>generator.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Model: "sequential_16"
-_________________________________________________________________
-Layer (type)                Output Shape              Param #
-=================================================================
-dense_33 (Dense)            (None, 6272)              809088
-reshape (Reshape)           (None, 7, 7, 128)         0
-conv2d_transpose (Conv2DTra  (None, 14, 14, 128)      262272
-nspose)
-conv2d_transpose_1 (Conv2DT  (None, 28, 28, 128)      262272
-ranspose)
-conv2d_2 (Conv2D)           (None, 28, 28, 1)         6273
-=================================================================
-Total params: 1,339,905
-Trainable params: 1,339,905
-Non-trainable params: 0
-_________________________________________________________________</code></pre>
-</div>
-</div>
-</section>
-<section id="advanced-image-layers" class="slide level2 smaller">
-<h2>Advanced image layers</h2>
-<div class="absolute" style="top: 120px; left: 250px; ">
-<p>Conv2D</p>
-</div>
-<div class="absolute" style="top: 270px; left: 60px; ">
-<p>GlobalMaxPool2D</p>
-</div>
-<div class="absolute" style="top: 270px; right: 100px; ">
-<p>Conv2DTranspose</p>
-</div>
-<p><img data-src="2d_global_max_pooling_pa1.png" class="absolute" style="left: 0px; bottom: 0px; width: 550px; "></p>
-<p><img data-src="conv2d.gif" class="absolute" style="top: 75px; left: 350px; width: 300px; "></p>
-<p><img data-src="conv2dTranspose.gif" class="absolute" style="bottom: 0px; right: 50px; width: 300px; "></p>
-<div class="footer">
-<p>Sources: Pröve (2017), <a href="https://towardsdatascience.com/types-of-convolutions-in-deep-learning-717013397f4d">An Introduction to different Types of Convolutions in Deep Learning</a>, and Peltarion Knowledge Center, <a href="https://peltarion.com/knowledge-center/documentation/modeling-view/build-an-ai-model/blocks/global-max-pooling-2d">Global max pooling 2D</a>.</p>
-</div>
-</section>
-<section id="train-step" class="slide level2">
-<h2>Train step</h2>
-<div class="cell" data-execution_count="78">
-<div class="sourceCode cell-code" id="cb127"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb127-1"><a href="#cb127-1"></a><span class="co"># Separate optimisers for discriminator and generator.</span></span>
-<span id="cb127-2"><a href="#cb127-2"></a>d_optimizer <span class="op">=</span> keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.0003</span>)</span>
-<span id="cb127-3"><a href="#cb127-3"></a>g_optimizer <span class="op">=</span> keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.0004</span>)</span>
-<span id="cb127-4"><a href="#cb127-4"></a></span>
-<span id="cb127-5"><a href="#cb127-5"></a><span class="co"># Instantiate a loss function.</span></span>
-<span id="cb127-6"><a href="#cb127-6"></a>loss_fn <span class="op">=</span> keras.losses.BinaryCrossentropy(from_logits<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb127-7"><a href="#cb127-7"></a></span>
-<span id="cb127-8"><a href="#cb127-8"></a><span class="at">@tf.function</span></span>
-<span id="cb127-9"><a href="#cb127-9"></a><span class="kw">def</span> train_step(real_images):</span>
-<span id="cb127-10"><a href="#cb127-10"></a>  <span class="co"># Sample random points in the latent space</span></span>
-<span id="cb127-11"><a href="#cb127-11"></a>  random_latent_vectors <span class="op">=</span> tf.random.normal(shape<span class="op">=</span>(batch_size, latent_dim))</span>
-<span id="cb127-12"><a href="#cb127-12"></a>  <span class="co"># Decode them to fake images</span></span>
-<span id="cb127-13"><a href="#cb127-13"></a>  generated_images <span class="op">=</span> generator(random_latent_vectors)</span>
-<span id="cb127-14"><a href="#cb127-14"></a>  <span class="co"># Combine them with real images</span></span>
-<span id="cb127-15"><a href="#cb127-15"></a>  combined_images <span class="op">=</span> tf.concat([generated_images, real_images], axis<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb127-16"><a href="#cb127-16"></a></span>
-<span id="cb127-17"><a href="#cb127-17"></a>  <span class="co"># Assemble labels discriminating real from fake images</span></span>
-<span id="cb127-18"><a href="#cb127-18"></a>  labels <span class="op">=</span> tf.concat([</span>
-<span id="cb127-19"><a href="#cb127-19"></a>    tf.ones((batch_size, <span class="dv">1</span>)),</span>
-<span id="cb127-20"><a href="#cb127-20"></a>    tf.zeros((real_images.shape[<span class="dv">0</span>], <span class="dv">1</span>))], axis<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb127-21"><a href="#cb127-21"></a></span>
-<span id="cb127-22"><a href="#cb127-22"></a>  <span class="co"># Add random noise to the labels - important trick!</span></span>
-<span id="cb127-23"><a href="#cb127-23"></a>  labels <span class="op">+=</span> <span class="fl">0.05</span> <span class="op">*</span> tf.random.uniform(labels.shape)</span>
-<span id="cb127-24"><a href="#cb127-24"></a></span>
-<span id="cb127-25"><a href="#cb127-25"></a>  <span class="co"># Train the discriminator</span></span>
-<span id="cb127-26"><a href="#cb127-26"></a>  <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb127-27"><a href="#cb127-27"></a>    predictions <span class="op">=</span> discriminator(combined_images)</span>
-<span id="cb127-28"><a href="#cb127-28"></a>    d_loss <span class="op">=</span> loss_fn(labels, predictions)</span>
-<span id="cb127-29"><a href="#cb127-29"></a>  grads <span class="op">=</span> tape.gradient(d_loss, discriminator.trainable_weights)</span>
-<span id="cb127-30"><a href="#cb127-30"></a>  d_optimizer.apply_gradients(<span class="bu">zip</span>(grads, discriminator.trainable_weights))</span>
-<span id="cb127-31"><a href="#cb127-31"></a></span>
-<span id="cb127-32"><a href="#cb127-32"></a>  <span class="co"># Sample random points in the latent space</span></span>
-<span id="cb127-33"><a href="#cb127-33"></a>  random_latent_vectors <span class="op">=</span> tf.random.normal(shape<span class="op">=</span>(batch_size, latent_dim))</span>
-<span id="cb127-34"><a href="#cb127-34"></a></span>
-<span id="cb127-35"><a href="#cb127-35"></a>  <span class="co"># Assemble labels that say "all real images"</span></span>
-<span id="cb127-36"><a href="#cb127-36"></a>  misleading_labels <span class="op">=</span> tf.zeros((batch_size, <span class="dv">1</span>))</span>
-<span id="cb127-37"><a href="#cb127-37"></a></span>
-<span id="cb127-38"><a href="#cb127-38"></a>  <span class="co"># Train the generator (note that we should *not* update the weights</span></span>
-<span id="cb127-39"><a href="#cb127-39"></a>  <span class="co"># of the discriminator)!</span></span>
-<span id="cb127-40"><a href="#cb127-40"></a>  <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
-<span id="cb127-41"><a href="#cb127-41"></a>    predictions <span class="op">=</span> discriminator(generator(random_latent_vectors))</span>
-<span id="cb127-42"><a href="#cb127-42"></a>    g_loss <span class="op">=</span> loss_fn(misleading_labels, predictions)</span>
-<span id="cb127-43"><a href="#cb127-43"></a></span>
-<span id="cb127-44"><a href="#cb127-44"></a>  grads <span class="op">=</span> tape.gradient(g_loss, generator.trainable_weights)</span>
-<span id="cb127-45"><a href="#cb127-45"></a>  g_optimizer.apply_gradients(<span class="bu">zip</span>(grads, generator.trainable_weights))</span>
-<span id="cb127-46"><a href="#cb127-46"></a>  <span class="cf">return</span> d_loss, g_loss, generated_images</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
-<section id="grab-the-data" class="slide level2">
-<h2>Grab the data</h2>
-<div class="cell" data-execution_count="79">
-<div class="sourceCode cell-code" id="cb128"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb128-1"><a href="#cb128-1"></a><span class="co"># Prepare the dataset.</span></span>
-<span id="cb128-2"><a href="#cb128-2"></a><span class="co"># We use both the training &amp; test MNIST digits.</span></span>
-<span id="cb128-3"><a href="#cb128-3"></a>batch_size <span class="op">=</span> <span class="dv">64</span></span>
-<span id="cb128-4"><a href="#cb128-4"></a>(x_train, _), (x_test, _) <span class="op">=</span> keras.datasets.mnist.load_data()</span>
-<span id="cb128-5"><a href="#cb128-5"></a>all_digits <span class="op">=</span> np.concatenate([x_train, x_test])</span>
-<span id="cb128-6"><a href="#cb128-6"></a>all_digits <span class="op">=</span> all_digits.astype(<span class="st">"float32"</span>) <span class="op">/</span> <span class="fl">255.0</span></span>
-<span id="cb128-7"><a href="#cb128-7"></a>all_digits <span class="op">=</span> np.reshape(all_digits, (<span class="op">-</span><span class="dv">1</span>, <span class="dv">28</span>, <span class="dv">28</span>, <span class="dv">1</span>))</span>
-<span id="cb128-8"><a href="#cb128-8"></a>dataset <span class="op">=</span> tf.data.Dataset.from_tensor_slices(all_digits)</span>
-<span id="cb128-9"><a href="#cb128-9"></a>dataset <span class="op">=</span> dataset.shuffle(buffer_size<span class="op">=</span><span class="dv">1024</span>).batch(batch_size)</span>
-<span id="cb128-10"><a href="#cb128-10"></a></span>
-<span id="cb128-11"><a href="#cb128-11"></a><span class="co"># In practice you need at least 20 epochs to generate nice digits.</span></span>
-<span id="cb128-12"><a href="#cb128-12"></a>epochs <span class="op">=</span> <span class="dv">1</span></span>
-<span id="cb128-13"><a href="#cb128-13"></a>save_dir <span class="op">=</span> <span class="st">"./"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
-<section id="train-the-gan" class="slide level2">
-<h2>Train the GAN</h2>
-<div class="cell" data-execution_count="80">
-<div class="sourceCode cell-code" id="cb129"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb129-1"><a href="#cb129-1"></a><span class="op">%%</span>time</span>
-<span id="cb129-2"><a href="#cb129-2"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
-<span id="cb129-3"><a href="#cb129-3"></a>  <span class="cf">for</span> step, real_images <span class="kw">in</span> <span class="bu">enumerate</span>(dataset):</span>
-<span id="cb129-4"><a href="#cb129-4"></a>    <span class="co"># Train the discriminator &amp; generator on one batch of real images.</span></span>
-<span id="cb129-5"><a href="#cb129-5"></a>    d_loss, g_loss, generated_images <span class="op">=</span> train_step(real_images)</span>
-<span id="cb129-6"><a href="#cb129-6"></a></span>
-<span id="cb129-7"><a href="#cb129-7"></a>    <span class="co"># Logging.</span></span>
-<span id="cb129-8"><a href="#cb129-8"></a>    <span class="cf">if</span> step <span class="op">%</span> <span class="dv">200</span> <span class="op">==</span> <span class="dv">0</span>:</span>
-<span id="cb129-9"><a href="#cb129-9"></a>      <span class="co"># Print metrics</span></span>
-<span id="cb129-10"><a href="#cb129-10"></a>      <span class="bu">print</span>(<span class="ss">f"Discriminator loss at step </span><span class="sc">{</span>step<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>d_loss<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
-<span id="cb129-11"><a href="#cb129-11"></a>      <span class="bu">print</span>(<span class="ss">f"Adversarial loss at step </span><span class="sc">{</span>step<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>g_loss<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
-<span id="cb129-12"><a href="#cb129-12"></a>      <span class="cf">break</span> <span class="co"># Remove this if really training the GAN</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Discriminator loss at step 0: 0.69
-Adversarial loss at step 0: 0.69
-CPU times: user 1.69 s, sys: 138 ms, total: 1.83 s
-Wall time: 560 ms</code></pre>
-</div>
-</div>
-<div class="callout callout-warning callout-captioned callout-style-default">
-<div class="callout-body">
-<div class="callout-caption">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Warning</strong></p>
-</div>
-<div class="callout-content">
-<p>Converges to a Nash equilibrium.. if at all.</p>
-</div>
-</div>
-</div>
-</section>
-<section id="mode-collapse" class="slide level2 smaller">
-<h2>Mode collapse</h2>
-<div class="columns">
-<div class="column" style="width:50%&quot;;">
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="gan-mode-collapse.png"></p>
-<p></p><figcaption>Example of mode collapse</figcaption><p></p>
-</figure>
-</div>
-</div><div class="column" style="width:50%;">
-<p><img data-src="xkcd-random_number.png"></p>
-<ul>
-<li>Dongyu Liu (2021), <a href="https://youtu.be/jIDj2dhU99k">TadGAN: Time Series Anomaly Detection Using Generative Adversarial Networks</a></li>
-<li>Jeff Heaton (2022), <a href="https://youtu.be/yujdA46HKwA">GANs for Tabular Synthetic Data Generation (7.5)</a></li>
-<li>Jeff Heaton (2022), <a href="https://youtu.be/0OTd5GlHRx4">GANs to Enhance Old Photographs Deoldify (7.4)</a></li>
-<li>Jeff Heaton (2021), <a href="https://youtu.be/kbDd5lW6rkM">Training a GAN from your Own Images: StyleGAN2</a></li>
-</ul>
-</div>
-</div>
-<div class="footer">
-<p>Source: Metz et al.&nbsp;(2017), <a href="https://arxiv.org/pdf/1611.02163.pdf">Unrolled Generative Adversarial Networks</a> and Randall Munroe (2007), <a href="https://xkcd.com/221/">xkcd #221: Random Number</a>.</p>
 </div>
 </section></section>
 <section>
@@ -2197,23 +756,23 @@ Wall time: 560 ms</code></pre>
 </section>
 <section id="tensorflow-probability" class="slide level2">
 <h2>Tensorflow Probability</h2>
-<div class="cell" data-execution_count="82">
-<div class="sourceCode cell-code" id="cb131"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb131-1"><a href="#cb131-1"></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
-<span id="cb131-2"><a href="#cb131-2"></a>tfd <span class="op">=</span> tfp.distributions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1"></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
+<span id="cb23-2"><a href="#cb23-2"></a>tfd <span class="op">=</span> tfp.distributions</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-execution_count="83">
-<div class="sourceCode cell-code" id="cb132"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb132-1"><a href="#cb132-1"></a>tf.random.set_seed(<span class="dv">123</span>)</span>
-<span id="cb132-2"><a href="#cb132-2"></a>model <span class="op">=</span> keras.Sequential([</span>
-<span id="cb132-3"><a href="#cb132-3"></a>  layers.Dense(<span class="dv">24</span>, <span class="st">"leaky_relu"</span>, input_dim<span class="op">=</span>X_train.shape[<span class="dv">1</span>]),</span>
-<span id="cb132-4"><a href="#cb132-4"></a>  layers.Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>),</span>
-<span id="cb132-5"><a href="#cb132-5"></a>  tfp.layers.DistributionLambda(tfd.Poisson)</span>
-<span id="cb132-6"><a href="#cb132-6"></a>])</span>
-<span id="cb132-7"><a href="#cb132-7"></a></span>
-<span id="cb132-8"><a href="#cb132-8"></a><span class="kw">def</span> NLL(y_true, y_hat):</span>
-<span id="cb132-9"><a href="#cb132-9"></a>  <span class="cf">return</span> <span class="op">-</span>y_hat.log_prob(y_true)</span>
-<span id="cb132-10"><a href="#cb132-10"></a></span>
-<span id="cb132-11"><a href="#cb132-11"></a>model.<span class="bu">compile</span>(loss<span class="op">=</span>NLL)</span>
-<span id="cb132-12"><a href="#cb132-12"></a>model.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">3</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="cb24-2"><a href="#cb24-2"></a>model <span class="op">=</span> keras.Sequential([</span>
+<span id="cb24-3"><a href="#cb24-3"></a>  layers.Dense(<span class="dv">24</span>, <span class="st">"leaky_relu"</span>, input_dim<span class="op">=</span>X_train.shape[<span class="dv">1</span>]),</span>
+<span id="cb24-4"><a href="#cb24-4"></a>  layers.Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>),</span>
+<span id="cb24-5"><a href="#cb24-5"></a>  tfp.layers.DistributionLambda(tfd.Poisson)</span>
+<span id="cb24-6"><a href="#cb24-6"></a>])</span>
+<span id="cb24-7"><a href="#cb24-7"></a></span>
+<span id="cb24-8"><a href="#cb24-8"></a><span class="kw">def</span> NLL(y_true, y_hat):</span>
+<span id="cb24-9"><a href="#cb24-9"></a>  <span class="cf">return</span> <span class="op">-</span>y_hat.log_prob(y_true)</span>
+<span id="cb24-10"><a href="#cb24-10"></a></span>
+<span id="cb24-11"><a href="#cb24-11"></a>model.<span class="bu">compile</span>(loss<span class="op">=</span>NLL)</span>
+<span id="cb24-12"><a href="#cb24-12"></a>model.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">3</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="callout callout-tip callout-captioned callout-style-default">
 <div class="callout-body">
@@ -2231,76 +790,76 @@ Wall time: 560 ms</code></pre>
 </section>
 <section id="predictions-are-then-distributions" class="slide level2">
 <h2>Predictions are then distributions</h2>
-<div class="cell" data-execution_count="84">
-<div class="sourceCode cell-code" id="cb133"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb133-1"><a href="#cb133-1"></a>y_pred <span class="op">=</span> model(X_val)</span>
-<span id="cb133-2"><a href="#cb133-2"></a><span class="bu">type</span>(y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="84">
+<div class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1"></a>y_pred <span class="op">=</span> model(X_val)</span>
+<span id="cb25-2"><a href="#cb25-2"></a><span class="bu">type</span>(y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="21">
 <pre><code>tensorflow_probability.python.layers.internal.distribution_tensor_coercible._TensorCoercible</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="85">
-<div class="sourceCode cell-code" id="cb135"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb135-1"><a href="#cb135-1"></a>y_pred.mean()[:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="85">
+<div class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1"></a>y_pred.mean()[:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="22">
 <pre><code>&lt;tf.Tensor: shape=(3, 1), dtype=float32, numpy=
-array([[0.06],
-       [0.03],
-       [0.03]], dtype=float32)&gt;</code></pre>
+array([[0.0486],
+       [0.0217],
+       [0.0308]], dtype=float32)&gt;</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="86">
-<div class="sourceCode cell-code" id="cb137"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb137-1"><a href="#cb137-1"></a>y_pred.stddev()[:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="86">
+<div class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1"></a>y_pred.stddev()[:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="23">
 <pre><code>&lt;tf.Tensor: shape=(3, 1), dtype=float32, numpy=
-array([[0.25],
-       [0.16],
-       [0.18]], dtype=float32)&gt;</code></pre>
+array([[0.2204],
+       [0.1473],
+       [0.1756]], dtype=float32)&gt;</code></pre>
 </div>
 </div>
 </section>
 <section id="zero-inflated-poisson" class="slide level2">
 <h2>Zero-inflated Poisson</h2>
-<div class="cell" data-execution_count="87">
-<div class="sourceCode cell-code" id="cb139"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb139-1"><a href="#cb139-1"></a><span class="kw">def</span> zero_inf(out): </span>
-<span id="cb139-2"><a href="#cb139-2"></a>  rate <span class="op">=</span> tf.squeeze(tf.math.exp(out[:,<span class="dv">0</span>:<span class="dv">1</span>]))</span>
-<span id="cb139-3"><a href="#cb139-3"></a>  s <span class="op">=</span> tf.math.sigmoid(out[:,<span class="dv">1</span>:<span class="dv">2</span>])</span>
-<span id="cb139-4"><a href="#cb139-4"></a>  probs <span class="op">=</span> tf.concat([<span class="dv">1</span><span class="op">-</span>s, s], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb139-5"><a href="#cb139-5"></a>  <span class="cf">return</span> tfd.Mixture(</span>
-<span id="cb139-6"><a href="#cb139-6"></a>    cat<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>probs),</span>
-<span id="cb139-7"><a href="#cb139-7"></a>    components<span class="op">=</span>[</span>
-<span id="cb139-8"><a href="#cb139-8"></a>      tfd.Deterministic(loc<span class="op">=</span>tf.zeros_like(rate)),</span>
-<span id="cb139-9"><a href="#cb139-9"></a>      tfd.Poisson(rate<span class="op">=</span>rate),</span>
-<span id="cb139-10"><a href="#cb139-10"></a>    ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1"></a><span class="kw">def</span> zero_inf(out): </span>
+<span id="cb31-2"><a href="#cb31-2"></a>  rate <span class="op">=</span> tf.squeeze(tf.math.exp(out[:,<span class="dv">0</span>:<span class="dv">1</span>]))</span>
+<span id="cb31-3"><a href="#cb31-3"></a>  s <span class="op">=</span> tf.math.sigmoid(out[:,<span class="dv">1</span>:<span class="dv">2</span>])</span>
+<span id="cb31-4"><a href="#cb31-4"></a>  probs <span class="op">=</span> tf.concat([<span class="dv">1</span><span class="op">-</span>s, s], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb31-5"><a href="#cb31-5"></a>  <span class="cf">return</span> tfd.Mixture(</span>
+<span id="cb31-6"><a href="#cb31-6"></a>    cat<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>probs),</span>
+<span id="cb31-7"><a href="#cb31-7"></a>    components<span class="op">=</span>[</span>
+<span id="cb31-8"><a href="#cb31-8"></a>      tfd.Deterministic(loc<span class="op">=</span>tf.zeros_like(rate)),</span>
+<span id="cb31-9"><a href="#cb31-9"></a>      tfd.Poisson(rate<span class="op">=</span>rate),</span>
+<span id="cb31-10"><a href="#cb31-10"></a>    ])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-execution_count="88">
-<div class="sourceCode cell-code" id="cb140"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb140-1"><a href="#cb140-1"></a>tf.random.set_seed(<span class="dv">123</span>)</span>
-<span id="cb140-2"><a href="#cb140-2"></a></span>
-<span id="cb140-3"><a href="#cb140-3"></a>zipModel <span class="op">=</span> keras.Sequential([</span>
-<span id="cb140-4"><a href="#cb140-4"></a>  layers.Dense(<span class="dv">24</span>, <span class="st">"leaky_relu"</span>, input_dim<span class="op">=</span>X_train.shape[<span class="dv">1</span>]),</span>
-<span id="cb140-5"><a href="#cb140-5"></a>  layers.Dense(<span class="dv">2</span>),</span>
-<span id="cb140-6"><a href="#cb140-6"></a>  tfp.layers.DistributionLambda(zero_inf)</span>
-<span id="cb140-7"><a href="#cb140-7"></a>])</span>
-<span id="cb140-8"><a href="#cb140-8"></a></span>
-<span id="cb140-9"><a href="#cb140-9"></a><span class="kw">def</span> NLL(y_true, y_hat):</span>
-<span id="cb140-10"><a href="#cb140-10"></a>  <span class="cf">return</span> <span class="op">-</span>y_hat.log_prob(y_true)</span>
-<span id="cb140-11"><a href="#cb140-11"></a></span>
-<span id="cb140-12"><a href="#cb140-12"></a>zipModel.<span class="bu">compile</span>(loss<span class="op">=</span>NLL)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="cb32-2"><a href="#cb32-2"></a></span>
+<span id="cb32-3"><a href="#cb32-3"></a>zipModel <span class="op">=</span> keras.Sequential([</span>
+<span id="cb32-4"><a href="#cb32-4"></a>  layers.Dense(<span class="dv">24</span>, <span class="st">"leaky_relu"</span>, input_dim<span class="op">=</span>X_train.shape[<span class="dv">1</span>]),</span>
+<span id="cb32-5"><a href="#cb32-5"></a>  layers.Dense(<span class="dv">2</span>),</span>
+<span id="cb32-6"><a href="#cb32-6"></a>  tfp.layers.DistributionLambda(zero_inf)</span>
+<span id="cb32-7"><a href="#cb32-7"></a>])</span>
+<span id="cb32-8"><a href="#cb32-8"></a></span>
+<span id="cb32-9"><a href="#cb32-9"></a><span class="kw">def</span> NLL(y_true, y_hat):</span>
+<span id="cb32-10"><a href="#cb32-10"></a>  <span class="cf">return</span> <span class="op">-</span>y_hat.log_prob(y_true)</span>
+<span id="cb32-11"><a href="#cb32-11"></a></span>
+<span id="cb32-12"><a href="#cb32-12"></a>zipModel.<span class="bu">compile</span>(loss<span class="op">=</span>NLL)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="evaluations-are-then-likelihoods" class="slide level2">
 <h2>Evaluations are then likelihoods</h2>
-<div class="cell" data-execution_count="89">
-<div class="sourceCode cell-code" id="cb141"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb141-1"><a href="#cb141-1"></a>zipModel.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">3</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1"></a>zipModel.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">3</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-execution_count="90">
-<div class="sourceCode cell-code" id="cb142"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb142-1"><a href="#cb142-1"></a>model.evaluate(X_val, y_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="90">
-<pre><code>0.21083223819732666</code></pre>
+<div class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1"></a>model.evaluate(X_val, y_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="27">
+<pre><code>0.21185359358787537</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="91">
-<div class="sourceCode cell-code" id="cb144"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb144-1"><a href="#cb144-1"></a>zipModel.evaluate(X_val, y_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="91">
-<pre><code>0.21178053319454193</code></pre>
+<div class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1"></a>zipModel.evaluate(X_val, y_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="28">
+<pre><code>0.21242453157901764</code></pre>
 </div>
 </div>
 <div class="smaller">
@@ -2314,21 +873,21 @@ array([[0.25],
 </section>
 <section id="huggingfaces-transformers" class="slide level2">
 <h2>HuggingFace’s Transformers</h2>
-<div class="cell" data-execution_count="92">
-<div class="sourceCode cell-code" id="cb146"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb146-1"><a href="#cb146-1"></a><span class="im">import</span> transformers</span>
-<span id="cb146-2"><a href="#cb146-2"></a><span class="im">from</span> transformers <span class="im">import</span> pipeline</span>
-<span id="cb146-3"><a href="#cb146-3"></a>generator <span class="op">=</span> pipeline(task<span class="op">=</span><span class="st">"text-generation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1"></a><span class="im">import</span> transformers</span>
+<span id="cb38-2"><a href="#cb38-2"></a><span class="im">from</span> transformers <span class="im">import</span> pipeline</span>
+<span id="cb38-3"><a href="#cb38-3"></a>generator <span class="op">=</span> pipeline(task<span class="op">=</span><span class="st">"text-generation"</span>, model<span class="op">=</span><span class="st">"gpt2"</span>, revision<span class="op">=</span><span class="st">"6c0e608"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-execution_count="93">
-<div class="sourceCode cell-code" id="cb147"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb147-1"><a href="#cb147-1"></a>transformers.set_seed(<span class="dv">1</span>)</span>
-<span id="cb147-2"><a href="#cb147-2"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1"></a>transformers.set_seed(<span class="dv">1</span>)</span>
+<span id="cb39-2"><a href="#cb39-2"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>It's the holidays so I'm going to enjoy the rest of the time and look forward to this week with new friends!"</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="94">
-<div class="sourceCode cell-code" id="cb149"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb149-1"><a href="#cb149-1"></a>transformers.set_seed(<span class="dv">1337</span>)</span>
-<span id="cb149-2"><a href="#cb149-2"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1"></a>transformers.set_seed(<span class="dv">1337</span>)</span>
+<span id="cb41-2"><a href="#cb41-2"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>It's the holidays so I'm going to enjoy working as much as possible," he told ABC Radio's Today.
 
@@ -2340,63 +899,63 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
 </section>
 <section id="reading-the-course-profile" class="slide level2">
 <h2>Reading the course profile</h2>
-<div class="cell" data-execution_count="95">
-<div class="sourceCode cell-code" id="cb151"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb151-1"><a href="#cb151-1"></a>context <span class="op">=</span> <span class="st">"""</span></span>
-<span id="cb151-2"><a href="#cb151-2"></a><span class="st">StoryWall Formative Discussions: An initial StoryWall, worth 2%, is due by noon on June 3. The following StoryWalls are worth 4</span><span class="sc">% e</span><span class="st">ach (taking the best 7 of 9) and are due at noon on the following dates:</span></span>
-<span id="cb151-3"><a href="#cb151-3"></a><span class="st">The project will be submitted in stages: draft due at noon on July 1 (10%), recorded presentation due at noon on July 22 (15%), final report due at noon on August 1 (15%).</span></span>
-<span id="cb151-4"><a href="#cb151-4"></a></span>
-<span id="cb151-5"><a href="#cb151-5"></a><span class="st">As a student at UNSW you are expected to display academic integrity in your work and interactions. Where a student breaches the UNSW Student Code with respect to academic integrity, the University may take disciplinary action under the Student Misconduct Procedure. To assure academic integrity, you may be required to demonstrate reasoning, research and the process of constructing work submitted for assessment.</span></span>
-<span id="cb151-6"><a href="#cb151-6"></a><span class="st">To assist you in understanding what academic integrity means, and how to ensure that you do comply with the UNSW Student Code, it is strongly recommended that you complete the Working with Academic Integrity module before submitting your first assessment task. It is a free, online self-paced Moodle module that should take about one hour to complete.</span></span>
-<span id="cb151-7"><a href="#cb151-7"></a></span>
-<span id="cb151-8"><a href="#cb151-8"></a><span class="st">StoryWall (30%)</span></span>
-<span id="cb151-9"><a href="#cb151-9"></a></span>
-<span id="cb151-10"><a href="#cb151-10"></a><span class="st">The StoryWall format will be used for small weekly questions. Each week of questions will be released on a Monday, and most of them will be due the following Monday at midday (see assessment table for exact dates). Students will upload their responses to the question sets, and give comments on another student's submission. Each week will be worth 4%, and the grading is pass/fail, with the best 7 of 9 being counted. The first week's basic 'introduction' StoryWall post is counted separately and is worth 2%.</span></span>
-<span id="cb151-11"><a href="#cb151-11"></a></span>
-<span id="cb151-12"><a href="#cb151-12"></a><span class="st">Project (40%)</span></span>
-<span id="cb151-13"><a href="#cb151-13"></a></span>
-<span id="cb151-14"><a href="#cb151-14"></a><span class="st">Over the term, students will complete an individual project. There will be a selection of deep learning topics to choose from (this will be outlined during Week 1).</span></span>
-<span id="cb151-15"><a href="#cb151-15"></a></span>
-<span id="cb151-16"><a href="#cb151-16"></a><span class="st">The deliverables for the project will include: a draft/progress report mid-way through the term, a presentation (recorded), a final report including a written summary of the project and the relevant Python code (Jupyter notebook).</span></span>
-<span id="cb151-17"><a href="#cb151-17"></a></span>
-<span id="cb151-18"><a href="#cb151-18"></a><span class="st">Exam (30%)</span></span>
-<span id="cb151-19"><a href="#cb151-19"></a></span>
-<span id="cb151-20"><a href="#cb151-20"></a><span class="st">The exam will test the concepts presented in the lectures. For example, students will be expected to: provide definitions for various deep learning terminology, suggest neural network designs to solve risk and actuarial problems, give advice to mock deep learning engineers whose projects have hit common roadblocks, find/explain common bugs in deep learning Python code.</span></span>
-<span id="cb151-21"><a href="#cb151-21"></a><span class="st">"""</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1"></a>context <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb43-2"><a href="#cb43-2"></a><span class="st">StoryWall Formative Discussions: An initial StoryWall, worth 2%, is due by noon on June 3. The following StoryWalls are worth 4</span><span class="sc">% e</span><span class="st">ach (taking the best 7 of 9) and are due at noon on the following dates:</span></span>
+<span id="cb43-3"><a href="#cb43-3"></a><span class="st">The project will be submitted in stages: draft due at noon on July 1 (10%), recorded presentation due at noon on July 22 (15%), final report due at noon on August 1 (15%).</span></span>
+<span id="cb43-4"><a href="#cb43-4"></a></span>
+<span id="cb43-5"><a href="#cb43-5"></a><span class="st">As a student at UNSW you are expected to display academic integrity in your work and interactions. Where a student breaches the UNSW Student Code with respect to academic integrity, the University may take disciplinary action under the Student Misconduct Procedure. To assure academic integrity, you may be required to demonstrate reasoning, research and the process of constructing work submitted for assessment.</span></span>
+<span id="cb43-6"><a href="#cb43-6"></a><span class="st">To assist you in understanding what academic integrity means, and how to ensure that you do comply with the UNSW Student Code, it is strongly recommended that you complete the Working with Academic Integrity module before submitting your first assessment task. It is a free, online self-paced Moodle module that should take about one hour to complete.</span></span>
+<span id="cb43-7"><a href="#cb43-7"></a></span>
+<span id="cb43-8"><a href="#cb43-8"></a><span class="st">StoryWall (30%)</span></span>
+<span id="cb43-9"><a href="#cb43-9"></a></span>
+<span id="cb43-10"><a href="#cb43-10"></a><span class="st">The StoryWall format will be used for small weekly questions. Each week of questions will be released on a Monday, and most of them will be due the following Monday at midday (see assessment table for exact dates). Students will upload their responses to the question sets, and give comments on another student's submission. Each week will be worth 4%, and the grading is pass/fail, with the best 7 of 9 being counted. The first week's basic 'introduction' StoryWall post is counted separately and is worth 2%.</span></span>
+<span id="cb43-11"><a href="#cb43-11"></a></span>
+<span id="cb43-12"><a href="#cb43-12"></a><span class="st">Project (40%)</span></span>
+<span id="cb43-13"><a href="#cb43-13"></a></span>
+<span id="cb43-14"><a href="#cb43-14"></a><span class="st">Over the term, students will complete an individual project. There will be a selection of deep learning topics to choose from (this will be outlined during Week 1).</span></span>
+<span id="cb43-15"><a href="#cb43-15"></a></span>
+<span id="cb43-16"><a href="#cb43-16"></a><span class="st">The deliverables for the project will include: a draft/progress report mid-way through the term, a presentation (recorded), a final report including a written summary of the project and the relevant Python code (Jupyter notebook).</span></span>
+<span id="cb43-17"><a href="#cb43-17"></a></span>
+<span id="cb43-18"><a href="#cb43-18"></a><span class="st">Exam (30%)</span></span>
+<span id="cb43-19"><a href="#cb43-19"></a></span>
+<span id="cb43-20"><a href="#cb43-20"></a><span class="st">The exam will test the concepts presented in the lectures. For example, students will be expected to: provide definitions for various deep learning terminology, suggest neural network designs to solve risk and actuarial problems, give advice to mock deep learning engineers whose projects have hit common roadblocks, find/explain common bugs in deep learning Python code.</span></span>
+<span id="cb43-21"><a href="#cb43-21"></a><span class="st">"""</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="question-answering" class="slide level2">
 <h2>Question answering</h2>
-<div class="cell" data-execution_count="96">
-<div class="sourceCode cell-code" id="cb152"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb152-1"><a href="#cb152-1"></a>qa <span class="op">=</span> pipeline(<span class="st">"question-answering"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell" data-execution_count="33">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1"></a>qa <span class="op">=</span> pipeline(<span class="st">"question-answering"</span>, model<span class="op">=</span><span class="st">"distilbert-base-cased-distilled-squad"</span>, revision<span class="op">=</span><span class="st">"626af31"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="cell" data-execution_count="97">
-<div class="sourceCode cell-code" id="cb153"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb153-1"><a href="#cb153-1"></a>qa(question<span class="op">=</span><span class="st">"What weight is the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="97">
-<pre><code>{'score': 0.5968161821365356, 'start': 2092, 'end': 2095, 'answer': '30%'}</code></pre>
+<div class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1"></a>qa(question<span class="op">=</span><span class="st">"What weight is the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="34">
+<pre><code>{'score': 0.5019664764404297, 'start': 2092, 'end': 2095, 'answer': '30%'}</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="98">
-<div class="sourceCode cell-code" id="cb155"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb155-1"><a href="#cb155-1"></a>qa(question<span class="op">=</span><span class="st">"What topics are in the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="98">
-<pre><code>{'score': 0.563531756401062,
+<div class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1"></a>qa(question<span class="op">=</span><span class="st">"What topics are in the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="35">
+<pre><code>{'score': 0.2127620279788971,
  'start': 1778,
  'end': 1791,
  'answer': 'deep learning'}</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="99">
-<div class="sourceCode cell-code" id="cb157"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb157-1"><a href="#cb157-1"></a>qa(question<span class="op">=</span><span class="st">"When is the presentation due?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="99">
-<pre><code>{'score': 0.6302009224891663,
+<div class="cell" data-execution_count="36">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1"></a>qa(question<span class="op">=</span><span class="st">"When is the presentation due?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="36">
+<pre><code>{'score': 0.5296482443809509,
  'start': 1319,
  'end': 1335,
  'answer': 'Monday at midday'}</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="100">
-<div class="sourceCode cell-code" id="cb159"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb159-1"><a href="#cb159-1"></a>qa(question<span class="op">=</span><span class="st">"How many StoryWall tasks are there?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="100">
-<pre><code>{'score': 0.47484666109085083, 'start': 1155, 'end': 1158, 'answer': '30%'}</code></pre>
+<div class="cell" data-execution_count="37">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1"></a>qa(question<span class="op">=</span><span class="st">"How many StoryWall tasks are there?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="37">
+<pre><code>{'score': 0.21390976011753082, 'start': 1155, 'end': 1158, 'answer': '30%'}</code></pre>
 </div>
 </div>
 </section>
@@ -2927,7 +1486,24 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
         button.classList.add('code-copy-button-checked');
         var currentTitle = button.getAttribute("title");
         button.setAttribute("title", "Copied!");
+        let tooltip;
+        if (window.bootstrap) {
+          button.setAttribute("data-bs-toggle", "tooltip");
+          button.setAttribute("data-bs-placement", "left");
+          button.setAttribute("data-bs-title", "Copied!");
+          tooltip = new bootstrap.Tooltip(button, 
+            { trigger: "manual", 
+              customClass: "code-copy-button-tooltip",
+              offset: [0, -8]});
+          tooltip.show();    
+        }
         setTimeout(function() {
+          if (tooltip) {
+            tooltip.hide();
+            button.removeAttribute("data-bs-title");
+            button.removeAttribute("data-bs-toggle");
+            button.removeAttribute("data-bs-placement");
+          }
           button.setAttribute("title", currentTitle);
           button.classList.remove('code-copy-button-checked');
         }, 1000);
@@ -2965,24 +1541,42 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
           return note.innerHTML;
         });
       }
+      const findCites = (el) => {
+        const parentEl = el.parentElement;
+        if (parentEl) {
+          const cites = parentEl.dataset.cites;
+          if (cites) {
+            return {
+              el,
+              cites: cites.split(' ')
+            };
+          } else {
+            return findCites(el.parentElement)
+          }
+        } else {
+          return undefined;
+        }
+      };
       var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
       for (var i=0; i<bibliorefs.length; i++) {
         const ref = bibliorefs[i];
-        const cites = ref.parentNode.getAttribute('data-cites').split(' ');
-        tippyHover(ref, function() {
-          var popup = window.document.createElement('div');
-          cites.forEach(function(cite) {
-            var citeDiv = window.document.createElement('div');
-            citeDiv.classList.add('hanging-indent');
-            citeDiv.classList.add('csl-entry');
-            var biblioDiv = window.document.getElementById('ref-' + cite);
-            if (biblioDiv) {
-              citeDiv.innerHTML = biblioDiv.innerHTML;
-            }
-            popup.appendChild(citeDiv);
+        const citeInfo = findCites(ref);
+        if (citeInfo) {
+          tippyHover(citeInfo.el, function() {
+            var popup = window.document.createElement('div');
+            citeInfo.cites.forEach(function(cite) {
+              var citeDiv = window.document.createElement('div');
+              citeDiv.classList.add('hanging-indent');
+              citeDiv.classList.add('csl-entry');
+              var biblioDiv = window.document.getElementById('ref-' + cite);
+              if (biblioDiv) {
+                citeDiv.innerHTML = biblioDiv.innerHTML;
+              }
+              popup.appendChild(citeDiv);
+            });
+            return popup.innerHTML;
           });
-          return popup.innerHTML;
-        });
+        }
       }
     });
     </script>
