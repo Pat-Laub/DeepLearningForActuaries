@@ -1,0 +1,716 @@
+# California House Price Prediction {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Import the data {.smaller}
+
+```{python}
+from sklearn.datasets import fetch_california_housing
+features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+features
+```
+
+## What is the target?
+
+```{python}
+target
+```
+
+## Location
+
+Python's `matplotlib` package $\approx$ R's basic `plot`s.
+
+```{python}
+import matplotlib.pyplot as plt
+plt.scatter(features["Longitude"], features["Latitude"])
+```
+
+## Location #2
+
+Python's `seaborn` package $\approx$ R's `ggplot2`.  
+
+```{python}
+import seaborn as sns
+sns.scatterplot(x="Longitude", y="Latitude", data=features);
+```
+
+## Features
+
+```{python}
+features.columns
+```
+
+How many?
+
+```{python}
+NUM_FEATURES = len(features.columns)
+NUM_FEATURES
+```
+
+Or
+
+```{python}
+NUM_FEATURES = features.shape[1]
+features.shape
+```
+
+## Set aside a fraction for a test set
+
+
+```{python}
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = \
+    train_test_split(features, target, random_state=42)
+```
+
+
+::: columns
+::: {.column width="70%"}
+
+![Illustration of a typical training/test split.](heaton-train-test-split.png)
+
+:::
+::: {.column width="30%"}
+![Our use of sklearn.](scikit-learn-what-is-my-purpose.png)
+:::
+:::
+
+
+::: footer
+Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/e4bdc124b0c45b592d9bdbed0d2ef6c63c0245d6/t81_558_class_02_1_python_pandas.ipynb), Part 2.1: Introduction to Pandas, and [this random site](https://journeys.dartmouth.edu/folklorearchive/2020/06/03/purpose-of-scikit-learn-is-to-split-the-data/).
+:::
+
+## The training set {.smaller}
+
+```{python}
+X_train
+```
+
+::: {.callout-tip}
+Why is the `X_` in the variable name in capitals and the `y_` in lowercase?
+:::
+
+# Simple baseline model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Linear Regression
+
+$$ \hat{y} = w_0 + \sum_{i=1}^N w_i x_i .$$
+
+```{python}
+from sklearn.linear_model import LinearRegression
+lr = LinearRegression()
+lr.fit(X_train, y_train);
+```
+
+The $w_0$ is in `lr.intercept_` and the others are in
+```{python}
+print(lr.coef_)
+```
+
+## Make some predictions
+
+```{python}
+X_train.head(3)
+```
+
+```{python}
+y_pred = lr.predict(X_train.head(3))
+y_pred
+```
+
+```{python}
+prediction = lr.intercept_
+for w_i, x_i in zip(lr.coef_, X_train.iloc[0]):
+    prediction += w_i * x_i
+prediction
+```
+
+## Plot the predictions
+
+```{python}
+#| include: false
+set_square_figures()
+```
+
+::: columns
+::: column
+```{python}
+#| echo: false
+y_pred = lr.predict(X_train)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+```
+:::
+::: column
+```{python}
+#| echo: false
+y_pred = lr.predict(X_test)
+plt.scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Test set")
+add_diagonal_line()
+```
+:::
+:::
+
+```{python}
+#| include: false
+set_rectangular_figures()
+```
+
+## Calculate mean squared error
+
+```{python}
+import pandas as pd
+y_pred = lr.predict(X_train)
+df = pd.DataFrame({"Predictions": y_pred, "True values": y_train})
+df["Squared Error"] = (df["Predictions"] - df["True values"])**2
+df.head(4)
+```
+
+```{python}
+df["Squared Error"].mean()
+```
+
+## Using `mean_squared_error`
+
+```{python}
+df["Squared Error"].mean()
+```
+
+```{python}
+from sklearn.metrics import mean_squared_error
+
+mean_squared_error(y_train, y_pred)
+```
+
+Store the results in a dictionary:
+
+```{python}
+mseLRTrain = mean_squared_error(y_train, lr.predict(X_train))
+mseLRTest = mean_squared_error(y_test, lr.predict(X_test))
+
+mseTrain = {"Linear Regression": mseLRTrain}
+mseTest = {"Linear Regression": mseLRTest}
+```
+
+
+# Our First Neural Network {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Decide on the architecture
+
+![A simple network with one hidden layer with 30 neurons.](nn.svg)
+
+::: footer
+Generated used the [NN-SVG](http://alexlenail.me/NN-SVG/index.html) tool.
+:::
+
+## Create a Keras ANN model
+
+```{python}
+#| echo: false
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
+```
+
+Create the model:
+
+```{python}
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+
+model = Sequential([
+    Dense(30, input_dim=NUM_FEATURES, activation="relu"),
+    Dense(1)
+])
+```
+
+## Inspect the model
+
+```{python}
+model.summary()
+```
+
+## The model is initialised randomly
+
+```{python}
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1)
+])
+model.predict(X_test.head(3), verbose=0)
+```
+
+```{python}
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1)
+])
+model.predict(X_test.head(3), verbose=0)
+```
+
+## Controlling the randomness
+
+```{python}
+#| code-line-numbers: "|1-2,10"
+import random
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1)])
+
+display(model.predict(X_test.head(3), verbose=0))
+
+random.seed(123)
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1)])
+
+display(model.predict(X_test.head(3), verbose=0))
+```
+
+## Fit the model
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1)
+])
+
+model.compile("adam", "mse")
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
+hist.history["loss"]
+```
+
+## Make predictions
+
+```{python}
+y_pred = model.predict(X_train[:3], verbose=0)
+y_pred
+```
+
+::: {.callout-note}
+
+The `.predict` gives us a 'matrix' not a 'vector'.
+Calling `.flatten()` will convert it to a 'vector'.
+
+```{python}
+print(f"Original shape: {y_pred.shape}")
+y_pred = y_pred.flatten()
+print(f"Flattened shape: {y_pred.shape}")
+y_pred
+```
+
+:::
+
+## Plot the predictions
+
+```{python}
+#| include: false
+set_square_figures()
+```
+
+::: columns
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_train, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+```
+:::
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_test, verbose=0)
+plt.scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Test set")
+add_diagonal_line()
+```
+:::
+:::
+
+```{python}
+#| include: false
+set_rectangular_figures()
+```
+
+## Assess the model
+
+```{python}
+y_pred = model.predict(X_test, verbose=0)
+mean_squared_error(y_test, y_pred)
+```
+
+```{python}
+mseTrain["Basic ANN"] = mean_squared_error(y_train, model.predict(X_train, verbose=0))
+mseTest["Basic ANN"] = mean_squared_error(y_test, model.predict(X_test, verbose=0))
+```
+
+Some predictions are negative:
+
+```{python}
+y_pred = model.predict(X_test, verbose=0)
+y_pred.min(), y_pred.max()
+```
+
+```{python}
+y_test.min(), y_test.max()
+```
+
+
+# Force positive predictions {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Try running for longer
+
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1)
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit(X_train, y_train, \
+    epochs=50, verbose=False)
+```
+
+## Loss curve
+
+```{python}
+plt.plot(range(1, 51), hist.history["loss"])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+
+## Loss curve {data-visibility="uncounted"}
+
+```{python}
+plt.plot(range(2, 51), hist.history["loss"][1:])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+
+## Predictions
+
+```{python}
+y_pred = model.predict(X_test, verbose=0)
+print(f"Min prediction: {y_pred.min():.2f}")
+print(f"Max prediction: {y_pred.max():.2f}")
+```
+
+::: columns
+::: column
+```{python}
+#| eval: false
+plt.scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+<div style="margin-top: 1em;">
+
+```{python}
+mseTrain["Long run ANN"] = mean_squared_error(y_train, model.predict(X_train, verbose=0))
+mseTest["Long run ANN"] = mean_squared_error(y_test, model.predict(X_test, verbose=0))
+```
+
+</div>
+
+:::
+::: column
+
+<div style="position: relative; top: -3em;">
+
+```{python}
+#| echo: false
+squareFig().scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+</div>
+
+:::
+:::
+
+
+## Try different activation functions
+
+<br>
+
+```{python}
+#| echo: false
+import tensorflow.keras.activations as acts
+import numpy as np
+
+def plot_activation(activation, ax, name, hideX=False):
+    x = np.linspace(-5, 5, 100)
+    y = activation(x)
+    
+    ax.plot(x, y)
+    if y.numpy().min() < 0:
+        ax.axhline(0, ls='--', c='black', lw=0.5)
+
+    # Annotate the top-left corner of the subplot with the name
+    # of the activation function
+    ax.annotate(name, xy=(0.2, 1), xycoords='axes fraction',
+                xytext=(-5, -5), textcoords='offset points',
+                ha='left', va='top')
+    
+    if hideX:
+        ax.xaxis.set_visible(False)
+
+fig, axs = plt.subplots(2, 2)
+plot_activation(acts.tanh, axs[0,0], "tanh", hideX=True)
+plot_activation(acts.sigmoid, axs[0,1], "sigmoid", hideX=True)
+plot_activation(acts.relu, axs[1,0], "ReLU")
+plot_activation(acts.exponential, axs[1,1], "exponential")
+
+axs[0,0].set(ylabel="Output")
+axs[1,0].set(xlabel="Input", ylabel="Output")
+axs[1,1].set(xlabel="Input");
+```
+
+## Enforce positive outputs (ReLU)
+
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1, activation="relu")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit(X_train, y_train, epochs=50, \
+    verbose=False)
+
+import numpy as np
+losses = np.round(hist.history["loss"], 2)
+print(losses[:5], "...", losses[-5:])
+```
+
+## Plot the predictions
+
+```{python}
+#| include: false
+set_square_figures()
+```
+
+::: columns
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_train, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set");
+```
+:::
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_test, verbose=0)
+plt.scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Test set");
+```
+:::
+:::
+
+```{python}
+#| include: false
+set_rectangular_figures()
+```
+
+## Enforce positive outputs ($\mathrm{e}^{\,x}$)
+
+```{python}
+#| code-line-numbers: "|5"
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1, activation="exponential")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
+
+losses = hist.history["loss"]
+print(losses)
+```
+
+# Preprocessing {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Re-scaling the inputs
+
+```{python}
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+X_train_sc = scaler.transform(X_train)
+X_test_sc = scaler.transform(X_test)
+```
+
+::: columns
+::: column
+```{python}
+#| output-location: default
+#| eval: false
+plt.hist(X_train.iloc[:,0])
+plt.hist(X_train_sc[:,0])
+plt.legend([
+    "Original",
+    "Scaled"
+]);
+```
+:::
+::: column
+```{python}
+#| echo: false
+plt.hist(X_train.iloc[:,0])
+plt.hist(X_train_sc[:,0])
+plt.legend([
+        "Original",
+        "Scaled"]);
+```
+:::
+:::
+
+## Same model with scaled inputs
+
+```{python}
+#| code-line-numbers: "|11"
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1, activation="exponential")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit( \
+    X_train_sc, \
+    y_train, \
+    epochs=50, \
+    verbose=False)
+```
+
+## Loss curve
+
+```{python}
+plt.plot(range(1, 51), hist.history["loss"])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+
+## Loss curve {data-visibility="uncounted"}
+
+```{python}
+plt.plot(range(2, 51), hist.history["loss"][1:])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+
+## Predictions
+
+```{python}
+y_pred = model.predict(X_test_sc, verbose=0)
+print(f"Min prediction: {y_pred.min():.2f}")
+print(f"Max prediction: {y_pred.max():.2f}")
+```
+
+::: columns
+::: column
+```{python}
+#| eval: false
+plt.scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+<div style="margin-top: 1em;">
+
+```{python}
+mseTrain["Exp ANN"] = mean_squared_error(y_train, model.predict(X_train_sc, verbose=0))
+mseTest["Exp ANN"] = mean_squared_error(y_test, model.predict(X_test_sc, verbose=0))
+```
+
+</div>
+
+:::
+::: column
+
+<div style="position: relative; top: -3em;">
+
+```{python}
+#| echo: false
+squareFig().scatter(y_pred, y_test)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+</div>
+
+:::
+:::
+
+## Comparing MSE (smaller is better)
+
+On training data:
+
+```{python}
+mseTrain
+```
+
+On test data (expect _worse_, i.e. bigger):
+
+```{python}
+mseTest
+```
+
+## Comparing models (in sample) {data-visibility="uncounted"}
+
+```{python}
+trainResults = pd.DataFrame({
+    "Model": mseTrain.keys(), "MSE": mseTrain.values()
+})
+trainResults.sort_values("MSE", ascending=False)
+```
+
+## Comparing models (out sample) {data-visibility="uncounted"}
+
+```{python}
+testResults = pd.DataFrame({
+    "Model": mseTest.keys(), "MSE": mseTest.values()
+})
+testResults.sort_values("MSE", ascending=False)
+```

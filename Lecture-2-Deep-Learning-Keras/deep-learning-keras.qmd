@@ -1,8 +1,7 @@
 ---
 title: Deep Learning with Keras
-subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+subtitle: ACTL3143 & ACTL5111 Deep Learning for Actuaries
 author: Dr Patrick Laub
-date: Week 2
 format:
   revealjs:
     theme: [serif, custom.scss]
@@ -36,6 +35,7 @@ execute:
 
 ```{python}
 #| echo: false
+import matplotlib
 import matplotlib.pyplot as plt
 import cycler
 colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
@@ -55,6 +55,14 @@ plt.rcParams['font.family'] = "serif"
 plt.rcParams['axes.spines.right'] = False
 plt.rcParams['axes.spines.top'] = False
 
+import pandas as pandas
+pandas.options.display.max_rows = 6
+
+import tensorflow
+tensorflow.random.set_seed(1)
+tensorflow.get_logger().setLevel('ERROR')
+tensorflow.config.set_visible_devices([], 'GPU')
+
 def squareFig():
     return plt.figure(figsize=(2, 2), dpi=350).gca()
 
@@ -63,6 +71,7 @@ def add_diagonal_line():
     yl = plt.ylim()
     shortestSide = min(xl[1], yl[1])
     plt.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+
 
 import pandas as pd
 pd.options.display.max_rows = 6
@@ -76,769 +85,6 @@ tf.get_logger().setLevel('ERROR')
 
 tf.config.set_visible_devices([], 'GPU')
 ```
-
-## Lecture Outline
-
-<br>
-
-- StoryWall #1 Recap
-- Machine Learning
-- Deep Learning
-- Python syntax
-- Demo: California house price prediction
-- Tutorial: Jupyter
-
-## Notes from Week 1
-
-Lecture main ideas:
-
-- rules-based AI (minimax was the concrete example),
-- Python data types, functions, and other syntax.
-
-Assessments:
-
-- the project 'template' paper is _not_ what is expected for your project, don't be intimidated by it,
-- the exam format will be via Moodle,
-- late StoryWalls (apart from 'introduction') will be marked as fails.
-
-# StoryWall #1 Recap {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Should have kept infinity
-```{python}
-#| include: false
-!pip install chess
-import chess
-import math
-
-STANDARD_PIECE_VALUES = {"P": 1, "N": 3, "B": 3,
-                         "R": 5, "Q": 9, "K": 0}
-```
-
-```{python}
-#| code-line-numbers: "|5,7"
-def static_evaluation(board):
-    if board.is_game_over():
-        outcome = board.outcome()
-        if outcome.winner == chess.WHITE:
-            return math.inf
-        elif outcome.winner == chess.BLACK:
-            return -math.inf
-        else:
-            return 0
-
-    pointsBalance = 0
-    for square in chess.SQUARES:
-        piece = board.piece_at(square)
-        if piece:
-          pieceValue = STANDARD_PIECE_VALUES[piece.symbol().upper()]
-          if piece.symbol().isupper():
-              pointsBalance += pieceValue
-          else:
-              pointsBalance -= pieceValue
-    return pointsBalance
-```
-
-## Original Minimax (Simpler)
-
-```{python}
-def minimax(board, depth):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board)
-  
-  scores = []
-  for move in board.legal_moves:
-    board.push(move)
-    score = minimax(board, depth-1)
-    board.pop()
-    scores.append(score)
-
-  if board.turn == chess.WHITE:
-    return max(scores)
-  else:
-    return min(scores)  
-```
-## Original Minimax (Pseudocode)
-
-```{python}
-def minimax(board, depth):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board)
-  
-  if board.turn == chess.WHITE:
-    maxEval = -math.inf
-    for move in board.legal_moves:
-      board.push(move)
-      score = minimax(board, depth-1)
-      board.pop()
-      maxEval = max(maxEval, score)
-    return maxEval
-  else:
-    minEval = math.inf
-    for move in board.legal_moves:
-      board.push(move)
-      score = minimax(board, depth-1)
-      board.pop()
-      minEval = min(minEval, score)
-    return minEval
-```
-
-## Basic Alpha-Beta Pruning Solution
-
-```{python}
-#| code-line-numbers: "|1,9,12-14,20,23-25"
-def minimax_pruning(board, depth, alpha, beta):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board)
-  
-  if board.turn == chess.WHITE:
-    maxEval = -math.inf
-    for move in board.legal_moves:
-      board.push(move)
-      score = minimax_pruning(board, depth-1, alpha, beta)
-      board.pop()
-      maxEval = max(maxEval, score)
-      alpha = max(alpha, score)
-      if beta <= alpha:
-        break
-    return maxEval
-  else:
-    minEval = math.inf
-    for move in board.legal_moves:
-      board.push(move)
-      score = minimax_pruning(board, depth-1, alpha, beta)
-      board.pop()
-      minEval = min(minEval, score)
-      beta = min(beta, score)
-      if beta <= alpha:
-        break
-    return minEval
-```
-
-## Adjust the call to it
-
-```{python}
-def choose_move(board, depth=2):
-  ...
-  scores = []
-  for move in board.legal_moves:
-    score = minimax_pruning(board, depth, -math.inf, math.inf)
-    scores.append(score)
-  ...
-```
-
-## Add default arguments
-```{python}
-def minimax_pruning(board, depth,
-                    alpha=-math.inf, beta=math.inf):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board)
-
-  if board.turn == chess.WHITE:
-    maxEval = -math.inf
-    for move in board.legal_moves:
-      board.push(move)
-      score = minimax_pruning(board, depth-1, alpha, beta)
-      board.pop()
-      maxEval = max(maxEval, score)
-      alpha = max(alpha, score)
-      if beta <= alpha:
-        break
-    return maxEval
-  else:
-    minEval = math.inf
-    for move in board.legal_moves:
-      board.push(move)
-      score = minimax_pruning(board, depth-1, alpha, beta)
-      board.pop()
-      minEval = min(minEval, score)
-      beta = min(beta, score)
-      if beta <= alpha:
-        break
-    return minEval
-```
-
-## Refactoring
-
-```{python}
-def minimax_pruning(board, depth,
-                    alpha=-math.inf, beta=math.inf):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board)
-
-  scores = []
-  for move in board.legal_moves:
-    board.push(move)
-    score = minimax_pruning(board, depth-1, alpha, beta)
-    scores.append(score)
-    board.pop()
-
-    if board.turn == chess.WHITE:
-      alpha = max(alpha, score)
-    else:
-      beta = min(beta, score)
-
-    if beta <= alpha:
-      break
-  
-  return max(scores) if board.turn == chess.WHITE else min(scores)
-```
-
-## Print Debugging
-
-```{python}
-def noisy_minimax_pruning(board, depth,
-                    alpha=-math.inf, beta=math.inf):
-  
-  print((2-depth) * 2 * " ", f"Start MM(depth={depth}, alpha={alpha}, beta={beta})")
-  if depth == 0 or board.is_game_over():
-    staticEval = static_evaluation(board)
-    print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {staticEval}")
-    return staticEval
-
-  scores = []
-  for move in board.legal_moves:
-    board.push(move)
-    score = noisy_minimax_pruning(board, depth-1, alpha, beta)
-    scores.append(score)
-    board.pop()
-
-    if board.turn == chess.WHITE:
-      alpha = max(alpha, score)
-    else:
-      beta = min(beta, score)
-
-    if beta <= alpha:
-      break
-  
-  finalScore = max(scores) if board.turn == chess.WHITE else min(scores)
-  print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {finalScore}")
-  return finalScore
-```
-
-## Making a simple test case
-
-```{python}
-board = chess.Board("k2q4/p1P5/KP6/8/8/8/8/8 w - - 0 1")
-display(board)
-```
-
-## Digging through the debug logs
-
-```{python}
-score = noisy_minimax_pruning(board, depth=2)
-```
-
-## Bugs spotted
-
-```{python}
-#| code-line-numbers: "|1|6|9|14|18-19|21|22"
-def buggy_minimax_pruning(board, depth, alpha, beta):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board)
-  
-  if board.turn == chess.WHITE:
-    maxEval = -1_000_000
-    for move in board.legal_moves:
-      board.push(move)
-      eval = minimax_pruning(board, depth-1, alpha, beta)
-      maxEval = max(maxEval, eval)
-      alpha = max(alpha, eval)
-      if beta <= alpha:
-        break
-      board.pop()
-    return maxEval
-  else:
-    minEval = math.inf
-    alpha = -math.inf
-    beta = math.inf
-    for move in board.legal_moves:
-      eval = minimax_pruning(board.push(move), depth-1, alpha, beta)
-      
-      minEval = min(minEval, eval)
-      beta = min(beta, eval)
-      if beta <= alpha:
-        break
-    return minEval
-```
-
-```{python}
-#| echo: false
-import random 
-
-def choose_move(board, depth=2, alphaBetaPruning=False):
-  scores = []
-  moves = list(board.legal_moves)
-  for move in moves:
-    board.push(move)
-    if alphaBetaPruning:
-      score = minimax_pruning(board, depth-1)
-    else:
-      score = minimax(board, depth-1)
-    board.pop()
-    scores.append(score)
-
-  bestScore = max(scores) if (board.turn == chess.WHITE) else min(scores)
-  bestMoves = [move for move, score in zip(moves, scores) if score == bestScore]
-  return random.choice(bestMoves)
-```
-
-```{python}
-#| echo: false
-def play_game(maxMoves=5, depths=(3, 3), alphaBetaPruning=False):
-  board = chess.Board()
-  moveNumber = 0
-  while not board.is_game_over() and moveNumber < maxMoves:
-    if board.turn == chess.WHITE:
-      move = choose_move(board, depths[0], alphaBetaPruning=alphaBetaPruning)
-    else:
-      move = choose_move(board, depths[1], alphaBetaPruning=alphaBetaPruning)
-    board.push(move)
-    moveNumber += 1
-  return board
-```
-
-## Using Jupyter/Colab "magic"
-
-```{python}
-random.seed(42)
-%time slowGame = play_game(maxMoves=5, depths=(3, 3))
-```
-
-```{python}
-random.seed(42)
-%time fastGame = play_game(maxMoves=5, depths=(3, 3), \
-                           alphaBetaPruning=True)
-```
-
-```{python}
-slowGame.move_stack == fastGame.move_stack
-```
-
-```{python}
-%%time
-s = 0
-for i in range(1_000_000):
-  s += i
-```
-
-# One more thing... {background-image="unsw-yellow-shape.png"  data-visibility="uncounted"}
-
-## Never pruning in the first move
-
-![Illustration of alpha-beta pruning.](sebastian-lague-tree-shearing.png)
-
-Solution: have `minimax` return the 'score' of the best move, _and_ the move itself.
-
-## Multiple return values
-    
-```{python}
-def limits(numbers):
-    return min(numbers), max(numbers)
-
-limits([1, 2, 3, 4, 5])
-```
-
-```{python}
-type(limits([1, 2, 3, 4, 5]))
-```
-
-```{python}
-minNum, maxNum = limits([1, 2, 3, 4, 5])
-print(f"The numbers are between {minNum} and {maxNum}.")
-```
-
-```{python}
-_, maxNum = limits([1, 2, 3, 4, 5])
-print(f"The maximum is {maxNum}.")
-```
-
-```{python}
-print(f"The maximum is {limits([1, 2, 3, 4, 5])[1]}.")
-```
-
-## Tuple unpacking
-
-```{python}
-lims = limits([1, 2, 3, 4, 5])
-smallestNum = lims[0]
-largestNum = lims[1]
-print(f"The numbers are between {smallestNum} and {largestNum}.")
-```
-
-```{python}
-smallestNum, largestNum = limits([1, 2, 3, 4, 5])
-print(f"The numbers are between {smallestNum} and {largestNum}.")
-```
-
-This doesn't just work for functions with multiple return values:
-
-```{python}
-RESOLUTION = (1920, 1080)
-WIDTH, HEIGHT = RESOLUTION
-print(f"The resolution is {WIDTH} wide and {HEIGHT} tall.")
-```
-
-## Pruning at all levels
-
-```{python}
-def minimax_move(board, depth, alpha=-math.inf, beta=math.inf,
-                 pruning=True):
-  if depth == 0 or board.is_game_over():
-    return static_evaluation(board), None
-
-  whitesTurn = board.turn == chess.WHITE
-  scores = []
-  for move in board.legal_moves:
-    board.push(move)
-    score, _ = minimax_move(board, depth-1, alpha, beta, pruning)
-    scores.append(score)
-    board.pop()
-
-    if pruning:
-      if whitesTurn:
-        alpha = max(alpha, score)
-      else:
-        beta = min(beta, score)
-
-      if beta <= alpha:
-        break
-
-  bestScore = max(scores) if whitesTurn else min(scores) 
-  for move, score in zip(board.legal_moves, scores):
-    if score == bestScore:
-      return score, move
-```
-
-## Speed difference
-
-```{python}
-#| echo: false
-def play_game(maxMoves=5, depths=(4, 4), alphaBetaPruning=False):
-  board = chess.Board()
-  moveNumber = 0
-  while not board.is_game_over() and moveNumber < maxMoves:
-    if board.turn == chess.WHITE:
-      _, move = minimax_move(board, depths[0], pruning=alphaBetaPruning)
-    else:
-      _, move = minimax_move(board, depths[1], pruning=alphaBetaPruning)
-    board.push(move)
-    moveNumber += 1
-  return board
-```
-
-```{python}
-%time slowGame = play_game(maxMoves=5, depths=(4, 3))
-```
-
-```{python}
-%time fastGame = play_game(maxMoves=5, depths=(4, 3), \
-                           alphaBetaPruning=True)
-```
-
-```{python}
-slowGame.move_stack == fastGame.move_stack
-```
-
-## Further chess/AI things
-
-::: columns
-::: {.column width="70%"}
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/U4ogK0MIzqk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
-[Python & chess in the browser using PyScript](https://about.nmstoker.com/chess2.html)
-
-New York Times Podcast, [How AI Conquered Poker](https://podcasts.apple.com/au/podcast/the-daily/id1200361736?i=1000550199816).
-:::
-::: {.column width="30%"}
-![TV recommendation.](queens-gambit.jpeg)
-:::
-:::
-
-::: footer
-Source: [IMDB](https://www.imdb.com/title/tt10048342/).
-:::
-
-## Short-circuiting
-
-```{python}
-def is_positive(x):
-  print("Called is_positive")
-  return x > 0
-
-def is_negative(x):
-  print("Called is_negative")
-  return x < 0
-
-x = 10
-```
-
-::: columns
-::: column
-```{python}
-xIsPositive = is_positive(x)
-xIsPositive
-```
-
-:::
-::: column
-```{python}
-xIsNegative = is_negative(x)
-xIsNegative
-```
-:::
-:::
-
-```{python}
-xNotZero = is_positive(x) or is_negative(x)
-xNotZero
-```
-
-## Patrick vs. `depth=5` AI
-
-```{python}
-#| echo: false
-!mkdir -p initial-loss
-from IPython.display import display, HTML
-import chess
-board = chess.Board()
-
-with open("loss-against-5-depth.txt", "r") as f:
-    moves = [line.strip() for line in f.readlines()]
-
-b = board._repr_svg_()
-with open(f"initial-loss/move-0.svg", "w") as f:
-    f.write(b)
-
-for i, move in enumerate(moves):
-    move = chess.Move.from_uci(move)
-    board.push(move)
-
-    b = board._repr_svg_()
-    with open(f"initial-loss/move-{i+1}.svg", "w") as f:
-        f.write(b)
-```
-
-```{python}
-#| echo: false
-html = '<div class="r-stack" data-id="board">'
-
-# Draw the board before any moves
-html += f'<img src="initial-loss/move-0.svg" width="500">'
-
-for i in range(1, 36):
-    html += f'<img src="initial-loss/move-{i}.svg" class="fragment" width="500">'
-
-html += "</div>"
-
-display(HTML(html))
-```
-
-## Blundered! {data-visibility="uncounted"}
-
-```{python}
-#| echo: false
-html = '<div class="r-stack" data-id="board">'
-
-# Draw the board before any moves
-html += f'<img src="initial-loss/move-36.svg" width="500">'
-
-for i in range(37, len(moves)+1):
-    html += f'<img src="initial-loss/move-{i}.svg" class="fragment" width="500">'
-
-html += "</div>"
-
-display(HTML(html))
-```
-
-## Tried again {data-visibility="uncounted"}
-
-```{python}
-#| echo: false
-!mkdir -p win
-from IPython.display import display, HTML
-
-board = chess.Board()
-
-with open("win-against-5-depth.txt", "r") as f:
-    moves = [line.strip() for line in f.readlines()]
-
-b = board._repr_svg_()
-with open(f"win/move-0.svg", "w") as f:
-    f.write(b)
-
-for i, move in enumerate(moves):
-    move = chess.Move.from_uci(move)
-    board.push(move)
-
-    b = board._repr_svg_()
-    with open(f"win/move-{i+1}.svg", "w") as f:
-        f.write(b)
-```
-
-```{python}
-#| echo: false
-html = '<div class="r-stack" data-id="board">'
-
-# Draw the board before any moves
-html += f'<img src="win/move-36.svg" width="500">'
-
-for i in range(37, 57):
-    html += f'<img src="win/move-{i}.svg" class="fragment" width="500">'
-
-html += "</div>"
-
-display(HTML(html))
-```
-
-## Black on the run... {data-visibility="uncounted"}
-```{python}
-#| echo: false
-html = '<div class="r-stack" data-id="board">'
-
-# Draw the board before any moves
-html += f'<img src="win/move-57.svg" width="500">'
-
-for i in range(58, len(moves)+1):
-    html += f'<img src="win/move-{i}.svg" class="fragment" width="500">'
-
-html += "</div>"
-
-display(HTML(html))
-```
-
-# Machine Learning {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Definition
-
-::: columns 
-::: {.column width="55%"}
-
-> "[Machine Learning is the] field of study that gives computers the ability to learn without being explicitly programmed"
-Arthur Samuel (1959)
-
-:::
-::: {.column width="45%"}
-![](xkcd-machine_learning_2x.png)
-:::
-:::
-
-::: footer
-Source: Randall Munroe (2017), [xkcd #1838: Machine Learning](https://xkcd.com/1838/).
-:::
-
-## Traditional AI versus ML
-
-<br>
-
-::: columns
-::: column
-![The traditional approach.](Geron-mls2_0101-blur.png)
-:::
-::: column
-![The machine learning approach.](Geron-mls2_0102-blur.png)
-:::
-:::
-
-:::footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figures 1-1 and 1-2 (__redacted__).
-:::
-
-## Benefits of ML
-
-<br>
-
-::: columns
-::: {.column .aligned-column}
-![Machine learning can automatically adapt to change.](Geron-mls2_0103-blur.png)
-:::
-::: {.column .aligned-column}
-![Machine learning can help humans to learn.](Geron-mls2_0104-blur.png)
-::::
-:::
-
-:::footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figures 1-3 and 1-4 (__redacted__).
-:::
-
-# Categories of Machine Learning Problems {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Types of ML problems
-
-- _Supervised learning_
-- Self-supervised learning
-
-Others:
-
-- Unsupervised learning
-- Reinforcement learning
-- Active learning
-- Semi-supervised learning
-
-## Supervised learning
-
-### Regression
-
-- Given policy $\hookrightarrow$ predict the rate of claims.
-- Given policy $\hookrightarrow$ predict claim severity.
-- Given a reserving triangle $\hookrightarrow$ predict future claims.
-
-### Classification
-
-- Given a claim $\hookrightarrow$ classify as fraudulent or not.
-- Given a customer $\hookrightarrow$ predict customer retention patterns.
-
-## Supervised learning: mathematically
-
-![A recipe for supervised learning.](recipe-for-supervised-ml.png)
-
-::: footer
-Source: Matthew Gormley (2021), [Introduction to Machine Learning Lecture Slides](https://www.cs.cmu.edu/~mgormley/courses/10601-s17/slides/lecture20-backprop.pdf), Slide 67.
-:::
-
-## Self-supervised learning
-
-Data which 'labels itself'. Example: language model.
-
-<center>
-![](Chaudhary-nlp-ssl-causal-language-modeling-steps.png)
-</center>
-
-!['Autoregressive' (e.g. GPT) versus 'masked' model (e.g. BERT).](Chaudhary-nlp-ssl-masked-lm.png)
-
-
-::: footer
-Source: Amit Chaudhary (2020), [Self Supervised Representation Learning in NLP](https://amitness.com/2020/05/self-supervised-learning-nlp/).
-:::
-
-## Example: image inpainting
-
-![Image inpainting example using Mads Mikkelsen in the CelebA-HQ dataset.](liu-2018-fig-8.png)
-
-<br>
-
-Other examples: image super-resolution, denoising images.
-
-::: footer
-Source: Liu et al. (2018), [Image Inpainting for Irregular Holes using Partial Convolutions](https://arxiv.org/pdf/1804.07723.pdf), Figure 8.
-:::
-
-
-## Example: Deoldify images #1
-
-![A deoldified version of the famous "Migrant Mother" photograph.](deoldify-migrant-mother.jpeg)
-
-:::footer
-Source: [Deoldify package](https://github.com/jantic/DeOldify).
-:::
-
-## Example: Deoldify images #2
-
-![A deoldified Golden Gate Bridge under construction.](deoldify-golden-gate-bridge.jpeg)
-
-:::footer
-Source: [Deoldify package](https://github.com/jantic/DeOldify).
-:::
 
 # Deep Learning {background-image="unsw-yellow-shape.png" background-size="85%"}
 
@@ -878,7 +124,7 @@ plt.ylabel("Output");
 ![A neuron in a neural network with step function activation.](Geron-mls2_1004-blur.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-04 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-04
 :::
 
 ## One neuron
@@ -911,7 +157,7 @@ Here, $x_1$, $x_2$, $x_3$ is just some fixed data.
 The weights $w_1$, $w_2$, $w_3$ should be 'learned'.
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-04 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-04.
 :::
 
 ## One neuron with bias
@@ -944,7 +190,7 @@ See [interactive plot](bias-activation-function.html).
 The weights $w_1$, $w_2$, $w_3$ and bias $b$ should be 'learned'.
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-04 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-04.
 :::
 
 ## A basic neural network
@@ -952,7 +198,7 @@ Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, K
 ![A basic fully-connected/dense network with one hidden layer.](Geron-mls2_1007-blur.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-07 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Fig. 10-07
 :::
 
 ## Step-function activation
@@ -1028,7 +274,7 @@ Source: Shan-Hung Wu (2022), [_CS565600 Deep Learning Lecture Slides_](https://n
 :::
 
 ::: footer
-Source: Krohn (2019), _Deep Learning Illustrated: A Visual, Interactive Guide to Artificial Intelligence_ (__redacted__).
+Source: Krohn (2019), _Deep Learning Illustrated: A Visual, Interactive Guide to Artificial Intelligence_.
 :::
 
 ## Example: Facial recognition
@@ -1047,7 +293,7 @@ It gives a simple interface to _various backend_ libraries, including Tensorflow
 ![Keras as a independent interface, and Keras as part of Tensorflow.](Geron-mls2_1010-blur.png)
 
 :::footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-10 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-10.
 :::
 
 ## The deep learning hammer
@@ -1085,847 +331,162 @@ What is the depth?
 Source: Dertat (2017), [_Applied Deep Learning - Part 1: Artificial Neural Networks_](https://towardsdatascience.com/applied-deep-learning-part-1-artificial-neural-networks-d7834f67a4f6), Medium.
 :::
 
-# Import syntax {background-image="unsw-yellow-shape.png"}
+{{< include _keras-calif-housing-regression-demo.qmd >}}
 
-## Python standard library
+{{< include _keras-calif-housing-early-stopping-demo.qmd >}}
 
-```{python}
-import time
-time.sleep(0.1)
-```
+{{< include _keras-iris-classification-demo.qmd >}}
 
-```{python}
-import os
-```
 
-```{python}
-os.getlogin()
-```
-
-```{python}
-os.getcwd()
-```
-
-::: {.callout-note}
-Here, the syntax is `package.function()`.
-:::
-
-## Import a few functions
-
-```{python}
-from time import sleep
-sleep(0.1)
-```
-```{python}
-from os import getcwd, getlogin
-```
-
-```{python}
-getlogin()
-```
-
-```{python}
-getcwd()
-```
-
-## Timing using pure Python
-
-```{python}
-from time import time
-
-startTime = time()
-
-counting = 0
-for i in range(1_000_000):
-    counting += 1
-
-endTime = time()
-
-elapsed = endTime - startTime
-print(f"Elapsed time: {elapsed} secs")
-```
-
-## Data science packages
-
-![Common data science packages](python-data-science-packages.png)
-
-::: footer
-Source: Learnbay.co, [Python libraries for data analysis and modeling in Data science](https://medium.com/@learnbay/python-libraries-for-data-analysis-and-modeling-in-data-science-c5c994208385), Medium.
-:::
-
-## Importing using `as`
-
-::: columns
-::: column
-```{python}
-import pandas
-pandas.DataFrame(
-  {"x": [1, 2, 3],
-   "y": [4, 5, 6]})
-```
-:::
-::: column
-```{python}
-import pandas as pd
-pd.DataFrame(
-  {"x": [1, 2, 3],
-   "y": [4, 5, 6]})
-```
-:::
-:::
-
-::: {.callout-note}
-Here, the syntax is `shortenedPackage.className()` or `shortenedPackage.className()`.
-:::
-
-
-## Importing from a subdirectory
-
-Want `tensorflow.keras.models.Sequential()`.
-
-```{python}
-import tensorflow
-model = tensorflow.keras.models.Sequential()
-```
-
-Alternatives using `from`:
-
-```{python}
-from tensorflow import keras
-model = keras.models.Sequential()
-```
-
-```{python}
-from tensorflow.keras import models
-model = models.Sequential()
-```
-
-```{python}
-from tensorflow.keras.models import Sequential
-model = Sequential()
-```
-
-::: {.callout-note}
-Syntax is `package.subdirectory.subdirectory.className()`.
-:::
-
-# California House Price Prediction {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Import the data {.smaller}
-
-```{python}
-from sklearn.datasets import fetch_california_housing
-features, target = fetch_california_housing(as_frame=True, return_X_y=True)
-features
-```
-
-## What is the target?
-
-```{python}
-target
-```
-
-## Location
-
-Python's `matplotlib` package $\approx$ R's basic `plot`s.
-
-```{python}
-import matplotlib.pyplot as plt
-plt.scatter(features["Longitude"], features["Latitude"])
-```
-
-## Location #2
-
-Python's `seaborn` package $\approx$ R's `ggplot2`.  
-
-```{python}
-import seaborn as sns
-sns.scatterplot(x="Longitude", y="Latitude", data=features);
-```
-
-## Features
-
-```{python}
-features.columns
-```
-
-How many?
-
-```{python}
-NUM_FEATURES = len(features.columns)
-NUM_FEATURES
-```
-
-Or
-
-```{python}
-NUM_FEATURES = features.shape[1]
-features.shape
-```
-
-## Set aside a fraction for a test set
-
-
-```{python}
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = \
-    train_test_split(features, target, random_state=42)
-```
-
-
-::: columns
-::: {.column width="70%"}
-
-![Illustration of a typical training/test split.](heaton-train-test-split.png)
-
-:::
-::: {.column width="30%"}
-![Our use of sklearn.](scikit-learn-what-is-my-purpose.png)
-:::
-:::
-
-
-::: footer
-Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/e4bdc124b0c45b592d9bdbed0d2ef6c63c0245d6/t81_558_class_02_1_python_pandas.ipynb), Part 2.1: Introduction to Pandas, and [this random site](https://journeys.dartmouth.edu/folklorearchive/2020/06/03/purpose-of-scikit-learn-is-to-split-the-data/).
-:::
-
-## The training set {.smaller}
-
-```{python}
-X_train
-```
-
-::: {.callout-tip}
-Why is the `X_` in the variable name in capitals and the `y_` in lowercase?
-:::
-
-# Simple baseline model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Linear Regression
-
-$$ \hat{y} = w_0 + \sum_{i=1}^N w_i x_i .$$
-
-```{python}
-from sklearn.linear_model import LinearRegression
-lr = LinearRegression()
-lr.fit(X_train, y_train);
-```
-
-The $w_0$ is in `lr.intercept_` and the others are in
-```{python}
-print(lr.coef_)
-```
-
-## Make some predictions
-
-```{python}
-X_train.head(3)
-```
-
-```{python}
-y_pred = lr.predict(X_train.head(3))
-y_pred
-```
-
-```{python}
-prediction = lr.intercept_
-for w_i, x_i in zip(lr.coef_, X_train.iloc[0]):
-    prediction += w_i * x_i
-prediction
-```
-
-## Plot the predictions
-
-```{python}
-#| include: false
-set_square_figures()
-```
-
-::: columns
-::: column
-```{python}
-#| echo: false
-y_pred = lr.predict(X_train)
-plt.scatter(y_pred, y_train)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-plt.title("Training set")
-add_diagonal_line()
-```
-:::
-::: column
-```{python}
-#| echo: false
-y_pred = lr.predict(X_test)
-plt.scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-plt.title("Test set")
-add_diagonal_line()
-```
-:::
-:::
-
-```{python}
-#| include: false
-set_rectangular_figures()
-```
-
-## Calculate mean squared error
-
-```{python}
-y_pred = lr.predict(X_train)
-df = pd.DataFrame({"Predictions": y_pred, "True values": y_train})
-df["Squared Error"] = (df["Predictions"] - df["True values"])**2
-df.head(4)
-```
-
-```{python}
-df["Squared Error"].mean()
-```
-
-## Using `mean_squared_error`
-
-```{python}
-df["Squared Error"].mean()
-```
-
-```{python}
-from sklearn.metrics import mean_squared_error
-
-mean_squared_error(y_train, y_pred)
-```
-
-Store the results in a dictionary:
-
-```{python}
-mseLRTrain = mean_squared_error(y_train, lr.predict(X_train))
-mseLRTest = mean_squared_error(y_test, lr.predict(X_test))
-
-mseTrain = {"Linear Regression": mseLRTrain}
-mseTest = {"Linear Regression": mseLRTest}
-```
-
-
-# Our First Neural Network {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Decide on the architecture
-
-![A simple network with one hidden layer with 30 neurons.](nn.svg)
-
-::: footer
-Generated used the [NN-SVG](http://alexlenail.me/NN-SVG/index.html) tool.
-:::
-
-## Create a Keras ANN model
+# Quiz {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
 
 ```{python}
 #| echo: false
-import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
+import numpy
+
+numpy.random.seed(123)
+x = numpy.random.rand(100)
+y = 1_000 * numpy.random.rand(100)
+z = 2*x + 0.001 * y + 1 + 1 * numpy.random.rand(100)
+
+# X = np.c_[x, y]
+# features = X
+features = pandas.DataFrame({"$x_1$": x, "$x_2$": y})
+targets = z
 ```
 
-Create the model:
+## Critique this 💩 regression code
 
 ```{python}
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+#| echo: false
+from tensorflow.keras.callbacks import EarlyStopping
+tf.get_logger().setLevel('ERROR')
+```
 
+```{python}
+X_train = features[:80]; X_test = features[81:]
+y_train = targets[:80]; y_test = targets[81:]
+```
+```{python}
 model = Sequential([
-    Dense(30, input_dim=NUM_FEATURES, activation="relu"),
-    Dense(1)
+  Dense(32, activation='ReLU', input_dim=2),
+   Dense(32, activation='ReLU', input_dim=2),
+  Dense(1, activation='sigmoid')
 ])
+model.compile(optimizer="adam", loss='mse')
+es = EarlyStopping(patience=10)
+fitted_model = model.fit(X_train, y_train, epochs=5,
+  callbacks=[es], verbose=False)
 ```
-
-## Inspect the model
-
 ```{python}
-model.summary()
-```
-
-## The model is initialised randomly
-
-```{python}
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
-])
-model.predict(X_test.head(3))
-```
-
-```{python}
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
-])
-model.predict(X_test.head(3))
-```
-
-## Controlling the randomness
-
-```{python}
-#| code-line-numbers: "|1-2,10"
-from tensorflow.random import set_seed
-set_seed(123)
-
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)])
-
-display(model.predict(X_test.head(3)))
-
-set_seed(123)
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)])
-
-display(model.predict(X_test.head(3)))
-```
-
-## Fit the model
-```{python}
-set_seed(123)
-
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
-])
-
-model.compile("adam", "mse")
-%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
+trainMAE = model.evaluate(X_train, y_train, verbose=False)
+hist = model.fit(X_test, y_test, epochs=5,
+  callbacks=[es], verbose=False)
 hist.history["loss"]
+testMAE = model.evaluate(X_test, y_test, verbose=False)
 ```
 
-## Make predictions
-
 ```{python}
-y_pred = model.predict(X_train[:3])
-y_pred
+f"Train MAE: {testMAE:.2f} Test MAE: {trainMAE:.2f}"
 ```
 
-::: {.callout-note}
-
-The `.predict` gives us a 'matrix' not a 'vector'.
-Calling `.flatten()` will convert it to a 'vector'.
+## The data
 
 ```{python}
-print(f"Original shape: {y_pred.shape}")
-y_pred = y_pred.flatten()
-print(f"Flattened shape: {y_pred.shape}")
-y_pred
-```
-
-:::
-
-## Plot the predictions
-
-```{python}
-#| include: false
+#| echo: false
 set_square_figures()
 ```
 
 ::: columns
 ::: column
-
 ```{python}
-#| echo: false
-y_pred = model.predict(X_train)
-plt.scatter(y_pred, y_train)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-plt.title("Training set")
-add_diagonal_line()
+sns.scatterplot(
+  x="$x_1$", y="$x_2$",
+  c=targets, data=features);
 ```
 :::
 ::: column
+```{python}
+sns.distplot(targets);
+```
+
+:::
+:::
 
 ```{python}
 #| echo: false
-y_pred = model.predict(X_test)
-plt.scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-plt.title("Test set")
-add_diagonal_line()
-```
-:::
-:::
-
-```{python}
-#| include: false
 set_rectangular_figures()
 ```
 
-## Assess the model
+## With warnings enabled
 
 ```{python}
-y_pred = model.predict(X_test)
-mean_squared_error(y_test, y_pred)
+#| echo: false
+tf.get_logger().setLevel("WARN")
 ```
 
 ```{python}
-mseTrain["Basic ANN"] = mean_squared_error(y_train, model.predict(X_train))
-mseTest["Basic ANN"] = mean_squared_error(y_test, model.predict(X_test))
-```
-
-Some predictions are negative:
-
-```{python}
-y_pred = model.predict(X_test)
-y_pred.min(), y_pred.max()
+model.fit(X_train, y_train, epochs=5,
+  callbacks=[es], verbose=False);
 ```
 
 ```{python}
-y_test.min(), y_test.max()
+es = EarlyStopping(restore_best_weights=True, patience=10)
+model.fit(X_train, y_train, epochs=5, validation_split=0.1,
+  callbacks=[es], verbose=False);
 ```
 
-
-# Force positive predictions {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Try running for longer
+## Later `input_dim` ignored
 
 ```{python}
-set_seed(123)
+#| echo: false
+def skip_empty(line):
+  if line.strip() != "":
+    print(line.strip())
+```
 
+```{python}
 model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
+  Dense(32, activation='ReLU', input_dim=2),
+  Dense(32, activation='ReLU', input_dim=2),
+  Dense(1, activation='ReLU')
 ])
 
-model.compile("adam", "mse")
-
-%time hist = model.fit(X_train, y_train, \
-    epochs=100, verbose=False)
+model.compile(optimizer='adam', loss='mse')
+model.summary(print_fn=skip_empty)
 ```
 
-## Loss curve
+## Later `input_dim` ignored {data-visibility="uncounted"}
 
 ```{python}
-plt.plot(range(1, 101), hist.history["loss"])
-plt.xlabel("Epoch")
-plt.ylabel("MSE");
-```
-
-## Loss curve {data-visibility="uncounted"}
-
-```{python}
-plt.plot(range(2, 101), hist.history["loss"][1:])
-plt.xlabel("Epoch")
-plt.ylabel("MSE");
-```
-
-## Predictions
-
-```{python}
-y_pred = model.predict(X_test)
-print(f"Min prediction: {y_pred.min():.2f}")
-print(f"Max prediction: {y_pred.max():.2f}")
-```
-
-::: columns
-::: column
-```{python}
-#| eval: false
-plt.scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-add_diagonal_line()
-```
-
-<div style="margin-top: 1em;">
-
-```{python}
-mseTrain["Long run ANN"] = mean_squared_error(y_train, model.predict(X_train))
-mseTest["Long run ANN"] = mean_squared_error(y_test, model.predict(X_test))
-```
-
-</div>
-
-:::
-::: column
-
-<div style="position: relative; top: -3em;">
-
-```{python}
-#| echo: false
-squareFig().scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-add_diagonal_line()
-```
-
-</div>
-
-:::
-:::
-
-
-## Try different activation functions
-
-<br>
-
-```{python}
-#| echo: false
-import tensorflow.keras.activations as acts
-import numpy as np
-
-def plot_activation(activation, ax, name, hideX=False):
-    x = np.linspace(-5, 5, 100)
-    y = activation(x)
-    
-    ax.plot(x, y)
-    if y.numpy().min() < 0:
-        ax.axhline(0, ls='--', c='black', lw=0.5)
-
-    # Annotate the top-left corner of the subplot with the name
-    # of the activation function
-    ax.annotate(name, xy=(0.2, 1), xycoords='axes fraction',
-                xytext=(-5, -5), textcoords='offset points',
-                ha='left', va='top')
-    
-    if hideX:
-        ax.xaxis.set_visible(False)
-
-fig, axs = plt.subplots(2, 2)
-plot_activation(acts.tanh, axs[0,0], "tanh", hideX=True)
-plot_activation(acts.sigmoid, axs[0,1], "sigmoid", hideX=True)
-plot_activation(acts.relu, axs[1,0], "ReLU")
-plot_activation(acts.exponential, axs[1,1], "exponential")
-
-axs[0,0].set(ylabel="Output")
-axs[1,0].set(xlabel="Input", ylabel="Output")
-axs[1,1].set(xlabel="Input");
-```
-
-## Enforce positive outputs (ReLU)
-
-```{python}
-set_seed(123)
-
 model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1, activation="relu")
+  Dense(32, activation='ReLU', input_dim=2),
+  Dense(32, activation='ReLU'),
+  Dense(1, activation='ReLU')
 ])
 
-model.compile("adam", "mse")
-
-%time hist = model.fit(X_train, y_train, epochs=100, \
-    verbose=False)
-
-import numpy as np
-losses = np.round(hist.history["loss"], 2)
-print(losses[:5], "...", losses[-5:])
+model.compile(optimizer='adam', loss='mse')
+model.summary(print_fn=skip_empty)
 ```
 
-## Plot the predictions
+## Later `input_dim` ignored {data-visibility="uncounted"}
 
 ```{python}
-#| include: false
-set_square_figures()
-```
-
-::: columns
-::: column
-
-```{python}
-#| echo: false
-y_pred = model.predict(X_train)
-plt.scatter(y_pred, y_train)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-plt.title("Training set");
-```
-:::
-::: column
-
-```{python}
-#| echo: false
-y_pred = model.predict(X_test)
-plt.scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-plt.title("Test set");
-```
-:::
-:::
-
-```{python}
-#| include: false
-set_rectangular_figures()
-```
-
-## Enforce positive outputs ($\mathrm{e}^{\,x}$)
-
-```{python}
-#| code-line-numbers: "|5"
-set_seed(123)
-
 model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1, activation="exponential")
+  Dense(32, activation='ReLU'),
+  Dense(32, activation='ReLU'),
+  Dense(1, activation='ReLU')
 ])
-
-model.compile("adam", "mse")
-
-%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
-
-losses = hist.history["loss"]
-print(losses)
+model.compile(optimizer='adam', loss='mse')
+model.fit(X_train, y_train, epochs=5, verbose=False)
+model.summary(print_fn=skip_empty)
 ```
 
-# Preprocessing {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+{{< include _sw2-poisson-regression.qmd >}}
 
-## Re-scaling the inputs
+{{< include _stroke-prediction.qmd >}}
 
-```{python}
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
-scaler = StandardScaler()
-scaler.fit(X_train)
-
-X_train_sc = scaler.transform(X_train)
-X_test_sc = scaler.transform(X_test)
-```
-
-::: columns
-::: column
-```{python}
-#| output-location: default
-#| eval: false
-plt.hist(X_train.iloc[:,0])
-plt.hist(X_train_sc[:,0])
-plt.legend([
-    "Original",
-    "Scaled"
-]);
-```
-:::
-::: column
-```{python}
-#| echo: false
-plt.hist(X_train.iloc[:,0])
-plt.hist(X_train_sc[:,0])
-plt.legend([
-        "Original",
-        "Scaled"]);
-```
-:::
-:::
-
-## Same model with scaled inputs
-
-```{python}
-#| code-line-numbers: "|11"
-set_seed(123)
-
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1, activation="exponential")
-])
-
-model.compile("adam", "mse")
-
-%time hist = model.fit( \
-    X_train_sc, \
-    y_train, \
-    epochs=100, \
-    verbose=False)
-```
-
-## Loss curve
-
-```{python}
-plt.plot(range(1, 101), hist.history["loss"])
-plt.xlabel("Epoch")
-plt.ylabel("MSE");
-```
-
-## Loss curve {data-visibility="uncounted"}
-
-```{python}
-plt.plot(range(2, 101), hist.history["loss"][1:])
-plt.xlabel("Epoch")
-plt.ylabel("MSE");
-```
-
-## Predictions
-
-```{python}
-y_pred = model.predict(X_test_sc)
-print(f"Min prediction: {y_pred.min():.2f}")
-print(f"Max prediction: {y_pred.max():.2f}")
-```
-
-::: columns
-::: column
-```{python}
-#| eval: false
-plt.scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-add_diagonal_line()
-```
-
-<div style="margin-top: 1em;">
-
-```{python}
-mseTrain["Exp ANN"] = mean_squared_error(y_train, model.predict(X_train_sc))
-mseTest["Exp ANN"] = mean_squared_error(y_test, model.predict(X_test_sc))
-```
-
-</div>
-
-:::
-::: column
-
-<div style="position: relative; top: -3em;">
-
-```{python}
-#| echo: false
-squareFig().scatter(y_pred, y_test)
-plt.xlabel("Predictions")
-plt.ylabel("True values")
-add_diagonal_line()
-```
-
-</div>
-
-:::
-:::
-
-## Comparing MSE (smaller is better)
-
-On training data:
-
-```{python}
-mseTrain
-```
-
-On test data (expect _worse_, i.e. bigger):
-
-```{python}
-mseTest
-```
-
-## Comparing models (in sample) {data-visibility="uncounted"}
-
-```{python}
-trainResults = pd.DataFrame({
-    "Model": mseTrain.keys(), "MSE": mseTrain.values()
-})
-trainResults.sort_values("MSE", ascending=False)
-```
-
-## Comparing models (out sample) {data-visibility="uncounted"}
-
-```{python}
-testResults = pd.DataFrame({
-    "Model": mseTest.keys(), "MSE": mseTest.values()
-})
-testResults.sort_values("MSE", ascending=False)
-```
-
-# {data-visibility="uncounted"}
+# {.smaller data-visibility="uncounted"}
 
 <h2>Glossary</h2>
 
@@ -1935,10 +496,12 @@ testResults.sort_values("MSE", ascending=False)
 - artificial intelligence vs machine learning
 - artificial neural network
 - biases (in neurons)
+- callbacks
 - classification problem
 - cost/loss function
 - deep network, network depth
 - dense or fully-connected layer
+- early stopping
 - epoch
 - feed-forward neural network
 - Keras, Tensorflow, PyTorch
@@ -1954,8 +517,8 @@ testResults.sort_values("MSE", ascending=False)
 - sigmoid activation function
 - targets
 - training/test split
-- universal approximation theorem
 - weights (in a neuron)
+- validation set
 :::
 :::
 

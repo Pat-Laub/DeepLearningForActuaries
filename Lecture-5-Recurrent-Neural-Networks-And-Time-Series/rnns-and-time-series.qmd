@@ -1,8 +1,7 @@
 ---
 title: Recurrent Neural Networks
-subtitle: "ACTL3143/5111: Deep Learning for Actuaries"
+subtitle: ACTL3143 & ACTL5111 Deep Learning for Actuaries
 author: Dr Patrick Laub
-date: Week 5
 format:
   revealjs:
     theme: [serif, custom.scss]
@@ -85,16 +84,10 @@ numpy.random.seed(123)
 
 import tensorflow
 tensorflow.random.set_seed(1)
-tensorflow.config.set_visible_devices([], 'GPU')
+tensorflow.config.set_visible_devices([], 'GPU') # Crashes on GPU
 
 tensorflow.get_logger().setLevel('ERROR')
 ```
-
-## Lecture Outline
-
-- **Guest lecture: Jacky Poon**
-- Demo: Australian House Prices 
-- Recurrent neural networks
 
 ## Load packages {data-visibility="uncounted"}
 
@@ -102,6 +95,7 @@ tensorflow.get_logger().setLevel('ERROR')
 <br>
 
 ```{python}
+import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -271,7 +265,7 @@ The RNN processes each data in the sequence one by one, while keeping memory of 
 Common RNN structures are: LSTM and GRU cells.
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 15-1 (__redacted__).
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 15-1.
 :::
 
 
@@ -348,7 +342,6 @@ numVal = int(0.2 * len(changes))
 numTest = len(changes) - numTrain - numVal
 print(f"# Train: {numTrain}, # Val: {numVal}, # Test: {numTest}")
 ```
-
 ```{python}
 #| echo: false
 changes.iloc[:numTrain,0].plot(c=colors[0], lw=1, alpha=0.5);
@@ -479,7 +472,7 @@ y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
 
 ```{python}
 from tensorflow.keras.layers import Input, Flatten
-tf.random.set_seed(1)
+random.seed(1)
 modelDense = Sequential([
     Input(shape=(seqLength, numTS)),
     Flatten(),
@@ -518,7 +511,7 @@ modelDense.evaluate(valDS, verbose=0)
 
 ```{python}
 #| echo: false
-y_pred = modelDense.predict(valDS)
+y_pred = modelDense.predict(valDS, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -533,7 +526,7 @@ plt.legend(frameon=False);
 ```{python}
 from tensorflow.keras.layers import SimpleRNN
 
-tf.random.set_seed(1)
+random.seed(1)
 
 modelSimple = Sequential([
     SimpleRNN(50, input_shape=(seqLength, numTS)),
@@ -569,7 +562,7 @@ plot_model(modelSimple, show_shapes=True)
 
 ```{python}
 #| echo: false
-y_pred = modelSimple.predict(valDS)
+y_pred = modelSimple.predict(valDS, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -584,7 +577,7 @@ plt.legend(frameon=False);
 ```{python}
 from tensorflow.keras.layers import LSTM
 
-tf.random.set_seed(1)
+random.seed(1)
 
 modelLSTM = Sequential([
     LSTM(50, input_shape=(seqLength, numTS)),
@@ -617,7 +610,7 @@ modelLSTM.evaluate(valDS, verbose=0)
 
 ```{python}
 #| echo: false
-y_pred = modelLSTM.predict(valDS)
+y_pred = modelLSTM.predict(valDS, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -632,7 +625,7 @@ plt.legend(frameon=False);
 ```{python}
 from tensorflow.keras.layers import GRU
 
-tf.random.set_seed(1)
+random.seed(1)
 
 modelGRU = Sequential([
     GRU(50, input_shape=(seqLength, numTS)),
@@ -665,7 +658,7 @@ modelGRU.evaluate(valDS, verbose=0)
 
 ```{python}
 #| echo: false
-y_pred = modelGRU.predict(valDS)
+y_pred = modelGRU.predict(valDS, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -678,7 +671,7 @@ plt.legend(frameon=False);
 ## Two `GRU` layers
 
 ```{python}
-tf.random.set_seed(1)
+random.seed(1)
 
 modelTwoGRUs = Sequential([
     GRU(50, input_shape=(seqLength, numTS), return_sequences=True),
@@ -712,7 +705,7 @@ modelTwoGRUs.evaluate(valDS, verbose=0)
 
 ```{python}
 #| echo: false
-y_pred = modelTwoGRUs.predict(valDS)
+y_pred = modelTwoGRUs.predict(valDS, verbose=0)
 # plt.scatter(y_val, y_pred)
 # plt.show()
 
@@ -744,7 +737,7 @@ modelGRU.evaluate(testDS, verbose=0)
 
 ```{python}
 #| echo: false
-y_pred = modelGRU.predict(testDS)
+y_pred = modelGRU.predict(testDS, verbose=0)
 # plt.scatter(y_test, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -823,7 +816,7 @@ Y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
 ## A dense network
 
 ```{python}
-tf.random.set_seed(1)
+random.seed(1)
 modelDense = Sequential([
     Input(shape=(seqLength, numTS)),
     Flatten(),
@@ -863,7 +856,7 @@ modelDense.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelDense.predict(valDS)
+Y_pred = modelDense.predict(valDS, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -894,7 +887,7 @@ plt.legend(frameon=False);
 ## A `SimpleRNN` layer
 
 ```{python}
-tf.random.set_seed(1)
+random.seed(1)
 
 modelSimple = Sequential([
     SimpleRNN(50, input_shape=(seqLength, numTS)),
@@ -933,7 +926,7 @@ plot_model(modelSimple, show_shapes=True)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelSimple.predict(valDS)
+Y_pred = modelSimple.predict(valDS, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -963,7 +956,7 @@ plt.legend(frameon=False);
 ## A `LSTM` layer
 
 ```{python}
-tf.random.set_seed(1)
+random.seed(1)
 
 modelLSTM = Sequential([
     LSTM(50, input_shape=(seqLength, numTS)),
@@ -998,7 +991,7 @@ modelLSTM.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelLSTM.predict(valDS)
+Y_pred = modelLSTM.predict(valDS, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1027,7 +1020,7 @@ plt.legend(frameon=False);
 ## A `GRU` layer
 
 ```{python}
-tf.random.set_seed(1)
+random.seed(1)
 
 modelGRU = Sequential([
     GRU(50, input_shape=(seqLength, numTS)),
@@ -1062,7 +1055,7 @@ modelGRU.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelGRU.predict(valDS)
+Y_pred = modelGRU.predict(valDS, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1091,7 +1084,7 @@ plt.legend(frameon=False);
 ## Two `GRU` layers
 
 ```{python}
-tf.random.set_seed(1)
+random.seed(1)
 
 modelTwoGRUs = Sequential([
     GRU(50, input_shape=(seqLength, numTS), return_sequences=True),
@@ -1127,7 +1120,7 @@ modelTwoGRUs.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelTwoGRUs.predict(valDS)
+Y_pred = modelTwoGRUs.predict(valDS, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1178,7 +1171,7 @@ modelTwoGRUs.evaluate(testDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelTwoGRUs.predict(testDS)
+Y_pred = modelTwoGRUs.predict(testDS, verbose=0)
 plt.scatter(Y_test, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1301,355 +1294,6 @@ X.median(axis=2)
 ::::
 :::
 
-# Dense Layers in Matrices {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Logistic regression
-
-```{python}
-#| echo: false
-set_square_figures()
-```
-
-::: columns
-::: column
-
-Observations: $\mathbf{x}_{i,\bullet} \in \mathbb{R}^{2}$.
-
-Target: $y_i \in \{0, 1\}$.
-
-Predict: $\hat{y}_i = \mathbb{P}(Y_i = 1)$.
-
-<br>
-
-__The model__
-
-For $\mathbf{x}_{i,\bullet} = (x_{i,1}, x_{i,2})$:
-$$
-z_i = x_{i,1} w_1 + x_{i,2} w_2 + b
-$$
-
-$$
-\hat{y}_i = \sigma(z_i) = \frac{1}{1 + \mathrm{e}^{-z_i}} .
-$$
-
-:::
-::: column
-
-```{python}
-import sympy
-sympy.plot("1/(1 + exp(-z))");
-```
-:::
-:::
-
-```{python}
-#| echo: false
-set_rectangular_figures()
-```
-
-## Multiple observations
-
-```{python}
-data = pd.DataFrame({"x_1": [1, 3, 5], "x_2": [2, 4, 6], "y": [0, 1, 1]})
-data
-```
-
-Let $w_1 = 1$, $w_2 = 2$ and $b = -10$.
-
-```{python}
-w_1 = 1; w_2 = 2; b = -10
-data["x_1"] * w_1 + data["x_2"] * w_2 + b 
-```
-
-## Matrix notation
-
-::: columns
-::: column
-Have $\mathbf{X} \in \mathbb{R}^{3 \times 2}$.
-
-```{python}
-X_df = data[["x_1", "x_2"]]
-X = X_df.to_numpy()
-X
-```
-:::
-::: column
-Let $\mathbf{w} = (w_1, w_2)^\top \in \mathbb{R}^{2 \times 1}$.
-
-```{python}
-w = np.array([[1], [2]])
-w
-```
-:::
-:::
-
-$$
-\mathbf{z} = \mathbf{X} \mathbf{w} + b , \quad \mathbf{a} = \sigma(\mathbf{z})
-$$
-
-::: columns
-::: column
-```{python}
-z = X.dot(w) + b
-z
-```
-:::
-::: column
-```{python}
-1 / (1 + np.exp(-z))
-```
-:::
-:::
-
-## In Keras
-
-```{python}
-#| echo: false
-tf.random.set_seed(1234) 
-```
-
-```{python}
-model = Sequential([
-    Dense(1, input_dim=2, activation='sigmoid'),
-])
-
-w, b = model.get_weights()
-print(f"w's shape is {w.shape}, b's shape is {b.shape}")
-```
-
-::: columns
-::: column
-```{python}
-w
-```
-:::
-::: column
-```{python}
-b
-```
-:::
-:::
-
-```{python}
-model(X)
-```
-
-## In Keras with fixed weights & bias
-
-```{python}
-from tensorflow.keras.initializers import Constant
-```
-
-```{python}
-model = Sequential([
-    Dense(1, input_dim=2, activation='sigmoid',
-      kernel_initializer=Constant(value=[1.0, 2.0]),
-      bias_initializer=Constant(value=-10))
-])
-
-w, b = model.get_weights()
-```
-
-::: columns
-::: column
-```{python}
-w
-```
-:::
-::: column
-```{python}
-b
-```
-:::
-:::
-
-```{python}
-model(X)
-```
-
-## Using a softmax output
-
-::: columns
-::: column
-Observations: $\mathbf{x}_{i,\bullet} \in \mathbb{R}^{2}$.
-Predict: $\hat{y}_{i,j} = \mathbb{P}(Y_i = j)$.
-:::
-::: column
-Target: $\mathbf{y}_{i,\bullet} \in \{(1, 0), (0, 1)\}$.
-:::
-:::
-
-__The model__: For $\mathbf{x}_{i,\bullet} = (x_{i,1}, x_{i,2})$
-$$
-\begin{aligned}
-z_{i,1} &= x_{i,1} w_{1,1} + x_{i,2} w_{2,1} + b_1 , \\
-z_{i,2} &= x_{i,1} w_{1,2} + x_{i,2} w_{2,2} + b_2 .
-\end{aligned}
-$$
-
-$$
-\begin{aligned}
-\hat{y}_{i,1} &= \text{Softmax}_1(\mathbf{z}_i) = \frac{\mathrm{e}^{z_{i,1}}}{\mathrm{e}^{z_{i,1}} + \mathrm{e}^{z_{i,2}}} , \\
-\hat{y}_{i,2} &= \text{Softmax}_2(\mathbf{z}_i) = \frac{\mathrm{e}^{z_{i,2}}}{\mathrm{e}^{z_{i,1}} + \mathrm{e}^{z_{i,2}}} .
-\end{aligned}
-$$
-
-## Multiple observations
-
-::: columns
-::: column
-```{python}
-#| echo: false
-data = pd.DataFrame({
-  "x_1": [1, 3, 5], "x_2": [2, 4, 6],
-  "y_1": [1, 0, 0], "y_2": [0, 1, 1]})
-```
-
-```{python}
-data
-```
-:::
-::: column
-Choose:
-
-$w_{1,1} = 1$, $w_{2,1} = 2$,
-
-$w_{1,2} = 3$, $w_{2,2} = 4$, and
-
-$b_1 = -10$, $b_2 = -20$.
-
-:::
-:::
-
-```{python}
-w_11 = 1; w_21 = 2; b_1 = -10
-w_12 = 3; w_22 = 4; b_2 = -20
-data["x_1"] * w_11 + data["x_2"] * w_21 + b_1
-```
-
-## Matrix notation
-
-::: columns
-::: column
-Have $\mathbf{X} \in \mathbb{R}^{3 \times 2}$.
-
-```{python}
-X
-```
-:::
-::: column
-$\mathbf{W}\in \mathbb{R}^{2\times2}$, $\mathbf{b}\in \mathbb{R}^{2}$
-
-
-```{python}
-W = np.array([[1, 3], [2, 4]])
-b = np.array([-10, -20])
-display(W); b
-```
-:::
-:::
-
-$$
-  \mathbf{Z} = \mathbf{X} \mathbf{W} + \mathbf{b} , \quad \mathbf{A} = \text{Softmax}(\mathbf{Z}) .
-$$
-
-::: columns
-::: column
-```{python}
-Z = X @ W + b
-Z
-```
-:::
-::: column
-```{python}
-np.exp(Z) / np.sum(np.exp(Z),
-  axis=1, keepdims=True)
-```
-:::
-:::
-
-## In Keras
-
-```{python}
-#| echo: false
-tf.random.set_seed(1234) 
-```
-
-```{python}
-model = Sequential([
-    Dense(2, input_dim=2, activation='softmax'),
-])
-
-W, b = model.get_weights()
-print(f"W's shape is {W.shape}, b's shape is {b.shape}")
-```
-
-::: columns
-::: column
-```{python}
-W
-```
-:::
-::: column
-```{python}
-b
-```
-:::
-:::
-
-::: columns
-::: column
-```{python}
-model(X)
-```
-:::
-::: column
-```{python}
-tf.reduce_sum(model(X),
-    axis=1, keepdims=True)
-```
-:::
-:::
-
-## In Keras with fixed weights & bias
-
-```{python}
-model = Sequential([
-    Dense(2, input_dim=2, activation='softmax',
-      kernel_initializer=Constant(value=[[1.0, 3.0], [2.0, 4.0]]),
-      bias_initializer=Constant(value=[-10, -20]))
-])
-
-W, b = model.get_weights()
-```
-
-::: columns
-::: column
-```{python}
-W
-```
-:::
-::: column
-```{python}
-b
-```
-:::
-:::
-
-::: columns
-::: column
-```{python}
-model(X)
-```
-:::
-::: column
-```{python}
-tf.reduce_sum(model(X),
-    axis=1, keepdims=True)
-```
-:::
-:::
-
 ## Quiz
 
 Given a batch of time series in `X`, how would you get get:
@@ -1684,6 +1328,8 @@ Source: Wikipedia, [Recurrence relation](https://en.wikipedia.org/wiki/Recurrenc
 <br>
 
 All the outputs before the final one are often discarded.
+
+<!-- ![Notation for the diagram.](colah-LSTM2-notation.png) -->
 
 ::: footer
 Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
@@ -1761,7 +1407,7 @@ X[2:]
 As usual, the `SimpleRNN` is just a layer in Keras. 
 
 ```{python}
-tf.random.set_seed(1234)
+random.seed(1234)
 model = Sequential([
   SimpleRNN(outputSize, activation="sigmoid")
 ])
@@ -1774,7 +1420,7 @@ model.evaluate(X, y, verbose=False)
 The predicted probabilities on the training set are:
 
 ```{python}
-model.predict(X)
+model.predict(X, verbose=0)
 ```
 
 ## SimpleRNN weights
@@ -1796,6 +1442,91 @@ for t in range(numTimeSteps):
 
 Y
 ```
+
+# Recurrent Neural Networks {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Input of an RNN {.smaller}
+
+- Recurrent neural network (RNN) is used to handle input data that occurs in one-dimensional sequence.
+  - Natural language data such as sentences.
+  - Price data such as financial time series, stock prices.
+  - Temperature data.
+  - Time-stamped medical events.
+  - Weekly sales.
+  - Hourly electricity consumption.
+  - Human activity pattern.
+- We talk about time steps when discussing RNN, but it can be any steps in a sequence of ordered data.
+  
+## Applications {.smaller}
+
+- Forecasting: revenue forecast, weather forecast, predict disease rate from medical history, etc. 
+- Classification: given a time series of the activities of a visitor on a website, classify whether the visitor is a bot or a human.
+- Event detection: given a continuous data stream, identify the occurrence of a specific event. Example: Detect utterances like "Hey Alexa" from an audio stream.
+- Anomaly detection: given a continuous data stream, detect anything unusual happening. This is typically an unsupervised learning problem. Example: Detect unusual activity on the corporate network.
+
+## Recurrent neural network
+
+For a single neuron, output of a recurrent layer is:
+
+$$
+\mathbf{Y}_t = \psi\bigl( \mathbf{X}_t \mathbf{W}_x + \mathbf{Y}_{t-1} \mathbf{W}_y + \mathbf{b} \bigr) .
+$$
+
+Densely connected neural networks and convnet have no memory, which means each input is processed independently with no state (memory) kept between inputs. The recurrent neuron has a form of memory because the output at step $t$ depends on all the inputs from the previous steps. We call the part of a neural network that preserves some state across time steps a *memory cell* or a *cell*.
+
+## Recurrent neural network {.smaller}
+
+Note: the same weights are shared across the time steps of the recurrent network. A lot of resource will be required if these parameters are not shared. This also allows generalization when the model is used on a sequence of arbitrary length.
+
+::: {layout-ncol=2}
+![One layer of recurrent neurons unrolled through time.](Geron-recurrentneuronlayer-blur.png)
+
+![_Deep RNN_ unrolled through time.](Geron-recurrentneurondeep-blur.png)
+:::
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 15.
+:::
+
+## Input and output sequences
+
+![Categories of recurrent neural networks: sequence to sequence, sequence to vector, vector to sequence, encoder-decoder network.](Geron-rnnType-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 15.
+:::
+
+
+## Input and output sequences
+
+- Sequence to sequence: Useful for predicting time series such as using prices over the last $N$ days to output the prices shifted one day into the future (i.e. from $N-1$ days ago to tomorrow.)
+- Sequence to vector: ignore all outputs in the previous time steps except for the last one. Example: give a sentiment score to a sequence of words corresponding to a movie review.
+
+## Input and output sequences {.smaller}
+
+- Vector to sequence: feed the network the same input vector over and over at each time step and let it output a sequence. Example: given that the input is an image, find a caption for it. The image is treated as an input vector (pixels in an image do not follow a sequence). The caption is a sequence of textual description of the image. A dataset containing images and their descriptions is the input of the RNN.
+- The Encoder-Decoder: The encoder is a sequence-to-vector network. The decoder is a vector-to-sequence network. Example: Feed the network a sequence in one language. Use the encoder to convert the sentence into a single vector representation. The decoder decodes this vector into the translation of the sentence in another language.
+
+## LSTM internals
+
+![Diagram of an LSTM cell.](colah-LSTM3-chain.png)
+![Notation for the diagram.](colah-LSTM2-notation.png)
+
+::: footer
+Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
+:::
+
+## GRU internals
+
+![Diagram of a GRU cell.](colah-LSTM3-var-GRU.png)
+
+<br>
+
+::: footer
+Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
+:::
+
+{{< include _temperature-forecast-rnn-example.qmd >}}
 
 # {data-visibility="uncounted"} 
 

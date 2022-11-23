@@ -1,0 +1,348 @@
+
+# Dissecting `model.fit` {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+<br>
+<center>
+<blockquote class="twitter-tweet" data-theme="light"><p lang="en" dir="ltr">Spoiler: it&#39;s going to be a 20-lines Python script that calls model.fіt()<a href="https://t.co/AqLZSQ0kwD">https://t.co/AqLZSQ0kwD</a></p>&mdash; François Chollet (@fchollet) <a href="https://twitter.com/fchollet/status/1518702623892799488?ref_src=twsrc%5Etfw">April 25, 2022</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+</center>
+
+::: footer
+Source: [Twitter](https://twitter.com/fchollet/status/1518702623892799488?s=20&t=RZyyrUzgI5VhGfq730ynBg)
+:::
+
+## Load MNIST dataset
+
+```{python}
+(X_train, y_train), (X_test, y_test) = keras.datasets.mnist.load_data()
+X_train = X_train.astype("float32") / 255.0
+X_test = X_test.astype("float32") / 255.0
+
+# Reserve 10,000 samples for validation.
+X_val = X_train[-10000:]
+y_val = y_train[-10000:]
+X_train = X_train[:-10000]
+y_train = y_train[:-10000]
+
+# Prepare the training dataset.
+batch_size = 64
+train_dataset = tf.data.Dataset.from_tensor_slices((X_train, y_train))
+# train_dataset = train_dataset.shuffle(buffer_size=1024)
+train_dataset = train_dataset.batch(batch_size)
+
+# Prepare the validation dataset.
+val_dataset = tf.data.Dataset.from_tensor_slices((X_val, y_val))
+val_dataset = val_dataset.batch(batch_size)
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## A basic MNIST model
+
+```{python}
+def build_model(seed=42):
+  random.seed(seed)
+  return keras.Sequential([
+    layers.Flatten(input_shape=(28, 28)),
+    layers.Dense(128, activation="relu"),
+    layers.Dense(10)
+  ])
+
+firstModel = build_model()
+firstModel.summary(print_fn=skip_empty)
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## Fitting like normal
+
+Specify fitting requirements.
+```{python}
+epochs = 2
+lr = 1e-2
+optimizer = keras.optimizers.SGD(learning_rate=lr)
+loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+```
+
+Create a model & run `model.fit`.
+```{python}
+firstModel = build_model()
+firstModel.compile(optimizer, loss_fn)
+%time firstFit = firstModel.fit(train_dataset, epochs=epochs, \
+        validation_data=val_dataset, verbose=0);
+firstFit.history["loss"]
+```
+
+## Going through the epochs
+
+Create a new model:
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+```
+
+Repeatedly call `model.fit`:
+
+```{python}
+# Go through all the training data multiple times.
+for epoch in range(epochs):
+    model.fit(train_dataset, epochs=1, verbose=0)
+```
+
+::: {.callout-warning}
+Reusing the same optimiser works here because SGD is stateless.
+In contrast, RMSprop & Adam have internal state (e.g. to calculate/store momentum).
+:::
+
+## Are they _exactly_ the same?
+
+::: columns
+::: column
+```{python}
+firstModel.layers[-1].get_weights()[0][:3,:3]
+```
+:::
+::: column
+```{python}
+model.layers[-1].get_weights()[0][:3,:3]
+```
+:::
+:::
+
+```{python}
+def same_last_layer(model1, model2):
+    weights1 = model1.layers[-1].get_weights()[0]
+    weights2 = model2.layers[-1].get_weights()[0]
+    return np.max(np.abs(weights1 - weights2)) == 0
+
+same_last_layer(firstModel, model)
+```
+
+## Going through the batches
+
+Create a new model:
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+```
+
+Repeatedly call `train_on_batch`:
+
+```{python}
+# Go through all the training data multiple times.
+for epoch in range(epochs):
+
+    # Go through the entire training dataset in batches.
+    for (X_batch_train, y_batch_train) in train_dataset:
+
+        # Update weights & biases to make this batch's predictions better.
+        # model.train_on_batch(X_batch_train, y_batch_train)
+
+        # BUG: 'train_on_batch' hangs on Windows.
+        # Later on, check to see if an updated TF fixes it. 
+        pass
+
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## What is `model.fit()` really doing?
+
+```{python}
+%%time
+model = build_model() # No model.compile!
+
+# Go through all the training data multiple times.
+for epoch in range(epochs):
+    # Go through the entire training dataset in batches.
+    for (X_batch_train, y_batch_train) in train_dataset:
+        # Calculate the loss, while keeping track of gradients.
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch_train, training=True)
+            loss_value = loss_fn(y_batch_train, y_pred)
+
+        # Calculate the gradients & take a SGD step.
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## What about `optimizer` stuff?
+
+$$
+\boldsymbol{\theta}_i = \boldsymbol{\theta}_{i-1} - \eta \nabla \text{LossOnBatch} \\
+$$
+
+```{python}
+model = build_model()
+for epoch in range(epochs):
+    for (X_batch_train, y_batch_train) in train_dataset:
+        # Calculate the loss, while keeping track of gradients.
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch_train, training=True)
+            loss_value = loss_fn(y_batch_train, y_pred)
+
+        # Calculate the gradients & take a SGD step.
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        for grad, weight in zip(grads, model.trainable_weights):
+            # Take a small negative step in the direction of the gradient.
+            weight.assign(weight - lr * grad) 
+
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## Inspecting the gradients
+
+```{python}
+grads
+```
+
+```{python}
+[np.mean(np.abs(grad.numpy())) for grad in grads]
+```
+
+## Calculating training losses
+
+```{python}
+firstFit.history["loss"]
+```
+
+```{python}
+model = build_model()
+
+for epoch in range(epochs):
+    loss_history = []
+    for (X_batch_train, y_batch_train) in train_dataset:
+        with tf.GradientTape() as tape:
+            y_pred = model(X_batch_train, training=True)
+            loss_value = loss_fn(y_batch_train, y_pred)
+            loss_history.append(loss_value.numpy())
+
+        grads = tape.gradient(loss_value, model.trainable_weights)
+        optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+    print(f"[Epoch {epoch}] Loss avg {np.mean(loss_history)}")
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## Calculating validation losses
+
+```{python}
+firstFit.history["val_loss"]
+```
+
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+
+for epoch in range(epochs):
+    model.fit(train_dataset, epochs=1, verbose=0)
+
+    val_losses = []
+    for (X_batch_val, y_batch_val) in val_dataset:
+        y_pred = model(X_batch_val)
+        val_losses.append(loss_fn(y_batch_val, y_pred))
+
+    print(f"[Epoch {epoch}] Val loss avg {np.mean(val_losses)}")
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## Comparable training & val. losses
+
+```{python}
+print(firstFit.history["loss"])
+print(firstFit.history["val_loss"])
+```
+
+```{python}
+model = build_model()
+model.compile(optimizer, loss_fn)
+
+for epoch in range(epochs):
+    model.fit(train_dataset, epochs=1, verbose=0)
+
+    # Now the epoch is over and the model isn't being updated,
+    # calculate the losses on train and validation data.
+    train_loss = model.evaluate(train_dataset, verbose=0)
+    val_loss = model.evaluate(val_dataset, verbose=0)
+    print(f"[Epoch {epoch}] Train loss {train_loss} Val loss {val_loss}")
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+## How to use losses
+
+A common strategy is to:
+
+1. Keep fitting bigger and bigger models until training error is $\approx 0$. _This will likely produce a huge error on the validation set, called generalisation error, due to overfitting_.
+2. Apply regularisation/dropout/early stopping to reduce the generalisation error.
+3. Watch out for _overfitting the validation set_ by looking at the test loss.
+
+## What is this `with` syntax?
+
+Example, opening a file:
+
+::: columns
+::: column
+Most basic way is:
+```{python}
+f = open("haiku1.txt", "r")
+print(f.read())
+f.close()
+```
+
+:::
+::: column
+Instead, use:
+```{python}
+with open("haiku2.txt", "r") as f:
+    print(f.read())
+```
+:::
+:::
+
+::: footer
+Haikus from http://www.libertybasicuniversity.com/lbnews/nl107/haiku.htm
+:::
+
+## What is `GradientTape()`?
+
+```{python}
+x = tf.Variable(3.0)
+
+with tf.GradientTape() as tape:
+  y = x**2
+
+dy_dx = tape.gradient(y, x)
+dy_dx.numpy()
+```
+
+::: footer
+Source: Tensorflow (2022), [Introduction to gradients and automatic differentiation](https://www.tensorflow.org/guide/autodiff), Tensorflow docs.
+:::

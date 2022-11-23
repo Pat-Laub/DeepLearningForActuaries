@@ -1,0 +1,361 @@
+# Word Embeddings {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Overview
+
+::: {.notes}
+In order for deep learning models to process language, we need to supply that language to the model in a way it can digest, i.e. a __quantitative representation__ such as a 2-D matrix of numerical values.
+:::
+
+::: columns
+:::: {.column width="60%"}
+Popular methods for converting text into numbers include:
+
+- One-hot encoding
+- Bag of words
+- TF-IDF
+- Word vectors (_transfer learning_)
+
+::::
+:::: {.column width="40%"}
+![Assigning Numbers](xkcd-assigning_numbers_2x.png)
+::::
+:::
+
+::: footer
+Source: Randall Munroe (2022), [xkcd #2610: Assigning Numbers](https://xkcd.com/2610/).
+:::
+
+## Word Vectors
+
+- One-hot representations capture word 'existence' only, whereas word vectors capture information about word meaning as well as location.
+- This enables deep learning NLP models to automatically learn linguistic features.
+- **Word2Vec** & **GloVe** are popular algorithms for generating word embeddings (i.e. word vectors).
+
+## Word Vectors
+
+![Illustrative word vectors.](krohn_f02_06-blur.png)
+
+::: {.notes}
+- Overarching concept is to assign each word within a corpus to a particular, meaningful location within a multidimensional space called the vector space.
+- Initially each word is assigned to a random location.
+- BUT by considering the words that tend to be used around a given word within the corpus, the locations of the words shift. 
+:::
+
+::: footer
+Source: Krohn (2019), _Deep Learning Illustrated_, Figure 2-6.
+::: 
+
+## Remember this diagram?
+
+![Embeddings will gradually improve during training.](Geron-mls2_1304-blur.png)
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 13-4.
+:::
+
+## Word2Vec
+
+**Key idea**: You're known by the company you keep.
+
+Two algorithms are used to calculate embeddings:
+
+* _Continuous bag of words_: uses the context words to predict the target word
+* _Skip-gram_: uses the target word to predict the context words
+
+Predictions are made using a neural network with one hidden layer. Through backpropagation, we update a set of "weights" which become the word vectors.
+
+::: footer
+Paper: Mikolov et al. (2013), [_Efficient estimation of word representations in vector space_](https://arxiv.org/pdf/1301.3781.pdf), arXiv:1301.3781.
+:::
+
+## Word2Vec training methods
+
+![Continuous bag of words is a _center word prediction_ task](Chaudhary-nlp-ssl-center-word-prediction.gif)
+
+![Skip-gram is a _neighbour word prediction_ task](Chaudhary-nlp-ssl-neighbor-word-prediction.gif)
+
+<!--
+![One datapoint for center word prediction](Chaudhary-nlp-ssl-cbow-explained.png)
+-->
+
+:::{.callout-tip}
+## Suggested viewing
+
+Computerphile (2019), [Vectoring Words (Word Embeddings)](https://youtu.be/gQddtTdmG_8), YouTube (16 mins).
+:::
+
+::: footer
+Source: Amit Chaudhary (2020), [Self Supervised Representation Learning in NLP](https://amitness.com/2020/05/self-supervised-learning-nlp/).
+:::
+
+## The skip-gram network
+
+![The skip-gram model. Both the input vector $\boldsymbol{x}$ and the output $\boldsymbol{y}$ are one-hot encoded word representations. The hidden layer is the word embedding of size 
+$N$.](lilianweng-word2vec-skip-gram.png)
+
+::: footer
+Source: Lilian Weng (2017), [Learning Word Embedding](https://lilianweng.github.io/posts/2017-10-15-word-embedding/), Blog post, Figure 1.
+:::
+
+
+## GloVe {.smaller}
+
+GloVe (Global Vectors for Word Representation) is an unsupervised learning algorithm for obtaining word vector representations, developed by Stanford University in 2014.
+
+<!-- ## GloVe -->
+
+GloVe captures contextual information about words by comparing co-occurrence probability ratios
+
+_A co-occurrence probability_ is the probability that word $k$ is present in the corpus if word $j$ is present.
+
+![Example co-occurrence probabilities](co-occurrence.png)
+
+::: footer
+Source: Pennington et al. (2014), [GloVe: Global Vectors for Word Representation](https://nlp.stanford.edu/projects/glove/), Project webpage.
+:::
+
+## Word Vector Arithmetic
+
+::: columns
+::: column
+
+Relationships between words becomes vector math.
+
+![You remember vectors, right?](vectors-Figure_03_02_09.jpeg)
+
+::: {.notes}
+- E.g., if we calculate the direction and distance between the coordinates of the words _Paris_ and _France_, and trace this direction and distance from _London_, we should be close to the word _England_.
+:::
+
+:::
+::: column
+![Illustrative word vector arithmetic](krohn_f02_07-blur.png)
+
+![Screenshot from [Word2viz](https://lamyiowce.github.io/word2viz/)](krohn_f02_08-blur.png)
+:::
+:::
+
+::: footer
+Sources: PressBooks, [College Physics: OpenStax](https://pressbooks.bccampus.ca/collegephysics/chapter/vector-addition-and-subtraction-graphical-methods/), Chapter 17 Figure 9, and Krohn (2019), _Deep Learning Illustrated_, Figures 2-7 & 2-8.
+::: 
+
+# 
+
+<h2>Pretrained word embeddings</h2>
+
+Install `gensim` library:
+
+```{python}
+#| output: false
+!pip install gensim
+```
+
+Load word2vec embeddings trained on Google News:
+```{python}
+import gensim.downloader as api
+wv = api.load('word2vec-google-news-300')
+```
+
+When run for the first time, that downloads a huge file:
+
+```{python}
+gensimDir = Path("~/gensim-data/").expanduser()
+[str(p) for p in gensimDir.iterdir()]
+```
+
+```{python}
+next(gensimDir.glob("*/*.gz")).stat().st_size / 1024**3
+```
+
+```{python}
+f"The size of the vocabulary is {len(wv)}"
+```
+
+## Treat `wv` like a dictionary
+
+```{python}
+wv["pizza"]
+```
+
+```{python}
+len(wv["pizza"])
+```
+
+## Find nearby word vectors 
+
+```{python}
+wv.most_similar("Python")
+```
+
+```{python}
+wv.similarity("Python", "Java")
+```
+
+```{python}
+wv.similarity("Python", "sport")
+```
+
+```{python}
+wv.similarity("Python", "R")
+```
+
+::: footer
+Fun fact: Gensim's `most_similar` uses Spotify's `annoy` library ("Approximate Nearest Neighbors Oh Yeah")
+:::
+
+## What does 'similarity' mean?
+
+The 'similarity' scores
+```{python}
+wv.similarity("Sydney", "Melbourne")
+```
+
+are normally based on cosine distance.
+```{python}
+x = wv["Sydney"]
+y = wv["Melbourne"]
+x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))
+```
+
+```{python}
+wv.similarity("Sydney", "Aarhus")
+```
+
+## Weng's GoT Word2Vec
+
+In the GoT word embedding space, the top similar words to “king” and “queen” are:
+
+::: columns
+::: column
+```python
+model.most_similar('king')
+```
+```
+('kings', 0.897245)	
+('baratheon', 0.809675)	
+('son', 0.763614)
+('robert', 0.708522)
+('lords', 0.698684)
+('joffrey', 0.696455)
+('prince', 0.695699)
+('brother', 0.685239)
+('aerys', 0.684527)
+('stannis', 0.682932)
+```
+:::
+::: column
+```python
+model.most_similar('queen')
+```
+```
+('cersei', 0.942618)
+('joffrey', 0.933756)
+('margaery', 0.931099)
+('sister', 0.928902)
+('prince', 0.927364)
+('uncle', 0.922507)
+('varys', 0.918421)
+('ned', 0.917492)
+('melisandre', 0.915403)
+('robb', 0.915272)
+```
+:::
+:::
+
+::: footer
+Source: Lilian Weng (2017), [Learning Word Embedding](https://lilianweng.github.io/posts/2017-10-15-word-embedding/), Blog post.
+:::
+
+## Combining word vectors
+
+You can summarise a sentence by averaging the individual word vectors.
+
+```{python}
+sv = (wv["Melbourne"] + wv["has"] + wv["better"] + wv["coffee"]) / 4
+len(sv), sv[:5]
+```
+
+> As it turns out, averaging word embeddings is a surprisingly effective way to create word embeddings. It’s not perfect (as you’ll see), but it does a strong job of capturing what you might perceive to be complex relationships between words.
+
+::: footer
+Source: Trask (2019), Grokking Deep Learning, Chapter 12.
+:::
+
+## Recipe recommender
+
+::: columns
+::: {.column width="49%"}
+![Recipes are the average of the word vectors of the ingredients.](duarte-o-carmo-recipe-space-1.png)
+:::
+::: {.column width="51%"}
+![Nearest neighbours used to classify new recipes as potentially delicious.](duarte-o-carmo-recipe-space-2.png)
+:::
+:::
+
+::: footer
+Source: Duarte O.Carmo (2022), [A recipe recommendation system](https://duarteocarmo.com/blog/scandinavia-food-python-recommendation-systems), Blog post.
+:::
+
+## Analogies with word vectors
+
+Obama is to America as ___ is to Australia.
+
+::: fragment
+$$ \text{Obama} - \text{America} + \text{Australia} = ? $$
+:::
+
+::: fragment
+```{python}
+wv.most_similar(positive=["Obama", "Australia"], negative=["America"])
+```
+:::
+
+## Testing more associations 
+
+```{python}
+wv.most_similar(positive=["France", "London"], negative=["Paris"])
+```
+
+## Quickly get to bad associations
+
+```{python}
+wv.most_similar(positive=["King", "woman"], negative=["man"])
+```
+
+```{python}
+wv.most_similar(positive=["computer_programmer", "woman"], negative=["man"])
+```
+
+## Bias in NLP models {.smaller}
+
+::: columns
+::: column
+![](the-verge-banner-microsoft-tay.jpeg)
+
+The Verge (2016), [Twitter taught Microsoft's AI chatbot to be a racist a****** in less than a day](https://www.theverge.com/2016/3/24/11297050/tay-microsoft-chatbot-racist).
+:::
+::: column
+> ... there are serious questions to answer, like how are we going to teach AI using public data without incorporating the worst traits of humanity? If we create bots that mirror their users, do we care if their users are human trash? There are plenty of examples of technology embodying — either accidentally or on purpose — the prejudices of society, and Tay's adventures on Twitter show that even big corporations like Microsoft forget to take any preventative measures against these problems.
+:::
+:::
+
+## The library cheats a little bit
+
+```{python}
+wv.similar_by_vector(wv["computer_programmer"]-wv["man"]+wv["woman"])
+```
+
+To get the 'nice' analogies, the `.most_similar` ignores the input words as possible answers.
+
+```{python}
+#| eval: false
+# ignore (don't return) keys from the input
+result = [
+    (self.index_to_key[sim + clip_start], float(dists[sim]))
+    for sim in best if (sim + clip_start) not in all_keys
+]
+```
+
+::: footer
+Source: gensim, [gensim/models/keyedvectors.py](https://github.com/RaRe-Technologies/gensim/blob/eeb7e8662d5350efe68fa14db08b02d273735af9/gensim/models/keyedvectors.py#L853), lines 853-857.
+:::

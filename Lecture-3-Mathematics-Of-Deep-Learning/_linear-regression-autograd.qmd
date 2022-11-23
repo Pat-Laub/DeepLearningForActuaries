@@ -1,0 +1,318 @@
+# Computation Graphs & Automatic Differentiation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Compile using graph mode
+
+```{python}
+model = build_model()
+
+@tf.function
+def train_step(X, y):
+    with tf.GradientTape() as tape:
+        y_pred = model(X, training=True)
+        loss_value = loss_fn(y, y_pred)
+    grads = tape.gradient(loss_value, model.trainable_weights)
+    optimizer.apply_gradients(zip(grads, model.trainable_weights))
+    return loss_value
+```
+
+```{python}
+%%time
+for epoch in range(epochs):
+    for (X_batch_train, y_batch_train) in train_dataset:
+        loss_value = train_step(X_batch_train, y_batch_train)
+print(same_last_layer(firstModel, model))
+```
+
+::: footer
+Adapted from: Chollet (2020), [Writing a training loop from scratch](https://keras.io/guides/writing_a_training_loop_from_scratch/), Keras docs.
+:::
+
+
+## Example computational graph
+
+![Each basic equation is broken down to its core components.](Geron-mlst_0901-blur.png)
+
+::: footer
+Source: Aurélien Géron (2017), _Hands-On Machine Learning with Scikit-Learn & TensorFlow_, 1st Edition, Figure 9.1.
+:::
+
+## Why?
+
+![Tensorflow figures out the smartest way to evaluate your equations.](Geron-mlst_0902-blur.png)
+
+::: footer
+Source: Aurélien Géron (2017), _Hands-On Machine Learning with Scikit-Learn & TensorFlow_, 1st Edition, Figure 9.2.
+:::
+
+## Example: linear regression
+
+$$
+\hat{y}(x) = w x + b
+$$
+
+For some observation $\{ x_i, y_i \}$, the (MSE) loss is
+
+$$ 
+\text{Loss}_i = (\hat{y}(x_i) - y_i)^2
+$$
+
+For a batch of the first $n$ observations the loss is
+
+$$ 
+\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n (\hat{y}(x_i) - y_i)^2
+$$
+
+## Derivatives
+
+Since $\hat{y}(x) = w x + b$,
+
+$$
+\frac{\partial \hat{y}(x)}{\partial w} = x \text{ and }
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+As $\text{Loss}_i = (\hat{y}(x_i) - y_i)^2$, we know
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i) .
+$$
+
+## Chain rule
+
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i), \,\,
+\frac{\partial \hat{y}(x)}{\partial w} = x , \, \text{ and } \,
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+Putting this together, we have
+
+$$
+\frac{\partial \text{Loss}_i}{\partial w}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial w}
+= 2 (\hat{y}(x_i) - y_i) \, x_i 
+$$
+
+and
+$$
+\frac{\partial \text{Loss}_i}{\partial b}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial b}
+= 2 (\hat{y}(x_i) - y_i) .
+$$
+
+
+## Backpropagation
+
+::: columns
+::: column
+
+<iframe width="560" height="560" src="https://www.youtube.com/embed/Ilg3gGewQ5U" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+:::
+::: column
+
+<iframe width="560" height="560" src="https://www.youtube.com/embed/tIeHLnjs5U8" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+:::
+:::
+
+## Linear regression graph
+
+<br>
+
+```{mermaid}
+%%| echo: false
+%%| fig-width: 10
+%%{init: {'themeVariables': {'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
+graph LR
+    x[x]:::data --> times(( <sup>.</sup> ))
+    w[w]:::param --> times
+    times -->|z| plus(( + ))
+    b[b]:::param --> plus
+    plus -->|yp| minus(( - ))
+    y[y]:::data --> minus
+    minus --> loss[loss]
+    
+    classDef data fill:aqua,stroke-width:0px
+    classDef param fill:lightGreen,stroke-width:0px
+    style loss fill:white,stroke-width:0px
+```
+
+## Forward pass
+
+<br><br>
+
+```{mermaid}
+%%| echo: false
+%%| fig-width: 10
+%%{init: {'themeVariables': { 'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
+graph LR
+    x[x = 2]:::data --> times(( <sup>.</sup> ))
+    w[w = 3]:::param --> times
+    times -->|z = 6| plus(( + ))
+    b[b = 1]:::param --> plus
+    plus -->|yp = 7| minus(( - ))
+    y[y = 4]:::data --> minus
+    minus --> loss[loss = 3]
+    
+    classDef data fill:aqua,stroke-width:0px
+    classDef param fill:lightGreen,stroke-width:0px
+    style loss fill:white,stroke-width:0px
+```
+
+## Backward pass
+
+```{mermaid}
+%%| echo: false
+%%| fig-width: 10
+%%{init: {'themeVariables': { 'edgeLabelBackground': 'white', 'fontSize': '25px'}}}%%
+graph LR
+    x[x = 2]:::data --- times(( <sup>.</sup> ))
+    w[w = 3]:::param ---|"grad(z, w) = 2"| times
+    times ---|"z=6<br>grad(yp, z) = 1"| plus(( + ))
+    b[b = 1]:::param ---|"grad(yp, b) = 1"| plus
+    plus ---|"yp = 7<br>grad(loss, yp) = 1"| minus(( - ))
+    y[y = 4]:::data --- minus
+    minus --- loss[loss = 3]
+    
+    classDef data fill:aqua,stroke-width:0px
+    classDef param fill:lightGreen,stroke-width:0px
+    style loss fill:white,stroke-width:0px
+```
+
+::: fragment
+```{python}
+x = tf.constant(2.0); y = tf.constant(4.0)
+w = tf.Variable(3.0); b = tf.Variable(1.0)
+with tf.GradientTape() as tape:
+  yp = w*x + b
+  loss = tf.abs(yp - y)
+tape.gradient(loss, [w, b])
+```
+:::
+
+## That's it
+
+> And with that, you just saw backpropagation in action! Backpropagation is simply the application of the chain rule to a computation graph. There’s nothing more to it. Backpropagation starts with the final loss value and works backward from the top layers to the bottom layers, computing the contribution that each parameter had in the loss value. That’s where the name “backpropagation” comes from: we “back propagate” the loss contributions of different nodes in a computation graph.
+
+::: footer
+Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Chapter 2.
+:::
+
+## Batch gradient descent
+
+For the first $n$ observations 
+$\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n \text{Loss}_i$
+so
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial w}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial w}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial w} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) \, x_i .
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial b}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial b}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial b} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) .
+\end{aligned}
+$$
+
+## Bespoke derivatives vs. autodiff
+
+```{python}
+#| echo: false
+numpy.random.seed(111) 
+n = 3 
+x = numpy.arange(1, n+1, dtype=np.float32)
+y = 2*x - 1 + 0.01 * numpy.random.randn(n)
+y = y.astype(np.float32)
+```
+
+::: columns
+::: {.column width="60%"}
+```{python}
+w = 0; b = 0;
+y_pred = w * x + b
+loss = (y_pred - y) ** 2
+
+dL_dw = 2 * (y_pred - y) * x
+dL_db = 2 * (y_pred - y)
+
+nabla = [dL_dw.mean(), dL_db.mean()]
+print(np.array(nabla))
+```
+:::
+::: {.column width="40%"}
+```{python}
+#| echo: false
+df = pandas.DataFrame({"x": x, "y": y, "y_hat": y_pred, "loss": loss, "dL/dw": dL_dw, "dL/db": dL_db})
+df[["x", "y", "dL/dw"]].round(2)
+```
+:::
+:::
+
+```{python}
+w = tf.Variable(0.0); b = tf.Variable(0.0)
+x = tf.constant(x); y = tf.constant(y)
+
+with tf.GradientTape() as tape:
+  y_pred = w * x + b
+  loss = tf.reduce_mean((y_pred - y) ** 2)
+
+dL_dw, dL_db = tape.gradient(loss, [w, b])
+print(np.array([dL_dw, dL_db]))
+```
+
+## The magic of autodiff
+
+```{python}
+#| echo: false
+random.seed(111) 
+n = 100_000_000
+x = tf.range(1, n+1, dtype=tf.float32)
+y = 2*x - 1 + 0.01 * tf.random.normal([n])
+```
+
+```{python}
+from tensorflow.keras.metrics import mean_squared_error as mse
+```
+
+::: columns
+::: column
+```{python}
+%%timeit
+y_pred = w*x + b
+res = y_pred - y
+dL_db = tf.reduce_mean(2*res)
+```
+
+```{python}
+%%timeit
+with tf.GradientTape() as tape:
+  loss = mse(y, w*x + b)
+tape.gradient(loss, b)
+```
+:::
+::: column
+```{python}
+%%timeit
+res = (w*x + b) - y
+dL_dw = tf.reduce_mean(2*res*x)
+dL_db = tf.reduce_mean(2*res)
+```
+
+```{python}
+%%timeit
+with tf.GradientTape() as tape:
+  loss = mse(y, w*x + b)
+tape.gradient(loss, [w, b])
+```
+:::
+:::

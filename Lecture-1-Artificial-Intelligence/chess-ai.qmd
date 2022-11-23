@@ -1,0 +1,1079 @@
+---
+title: Chess AI
+subtitle: ACTL3143 & ACTL5111 Deep Learning for Actuaries
+author: Dr Patrick Laub
+format:
+  revealjs:
+    theme: [serif, custom.scss]
+    controls: true
+    controls-tutorial: true
+    logo: unsw-logo.svg
+    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
+    title-slide-attributes:
+      data-background-image: unsw-yellow-shape.png
+      data-background-size: contain !important
+    transition: none
+    slide-number: c/t
+    strip-comments: true
+    preview-links: false
+    margin: 0.12
+    width: 1000
+    chalkboard:
+      boardmarker-width: 6
+      grid: false
+      background:
+        - "rgba(255,255,255,0.0)"
+        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
+    include-before: <div class="line right"></div>
+    include-after: <script>registerRevealCallbacks();</script>
+highlight-style: breeze
+jupyter: python3
+execute:
+  keep-ipynb: true
+  echo: true
+---
+
+# Chess AI {background-image="unsw-yellow-shape.png"}
+
+## Install a package for chess
+
+```{python}
+#| include: false
+!pip install chess
+```
+
+```{python}
+#| eval: false
+!pip install chess
+```
+
+```{python}
+import chess
+board = chess.Board()
+board
+```
+
+## The names of the squares
+
+![Algebraic notation.](wiki-SCD_algebraic_notation.svg)
+
+::: footer
+Source: [Wikipedia](https://upload.wikimedia.org/wikipedia/commons/b/b6/SCD_algebraic_notation.svg).
+:::
+
+## What moves are available?
+
+```{python}
+list(board.legal_moves)[:6]
+```
+
+```{python}
+[board.san(move) for move in board.legal_moves][:6]
+```
+
+
+
+## Make moves
+
+::: columns
+::: column
+```{python}
+move = chess.Move.from_uci("e2e4")
+board.push(move)
+board
+```
+
+:::
+::: column
+```{python}
+move = chess.Move.from_uci("e7e5")
+board.push(move)
+board
+```
+:::
+:::
+
+## Take back moves
+
+::: columns
+::: column
+```{python}
+board.pop()
+board
+```
+
+:::
+::: column
+```{python}
+board.pop()
+board
+```
+:::
+:::
+
+
+## What first moves are available? {auto-animate=true}
+
+::: columns
+::: column
+
+```{python}
+#| eval: false
+from IPython.display \
+  import clear_output, display
+import time
+
+board = chess.Board()
+
+for move in board.legal_moves:
+    board.push(move)
+
+    display(board)
+    time.sleep(0.5)
+    clear_output(wait=True)
+    
+    board.pop()
+```
+:::
+::: column
+```{python}
+#| echo: false
+from pathlib import Path
+
+Path("chess-first-move").mkdir(exist_ok=True)
+
+from IPython.display import display, HTML
+
+html = '<div class="r-stack" data-id="board">'
+board = chess.Board()
+
+# Draw the board before any moves
+b = board._repr_svg_()
+with open(f"chess-first-move/move-0.svg", "w") as f:
+    f.write(b)
+html += f'<img src="chess-first-move/move-0.svg" width="500">'
+
+for i, move in enumerate(board.legal_moves):
+    board.push(move)
+    b = board._repr_svg_()
+    with open(f"chess-first-move/move-{i+1}.svg", "w") as f:
+        f.write(b)
+    board.pop()
+
+    html += f'<img src="chess-first-move/move-{i+1}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+:::
+:::
+
+
+## What if there were no pawns? {auto-animate=true}
+
+::: columns
+::: column
+
+```{python}
+#| eval: false
+board = chess.Board()
+
+# Remove the pawns
+for i in range(8):
+    board.remove_piece_at( \
+      chess.square(i, 1))
+    board.remove_piece_at( \
+      chess.square(i, 6))
+
+for move in board.legal_moves:
+    board.push(move)
+
+    display(board)
+    time.sleep(0.5)
+    clear_output(wait=True)
+    
+    board.pop()
+```
+:::
+::: column
+```{python}
+#| echo: false
+Path("chess-no-pawn-move").mkdir(exist_ok=True)
+
+from IPython.display import display, HTML
+
+html = '<div class="r-stack" data-id="board">'
+board = chess.Board()
+
+for i in range(8):
+    board.remove_piece_at(chess.square(i, 1))
+    board.remove_piece_at(chess.square(i, 6))
+
+# Draw the board before any moves
+b = board._repr_svg_()
+with open(f"chess-no-pawn-move/move-0.svg", "w") as f:
+    f.write(b)
+html += f'<img src="chess-no-pawn-move/move-0.svg" width="500">'
+
+for i, move in enumerate(board.legal_moves):
+    board.push(move)
+    b = board._repr_svg_()
+    with open(f"chess-no-pawn-move/move-{i+1}.svg", "w") as f:
+        f.write(b)
+    board.pop()
+
+    html += f'<img src="chess-no-pawn-move/move-{i+1}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+:::
+:::
+
+## Making random moves
+
+::: columns
+::: column
+
+```{python}
+#| eval: false
+import random
+
+def choose_move(board):
+    options = list(board.legal_moves)
+    return random.choice(options)
+
+random.seed(42)
+board = chess.Board()
+display(board)
+
+for i in range(20):
+    move = choose_move(board)
+    board.push(move)
+
+    clear_output(wait=True)
+    display(board)
+    time.sleep(0.5)    
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+Path("random-moves").mkdir(exist_ok=True)
+
+import random
+
+def choose_move(board):
+    options = list(board.legal_moves)
+    return random.choice(options)
+
+random.seed(42)
+from IPython.display import display, HTML
+
+html = '<div class="r-stack" data-id="board">'
+board = chess.Board()
+
+# Draw the board before any moves
+b = board._repr_svg_()
+with open(f"random-moves/move-0.svg", "w") as f:
+    f.write(b)
+html += f'<img src="random-moves/move-0.svg" width="500">'
+
+for i in range(20):
+    move = choose_move(board)
+    board.push(move)
+    b = board._repr_svg_()
+    with open(f"random-moves/move-{i+1}.svg", "w") as f:
+        f.write(b)
+
+    html += f'<img src="random-moves/move-{i+1}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+:::
+:::
+
+## AI would choose rational moves
+
+The rough idea for a rational move selection:
+
+```{python}
+#| eval: false
+def choose_move(board):
+    options = list(board.legal_moves)
+
+    scores = []
+    for move in options:
+        board.push(move)
+        scores.append(minimax(board)) # TODO
+        board.pop()
+    
+    if board.turn == chess.WHITE:
+        bestScore = max(scores)
+    else:
+        bestScore = min(scores)
+    
+    for move, score in zip(options, scores):
+        if score == bestScore:
+            return move
+```
+
+
+## The minimax algorithm #2
+
+![Illustration of minimax on a game of Chess.](sebastian-lague-minimax.png)
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+## Evaluating a board
+
+::: columns
+::: {.column width="50%"}
+
+::: figure
+```{python}
+#| echo: false
+board = chess.Board("2r3k1/p3bp1p/2Bp1np1/4p3/1r6/B1R5/P1PP1P1P/R5K1 b - - 0 1")
+
+fig = f"""
+<center>
+<figure class="tightCaption">
+{chess.svg.board(board)}
+<figcaption aria-hidden="true">A random game.</figcaption>
+</figure>
+</center>
+"""
+
+HTML(fig)
+```
+:::
+
+:::
+::: {.column width="50%"}
+```{python}
+#| echo: false
+PIECES = ["P", "N", "B", "R", "Q", "K"]
+STANDARD_PIECE_VALUES = {"P": 1, "N": 3, "B": 3, "R": 5, "Q": 9, "K": 0}
+
+
+def count_piece(board, piece, white=True):
+    count = 0
+    for square in chess.SQUARES:
+        p = board.piece_at(square)
+        if p and p.symbol() == piece:
+            count += 1
+    return count
+
+table = "<table><tbody>"
+
+total = 0
+vals = []
+
+for piece in PIECES:
+    table += "<tr>"
+
+    svg = chess.svg.piece(chess.Piece.from_symbol(piece), size="50px") 
+    numPiece = count_piece(board, piece)
+    valPiece = STANDARD_PIECE_VALUES[piece]
+    total += numPiece * valPiece
+    if numPiece * valPiece > 0:
+        vals.append(str(numPiece * valPiece))
+    table += f'<td style="text-align: center">{svg}</td>'
+    table += f'<td style="text-align: center">{numPiece} &times {valPiece} = {numPiece * valPiece}</td>'
+    table += "</tr>"
+
+table += f'<td style="text-align: center">White</td>'
+# table += f'<td style="text-align: center">{" + ".join(vals)} = {total}</td>'
+table += f'<td style="text-align: center">{total}</td>'
+table += "</tr>"
+
+table += "</tbody></table>"
+
+HTML(table)
+```
+:::
+:::
+
+## Evaluating a board #2
+
+::: columns
+::: {.column width="50%"}
+
+::: figure
+```{python}
+#| echo: false
+board = chess.Board("2r3k1/p3bp1p/2Bp1np1/4p3/1r6/B1R5/P1PP1P1P/R5K1 b - - 0 1")
+
+fig = f"""
+<center>
+<figure class="tightCaption">
+{chess.svg.board(board)}
+<figcaption aria-hidden="true">A random game.</figcaption>
+</figure>
+</center>
+"""
+
+HTML(fig)
+```
+:::
+
+:::
+::: {.column width="50%"}
+```{python}
+#| echo: false
+def count_piece(board, piece, white=True):
+    count = 0
+    for square in chess.SQUARES:
+        p = board.piece_at(square)
+        if p and p.symbol() == piece:
+            count += 1
+    return count
+
+table = "<table><tbody>"
+
+total = 0
+vals = []
+
+for piece in PIECES:
+    table += "<tr>"
+
+    piece = piece.lower()
+    svg = chess.svg.piece(chess.Piece.from_symbol(piece), size="50px") 
+    numPiece = count_piece(board, piece)
+    valPiece = STANDARD_PIECE_VALUES[piece.upper()]
+    total += numPiece * valPiece
+    if numPiece * valPiece > 0:
+        vals.append(str(numPiece * valPiece))
+    table += f'<td style="text-align: center">{svg}</td>'
+    table += f'<td style="text-align: center">{numPiece} &times {valPiece} = {numPiece * valPiece}</td>'
+    table += "</tr>"
+
+table += f'<td style="text-align: center">Black</td>'
+# table += f'<td style="text-align: center">{" + ".join(vals)} = {total}</td>'
+table += f'<td style="text-align: center">{total}</td>'
+table += "</tr>"
+
+table += "</tbody></table>"
+
+HTML(table)
+```
+
+:::
+:::
+
+
+::: fragment
+Overall: 21 &minus; 22 = &minus;1.
+:::
+
+## The static evaluation function
+
+```{python}
+STANDARD_PIECE_VALUES = {"P": 1, "N": 3, "B": 3,
+                         "R": 5, "Q": 9, "K": 0}
+
+def static_evaluation(board):
+    if board.is_game_over():
+        outcome = board.outcome()
+        if outcome.winner == chess.WHITE:
+            return 1_000_000
+        elif outcome.winner == chess.BLACK:
+            return -1_000_000
+        else:
+            return 0
+
+    pointsBalance = 0
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece:
+          pieceValue = STANDARD_PIECE_VALUES[piece.symbol().upper()]
+          if piece.symbol().isupper():
+              pointsBalance += pieceValue
+          else:
+              pointsBalance -= pieceValue
+
+    return pointsBalance
+```
+
+## Minimax pseudocode
+
+![Pseudocode for the minimax algorithm.](sebastian-lague-minimax-pseudocode.png)
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+## StoryWall: alpha-beta pruning
+
+::: columns
+::: column
+
+![Pseudocode for minimax with alpha-beta pruning.](sebastian-lague-minimax-alpha-beta-pruning-pseudocode.png)
+
+:::
+::: column
+
+![Illustration of alpha-beta pruning.](sebastian-lague-tree-shearing.png)
+
+:::
+:::
+
+::: footer
+Source: Sebastian Lague (2018), [Algorithms Explained – minimax and alpha-beta pruning](https://youtu.be/l-hh51ncgDI).
+:::
+
+# Solution {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Should have kept infinity
+```{python}
+#| include: false
+!pip install chess
+import chess
+import math
+
+STANDARD_PIECE_VALUES = {"P": 1, "N": 3, "B": 3,
+                         "R": 5, "Q": 9, "K": 0}
+```
+
+```{python}
+#| code-line-numbers: "|5,7"
+def static_evaluation(board):
+    if board.is_game_over():
+        outcome = board.outcome()
+        if outcome.winner == chess.WHITE:
+            return math.inf
+        elif outcome.winner == chess.BLACK:
+            return -math.inf
+        else:
+            return 0
+
+    pointsBalance = 0
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece:
+          pieceValue = STANDARD_PIECE_VALUES[piece.symbol().upper()]
+          if piece.symbol().isupper():
+              pointsBalance += pieceValue
+          else:
+              pointsBalance -= pieceValue
+    return pointsBalance
+```
+
+## Original Minimax (Simpler)
+
+```{python}
+def minimax(board, depth):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board)
+  
+  scores = []
+  for move in board.legal_moves:
+    board.push(move)
+    score = minimax(board, depth-1)
+    board.pop()
+    scores.append(score)
+
+  if board.turn == chess.WHITE:
+    return max(scores)
+  else:
+    return min(scores)  
+```
+## Original Minimax (Pseudocode)
+
+```{python}
+def minimax(board, depth):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board)
+  
+  if board.turn == chess.WHITE:
+    maxEval = -math.inf
+    for move in board.legal_moves:
+      board.push(move)
+      score = minimax(board, depth-1)
+      board.pop()
+      maxEval = max(maxEval, score)
+    return maxEval
+  else:
+    minEval = math.inf
+    for move in board.legal_moves:
+      board.push(move)
+      score = minimax(board, depth-1)
+      board.pop()
+      minEval = min(minEval, score)
+    return minEval
+```
+
+## Basic Alpha-Beta Pruning Solution
+
+```{python}
+#| code-line-numbers: "|1,9,12-14,20,23-25"
+def minimax_pruning(board, depth, alpha, beta):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board)
+  
+  if board.turn == chess.WHITE:
+    maxEval = -math.inf
+    for move in board.legal_moves:
+      board.push(move)
+      score = minimax_pruning(board, depth-1, alpha, beta)
+      board.pop()
+      maxEval = max(maxEval, score)
+      alpha = max(alpha, score)
+      if beta <= alpha:
+        break
+    return maxEval
+  else:
+    minEval = math.inf
+    for move in board.legal_moves:
+      board.push(move)
+      score = minimax_pruning(board, depth-1, alpha, beta)
+      board.pop()
+      minEval = min(minEval, score)
+      beta = min(beta, score)
+      if beta <= alpha:
+        break
+    return minEval
+```
+
+## Adjust the call to it
+
+```{python}
+def choose_move(board, depth=2):
+  ...
+  scores = []
+  for move in board.legal_moves:
+    score = minimax_pruning(board, depth, -math.inf, math.inf)
+    scores.append(score)
+  ...
+```
+
+## Add default arguments
+```{python}
+def minimax_pruning(board, depth,
+                    alpha=-math.inf, beta=math.inf):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board)
+
+  if board.turn == chess.WHITE:
+    maxEval = -math.inf
+    for move in board.legal_moves:
+      board.push(move)
+      score = minimax_pruning(board, depth-1, alpha, beta)
+      board.pop()
+      maxEval = max(maxEval, score)
+      alpha = max(alpha, score)
+      if beta <= alpha:
+        break
+    return maxEval
+  else:
+    minEval = math.inf
+    for move in board.legal_moves:
+      board.push(move)
+      score = minimax_pruning(board, depth-1, alpha, beta)
+      board.pop()
+      minEval = min(minEval, score)
+      beta = min(beta, score)
+      if beta <= alpha:
+        break
+    return minEval
+```
+
+## Refactoring
+
+```{python}
+def minimax_pruning(board, depth,
+                    alpha=-math.inf, beta=math.inf):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board)
+
+  scores = []
+  for move in board.legal_moves:
+    board.push(move)
+    score = minimax_pruning(board, depth-1, alpha, beta)
+    scores.append(score)
+    board.pop()
+
+    if board.turn == chess.WHITE:
+      alpha = max(alpha, score)
+    else:
+      beta = min(beta, score)
+
+    if beta <= alpha:
+      break
+  
+  return max(scores) if board.turn == chess.WHITE else min(scores)
+```
+
+## Print Debugging
+
+```{python}
+def noisy_minimax_pruning(board, depth,
+                    alpha=-math.inf, beta=math.inf):
+  
+  print((2-depth) * 2 * " ", f"Start MM(depth={depth}, alpha={alpha}, beta={beta})")
+  if depth == 0 or board.is_game_over():
+    staticEval = static_evaluation(board)
+    print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {staticEval}")
+    return staticEval
+
+  scores = []
+  for move in board.legal_moves:
+    board.push(move)
+    score = noisy_minimax_pruning(board, depth-1, alpha, beta)
+    scores.append(score)
+    board.pop()
+
+    if board.turn == chess.WHITE:
+      alpha = max(alpha, score)
+    else:
+      beta = min(beta, score)
+
+    if beta <= alpha:
+      break
+  
+  finalScore = max(scores) if board.turn == chess.WHITE else min(scores)
+  print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {finalScore}")
+  return finalScore
+```
+
+## Making a simple test case
+
+```{python}
+board = chess.Board("k2q4/p1P5/KP6/8/8/8/8/8 w - - 0 1")
+display(board)
+```
+
+## Digging through the debug logs
+
+```{python}
+score = noisy_minimax_pruning(board, depth=2)
+```
+
+## Bugs spotted
+
+```{python}
+#| code-line-numbers: "|1|6|9|14|18-19|21|22"
+def buggy_minimax_pruning(board, depth, alpha, beta):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board)
+  
+  if board.turn == chess.WHITE:
+    maxEval = -1_000_000
+    for move in board.legal_moves:
+      board.push(move)
+      eval = minimax_pruning(board, depth-1, alpha, beta)
+      maxEval = max(maxEval, eval)
+      alpha = max(alpha, eval)
+      if beta <= alpha:
+        break
+      board.pop()
+    return maxEval
+  else:
+    minEval = math.inf
+    alpha = -math.inf
+    beta = math.inf
+    for move in board.legal_moves:
+      eval = minimax_pruning(board.push(move), depth-1, alpha, beta)
+      
+      minEval = min(minEval, eval)
+      beta = min(beta, eval)
+      if beta <= alpha:
+        break
+    return minEval
+```
+
+<!-- # Setting up a game -->
+
+```{python}
+#| echo: false
+import random 
+
+def choose_move(board, depth=2, alphaBetaPruning=False):
+  scores = []
+  moves = list(board.legal_moves)
+  for move in moves:
+    board.push(move)
+    if alphaBetaPruning:
+      score = minimax_pruning(board, depth-1)
+    else:
+      score = minimax(board, depth-1)
+    board.pop()
+    scores.append(score)
+
+  bestScore = max(scores) if (board.turn == chess.WHITE) else min(scores)
+  bestMoves = [move for move, score in zip(moves, scores) if score == bestScore]
+  return random.choice(bestMoves)
+```
+
+```{python}
+#| echo: false
+def play_game(maxMoves=5, depths=(3, 3), alphaBetaPruning=False):
+  board = chess.Board()
+  moveNumber = 0
+  while not board.is_game_over() and moveNumber < maxMoves:
+    if board.turn == chess.WHITE:
+      move = choose_move(board, depths[0], alphaBetaPruning=alphaBetaPruning)
+    else:
+      move = choose_move(board, depths[1], alphaBetaPruning=alphaBetaPruning)
+    board.push(move)
+    moveNumber += 1
+  return board
+```
+
+
+# One more thing... {background-image="unsw-yellow-shape.png"  data-visibility="uncounted"}
+
+## Never pruning in the first move
+
+![Illustration of alpha-beta pruning.](sebastian-lague-tree-shearing.png)
+
+Solution: have `minimax` return the 'score' of the best move, _and_ the move itself.
+
+## Pruning at all levels
+
+```{python}
+def minimax_move(board, depth, alpha=-math.inf, beta=math.inf,
+                 pruning=True):
+  if depth == 0 or board.is_game_over():
+    return static_evaluation(board), None
+
+  whitesTurn = board.turn == chess.WHITE
+  scores = []
+  for move in board.legal_moves:
+    board.push(move)
+    score, _ = minimax_move(board, depth-1, alpha, beta, pruning)
+    scores.append(score)
+    board.pop()
+
+    if pruning:
+      if whitesTurn:
+        alpha = max(alpha, score)
+      else:
+        beta = min(beta, score)
+
+      if beta <= alpha:
+        break
+
+  bestScore = max(scores) if whitesTurn else min(scores) 
+  for move, score in zip(board.legal_moves, scores):
+    if score == bestScore:
+      return score, move
+```
+
+## Using Jupyter/Colab "magic"
+
+```{python}
+random.seed(42)
+%time slowGame = play_game(maxMoves=5, depths=(3, 3))
+```
+
+```{python}
+random.seed(42)
+%time fastGame = play_game(maxMoves=5, depths=(3, 3), \
+                           alphaBetaPruning=True)
+```
+
+```{python}
+slowGame.move_stack == fastGame.move_stack
+```
+
+```{python}
+%%time
+s = 0
+for i in range(1_000_000):
+  s += i
+```
+
+## Speed difference
+
+```{python}
+#| echo: false
+def play_game(maxMoves=5, depths=(4, 4), alphaBetaPruning=False):
+  board = chess.Board()
+  moveNumber = 0
+  while not board.is_game_over() and moveNumber < maxMoves:
+    if board.turn == chess.WHITE:
+      _, move = minimax_move(board, depths[0], pruning=alphaBetaPruning)
+    else:
+      _, move = minimax_move(board, depths[1], pruning=alphaBetaPruning)
+    board.push(move)
+    moveNumber += 1
+  return board
+```
+
+```{python}
+%time slowGame = play_game(maxMoves=5, depths=(4, 3))
+```
+
+```{python}
+%time fastGame = play_game(maxMoves=5, depths=(4, 3), \
+                           alphaBetaPruning=True)
+```
+
+```{python}
+slowGame.move_stack == fastGame.move_stack
+```
+
+## Further chess/AI things
+
+::: columns
+::: {.column width="70%"}
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/U4ogK0MIzqk" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+
+[Python & chess in the browser using PyScript](https://about.nmstoker.com/chess2.html)
+
+New York Times Podcast, [How AI Conquered Poker](https://podcasts.apple.com/au/podcast/the-daily/id1200361736?i=1000550199816).
+:::
+::: {.column width="30%"}
+![TV recommendation.](queens-gambit.jpeg)
+:::
+:::
+
+::: footer
+Source: [IMDB](https://www.imdb.com/title/tt10048342/).
+:::
+
+## Patrick vs. `depth=5` AI
+
+```{python}
+#| echo: false
+Path("initial-loss").mkdir(exist_ok=True)
+
+from IPython.display import display, HTML
+import chess
+board = chess.Board()
+
+with open("loss-against-5-depth.txt", "r") as f:
+    moves = [line.strip() for line in f.readlines()]
+
+b = board._repr_svg_()
+with open(f"initial-loss/move-0.svg", "w") as f:
+    f.write(b)
+
+for i, move in enumerate(moves):
+    move = chess.Move.from_uci(move)
+    board.push(move)
+
+    b = board._repr_svg_()
+    with open(f"initial-loss/move-{i+1}.svg", "w") as f:
+        f.write(b)
+```
+
+```{python}
+#| echo: false
+html = '<div class="r-stack" data-id="board">'
+
+# Draw the board before any moves
+html += f'<img src="initial-loss/move-0.svg" width="500">'
+
+for i in range(1, 36):
+    html += f'<img src="initial-loss/move-{i}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+## Blundered! {data-visibility="uncounted"}
+
+```{python}
+#| echo: false
+html = '<div class="r-stack" data-id="board">'
+
+# Draw the board before any moves
+html += f'<img src="initial-loss/move-36.svg" width="500">'
+
+for i in range(37, len(moves)+1):
+    html += f'<img src="initial-loss/move-{i}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+## Tried again {data-visibility="uncounted"}
+
+```{python}
+#| echo: false
+Path("win").mkdir(exist_ok=True)
+
+from IPython.display import display, HTML
+
+board = chess.Board()
+
+with open("win-against-5-depth.txt", "r") as f:
+    moves = [line.strip() for line in f.readlines()]
+
+b = board._repr_svg_()
+with open(f"win/move-0.svg", "w") as f:
+    f.write(b)
+
+for i, move in enumerate(moves):
+    move = chess.Move.from_uci(move)
+    board.push(move)
+
+    b = board._repr_svg_()
+    with open(f"win/move-{i+1}.svg", "w") as f:
+        f.write(b)
+```
+
+```{python}
+#| echo: false
+html = '<div class="r-stack" data-id="board">'
+
+# Draw the board before any moves
+html += f'<img src="win/move-36.svg" width="500">'
+
+for i in range(37, 57):
+    html += f'<img src="win/move-{i}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+## Black on the run... {data-visibility="uncounted"}
+```{python}
+#| echo: false
+html = '<div class="r-stack" data-id="board">'
+
+# Draw the board before any moves
+html += f'<img src="win/move-57.svg" width="500">'
+
+for i in range(58, len(moves)+1):
+    html += f'<img src="win/move-{i}.svg" class="fragment" width="500">'
+
+html += "</div>"
+
+display(HTML(html))
+```
+
+# {data-visibility="uncounted"}
+
+<h2>Glossary</h2>
+
+- minimax algorithm
+- pseudocode
+
+
+<script defer>
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>
