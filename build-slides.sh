@@ -1,6 +1,9 @@
 #!/bin/bash
 
-quarto render Lecture-1-Artificial-Intelligence/artificial-intelligence.qmd --no-execute-daemon
+quarto render Lecture-1-Artificial-Intelligence/course-overview.qmd --no-execute-daemon
+(exit) && quarto render Lecture-1-Artificial-Intelligence/artificial-intelligence.qmd --no-execute-daemon
+(exit) && quarto render Lecture-1-Artificial-Intelligence/python.qmd --no-execute-daemon
+(exit) && quarto render Lecture-1-Artificial-Intelligence/chess-ai.qmd --no-execute-daemon
 (exit) && quarto render Lecture-2-Deep-Learning-Keras/deep-learning-keras.qmd --no-execute-daemon
 (exit) && quarto render Lecture-3-Mathematics-Of-Deep-Learning/mathematics-of-deep-learning.qmd --no-execute-daemon
 (exit) && quarto render Lecture-4-Network-Architectures-For-Tabular-Data/network-architectures-for-tabular-data.qmd --no-execute-daemon
