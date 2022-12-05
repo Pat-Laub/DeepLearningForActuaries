@@ -12,3 +12,4 @@ quarto render Lecture-1-Artificial-Intelligence/course-overview.qmd --no-execute
 (exit) && quarto render Lecture-7-Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
 (exit) && quarto render Lecture-8-Generative-Networks/generative-networks.qmd --no-execute-daemon
 (exit) && quarto render Lecture-9-Advanced-Topics/advanced-topics.qmd --no-execute-daemon
+(exit) && quarto render index.qmd --no-execute-daemon
