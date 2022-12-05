@@ -10,3 +10,4 @@ quarto render Lecture-6-Computer-Vision/computer-vision.qmd --no-execute-daemon
 quarto render Lecture-7-Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
 quarto render Lecture-8-Generative-Networks/generative-networks.qmd --no-execute-daemon
 quarto render Lecture-9-Advanced-Topics/advanced-topics.qmd --no-execute-daemon
+quarto render index.qmd --no-execute-daemon
