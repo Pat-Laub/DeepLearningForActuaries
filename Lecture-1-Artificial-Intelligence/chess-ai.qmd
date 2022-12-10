@@ -317,12 +317,12 @@ def choose_move(board):
         board.pop()
     
     if board.turn == chess.WHITE:
-        bestScore = max(scores)
+        best_score = max(scores)
     else:
-        bestScore = min(scores)
+        best_score = min(scores)
     
     for move, score in zip(options, scores):
-        if score == bestScore:
+        if score == best_score:
             return move
 ```
 
@@ -383,13 +383,13 @@ for piece in PIECES:
     table += "<tr>"
 
     svg = chess.svg.piece(chess.Piece.from_symbol(piece), size="50px") 
-    numPiece = count_piece(board, piece)
-    valPiece = STANDARD_PIECE_VALUES[piece]
-    total += numPiece * valPiece
-    if numPiece * valPiece > 0:
-        vals.append(str(numPiece * valPiece))
+    num_piece = count_piece(board, piece)
+    val_piece = STANDARD_PIECE_VALUES[piece]
+    total += num_piece * val_piece
+    if num_piece * val_piece > 0:
+        vals.append(str(num_piece * val_piece))
     table += f'<td style="text-align: center">{svg}</td>'
-    table += f'<td style="text-align: center">{numPiece} &times {valPiece} = {numPiece * valPiece}</td>'
+    table += f'<td style="text-align: center">{num_piece} &times {val_piece} = {num_piece * val_piece}</td>'
     table += "</tr>"
 
 table += f'<td style="text-align: center">White</td>'
@@ -449,13 +449,13 @@ for piece in PIECES:
 
     piece = piece.lower()
     svg = chess.svg.piece(chess.Piece.from_symbol(piece), size="50px") 
-    numPiece = count_piece(board, piece)
-    valPiece = STANDARD_PIECE_VALUES[piece.upper()]
-    total += numPiece * valPiece
-    if numPiece * valPiece > 0:
-        vals.append(str(numPiece * valPiece))
+    num_piece = count_piece(board, piece)
+    val_piece = STANDARD_PIECE_VALUES[piece.upper()]
+    total += num_piece * val_piece
+    if num_piece * val_piece > 0:
+        vals.append(str(num_piece * val_piece))
     table += f'<td style="text-align: center">{svg}</td>'
-    table += f'<td style="text-align: center">{numPiece} &times {valPiece} = {numPiece * valPiece}</td>'
+    table += f'<td style="text-align: center">{num_piece} &times {val_piece} = {num_piece * val_piece}</td>'
     table += "</tr>"
 
 table += f'<td style="text-align: center">Black</td>'
@@ -492,17 +492,17 @@ def static_evaluation(board):
         else:
             return 0
 
-    pointsBalance = 0
+    points_balance = 0
     for square in chess.SQUARES:
         piece = board.piece_at(square)
         if piece:
-          pieceValue = STANDARD_PIECE_VALUES[piece.symbol().upper()]
+          piece_value = STANDARD_PIECE_VALUES[piece.symbol().upper()]
           if piece.symbol().isupper():
-              pointsBalance += pieceValue
+              points_balance += piece_value
           else:
-              pointsBalance -= pieceValue
+              points_balance -= piece_value
 
-    return pointsBalance
+    return points_balance
 ```
 
 ## Minimax pseudocode
@@ -557,16 +557,16 @@ def static_evaluation(board):
         else:
             return 0
 
-    pointsBalance = 0
+    points_balance = 0
     for square in chess.SQUARES:
         piece = board.piece_at(square)
         if piece:
-          pieceValue = STANDARD_PIECE_VALUES[piece.symbol().upper()]
+          piece_value = STANDARD_PIECE_VALUES[piece.symbol().upper()]
           if piece.symbol().isupper():
-              pointsBalance += pieceValue
+              points_balance += piece_value
           else:
-              pointsBalance -= pieceValue
-    return pointsBalance
+              points_balance -= piece_value
+    return points_balance
 ```
 
 ## Original Minimax (Simpler)
@@ -596,21 +596,21 @@ def minimax(board, depth):
     return static_evaluation(board)
   
   if board.turn == chess.WHITE:
-    maxEval = -math.inf
+    max_eval = -math.inf
     for move in board.legal_moves:
       board.push(move)
       score = minimax(board, depth-1)
       board.pop()
-      maxEval = max(maxEval, score)
-    return maxEval
+      max_eval = max(max_eval, score)
+    return max_eval
   else:
-    minEval = math.inf
+    min_eval = math.inf
     for move in board.legal_moves:
       board.push(move)
       score = minimax(board, depth-1)
       board.pop()
-      minEval = min(minEval, score)
-    return minEval
+      min_eval = min(min_eval, score)
+    return min_eval
 ```
 
 ## Basic Alpha-Beta Pruning Solution
@@ -622,27 +622,27 @@ def minimax_pruning(board, depth, alpha, beta):
     return static_evaluation(board)
   
   if board.turn == chess.WHITE:
-    maxEval = -math.inf
+    max_eval = -math.inf
     for move in board.legal_moves:
       board.push(move)
       score = minimax_pruning(board, depth-1, alpha, beta)
       board.pop()
-      maxEval = max(maxEval, score)
+      max_eval = max(max_eval, score)
       alpha = max(alpha, score)
       if beta <= alpha:
         break
-    return maxEval
+    return max_eval
   else:
-    minEval = math.inf
+    min_eval = math.inf
     for move in board.legal_moves:
       board.push(move)
       score = minimax_pruning(board, depth-1, alpha, beta)
       board.pop()
-      minEval = min(minEval, score)
+      min_eval = min(min_eval, score)
       beta = min(beta, score)
       if beta <= alpha:
         break
-    return minEval
+    return min_eval
 ```
 
 ## Adjust the call to it
@@ -665,27 +665,27 @@ def minimax_pruning(board, depth,
     return static_evaluation(board)
 
   if board.turn == chess.WHITE:
-    maxEval = -math.inf
+    max_eval = -math.inf
     for move in board.legal_moves:
       board.push(move)
       score = minimax_pruning(board, depth-1, alpha, beta)
       board.pop()
-      maxEval = max(maxEval, score)
+      max_eval = max(max_eval, score)
       alpha = max(alpha, score)
       if beta <= alpha:
         break
-    return maxEval
+    return max_eval
   else:
-    minEval = math.inf
+    min_eval = math.inf
     for move in board.legal_moves:
       board.push(move)
       score = minimax_pruning(board, depth-1, alpha, beta)
       board.pop()
-      minEval = min(minEval, score)
+      min_eval = min(min_eval, score)
       beta = min(beta, score)
       if beta <= alpha:
         break
-    return minEval
+    return min_eval
 ```
 
 ## Refactoring
@@ -722,9 +722,9 @@ def noisy_minimax_pruning(board, depth,
   
   print((2-depth) * 2 * " ", f"Start MM(depth={depth}, alpha={alpha}, beta={beta})")
   if depth == 0 or board.is_game_over():
-    staticEval = static_evaluation(board)
-    print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {staticEval}")
-    return staticEval
+    static_eval = static_evaluation(board)
+    print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {static_eval}")
+    return static_eval
 
   scores = []
   for move in board.legal_moves:
@@ -741,9 +741,9 @@ def noisy_minimax_pruning(board, depth,
     if beta <= alpha:
       break
   
-  finalScore = max(scores) if board.turn == chess.WHITE else min(scores)
-  print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {finalScore}")
-  return finalScore
+  final_score = max(scores) if board.turn == chess.WHITE else min(scores)
+  print((2-depth) * 2 * " ", f"End  MM(depth={depth}, alpha={alpha}, beta={beta}) = {final_score}")
+  return final_score
 ```
 
 ## Making a simple test case
@@ -768,28 +768,28 @@ def buggy_minimax_pruning(board, depth, alpha, beta):
     return static_evaluation(board)
   
   if board.turn == chess.WHITE:
-    maxEval = -1_000_000
+    max_eval = -1_000_000
     for move in board.legal_moves:
       board.push(move)
       eval = minimax_pruning(board, depth-1, alpha, beta)
-      maxEval = max(maxEval, eval)
+      max_eval = max(max_eval, eval)
       alpha = max(alpha, eval)
       if beta <= alpha:
         break
       board.pop()
-    return maxEval
+    return max_eval
   else:
-    minEval = math.inf
+    min_eval = math.inf
     alpha = -math.inf
     beta = math.inf
     for move in board.legal_moves:
       eval = minimax_pruning(board.push(move), depth-1, alpha, beta)
       
-      minEval = min(minEval, eval)
+      min_eval = min(min_eval, eval)
       beta = min(beta, eval)
       if beta <= alpha:
         break
-    return minEval
+    return min_eval
 ```
 
 <!-- # Setting up a game -->
@@ -798,35 +798,35 @@ def buggy_minimax_pruning(board, depth, alpha, beta):
 #| echo: false
 import random 
 
-def choose_move(board, depth=2, alphaBetaPruning=False):
+def choose_move(board, depth=2, alpha_beta_pruning=False):
   scores = []
   moves = list(board.legal_moves)
   for move in moves:
     board.push(move)
-    if alphaBetaPruning:
+    if alpha_beta_pruning:
       score = minimax_pruning(board, depth-1)
     else:
       score = minimax(board, depth-1)
     board.pop()
     scores.append(score)
 
-  bestScore = max(scores) if (board.turn == chess.WHITE) else min(scores)
-  bestMoves = [move for move, score in zip(moves, scores) if score == bestScore]
-  return random.choice(bestMoves)
+  best_score = max(scores) if (board.turn == chess.WHITE) else min(scores)
+  best_moves = [move for move, score in zip(moves, scores) if score == best_score]
+  return random.choice(best_moves)
 ```
 
 ```{python}
 #| echo: false
-def play_game(maxMoves=5, depths=(3, 3), alphaBetaPruning=False):
+def play_game(max_moves=5, depths=(3, 3), alpha_beta_pruning=False):
   board = chess.Board()
-  moveNumber = 0
-  while not board.is_game_over() and moveNumber < maxMoves:
+  move_number = 0
+  while not board.is_game_over() and move_number < max_moves:
     if board.turn == chess.WHITE:
-      move = choose_move(board, depths[0], alphaBetaPruning=alphaBetaPruning)
+      move = choose_move(board, depths[0], alpha_beta_pruning=alpha_beta_pruning)
     else:
-      move = choose_move(board, depths[1], alphaBetaPruning=alphaBetaPruning)
+      move = choose_move(board, depths[1], alpha_beta_pruning=alpha_beta_pruning)
     board.push(move)
-    moveNumber += 1
+    move_number += 1
   return board
 ```
 
@@ -847,7 +847,7 @@ def minimax_move(board, depth, alpha=-math.inf, beta=math.inf,
   if depth == 0 or board.is_game_over():
     return static_evaluation(board), None
 
-  whitesTurn = board.turn == chess.WHITE
+  whites_turn = board.turn == chess.WHITE
   scores = []
   for move in board.legal_moves:
     board.push(move)
@@ -856,7 +856,7 @@ def minimax_move(board, depth, alpha=-math.inf, beta=math.inf,
     board.pop()
 
     if pruning:
-      if whitesTurn:
+      if whites_turn:
         alpha = max(alpha, score)
       else:
         beta = min(beta, score)
@@ -864,9 +864,9 @@ def minimax_move(board, depth, alpha=-math.inf, beta=math.inf,
       if beta <= alpha:
         break
 
-  bestScore = max(scores) if whitesTurn else min(scores) 
+  best_score = max(scores) if whites_turn else min(scores) 
   for move, score in zip(board.legal_moves, scores):
-    if score == bestScore:
+    if score == best_score:
       return score, move
 ```
 
@@ -874,17 +874,17 @@ def minimax_move(board, depth, alpha=-math.inf, beta=math.inf,
 
 ```{python}
 random.seed(42)
-%time slowGame = play_game(maxMoves=5, depths=(3, 3))
+%time slow_game = play_game(max_moves=5, depths=(3, 3))
 ```
 
 ```{python}
 random.seed(42)
-%time fastGame = play_game(maxMoves=5, depths=(3, 3), \
-                           alphaBetaPruning=True)
+%time fast_game = play_game(max_moves=5, depths=(3, 3), \
+                           alpha_beta_pruning=True)
 ```
 
 ```{python}
-slowGame.move_stack == fastGame.move_stack
+slow_game.move_stack == fast_game.move_stack
 ```
 
 ```{python}
@@ -898,30 +898,30 @@ for i in range(1_000_000):
 
 ```{python}
 #| echo: false
-def play_game(maxMoves=5, depths=(4, 4), alphaBetaPruning=False):
+def play_game(max_moves=5, depths=(4, 4), alpha_beta_pruning=False):
   board = chess.Board()
-  moveNumber = 0
-  while not board.is_game_over() and moveNumber < maxMoves:
+  move_number = 0
+  while not board.is_game_over() and move_number < max_moves:
     if board.turn == chess.WHITE:
-      _, move = minimax_move(board, depths[0], pruning=alphaBetaPruning)
+      _, move = minimax_move(board, depths[0], pruning=alpha_beta_pruning)
     else:
-      _, move = minimax_move(board, depths[1], pruning=alphaBetaPruning)
+      _, move = minimax_move(board, depths[1], pruning=alpha_beta_pruning)
     board.push(move)
-    moveNumber += 1
+    move_number += 1
   return board
 ```
 
 ```{python}
-%time slowGame = play_game(maxMoves=5, depths=(4, 3))
+%time slow_game = play_game(max_moves=5, depths=(4, 3))
 ```
 
 ```{python}
-%time fastGame = play_game(maxMoves=5, depths=(4, 3), \
-                           alphaBetaPruning=True)
+%time fast_game = play_game(max_moves=5, depths=(4, 3), \
+                           alpha_beta_pruning=True)
 ```
 
 ```{python}
-slowGame.move_stack == fastGame.move_stack
+slow_game.move_stack == fast_game.move_stack
 ```
 
 ## Further chess/AI things

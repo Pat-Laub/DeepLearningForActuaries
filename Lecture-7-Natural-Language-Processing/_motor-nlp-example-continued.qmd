@@ -67,13 +67,13 @@ pd.DataFrame(X_train_txt, columns=vocab, index=X_train.index)
 
 ```{python}
 random.seed(42)
-tfidfModel = keras.models.Sequential([
+tfidf_model = keras.models.Sequential([
     layers.Dense(250, "relu", input_dim=X_train_txt.shape[1]),
     layers.Dense(1, "sigmoid")
 ])
 
-tfidfModel.compile("adam", "BinaryCrossentropy", metrics=["accuracy"])
-tfidfModel.summary(print_fn=skip_empty)
+tfidf_model.compile("adam", "BinaryCrossentropy", metrics=["accuracy"])
+tfidf_model.summary(print_fn=skip_empty)
 ```
 
 ## Fit & evaluate
@@ -83,17 +83,17 @@ es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("tfidfModel.h5").exists():
-    tfidfModel.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+    tfidf_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
         validation_data=(X_val_txt, y_val), verbose=0)
-    tfidfModel.save("tfidfModel.h5")
+    tfidf_model.save("tfidfModel.h5")
 else:
-    tfidfModel = keras.models.load_model("tfidfModel.h5")
+    tfidf_model = keras.models.load_model("tfidfModel.h5")
 ```
 ```{python}
-tfidfModel.evaluate(X_train_txt, y_train, verbose=0)
+tfidf_model.evaluate(X_train_txt, y_train, verbose=0)
 ```
 ```{python}
-tfidfModel.evaluate(X_val_txt, y_val, verbose=0)
+tfidf_model.evaluate(X_val_txt, y_val, verbose=0)
 ```
 
 ## Keep text as sequence of tokens
@@ -131,10 +131,10 @@ onehot = tf.one_hot(inputs, depth=max_tokens)
 x = layers.Bidirectional(layers.LSTM(32))(onehot)
 x = layers.Dropout(0.5)(x) 
 outputs = layers.Dense(1, activation="sigmoid")(x)    
-oneHotModel = keras.Model(inputs, outputs)
-oneHotModel.compile(optimizer="rmsprop",
+one_hot_model = keras.Model(inputs, outputs)
+one_hot_model.compile(optimizer="rmsprop",
     loss="binary_crossentropy", metrics=["accuracy"])
-oneHotModel.summary(print_fn=skip_empty)
+one_hot_model.summary(print_fn=skip_empty)
 ```
 
 ## Fit & evaluate
@@ -144,18 +144,18 @@ es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("oneHotModel.h5").exists():
-    oneHotModel.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+    one_hot_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
         validation_data=(X_val_txt, y_val), verbose=0);
-    oneHotModel.save("oneHotModel.h5")
+    one_hot_model.save("oneHotModel.h5")
 else:
-    oneHotModel = keras.models.load_model("oneHotModel.h5")
+    one_hot_model = keras.models.load_model("oneHotModel.h5")
 ```
 
 ```{python}
-oneHotModel.evaluate(X_train_txt, y_train, verbose=0)
+one_hot_model.evaluate(X_train_txt, y_train, verbose=0)
 ```
 ```{python}
-oneHotModel.evaluate(X_val_txt, y_val, verbose=0)
+one_hot_model.evaluate(X_val_txt, y_val, verbose=0)
 ```
 
 ## Custom embeddings
@@ -167,9 +167,9 @@ embedded = layers.Embedding(input_dim=max_tokens, output_dim=32,
 x = layers.Bidirectional(layers.LSTM(32))(embedded)
 x = layers.Dropout(0.5)(x)
 outputs = layers.Dense(1, activation="sigmoid")(x)
-embedLSTM = keras.Model(inputs, outputs)
-embedLSTM.compile("rmsprop", "binary_crossentropy", metrics=["accuracy"])
-embedLSTM.summary(print_fn=skip_empty)
+embed_lstm = keras.Model(inputs, outputs)
+embed_lstm.compile("rmsprop", "binary_crossentropy", metrics=["accuracy"])
+embed_lstm.summary(print_fn=skip_empty)
 ```
 
 ## Fit & evaluate
@@ -179,19 +179,19 @@ es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("embedLSTM.h5").exists():
-    embedLSTM.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+    embed_lstm.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
         validation_data=(X_val_txt, y_val), verbose=0);
-    embedLSTM.save("embedLSTM.h5")
+    embed_lstm.save("embedLSTM.h5")
 else:
-    embedLSTM = keras.models.load_model("embedLSTM.h5")
+    embed_lstm = keras.models.load_model("embedLSTM.h5")
 ```
 
 ```{python}
-embedLSTM.evaluate(X_train_txt, y_train, verbose=0)
+embed_lstm.evaluate(X_train_txt, y_train, verbose=0)
 ```
 ```{python}
-embedLSTM.evaluate(X_val_txt, y_val, verbose=0)
+embed_lstm.evaluate(X_val_txt, y_val, verbose=0)
 ```
 ```{python}
-embedLSTM.evaluate(X_test_txt, y_test, verbose=0)
+embed_lstm.evaluate(X_test_txt, y_test, verbose=0)
 ```

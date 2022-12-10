@@ -18,42 +18,42 @@ if not Path("mandarin-split").exists():
 
 from tensorflow.keras.utils import image_dataset_from_directory
 
-dataDir = "mandarin-split"
-batchSize = 32
-imgHeight = 80
-imgWidth = 80
-imgSize = (imgHeight, imgWidth)
+data_dir = "mandarin-split"
+batch_size = 32
+img_height = 80
+img_width = 80
+img_size = (img_height, img_width)
 
-trainDS = image_dataset_from_directory(
-    dataDir + "/train",
-    image_size=imgSize,
-    batch_size=batchSize,
+train_ds = image_dataset_from_directory(
+    data_dir + "/train",
+    image_size=img_size,
+    batch_size=batch_size,
     shuffle=False,
     color_mode="grayscale")
 
-valDS = image_dataset_from_directory(
-    dataDir + "/val",
-    image_size=imgSize,
-    batch_size=batchSize,
+val_ds = image_dataset_from_directory(
+    data_dir + "/val",
+    image_size=img_size,
+    batch_size=batch_size,
     shuffle=False,
     color_mode="grayscale")
 
-testDS = image_dataset_from_directory(
-    dataDir + "/test",
-    image_size=imgSize,
-    batch_size=batchSize,
+test_ds = image_dataset_from_directory(
+    data_dir + "/test",
+    image_size=img_size,
+    batch_size=batch_size,
     shuffle=False,
     color_mode="grayscale")
 
 # NB: Need shuffle=False earlier for these X & y to line up.
-X_train = np.concatenate(list(trainDS.map(lambda x, y: x)))
-y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
 
-X_val = np.concatenate(list(valDS.map(lambda x, y: x)))
-y_val = np.concatenate(list(valDS.map(lambda x, y: y)))
+X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
+y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
 
-X_test = np.concatenate(list(testDS.map(lambda x, y: x)))
-y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
+X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
+y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ```
 
 Loading the dataset off-screen (using [Lecture 6 code](https://pat-laub.github.io/DeepLearningMaterials/Lecture-6-Computer-Vision/computer-vision.html#/downloading-the-dataset)).
@@ -78,7 +78,7 @@ plt.imshow(X_train[42], cmap="gray");
 ::: column
 ```{python}
 plt.imshow(X_train[42], cmap="gray");
-print(imgWidth * imgHeight)
+print(img_width * img_height)
 ```
 :::
 ::: column
@@ -97,19 +97,19 @@ print(imgWidth * imgHeight)
 ## Make a basic autoencoder
 
 ```{python}
-numHiddenLayer = 400
-print(f"Compress from {imgHeight * imgWidth} pixels to {numHiddenLayer} latent variables.")
+num_hidden_layer = 400
+print(f"Compress from {img_height * img_width} pixels to {num_hidden_layer} latent variables.")
 ```
 
 ```{python}
 random.seed(123)
 
 model = keras.models.Sequential([
-    layers.Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
     layers.Flatten(),
-    layers.Dense(numHiddenLayer, "relu"),
-    layers.Dense(imgHeight*imgWidth, "sigmoid"),
-    layers.Reshape((imgHeight, imgWidth, 1)),
+    layers.Dense(num_hidden_layer, "relu"),
+    layers.Dense(img_height*img_width, "sigmoid"),
+    layers.Reshape((img_height, img_width, 1)),
     layers.Rescaling(255),
 ])
 
@@ -171,13 +171,13 @@ plt.imshow(255 - X_train[42], cmap="gray");
 random.seed(123)
 
 model = keras.models.Sequential([
-    layers.Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
     layers.Lambda(lambda x: 1 - x),
     layers.Flatten(),
-    layers.Dense(numHiddenLayer, "relu"),
-    layers.Dense(imgHeight*imgWidth, "sigmoid"),
+    layers.Dense(num_hidden_layer, "relu"),
+    layers.Dense(img_height*img_width, "sigmoid"),
     layers.Lambda(lambda x: 1 - x),
-    layers.Reshape((imgHeight, imgWidth, 1)),
+    layers.Reshape((img_height, img_width, 1)),
     layers.Rescaling(255),
 ])
 
@@ -227,7 +227,7 @@ plt.imshow(X_val_rec[42], cmap="gray");
 random.seed(123)
 
 encoder = keras.models.Sequential([
-    layers.Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
     layers.Lambda(lambda x: 1 - x),
     layers.Conv2D(16, 3, padding="same", activation="relu"),
     layers.MaxPooling2D(),
@@ -236,7 +236,7 @@ encoder = keras.models.Sequential([
     layers.Conv2D(64, 3, padding="same", activation="relu"),
     layers.MaxPooling2D(),
     layers.Flatten(),
-    layers.Dense(numHiddenLayer, "relu")
+    layers.Dense(num_hidden_layer, "relu")
 ])
 ```
 
@@ -244,7 +244,7 @@ encoder = keras.models.Sequential([
 
 ```{python}
 decoder = keras.models.Sequential([
-    keras.Input(shape=(numHiddenLayer,)),
+    keras.Input(shape=(num_hidden_layer,)),
     layers.Dense(20*20),
     layers.Reshape((20, 20, 1)),
     layers.Conv2D(128, 3, padding="same", activation="relu"),

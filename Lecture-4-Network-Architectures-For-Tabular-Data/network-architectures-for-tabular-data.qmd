@@ -54,14 +54,14 @@ matplotlib.pyplot.rcParams['font.family'] = "serif"
 matplotlib.pyplot.rcParams['axes.spines.right'] = False
 matplotlib.pyplot.rcParams['axes.spines.top'] = False
 
-def squareFig():
+def square_fig():
     return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
 
 def add_diagonal_line():
     xl = matplotlib.pyplot.xlim()
     yl = matplotlib.pyplot.ylim()
-    shortestSide = min(xl[1], yl[1])
-    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+    shortest_side = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortest_side], [0, shortest_side], color="black", linestyle="--")
 
 import pandas
 pandas.options.display.max_rows = 6
@@ -259,9 +259,9 @@ X_train.head(3)
 ::: column
 ```{python}
 #| echo: false
-catCols = ["Area", "VehGas", "VehBrand", "Region"]
-otherCols = [col for col in X_train.columns if col not in catCols]
-columns = catCols[:2] + otherCols
+cat_cols = ["Area", "VehGas", "VehBrand", "Region"]
+other_cols = [col for col in X_train.columns if col not in cat_cols]
+columns = cat_cols[:2] + other_cols
 # columns = ct.get_feature_names_out()
 X_train_ct_df = pd.DataFrame(X_train_ct, columns=columns, index=X_train.index)
 ```
@@ -414,23 +414,23 @@ hist.history["val_loss"][-1]
 ## One-length tuples
 
 ```{python}
-usingBracketsInMath = (2 + 4) * 3
-usingBracketsToSimplify = (1 + 1 == 2)
+using_brackets_in_math = (2 + 4) * 3
+using_brackets_to_simplify = (1 + 1 == 2)
 ```
 
 ```{python}
-failureOfATuple = ("Snowy")
-type(failureOfATuple)
+failure_of_atuple = ("Snowy")
+type(failure_of_atuple)
 ```
 
 ```{python}
-happySoloTuple = ("Snowy",)
-type(happySoloTuple)
+happy_solo_tuple = ("Snowy",)
+type(happy_solo_tuple)
 ```
 
 ```{python}
-cheekySoloList = ["Snowy"]
-type(cheekySoloList)
+cheeky_solo_list = ["Snowy"]
+type(cheeky_solo_list)
 ```
 
 ## Wide & Deep network
@@ -537,24 +537,24 @@ X_train_rest = X_train_ct[:,2:]; X_test_rest = X_test_ct[:,2:]
 Make a Keras `Input` for: vehicle brand, region, & others.
 
 ```{python}
-vehBrand = Input(shape=(1,), name="vehBrand")
+veh_brand = Input(shape=(1,), name="vehBrand")
 region = Input(shape=(1,), name="region")
-otherInputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+other_inputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
 ```
 Create embeddings and join them with the other inputs. 
 ```{python}
 from tensorflow.keras.layers import Reshape
 
 random.seed(1337)
-vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
-    name="vehBrandEE")(vehBrand)
-vehBrandEE = Reshape(target_shape=(2,))(vehBrandEE)
+veh_brand_ee = Embedding(input_dim=NUM_BRANDS, output_dim=2,
+    name="vehBrandEE")(veh_brand)
+veh_brand_ee = Reshape(target_shape=(2,))(veh_brand_ee)
 
-regionEE = Embedding(input_dim=NUM_REGIONS, output_dim=2,
+region_ee = Embedding(input_dim=NUM_REGIONS, output_dim=2,
     name="regionEE")(region)
-regionEE = Reshape(target_shape=(2,))(regionEE)
+region_ee = Reshape(target_shape=(2,))(region_ee)
 
-x = Concatenate(name="combined")([vehBrandEE, regionEE, otherInputs])
+x = Concatenate(name="combined")([veh_brand_ee, region_ee, other_inputs])
 ```
 
 ## Complete the model and fit it
@@ -565,7 +565,7 @@ Feed the combined embeddings & continuous inputs to some normal dense layers.
 x = Dense(30, "relu", name="hidden")(x)
 out = Dense(1, "exponential", name="out")(x)
 
-model = Model([vehBrand, region, otherInputs], out)
+model = Model([veh_brand, region, other_inputs], out)
 model.compile(optimizer="adam", loss="poisson")
 
 hist = model.fit((X_train_brand, X_train_region, X_train_rest),
@@ -592,12 +592,12 @@ plot_model(model, layer_range=("", "combined"), show_shapes=True)
 random.seed(1337)
 inputs = Input(shape=(X_train_ct.shape[1],))
 
-vehBrandEE = Embedding(input_dim=NUM_BRANDS, output_dim=2,
+veh_brand_ee = Embedding(input_dim=NUM_BRANDS, output_dim=2,
     name="vehBrandEE")(inputs[:,0])
-regionEE = Embedding(input_dim=NUM_REGIONS, output_dim=2,
+region_ee = Embedding(input_dim=NUM_REGIONS, output_dim=2,
     name="regionEE")(inputs[:,1])
 
-x = Concatenate(name="combined")([vehBrandEE, regionEE, inputs[:,2:]])
+x = Concatenate(name="combined")([veh_brand_ee, region_ee, inputs[:,2:]])
 x = Dense(30, "relu", name="hidden")(x)
 out = Dense(1, "exponential", name="out")(x)
 
@@ -663,7 +663,7 @@ Organise the inputs:
 
 ```{python}
 exposure = Input(shape=(1,), name="exposure")
-otherInputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+other_inputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
 ```
 
 ## Make & fit the model
@@ -672,7 +672,7 @@ Feed the continuous inputs to some normal dense layers.
 
 ```{python}
 random.seed(1337)
-x = Dense(30, "relu", name="hidden1")(otherInputs)
+x = Dense(30, "relu", name="hidden1")(other_inputs)
 x = Dense(30, "relu", name="hidden2")(x)
 lambda_ = Dense(1, "exponential", name="lambda")(x)
 ```
@@ -681,7 +681,7 @@ lambda_ = Dense(1, "exponential", name="lambda")(x)
 from tensorflow.keras.layers import Multiply
 
 out = Multiply(name="out")([lambda_, exposure])
-model = Model([exposure, otherInputs], out)
+model = Model([exposure, other_inputs], out)
 model.compile(optimizer="adam", loss="poisson")
 
 es = EarlyStopping(patience=10, restore_best_weights=True, verbose=1)
@@ -821,7 +821,7 @@ model.compile(optimizer='adam',
 ```
 
 ```{python}
-def InputDataTransformer(x):
+def input_data_transformer(x):
   return {
   'kilometres_input': (x.Kilometres.values - 1) / 5,
   'zone_input': x.Zone.values - 1,
@@ -837,7 +837,7 @@ Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://a
 
 ```{python}
 model.fit(
-  InputDataTransformer(train),
+  input_data_transformer(train),
   {
     'frequency': train.frequency.values/train_average_frequency,
     'severity': train.severity.values/train_average_severity,
@@ -940,8 +940,8 @@ model = Sequential([
     Dense(30, activation="relu"),
     Dense(1),
 ])
-preActivations = model.predict(X_train, verbose=0) 
-plt.hist(preActivations, bins=100);
+pre_activations = model.predict(X_train, verbose=0) 
+plt.hist(pre_activations, bins=100);
 ```
 
 ## Check the output of first layer
@@ -952,20 +952,20 @@ model = Sequential([
     Dense(30, activation="relu", name="hidden"),
     Dense(1),
 ])
-hiddenLayer = model.get_layer("hidden") # or simply 'model.layers[0]'
+hidden_layer = model.get_layer("hidden") # or simply 'model.layers[0]'
 ```
 
 ```{python}
 #| error: true
-hiddenLayer(X_train.head(1)) # Won't work as 'X_train' is a DataFrame.
+hidden_layer(X_train.head(1)) # Won't work as 'X_train' is a Data_frame.
 ```
 
 ```{python}
-hiddenLayer(X_train.head(1).to_numpy()) 
+hidden_layer(X_train.head(1).to_numpy()) 
 ```
 
 ```{python}
-hiddenLayer(X_train.head(1).to_numpy()).numpy()
+hidden_layer(X_train.head(1).to_numpy()).numpy()
 ```
 
 ## Revisit our first ever neural network
@@ -1063,14 +1063,14 @@ def count_dead(seed):
 Then we can try out different seeds:
 
 ```{python}
-numDead = [count_dead(seed) for seed in range(1_000)]
-np.median(numDead)
+num_dead = [count_dead(seed) for seed in range(1_000)]
+np.median(num_dead)
 ```
 
 ## Look at distribution of dead ReLUs
 
 ```{python}
-labels, counts = np.unique(numDead, return_counts=True)
+labels, counts = np.unique(num_dead, return_counts=True)
 plt.bar(labels, counts, align='center');
 ```
 
@@ -1121,7 +1121,7 @@ is called $\ell_2$ regularisation.
 ```{python}
 from tensorflow.keras.regularizers import l1, l2
 
-def l1_model(regulariserStrength=0.01):
+def l1_model(regulariser_strength=0.01):
   random.seed(123)
   model = Sequential([
       Dense(30,
@@ -1129,7 +1129,7 @@ def l1_model(regulariserStrength=0.01):
         name="hidden1"),
       Dense(30,
         activation="leaky_relu",
-        kernel_regularizer=l1(regulariserStrength),
+        kernel_regularizer=l1(regulariser_strength),
         name="hidden2"),
       Dense(1, 
         activation="exponential",
@@ -1172,7 +1172,7 @@ plt.hist(weights, bins=100);
 
 ```{python}
 #| echo: false
-def l2_model(regulariserStrength=0.01):
+def l2_model(regulariser_strength=0.01):
   random.seed(123)
   model = Sequential([
       Dense(30,
@@ -1180,7 +1180,7 @@ def l2_model(regulariserStrength=0.01):
         name="hidden1"),
       Dense(30,
         activation="leaky_relu",
-        kernel_regularizer=l2(regulariserStrength),
+        kernel_regularizer=l2(regulariser_strength),
         name="hidden2"),
       Dense(1, 
         activation="exponential",
@@ -1327,12 +1327,12 @@ predictions[0]
 ```
 
 ```{python}
-allPredictions = np.concatenate(predictions, axis=1)
-allPredictions
+all_predictions = np.concatenate(predictions, axis=1)
+all_predictions
 ```
 
 ```{python}
-np.mean(allPredictions, axis=1)
+np.mean(all_predictions, axis=1)
 ```
 
 # Combining models {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}

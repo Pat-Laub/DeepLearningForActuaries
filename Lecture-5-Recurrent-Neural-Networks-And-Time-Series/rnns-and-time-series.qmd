@@ -56,20 +56,20 @@ matplotlib.pyplot.rcParams['font.family'] = "serif"
 matplotlib.pyplot.rcParams['axes.spines.right'] = False
 matplotlib.pyplot.rcParams['axes.spines.top'] = False
 
-def squareFig():
+def square_fig():
     return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
 
 def add_diagonal_line():
     xl = matplotlib.pyplot.xlim()
     yl = matplotlib.pyplot.ylim()
 
-    minLeft = min(xl[0], yl[0])
-    maxRight = max(xl[1], yl[1])
+    min_left = min(xl[0], yl[0])
+    max_right = max(xl[1], yl[1])
 
-    matplotlib.pyplot.plot([minLeft, maxRight], [minLeft, maxRight], color="black", linestyle="--")
+    matplotlib.pyplot.plot([min_left, max_right], [min_left, max_right], color="black", linestyle="--")
 
-    matplotlib.pyplot.xlim([minLeft, maxRight])
-    matplotlib.pyplot.ylim([minLeft, maxRight])
+    matplotlib.pyplot.xlim([min_left, max_right])
+    matplotlib.pyplot.ylim([min_left, max_right])
     
     # shortestLeftSide = max(xl[0], yl[0])
     # shortestRightSide = min(xl[1], yl[1])
@@ -273,19 +273,19 @@ Source: Marcus Lautier (2022).
 
 ```{python}
 #|echo: false
-housePrices = pd.read_csv("sa3-capitals-house-price-index.csv", index_col=0)
-housePrices.index = pd.to_datetime(housePrices.index)
-housePrices.index.name = "Date"
-housePrices = housePrices[housePrices.index > pd.to_datetime("1990")]
-housePrices.columns = ["Brisbane", "East_Bris", "North_Bris", "West_Bris",
+house_prices = pd.read_csv("sa3-capitals-house-price-index.csv", index_col=0)
+house_prices.index = pd.to_datetime(house_prices.index)
+house_prices.index.name = "Date"
+house_prices = house_prices[house_prices.index > pd.to_datetime("1990")]
+house_prices.columns = ["Brisbane", "East_Bris", "North_Bris", "West_Bris",
   "Melbourne", "North_Syd", "Sydney"]
-housePrices.plot(legend=False);
+house_prices.plot(legend=False);
 ```
 
 ## Percentage changes {.smaller}
 
 ```{python}
-changes = housePrices.pct_change().dropna()
+changes = house_prices.pct_change().dropna()
 changes.round(2)
 ```
 
@@ -337,19 +337,19 @@ changes.plot(legend=False);
 ## Split _without_ shuffling
 
 ```{python}
-numTrain = int(0.6 * len(changes))
-numVal = int(0.2 * len(changes))
-numTest = len(changes) - numTrain - numVal
-print(f"# Train: {numTrain}, # Val: {numVal}, # Test: {numTest}")
+num_train = int(0.6 * len(changes))
+num_val = int(0.2 * len(changes))
+num_test = len(changes) - num_train - num_val
+print(f"# Train: {num_train}, # Val: {num_val}, # Test: {num_test}")
 ```
 ```{python}
 #| echo: false
-changes.iloc[:numTrain,0].plot(c=colors[0], lw=1, alpha=0.5);
-changes.iloc[numTrain:(numTrain+numVal),0].plot(c=colors[1], ax=plt.gca(), lw=1, alpha=0.5);
-changes.iloc[(numTrain+numVal):,0].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5);
-changes.iloc[:numTrain,1:].plot(c=colors[0], ax=plt.gca(), lw=1, alpha=0.5);
-changes.iloc[numTrain:(numTrain+numVal),1:].plot(c=colors[1], ax=plt.gca(), lw=1, alpha=0.5);
-changes.iloc[(numTrain+numVal):,1:].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5);
+changes.iloc[:num_train,0].plot(c=colors[0], lw=1, alpha=0.5);
+changes.iloc[num_train:(num_train+num_val),0].plot(c=colors[1], ax=plt.gca(), lw=1, alpha=0.5);
+changes.iloc[(num_train+num_val):,0].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5);
+changes.iloc[:num_train,1:].plot(c=colors[0], ax=plt.gca(), lw=1, alpha=0.5);
+changes.iloc[num_train:(num_train+num_val),1:].plot(c=colors[1], ax=plt.gca(), lw=1, alpha=0.5);
+changes.iloc[(num_train+num_val):,1:].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5);
 plt.legend(["Train", "Val", "Test"], frameon=False, ncol=3);
 ```
 
@@ -366,14 +366,14 @@ Keras has a built-in method for converting a time series into subsequences/chunk
 from tensorflow.keras.utils import timeseries_dataset_from_array
 
 integers = range(10)                                
-dummyDataset = timeseries_dataset_from_array(
+dummy_dataset = timeseries_dataset_from_array(
     data=integers[:-3],                                 
     targets=integers[3:],                               
     sequence_length=3,                                      
     batch_size=2,                                           
 )
 
-for inputs, targets in dummyDataset:
+for inputs, targets in dummy_dataset:
     for i in range(inputs.shape[0]):
         print([int(x) for x in inputs[i]], int(targets[i]))
 ```
@@ -391,29 +391,29 @@ Source: Code snippet in Chapter 10 of Chollet.
 ::: column
 ```{python}
 # Num. of input time series.
-numTS = changes.shape[1]
+num_ts = changes.shape[1]
 
 # How many prev. months to use.
-seqLength = 6
+seq_length = 6
 
 # Predict the next month ahead.
 ahead = 1
 
 # The index of the first target.
-delay = (seqLength+ahead-1)
+delay = (seq_length+ahead-1)
 ```
 :::
 ::: column
 ```{python}
 # Which suburb to predict.
-targetSuburb = changes["Sydney"]
+target_suburb = changes["Sydney"]
 
-trainDS = \
+train_ds = \
   timeseries_dataset_from_array(
     changes[:-delay],
-    targets=targetSuburb[delay:],
-    sequence_length=seqLength,
-    end_index=numTrain)
+    targets=target_suburb[delay:],
+    sequence_length=seq_length,
+    end_index=num_train)
 ```
 :::
 :::
@@ -421,23 +421,23 @@ trainDS = \
 ::: columns
 ::: column
 ```{python}
-valDS = \
+val_ds = \
   timeseries_dataset_from_array(
     changes[:-delay],
-    targets=targetSuburb[delay:],
-    sequence_length=seqLength,
-    start_index=numTrain,
-    end_index=numTrain+numVal)
+    targets=target_suburb[delay:],
+    sequence_length=seq_length,
+    start_index=num_train,
+    end_index=num_train+num_val)
 ```
 :::
 ::: column
 ```{python}
-testDS = \
+test_ds = \
   timeseries_dataset_from_array(
     changes[:-delay],
-    targets=targetSuburb[delay:],
-    sequence_length=seqLength,
-    start_index=numTrain+numVal)
+    targets=target_suburb[delay:],
+    sequence_length=seq_length,
+    start_index=num_train+num_val)
 ```
 :::
 :::
@@ -446,8 +446,8 @@ testDS = \
 
 The `Dataset` object can be handed to Keras directly, but if we really need a numpy array, we can run:
 ```{python}
-X_train = np.concatenate(list(trainDS.map(lambda x, y: x)))
-y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
 ```
 
 The shape of our training set is now:
@@ -463,9 +463,9 @@ y_train.shape
 Later, we need the targets as numpy arrays:
 
 ```{python}
-y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
-y_val = np.concatenate(list(valDS.map(lambda x, y: y)))
-y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
+y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
+y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ```
 
 ## A dense network
@@ -473,25 +473,25 @@ y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
 ```{python}
 from tensorflow.keras.layers import Input, Flatten
 random.seed(1)
-modelDense = Sequential([
-    Input(shape=(seqLength, numTS)),
+model_dense = Sequential([
+    Input(shape=(seq_length, num_ts)),
     Flatten(),
     Dense(50, activation="leaky_relu"),
     Dense(20, activation="leaky_relu"),
     Dense(1, activation="linear")
 ])
-modelDense.compile(loss="mse", optimizer="adam")
-print(f"This model has {modelDense.count_params()} parameters.")
+model_dense.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_dense.count_params()} parameters.")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
-%time hist = modelDense.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0);
+%time hist = model_dense.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0);
 ```
 
 ## Plot the model
 ```{python}
 from tensorflow.keras.utils import plot_model
-plot_model(modelDense, show_shapes=True)
+plot_model(model_dense, show_shapes=True)
 ```
 
 ## Assess the fits
@@ -504,14 +504,14 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelDense.evaluate(valDS, verbose=0)
+model_dense.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
 
 ```{python}
 #| echo: false
-y_pred = modelDense.predict(valDS, verbose=0)
+y_pred = model_dense.predict(val_ds, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -528,16 +528,16 @@ from tensorflow.keras.layers import SimpleRNN
 
 random.seed(1)
 
-modelSimple = Sequential([
-    SimpleRNN(50, input_shape=(seqLength, numTS)),
+model_simple = Sequential([
+    SimpleRNN(50, input_shape=(seq_length, num_ts)),
     Dense(1, activation="linear")
 ])
-modelSimple.compile(loss="mse", optimizer="adam")
-print(f"This model has {modelSimple.count_params()} parameters.")
+model_simple.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_simple.count_params()} parameters.")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
-%time hist = modelSimple.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0);
+%time hist = model_simple.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0);
 ```
 
 ## Assess the fits
@@ -550,19 +550,19 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelSimple.evaluate(valDS, verbose=0)
+model_simple.evaluate(val_ds, verbose=0)
 ```
 
 ## Plot the model
 ```{python}
-plot_model(modelSimple, show_shapes=True)
+plot_model(model_simple, show_shapes=True)
 ```
 
 ## Plotting the predictions {.smaller}
 
 ```{python}
 #| echo: false
-y_pred = modelSimple.predict(valDS, verbose=0)
+y_pred = model_simple.predict(val_ds, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -579,17 +579,17 @@ from tensorflow.keras.layers import LSTM
 
 random.seed(1)
 
-modelLSTM = Sequential([
-    LSTM(50, input_shape=(seqLength, numTS)),
+model_lstm = Sequential([
+    LSTM(50, input_shape=(seq_length, num_ts)),
     Dense(1, activation="linear")
 ])
 
-modelLSTM.compile(loss="mse", optimizer="adam")
+model_lstm.compile(loss="mse", optimizer="adam")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
-%time hist = modelLSTM.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0);
+%time hist = model_lstm.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0);
 ```
 
 
@@ -603,14 +603,14 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelLSTM.evaluate(valDS, verbose=0)
+model_lstm.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
 
 ```{python}
 #| echo: false
-y_pred = modelLSTM.predict(valDS, verbose=0)
+y_pred = model_lstm.predict(val_ds, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -627,17 +627,17 @@ from tensorflow.keras.layers import GRU
 
 random.seed(1)
 
-modelGRU = Sequential([
-    GRU(50, input_shape=(seqLength, numTS)),
+model_gru = Sequential([
+    GRU(50, input_shape=(seq_length, num_ts)),
     Dense(1, activation="linear")
 ])
 
-modelGRU.compile(loss="mse", optimizer="adam")
+model_gru.compile(loss="mse", optimizer="adam")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
-%time hist = modelGRU.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0)
+%time hist = model_gru.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0)
 ```
 
 
@@ -651,14 +651,14 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelGRU.evaluate(valDS, verbose=0)
+model_gru.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
 
 ```{python}
 #| echo: false
-y_pred = modelGRU.predict(valDS, verbose=0)
+y_pred = model_gru.predict(val_ds, verbose=0)
 # plt.scatter(y_val, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -673,18 +673,18 @@ plt.legend(frameon=False);
 ```{python}
 random.seed(1)
 
-modelTwoGRUs = Sequential([
-    GRU(50, input_shape=(seqLength, numTS), return_sequences=True),
+model_two_grus = Sequential([
+    GRU(50, input_shape=(seq_length, num_ts), return_sequences=True),
     GRU(50),
     Dense(1, activation="linear")
 ])
 
-modelTwoGRUs.compile(loss="mse", optimizer="adam")
+model_two_grus.compile(loss="mse", optimizer="adam")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
-%time hist = modelTwoGRUs.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0)
+%time hist = model_two_grus.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0)
 ```
 
 
@@ -698,14 +698,14 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelTwoGRUs.evaluate(valDS, verbose=0)
+model_two_grus.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
 
 ```{python}
 #| echo: false
-y_pred = modelTwoGRUs.predict(valDS, verbose=0)
+y_pred = model_two_grus.predict(val_ds, verbose=0)
 # plt.scatter(y_val, y_pred)
 # plt.show()
 
@@ -718,26 +718,26 @@ plt.legend(frameon=False);
 
 ```{python}
 #| echo: false
-models = [modelDense, modelSimple, modelLSTM, modelGRU, modelTwoGRUs]
-modelNames = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
-mseVal = {name: model.evaluate(valDS, verbose=0) for name, model in zip(modelNames, models)}
-valResults = pd.DataFrame({
-    "Model": mseVal.keys(), "MSE": mseVal.values()
+models = [model_dense, model_simple, model_lstm, model_gru, model_two_grus]
+model_names = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
+mse_val = {name: model.evaluate(val_ds, verbose=0) for name, model in zip(model_names, models)}
+val_results = pd.DataFrame({
+    "Model": mse_val.keys(), "MSE": mse_val.values()
 })
-valResults.sort_values("MSE", ascending=False)
+val_results.sort_values("MSE", ascending=False)
 ```
 
 The network with a single GRU layer is the best. 
 
 ```{python}
-modelGRU.evaluate(testDS, verbose=0)
+model_gru.evaluate(test_ds, verbose=0)
 ```
 
 ## Test set
 
 ```{python}
 #| echo: false
-y_pred = modelGRU.predict(testDS, verbose=0)
+y_pred = model_gru.predict(test_ds, verbose=0)
 # plt.scatter(y_test, y_pred)
 # add_diagonal_line()
 # plt.show()
@@ -757,12 +757,12 @@ Change the `targets` argument to include all the suburbs.
 :::
 ::: column
 ```{python}
-trainDS = \
+train_ds = \
   timeseries_dataset_from_array(
     changes[:-delay],
     targets=changes[delay:],
-    sequence_length=seqLength,
-    end_index=numTrain)
+    sequence_length=seq_length,
+    end_index=num_train)
 ```
 :::
 :::
@@ -770,23 +770,23 @@ trainDS = \
 ::: columns
 ::: column
 ```{python}
-valDS = \
+val_ds = \
   timeseries_dataset_from_array(
     changes[:-delay],
     targets=changes[delay:],
-    sequence_length=seqLength,
-    start_index=numTrain,
-    end_index=numTrain+numVal)
+    sequence_length=seq_length,
+    start_index=num_train,
+    end_index=num_train+num_val)
 ```
 :::
 ::: column
 ```{python}
-testDS = \
+test_ds = \
   timeseries_dataset_from_array(
     changes[:-delay],
     targets=changes[delay:],
-    sequence_length=seqLength,
-    start_index=numTrain+numVal)
+    sequence_length=seq_length,
+    start_index=num_train+num_val)
 ```
 :::
 :::
@@ -796,45 +796,45 @@ testDS = \
 The shape of our training set is now:
 
 ```{python}
-X_train = np.concatenate(list(trainDS.map(lambda x, y: x)))
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
 X_train.shape
 ```
 
 ```{python}
-Y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
+Y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
 Y_train.shape
 ```
 
 Later, we need the targets as numpy arrays:
 
 ```{python}
-Y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
-Y_val = np.concatenate(list(valDS.map(lambda x, y: y)))
-Y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
+Y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
+Y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
+Y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ```
 
 ## A dense network
 
 ```{python}
 random.seed(1)
-modelDense = Sequential([
-    Input(shape=(seqLength, numTS)),
+model_dense = Sequential([
+    Input(shape=(seq_length, num_ts)),
     Flatten(),
     Dense(50, activation="leaky_relu"),
     Dense(20, activation="leaky_relu"),
-    Dense(numTS, activation="linear")
+    Dense(num_ts, activation="linear")
 ])
-modelDense.compile(loss="mse", optimizer="adam")
-print(f"This model has {modelDense.count_params()} parameters.")
+model_dense.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_dense.count_params()} parameters.")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
-%time hist = modelDense.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0);
+%time hist = model_dense.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0);
 ```
 
 ## Plot the model
 ```{python}
-plot_model(modelDense, show_shapes=True)
+plot_model(model_dense, show_shapes=True)
 ```
 
 ## Assess the fits
@@ -847,7 +847,7 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelDense.evaluate(valDS, verbose=0)
+model_dense.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
@@ -856,7 +856,7 @@ modelDense.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelDense.predict(valDS, verbose=0)
+Y_pred = model_dense.predict(val_ds, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -889,16 +889,16 @@ plt.legend(frameon=False);
 ```{python}
 random.seed(1)
 
-modelSimple = Sequential([
-    SimpleRNN(50, input_shape=(seqLength, numTS)),
-    Dense(numTS, activation="linear")
+model_simple = Sequential([
+    SimpleRNN(50, input_shape=(seq_length, num_ts)),
+    Dense(num_ts, activation="linear")
 ])
-modelSimple.compile(loss="mse", optimizer="adam")
-print(f"This model has {modelSimple.count_params()} parameters.")
+model_simple.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_simple.count_params()} parameters.")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
-%time hist = modelSimple.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0);
+%time hist = model_simple.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0);
 ```
 
 ## Assess the fits
@@ -911,12 +911,12 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelSimple.evaluate(valDS, verbose=0)
+model_simple.evaluate(val_ds, verbose=0)
 ```
 
 ## Plot the model
 ```{python}
-plot_model(modelSimple, show_shapes=True)
+plot_model(model_simple, show_shapes=True)
 ```
 
 
@@ -926,7 +926,7 @@ plot_model(modelSimple, show_shapes=True)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelSimple.predict(valDS, verbose=0)
+Y_pred = model_simple.predict(val_ds, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -958,17 +958,17 @@ plt.legend(frameon=False);
 ```{python}
 random.seed(1)
 
-modelLSTM = Sequential([
-    LSTM(50, input_shape=(seqLength, numTS)),
-    Dense(numTS, activation="linear")
+model_lstm = Sequential([
+    LSTM(50, input_shape=(seq_length, num_ts)),
+    Dense(num_ts, activation="linear")
 ])
 
-modelLSTM.compile(loss="mse", optimizer="adam")
+model_lstm.compile(loss="mse", optimizer="adam")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
-%time hist = modelLSTM.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0);
+%time hist = model_lstm.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0);
 ```
 
 
@@ -982,7 +982,7 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelLSTM.evaluate(valDS, verbose=0)
+model_lstm.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
@@ -991,7 +991,7 @@ modelLSTM.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelLSTM.predict(valDS, verbose=0)
+Y_pred = model_lstm.predict(val_ds, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1022,17 +1022,17 @@ plt.legend(frameon=False);
 ```{python}
 random.seed(1)
 
-modelGRU = Sequential([
-    GRU(50, input_shape=(seqLength, numTS)),
-    Dense(numTS, activation="linear")
+model_gru = Sequential([
+    GRU(50, input_shape=(seq_length, num_ts)),
+    Dense(num_ts, activation="linear")
 ])
 
-modelGRU.compile(loss="mse", optimizer="adam")
+model_gru.compile(loss="mse", optimizer="adam")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
-%time hist = modelGRU.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0)
+%time hist = model_gru.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0)
 ```
 
 
@@ -1046,7 +1046,7 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelGRU.evaluate(valDS, verbose=0)
+model_gru.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
@@ -1055,7 +1055,7 @@ modelGRU.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelGRU.predict(valDS, verbose=0)
+Y_pred = model_gru.predict(val_ds, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1086,18 +1086,18 @@ plt.legend(frameon=False);
 ```{python}
 random.seed(1)
 
-modelTwoGRUs = Sequential([
-    GRU(50, input_shape=(seqLength, numTS), return_sequences=True),
+model_two_grus = Sequential([
+    GRU(50, input_shape=(seq_length, num_ts), return_sequences=True),
     GRU(50),
-    Dense(numTS, activation="linear")
+    Dense(num_ts, activation="linear")
 ])
 
-modelTwoGRUs.compile(loss="mse", optimizer="adam")
+model_two_grus.compile(loss="mse", optimizer="adam")
 
 es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
-%time hist = modelTwoGRUs.fit(trainDS, epochs=1_000, \
-  validation_data=valDS, callbacks=[es], verbose=0)
+%time hist = model_two_grus.fit(train_ds, epochs=1_000, \
+  validation_data=val_ds, callbacks=[es], verbose=0)
 ```
 
 
@@ -1111,7 +1111,7 @@ plt.legend(frameon=False);
 ```
 
 ```{python}
-modelTwoGRUs.evaluate(valDS, verbose=0)
+model_two_grus.evaluate(val_ds, verbose=0)
 ```
 
 ## Plotting the predictions {.smaller}
@@ -1120,7 +1120,7 @@ modelTwoGRUs.evaluate(valDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelTwoGRUs.predict(valDS, verbose=0)
+Y_pred = model_two_grus.predict(val_ds, verbose=0)
 plt.scatter(Y_val, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1150,19 +1150,19 @@ plt.legend(frameon=False);
 
 ```{python}
 #| echo: false
-models = [modelDense, modelSimple, modelLSTM, modelGRU, modelTwoGRUs]
-modelNames = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
-mseVal = {name: model.evaluate(valDS, verbose=0) for name, model in zip(modelNames, models)}
-valResults = pd.DataFrame({
-    "Model": mseVal.keys(), "MSE": mseVal.values()
+models = [model_dense, model_simple, model_lstm, model_gru, model_two_grus]
+model_names = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
+mse_val = {name: model.evaluate(val_ds, verbose=0) for name, model in zip(model_names, models)}
+val_results = pd.DataFrame({
+    "Model": mse_val.keys(), "MSE": mse_val.values()
 })
-valResults.sort_values("MSE", ascending=False)
+val_results.sort_values("MSE", ascending=False)
 ```
 
 The network with two GRU layers is the best. 
 
 ```{python}
-modelTwoGRUs.evaluate(testDS, verbose=0)
+model_two_grus.evaluate(test_ds, verbose=0)
 ```
 
 ## Test set
@@ -1171,7 +1171,7 @@ modelTwoGRUs.evaluate(testDS, verbose=0)
 ::: column
 ```{python}
 #| echo: false
-Y_pred = modelTwoGRUs.predict(testDS, verbose=0)
+Y_pred = model_two_grus.predict(test_ds, verbose=0)
 plt.scatter(Y_test, Y_pred)
 add_diagonal_line()
 plt.show()
@@ -1377,14 +1377,14 @@ Remember, $\mathbf{X} \in \mathbb{R}^{b \times n \times m}$, $\mathbf{Y} \in \ma
 ## Simple Keras demo
 
 ```{python}
-numObs = 4
-numTimeSteps = 3
-numTimeSeries = 2
+num_obs = 4
+num_time_steps = 3
+num_time_series = 2
 
-X = np.arange(numObs*numTimeSteps*numTimeSeries).astype(np.float32) \
-        .reshape([numObs, numTimeSteps, numTimeSeries])
+X = np.arange(num_obs*num_time_steps*num_time_series).astype(np.float32) \
+        .reshape([num_obs, num_time_steps, num_time_series])
 
-outputSize = 1
+output_size = 1
 y = np.array([0, 0, 1, 1])
 ```
 
@@ -1409,7 +1409,7 @@ As usual, the `SimpleRNN` is just a layer in Keras.
 ```{python}
 random.seed(1234)
 model = Sequential([
-  SimpleRNN(outputSize, activation="sigmoid")
+  SimpleRNN(output_size, activation="sigmoid")
 ])
 model.compile(loss="binary_crossentropy", metrics=["accuracy"])
 
@@ -1434,8 +1434,8 @@ def sigmoid(x):
 
 W_x, W_y, b = model.get_weights()
 
-Y = np.zeros((numObs, outputSize), dtype=np.float32)
-for t in range(numTimeSteps):
+Y = np.zeros((num_obs, output_size), dtype=np.float32)
+for t in range(num_time_steps):
     X_t = X[:, t, :]
     z = X_t @ W_x + Y @ W_y + b
     Y = sigmoid(z)

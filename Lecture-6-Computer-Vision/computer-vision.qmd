@@ -54,14 +54,14 @@ matplotlib.pyplot.rcParams['font.family'] = "serif"
 matplotlib.pyplot.rcParams['axes.spines.right'] = False
 matplotlib.pyplot.rcParams['axes.spines.top'] = False
 
-def squareFig():
+def square_fig():
     return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
 
 def add_diagonal_line():
     xl = matplotlib.pyplot.xlim()
     yl = matplotlib.pyplot.ylim()
-    shortestSide = min(xl[1], yl[1])
-    matplotlib.pyplot.plot([0, shortestSide], [0, shortestSide], color="black", linestyle="--")
+    shortest_side = min(xl[1], yl[1])
+    matplotlib.pyplot.plot([0, shortest_side], [0, shortest_side], color="black", linestyle="--")
 
 import pandas
 # pandas.options.display.max_rows = 6
@@ -696,20 +696,20 @@ print("...")
 from tensorflow.keras.utils import\
   image_dataset_from_directory
 
-dataDir = "mandarin-split"
-batchSize = 32
-imgHeight = 80
-imgWidth = 80
-imgSize = (imgHeight, imgWidth)
+data_dir = "mandarin-split"
+batch_size = 32
+img_height = 80
+img_width = 80
+img_size = (img_height, img_width)
 ```
 
 :::
 ::: column
 ```{python}
-trainDS = image_dataset_from_directory(
-    dataDir + "/train",
-    image_size=imgSize,
-    batch_size=batchSize,
+train_ds = image_dataset_from_directory(
+    data_dir + "/train",
+    image_size=img_size,
+    batch_size=batch_size,
     shuffle=False,
     color_mode='grayscale')
 ```
@@ -719,20 +719,20 @@ trainDS = image_dataset_from_directory(
 ::: columns
 ::: column
 ```{python}
-valDS = image_dataset_from_directory(
-    dataDir + "/val",
-    image_size=imgSize,
-    batch_size=batchSize,
+val_ds = image_dataset_from_directory(
+    data_dir + "/val",
+    image_size=img_size,
+    batch_size=batch_size,
     shuffle=False,
     color_mode='grayscale')
 ```
 :::
 ::: column
 ```{python}
-testDS = image_dataset_from_directory(
-    dataDir + "/test",
-    image_size=imgSize,
-    batch_size=batchSize,
+test_ds = image_dataset_from_directory(
+    data_dir + "/test",
+    image_size=img_size,
+    batch_size=batch_size,
     shuffle=False,
     color_mode='grayscale')
 ```
@@ -742,19 +742,19 @@ testDS = image_dataset_from_directory(
 ## Inspecting the datasets 
 
 ```{python}
-print(trainDS.class_names)
+print(train_ds.class_names)
 ```
 
 ```{python}
 # NB: Need shuffle=False earlier for these X & y to line up.
-X_train = np.concatenate(list(trainDS.map(lambda x, y: x)))
-y_train = np.concatenate(list(trainDS.map(lambda x, y: y)))
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
 
-X_val = np.concatenate(list(valDS.map(lambda x, y: x)))
-y_val = np.concatenate(list(valDS.map(lambda x, y: y)))
+X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
+y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
 
-X_test = np.concatenate(list(testDS.map(lambda x, y: x)))
-y_test = np.concatenate(list(testDS.map(lambda x, y: y)))
+X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
+y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 
 X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
 ```
@@ -764,25 +764,25 @@ X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.sha
 <br>
 
 ```{python}
-def plot_mandarin_characters(ds, plotCharLabel = 0):
-    numPlotted = 0
+def plot_mandarin_characters(ds, plot_char_label = 0):
+    num_plotted = 0
     for images, labels in ds:
         for i in range(images.shape[0]):
             label = labels[i]
-            if label == plotCharLabel:
-                plt.subplot(1, 5, numPlotted + 1)
+            if label == plot_char_label:
+                plt.subplot(1, 5, num_plotted + 1)
                 plt.imshow(images[i].numpy().astype("uint8"), cmap="gray")
                 plt.title(ds.class_names[label])
                 plt.axis("off")
-                numPlotted += 1
+                num_plotted += 1
     plt.show()
 ```
 
 ## Plotting some training characters {.smaller}
 ```{python}
 #| echo: false
-plot_mandarin_characters(trainDS, 0)
-plot_mandarin_characters(trainDS, 1)
+plot_mandarin_characters(train_ds, 0)
+plot_mandarin_characters(train_ds, 1)
 ```
 
 ## Plotting some val/test characters
@@ -790,14 +790,14 @@ plot_mandarin_characters(trainDS, 1)
 ::: columns
 ::: column
 ```{python}
-baiVal = X_val[y_val == 0][0]
-plt.imshow(baiVal, cmap="gray");
+bai_val = X_val[y_val == 0][0]
+plt.imshow(bai_val, cmap="gray");
 ```
 :::
 ::: column
 ```{python}
-baiTest = X_test[y_test == 0][0]
-plt.imshow(baiTest);
+bai_test = X_test[y_test == 0][0]
+plt.imshow(bai_test);
 ```
 :::
 :::
@@ -810,18 +810,18 @@ plt.imshow(baiTest);
 from tensorflow.keras.layers \
   import Rescaling, Conv2D, MaxPooling2D, Flatten
 
-numClasses = np.unique(y_train).shape[0]
+num_classes = np.unique(y_train).shape[0]
 random.seed(123)
 
 model = Sequential([
-  Rescaling(1./255, input_shape=(imgHeight, imgWidth, 1)),
+  Rescaling(1./255, input_shape=(img_height, img_width, 1)),
   Conv2D(16, 3, padding="same", activation="relu", name="conv1"),
   MaxPooling2D(name="pool1"),
   Conv2D(32, 3, padding="same", activation="relu", name="conv2"),
   MaxPooling2D(name="pool2"),
   Conv2D(64, 3, padding="same", activation="relu", name="conv3"),
   MaxPooling2D(name="pool3"),
-  Flatten(), Dense(128, activation="relu"), Dense(numClasses)
+  Flatten(), Dense(128, activation="relu"), Dense(num_classes)
 ])
 ```
 
@@ -871,7 +871,7 @@ epochs = 100
 es = EarlyStopping(patience=15, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
-hist = model.fit(trainDS.shuffle(1000), validation_data=valDS,
+hist = model.fit(train_ds.shuffle(1000), validation_data=val_ds,
   epochs=epochs, callbacks=[es], verbose=0)
 ```
 
@@ -908,9 +908,9 @@ plot_history(hist)
 ## Look at the metrics
 
 ```{python}
-print(model.evaluate(trainDS, verbose=0))
-print(model.evaluate(valDS, verbose=0))
-print(model.evaluate(testDS, verbose=0))
+print(model.evaluate(train_ds, verbose=0))
+print(model.evaluate(val_ds, verbose=0))
+print(model.evaluate(test_ds, verbose=0))
 ```
 
 ::: {.callout-tip}
@@ -946,7 +946,7 @@ model.predict(X_test[[17]], verbose=0).argmax()
 ```
 
 ```{python}
-testDS.class_names[model.predict(X_test[[17]], verbose=0).argmax()]
+test_ds.class_names[model.predict(X_test[[17]], verbose=0).argmax()]
 ```
 
 ```{python}
@@ -958,24 +958,24 @@ plt.imshow(X_test[17], cmap="gray");
 <h2>Error analysis (setup)</h2>
 
 ```{python}
-def plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, classNames):
+def plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, class_names):
   plt.figure(figsize=(4, 10))
 
-  numErrors = np.sum(y_pred != y_test)
-  errNum = 0
+  num_errors = np.sum(y_pred != y_test)
+  err_num = 0
   for i in range(X_test.shape[0]):
       if y_pred[i] != y_test[i]:
-          ax = plt.subplot(numErrors, 2, 2*errNum + 1)
+          ax = plt.subplot(num_errors, 2, 2*err_num + 1)
           plt.imshow(X_test[i].astype("uint8"), cmap="gray")
-          plt.title(f"Guessed '{classNames[y_pred[i]]}' True '{classNames[y_test[i]]}'")
+          plt.title(f"Guessed '{class_names[y_pred[i]]}' True '{class_names[y_test[i]]}'")
           plt.axis("off")
           
-          actualPredCharInd = np.argmax(y_test == y_pred[i])
-          ax = plt.subplot(numErrors, 2, 2*errNum + 2)
-          plt.imshow(X_val[actualPredCharInd].astype("uint8"), cmap="gray")
-          plt.title(f"A real '{classNames[y_pred[i]]}'")
+          actual_pred_char_ind = np.argmax(y_test == y_pred[i])
+          ax = plt.subplot(num_errors, 2, 2*err_num + 2)
+          plt.imshow(X_val[actual_pred_char_ind].astype("uint8"), cmap="gray")
+          plt.title(f"A real '{class_names[y_pred[i]]}'")
           plt.axis("off")
-          errNum += 1     
+          err_num += 1     
 ```
 
 <br>
@@ -992,14 +992,14 @@ def plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, classNames):
 
 ```{python}
 y_pred = model.predict(X_val, verbose=0).argmax(axis=1)
-plot_error_analysis(X_train, y_train, X_val, y_val, y_pred, valDS.class_names)
+plot_error_analysis(X_train, y_train, X_val, y_val, y_pred, val_ds.class_names)
 ```
 
 ## Error analysis IV
 
 ```{python}
 y_pred = model.predict(X_test, verbose=0).argmax(axis=1)
-plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, testDS.class_names)
+plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, test_ds.class_names)
 ```
 
 ## Confidence of predictions
@@ -1009,19 +1009,19 @@ y_pred = tf.keras.activations.softmax(model(X_test)).numpy()
 y_pred_class = y_pred.argmax(axis=1)
 y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]
 
-confidenceWhenCorrect = y_pred_prob[y_pred_class == y_test]
-confidenceWhenWrong = y_pred_prob[y_pred_class != y_test]
+confidence_when_correct = y_pred_prob[y_pred_class == y_test]
+confidence_when_wrong = y_pred_prob[y_pred_class != y_test]
 ```
 
 ::: columns
 ::: column
 ```{python}
-plt.hist(confidenceWhenCorrect);
+plt.hist(confidence_when_correct);
 ```
 :::
 ::: column
 ```{python}
-plt.hist(confidenceWhenWrong);
+plt.hist(confidence_when_wrong);
 ```
 :::
 :::
@@ -1103,9 +1103,9 @@ def build_model(hp):
   
     model.add(Dense(1, activation="exponential"))
     
-    learningRate = hp.Float("lr",
+    learning_rate = hp.Float("lr",
         min_value=1e-4, max_value=1e-2, sampling="log")
-    opt = tf.keras.optimizers.Adam(learning_rate=learningRate)
+    opt = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
     model.compile(optimizer=opt, loss="poisson")
     
@@ -1137,7 +1137,7 @@ tuner.search(X_train_sc, y_train,
   epochs=100, callbacks = [es],
   validation_data=(X_val_sc, y_val))
 
-bestModel = tuner.get_best_models()[0]
+best_model = tuner.get_best_models()[0]
 ```
 :::
 ::: {.column width="40%"}
@@ -1193,7 +1193,7 @@ tuner.search(X_train_sc, y_train,
   epochs=100, callbacks = [es],
   validation_data=(X_val_sc, y_val))
 
-bestModel = tuner.get_best_models()[0]
+best_model = tuner.get_best_models()[0]
 ```
 :::
 ::: {.column width="40%"}
