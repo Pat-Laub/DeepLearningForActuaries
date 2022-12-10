@@ -103,14 +103,14 @@ pandas.options.display.max_rows = 6
 
 ```{python}
 from sklearn.preprocessing import LabelEncoder
-targetLabels = df["NUM_VEHICLES"]
-target = LabelEncoder().fit_transform(targetLabels)
+target_labels = df["NUM_VEHICLES"]
+target = LabelEncoder().fit_transform(target_labels)
 target
 ```
 
 ```{python}
-weatherCols = [f"WEATHER{i}" for i in range(1, 9)]
-features = df[["SUMMARY_EN"] + weatherCols]
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df[["SUMMARY_EN"] + weather_cols]
 
 X_main, X_test, y_main, y_test = \
     train_test_split(features, target, test_size=0.2, random_state=1)
@@ -131,18 +131,18 @@ print([np.mean(y_train == y) for y in [0, 1, 2]])
 ## Grab the start of a few summaries
 
 ```{python}
-firstSummaries = X_train["SUMMARY_EN"].iloc[:3]
-firstSummaries
+first_summaries = X_train["SUMMARY_EN"].iloc[:3]
+first_summaries
 ```
 
 ```{python}
-firstWords = firstSummaries.map(lambda txt: txt.split(" ")[:7])
-firstWords
+first_words = first_summaries.map(lambda txt: txt.split(" ")[:7])
+first_words
 ```
 
 ```{python}
-startOfSummaries = firstWords.map(lambda txt: " ".join(txt))
-startOfSummaries
+start_of_summaries = first_words.map(lambda txt: " ".join(txt))
+start_of_summaries
 ```
 
 ## Count words in the first summaries
@@ -151,7 +151,7 @@ startOfSummaries
 from sklearn.feature_extraction.text import CountVectorizer
 
 vect = CountVectorizer()
-counts = vect.fit_transform(startOfSummaries)
+counts = vect.fit_transform(start_of_summaries)
 vocab = vect.get_feature_names_out()
 print(len(vocab), vocab)
 ```
@@ -184,7 +184,7 @@ vect.transform([
 
 ```{python}
 vect = CountVectorizer(ngram_range=(1, 2))
-counts = vect.fit_transform(startOfSummaries)
+counts = vect.fit_transform(start_of_summaries)
 vocab = vect.get_feature_names_out()
 print(len(vocab), vocab)
 ```
@@ -211,9 +211,9 @@ vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:]
 ## Create the $X$ matrices
 
 ```{python}
-def vectorise_dataset(X, vect, txtCol="SUMMARY_EN", dataframe=False):
-    X_vects = vect.transform(X[txtCol]).todense()
-    X_other = X.drop(txtCol, axis=1)
+def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):
+    X_vects = vect.transform(X[txt_col]).todense()
+    X_other = X.drop(txt_col, axis=1)
 
     if not dataframe:
         return np.concatenate([X_vects, X_other], axis=1)
@@ -239,15 +239,15 @@ vectorise_dataset(X_train, vect, dataframe=True)
 ## Make a simple dense model
 
 ```{python}
-numFeatures = X_train_ct.shape[1]
-numCats = 3 # 1, 2, 3+ vehicles
+num_features = X_train_ct.shape[1]
+num_cats = 3 # 1, 2, 3+ vehicles
 
-def build_model(numFeatures, numCats):
+def build_model(num_features, num_cats):
     random.seed(42)
     
     model = Sequential([
-        Dense(1_000, input_dim=numFeatures, activation="relu"),
-        Dense(numCats, activation="softmax")
+        Dense(1_000, input_dim=num_features, activation="relu"),
+        Dense(num_cats, activation="softmax")
     ])
     
     topk = SparseTopKCategoricalAccuracy(k=2, name="topk")
@@ -260,7 +260,7 @@ def build_model(numFeatures, numCats):
 ## Inspect the model
 
 ```{python}
-model = build_model(numFeatures, numCats)
+model = build_model(num_features, num_cats)
 model.summary(print_fn=skip_empty)
 ```
 
@@ -349,8 +349,8 @@ vectorise_dataset(X_train, vect, dataframe=True)
 ## Make & inspect the model
 
 ```{python}
-numFeatures = X_train_ct.shape[1]
-model = build_model(numFeatures, numCats)
+num_features = X_train_ct.shape[1]
+model = build_model(num_features, num_cats)
 model.summary(print_fn=skip_empty)
 ```
 
@@ -414,23 +414,23 @@ for token in doc:
 ```{python}
 def lemmatize(txt):
     doc = nlp(txt)
-    goodTokens = [token.lemma_.lower() for token in doc \
+    good_tokens = [token.lemma_.lower() for token in doc \
         if not token.like_num and \
            not token.is_punct and \
            not token.is_space and \
            not token.is_currency and \
            not token.is_stop]
-    return " ".join(goodTokens)
+    return " ".join(good_tokens)
 ```
 
 ```{python}
-testStr = "Incident at 100kph and '10 incidents -13.3%' are incidental?\t $5"
-lemmatize(testStr)
+test_str = "Incident at 100kph and '10 incidents -13.3%' are incidental?\t $5"
+lemmatize(test_str)
 ```
 
 ```{python}
-testStr = "I interviewed 5-years ago, 150 interviews every year at 10:30 are.."
-lemmatize(testStr)
+test_str = "I interviewed 5-years ago, 150 interviews every year at 10:30 are.."
+lemmatize(test_str)
 ```
 
 ## Apply to the whole dataset
@@ -453,8 +453,8 @@ else:
 ```
 
 ```{python}
-weatherCols = [f"WEATHER{i}" for i in range(1, 9)]
-features = df[["SUMMARY_EN_LEMMA"] + weatherCols]
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df[["SUMMARY_EN_LEMMA"] + weather_cols]
 
 X_main, X_test, y_main, y_test = \
     train_test_split(features, target, test_size=0.2, random_state=1)
@@ -496,8 +496,8 @@ vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", dataframe=True)
 ## Make & inspect the model
 
 ```{python}
-numFeatures = X_train_ct.shape[1]
-model = build_model(numFeatures, numCats)
+num_features = X_train_ct.shape[1]
+model = build_model(num_features, num_cats)
 model.summary(print_fn=skip_empty)
 ```
 
@@ -553,7 +553,7 @@ Source: scikit-learn documentation, [permutation_importance function](https://sc
 ## Find important inputs
 
 ```{python}
-def permutation_test(model, X, y, numReps=1, seed=42):
+def permutation_test(model, X, y, num_reps=1, seed=42):
     """
     Run the permutation test for variable importance.
     Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
@@ -562,15 +562,15 @@ def permutation_test(model, X, y, numReps=1, seed=42):
     scores = []    
 
     for j in range(X.shape[1]):
-        originalColumn = np.copy(X[:, j])
-        colScores = []
+        original_column = np.copy(X[:, j])
+        col_scores = []
 
-        for r in range(numReps):
+        for r in range(num_reps):
             rnd.shuffle(X[:,j])
-            colScores.append(model.evaluate(X, y, verbose=0))
+            col_scores.append(model.evaluate(X, y, verbose=0))
 
-        scores.append(np.mean(colScores, axis=0))
-        X[:,j] = originalColumn
+        scores.append(np.mean(col_scores, axis=0))
+        X[:,j] = original_column
     
     return np.array(scores)
 ```
@@ -584,8 +584,8 @@ Note: I updated this function after the lecture to make it more robust.
 <br>
 
 ```{python}
-permScores = permutation_test(model, X_val_ct, y_val)[:,1]
-plt.plot(permScores);
+perm_scores = permutation_test(model, X_val_ct, y_val)[:,1]
+plt.plot(perm_scores);
 plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
 ```
 
@@ -594,11 +594,11 @@ plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
 <br>
 
 ```{python}
-inputCols = \
+input_cols = \
     vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", True).columns
-bestInputInds = np.argsort(permScores)[:50]
-bestInputs = list(inputCols[bestInputInds])
-print(bestInputs)
+best_input_inds = np.argsort(perm_scores)[:50]
+best_inputs = list(input_cols[best_input_inds])
+print(best_inputs)
 ```
 
 ## How about a simple decision tree?
@@ -608,13 +608,13 @@ print(bestInputs)
 ```{python}
 from sklearn import tree
 clf = tree.DecisionTreeClassifier(random_state=0, max_depth=2)
-clf.fit(X_train_ct[:, bestInputInds], y_train);
+clf.fit(X_train_ct[:, best_input_inds], y_train);
 ```
 
 ```{python}
-print(clf.score(X_train_ct[:, bestInputInds], y_train))
-print(clf.score(X_val_ct[:, bestInputInds], y_val))
-print(clf.score(X_test_ct[:, bestInputInds], y_test))
+print(clf.score(X_train_ct[:, best_input_inds], y_train))
+print(clf.score(X_val_ct[:, best_input_inds], y_val))
+print(clf.score(X_test_ct[:, best_input_inds], y_test))
 ```
 
 ## Decision tree 
@@ -626,5 +626,5 @@ tree.plot_tree(clf);
 
 ```{python}
 print(np.where(clf.feature_importances_ > 0)[0])
-[bestInputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
+[best_inputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
 ```
