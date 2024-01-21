@@ -1,0 +1,250 @@
+# Stroke Prediction {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## The data {.smaller}
+
+Dataset source: [Kaggle Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset).
+
+```{python}
+data = pd.read_csv("stroke.csv")
+data.head()
+```
+
+## Data description {.smaller}
+
+::: columns
+::: column
+1) `id`: unique identifier
+2) `gender`: "Male", "Female" or "Other"
+3) `age`: age of the patient
+4) `hypertension`: 0 or 1 if the patient has hypertension
+5) `heart_disease`: 0 or 1 if the patient has any heart disease
+6) `ever_married`: "No" or "Yes"
+7) `work_type`: "children", "Govt_jov", "Never_worked", "Private" or "Self-employed"
+:::
+::: column
+8) `Residence_type`: "Rural" or "Urban"
+9) `avg_glucose_level`: average glucose level in blood
+10) `bmi`: body mass index
+11) `smoking_status`: "formerly smoked", "never smoked", "smokes" or "Unknown"
+12) `stroke`: 0 or 1 if the patient had a stroke
+:::
+:::
+
+::: footer
+Source: Kaggle, [Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset).
+:::
+
+## Split the data
+
+First, look for missing values.
+```{python}
+number_missing = data.isna().sum()
+number_missing[number_missing > 0]
+```
+
+```{python}
+features = data.drop(["id", "stroke"], axis=1)
+target = data["stroke"]
+
+X_main, X_test, y_main, y_test = train_test_split(
+    features, target, test_size=0.2, random_state=7)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_main, y_main, test_size=0.25, random_state=12)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## What values do we see in the data?
+
+::: columns
+::: column
+```{python}
+X_train["gender"].value_counts()
+```
+
+```{python}
+X_train["ever_married"].value_counts()
+```
+
+```{python}
+X_train["Residence_type"].value_counts()
+```
+:::
+::: column
+```{python}
+X_train["work_type"].value_counts()
+```
+
+```{python}
+X_train["smoking_status"].value_counts()
+```
+:::
+:::
+
+## Preprocess columns individually
+
+1. Take categorical columns $\hookrightarrow$ one-hot vectors
+2. binary columns $\hookrightarrow$ do nothing
+3. continuous columns $\hookrightarrow$ impute NaNs & standardise.
+
+## Scikit-learn column transformer
+
+```{python}
+from sklearn.pipeline import make_pipeline
+
+cat_vars =  ["gender", "ever_married", "Residence_type",
+    "work_type", "smoking_status"]
+
+ct = make_column_transformer(
+  (OneHotEncoder(sparse_output=False, handle_unknown="ignore"), cat_vars),
+  ("passthrough", ["hypertension", "heart_disease"]),
+  remainder=make_pipeline(SimpleImputer(), StandardScaler()),
+  verbose_feature_names_out=False
+)
+
+X_train_ct = ct.fit_transform(X_train)
+X_val_ct = ct.transform(X_val)
+X_test_ct = ct.transform(X_test)
+
+for name, X in zip(("train", "val", "test"), (X_train_ct, X_val_ct, X_test_ct)):
+    num_na = X.isna().sum().sum()
+    print(f"The {name} set has shape {X_train_ct.shape} & with {num_na} NAs.")
+```
+
+## Handling unseen categories
+
+::: columns
+::: column
+```{python}
+X_train["gender"].value_counts()
+```
+:::
+::: column
+```{python}
+X_val["gender"].value_counts()
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+ind = np.argmax(X_val["gender"] == "Other")
+X_val.iloc[ind-1:ind+3][["gender"]]
+```
+:::
+::: column
+```{python}
+gender_cols = X_val_ct[["gender_Female", "gender_Male"]]
+gender_cols.iloc[ind-1:ind+3]
+```
+:::
+:::
+
+
+## Setup a binary classification model
+
+```{python}
+def create_model(seed=42):
+    random.seed(seed)
+    model = Sequential()
+    model.add(Dense(32, "leaky_relu", input_shape=X_train_ct.shape[1:]))
+    model.add(Dense(16, "leaky_relu"))
+    model.add(Dense(1, "sigmoid"))
+    return model
+```
+
+```{python}
+model = create_model()
+model.summary(print_fn=skip_empty)
+```
+
+## Add metrics, compile, and fit
+
+```{python}
+model = create_model()
+
+pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
+model.compile(optimizer="adam", loss="BinaryCrossentropy",
+    metrics=["accuracy", "AUC", pr_auc])
+
+es = EarlyStopping(patience=50, restore_best_weights=True,
+    monitor="val_pr_auc", verbose=1)
+model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
+  validation_data=(X_val_ct, y_val));
+```
+
+::: columns
+::: column
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+:::
+::: column
+:::
+:::
+
+## Overweight the minority class
+
+```{python}
+model = create_model()
+
+pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
+model.compile(optimizer="adam", loss="BinaryCrossentropy",
+    metrics=["accuracy", "AUC", pr_auc])
+
+es = EarlyStopping(patience=50, restore_best_weights=True,
+    monitor="val_pr_auc", verbose=1)
+model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
+  validation_data=(X_val_ct, y_val), class_weight={0: 1, 1: 10});
+```
+
+::: columns
+::: column
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+:::
+::: column
+::: fragment
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+:::
+:::
+:::
+
+## Classification Metrics {.smaller}
+
+```{python}
+from sklearn.metrics import confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay
+y_pred = model.predict(X_test_ct, verbose=0)
+```
+
+::: columns
+::: column
+```{python}
+RocCurveDisplay.from_predictions(y_test, y_pred, name="");
+```
+:::
+::: column
+```{python}
+PrecisionRecallDisplay.from_predictions(y_test, y_pred, name=""); plt.legend(loc="upper right");
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+y_pred_stroke = y_pred > 0.5
+confusion_matrix(y_test, y_pred_stroke)
+```
+:::
+::: column
+```{python}
+y_pred_stroke = y_pred > 0.3
+confusion_matrix(y_test, y_pred_stroke)
+```
+:::
+:::

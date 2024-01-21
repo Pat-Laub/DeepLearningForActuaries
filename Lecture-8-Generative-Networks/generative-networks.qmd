@@ -1,40 +1,15 @@
 ---
 title: Generative Networks
-subtitle: ACTL3143 & ACTL5111 Deep Learning for Actuaries
-author: Dr Patrick Laub
-format:
-  revealjs:
-    theme: [serif, custom.scss]
-    controls: true
-    controls-tutorial: true
-    logo: unsw-logo.svg
-    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
-    title-slide-attributes:
-      data-background-image: unsw-yellow-shape.png
-      data-background-size: contain !important
-    transition: none
-    slide-number: c/t
-    strip-comments: true
-    preview-links: false
-    margin: 0.2
-    chalkboard:
-      boardmarker-width: 6
-      grid: false
-      background:
-        - "rgba(255,255,255,0.0)"
-        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
-    include-before: <div class="line right"></div>
-    include-after: <script>registerRevealCallbacks();</script>
-highlight-style: breeze
-jupyter: python3
-execute:
-  keep-ipynb: true
-  echo: true
 ---
 
 ```{python}
 #| echo: false
 import matplotlib
+import matplotlib.pyplot as plt
+import cycler
+
+colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
+plt.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
 
 def set_square_figures():
   matplotlib.pyplot.rcParams['figure.figsize'] = (2.0, 2.0)
@@ -67,8 +42,9 @@ numpy.set_printoptions(precision=2)
 numpy.random.seed(123)
 
 import tensorflow
+tensorflow.config.set_visible_devices([], 'GPU') # A lot faster on GPU: 34s vs 1m10s.
+
 tensorflow.random.set_seed(1)
-# tensorflow.config.set_visible_devices([], 'GPU') # A lot faster on GPU: 34s vs 1m10s.
 
 tensorflow.get_logger().setLevel('ERROR')
 
@@ -77,26 +53,16 @@ def skip_empty(line):
     print(line.strip())
 ```
 
+
 ## Lecture Outline
 
 <br><br>
 
-::: columns
-::: column
-- Recap (project, lecture, Story Wall)
-- Continue car crash police report example
-- Word embeddings
-:::
-::: column
 - Text Generation
 - Image Generation
 - Autoencoders
-:::
-:::
+- Generative adversarial networks
 
-<br>
-
-Thanks Hang Nguyen & Michael Jacinto for draft slides.
 
 ## Load packages {data-visibility="uncounted"}
 
@@ -108,6 +74,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.random as rnd
 import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
@@ -116,258 +83,6 @@ from tensorflow.keras import layers
 %load_ext watermark
 %watermark -p matplotlib,numpy,pandas,tensorflow
 ```
-
-# Project {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-::: footer
-Now possible to upload report to shared Moodle page, under Week 10.
-:::
-
-## On time series splits
-
-If you have a lot of time series data, then use:
-
-```{python}
-from tensorflow.keras.utils import timeseries_dataset_from_array
-data = range(20); seq = 3; ts = data[:-seq]; target = data[seq:]
-n_train = int(0.5 * len(ts)); n_val = int(0.25 * len(ts))
-n_test = len(ts) - n_train - n_val
-print(f"# Train: {n_train}, # Val: {n_val}, # Test: {n_test}")
-```
-
-::: columns
-::: {.column width="33%"}
-
-```{python}
-train_ds = \
-  timeseries_dataset_from_array(
-    ts, target, seq,
-    end_index=n_train)
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-val_ds = \
-  timeseries_dataset_from_array(
-    ts, target, seq,
-    start_index=n_train,
-    end_index=n_train+n_val)
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-test_ds = \
-  timeseries_dataset_from_array(
-    ts, target, seq,
-    start_index=n_train+n_val)
-```
-
-:::
-:::
-
-::: columns
-::: {.column width="33%"}
-
-```{python}
-#| echo: false
-print("Training dataset")
-for inputs, targets in train_ds:
-    for i in range(inputs.shape[0]):
-        print([int(x) for x in inputs[i]], int(targets[i]))
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-#| echo: false
-print("Validation dataset")
-for inputs, targets in val_ds:
-    for i in range(inputs.shape[0]):
-        print([int(x) for x in inputs[i]], int(targets[i]))
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-#| echo: false
-print("Test dataset")
-for inputs, targets in test_ds:
-    for i in range(inputs.shape[0]):
-        print([int(x) for x in inputs[i]], int(targets[i]))
-```
-
-:::
-:::
-
-::: footer
-Adapted from: François Chollet (2021), _Deep Learning with Python_, Second Edition, Listing 10.7.
-:::
-
-## On time series splits II
-
-If you _don't_ have a lot of time series data, consider:
-
-```{python}
-X = []; y = []
-for i in range(len(data)-seq):
-    X.append(data[i:i+seq])
-    y.append(data[i+seq])
-X = np.array(X); y = np.array(y);
-```
-
-::: columns
-::: {.column width="33%"}
-
-```{python}
-n_train = int(0.5 * X.shape[0])
-X_train = X[:n_train]
-y_train = y[:n_train]
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-n_val = int(np.ceil(0.25 * X.shape[0]))
-X_val = X[n_train:n_train+n_val]
-y_val = y[n_train:n_train+n_val]
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-n_test = X.shape[0] - n_train - n_val
-X_test = X[n_train+n_val:]
-y_test = y[n_train+n_val:]
-```
-
-:::
-:::
-
-::: columns
-::: {.column width="33%"}
-
-```{python}
-#| echo: false
-print("Training dataset")
-for i in range(X_train.shape[0]):
-    print([int(x) for x in X_train[i]], int(y_train[i]))
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-#| echo: false
-print("Validation dataset")
-for i in range(X_val.shape[0]):
-    print([int(x) for x in X_val[i]], int(y_val[i]))
-```
-
-:::
-::: {.column width="33%"}
-
-```{python}
-#| echo: false
-print("Test dataset")
-for i in range(X_test.shape[0]):
-    print([int(x) for x in X_test[i]], int(y_test[i]))
-```
-
-:::
-:::
-
-# Previous lecture {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## Escape characters
-
-::: columns
-::: column
-
-```{python}
-print("Hello,\tworld!")
-```
-
-```{python}
-print("Line 1\nLine 2")
-```
-
-```{python}
-#| eval: false
-print("Patrick\rLaub")
-```
-
-```{python}
-#| echo: false
-print("Laubick")
-```
-
-:::
-::: column
-
-```{python}
-#| error: true
-print("C:\tom\new folder")
-```
-
-Escape the backslash:
-
-```{python}
-print("C:\\tom\\new folder")
-```
-
-```{python}
-repr("Hello,\rworld!")
-```
-
-:::
-:::
-
-## A more robust `permutation_test`
-
-```{python}
-import numpy.random as rnd
-
-def permutation_test(model, X, y, num_reps=1, seed=42):
-    """
-    Run the permutation test for variable importance.
-    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
-    """
-    rnd.seed(seed)
-    scores = []    
-
-    for j in range(X.shape[1]):
-        original_column = np.copy(X[:, j])
-        col_scores = []
-
-        for r in range(num_reps):
-            rnd.shuffle(X[:,j])
-            col_scores.append(model.evaluate(X, y, verbose=0))
-
-        scores.append(np.mean(col_scores, axis=0))
-        X[:,j] = original_column
-    
-    return np.array(scores)
-```
-
-
-# Story Wall {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-## A few comments
-
-- Expert programmers still use other people's code
-- When going through some tutorial notebook, don't just press 'run cell'
-- Try changing hyperparameters (weights in a loss function in particular)
-- Try commenting out some lines of code
-- Try removing layers from a network
-- Keep expectations low when running on your own inputs
 
 # Text Generation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
 
@@ -394,7 +109,7 @@ Source: Alex Graves (2013), [Generating Sequences With Recurrent Neural Networks
 
 ## Word-level language model
 
-![Diagram of a word-level language model.](word-level-language-model.svg)
+![Diagram of a word-level language model.](word-level-language-model.png)
 
 ::: footer
 Source: Marcus Lautier (2022).
@@ -441,7 +156,7 @@ Source: Hannun et al. (2014), [Deep Speech: Scaling up end-to-end speech recogni
 Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
 :::
 
-## Generating Shakespeare II
+## Generating Shakespeare II {data-visibility="uncounted"}
 
 > | DUKE OF YORK:
 | Peace, sing! do you must be all the law;
@@ -458,7 +173,7 @@ Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflo
 :::
 
 
-## Generating Shakespeare III
+## Generating Shakespeare III {data-visibility="uncounted"}
 
 > | ANTIGONUS: 
 | To be by oath enjoin'd to this. Farewell! 
@@ -468,30 +183,79 @@ Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflo
 |
 | [Exit, pursued by a bear]
 
-::: footer
-Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
-:::
 
-## Sampling strategy
+#
+
+<h2>Sampling strategy</h2>
 
 - *Greedy sampling* will choose the token with the highest probability. It makes the resulting sentence repetitive and predictable.
 - *Stochastic sampling*: if a word has probability 0.3 of being next in the sentence according to the model, we’ll choose it 30% of the time. But the result is still not interesting enough and still quite predictable.
 - Use a *softmax temperature* to control the randomness. More randomness results in more surprising and creative sentences.
+
+## Softmax temperature
+
+- The softmax temperature is a parameter that controls the randomness of the next token.
+- The formula is: $$ \text{softmax}_\text{temperature}(x) = \frac{\exp(x / \text{temperature})}{\sum_i \exp(x_i / \text{temperature})} $$
+
+## "I am a" ...
+
+```{python}
+#| echo: false
+def softmax(x, temperature=1.0):
+    return np.exp(x / temperature) / np.sum(np.exp(x / temperature))
+
+x = np.array([0.15, 0.5, 0.1, 0.25])
+x /= np.sum(x)
+
+# Plot bar charts for the original distributions and the softmax temperature versions.
+plt.figure(figsize=(6, 3))
+
+phrase = "I am a"
+next_words = ["dog", "human", "robot", "teddy"] 
+
+plt.subplot(2, 2, 1)
+temperature = 0.1
+plt.bar(next_words, softmax(x, temperature), color=colors)
+plt.title(f"Temp = {temperature}")
+
+plt.subplot(2, 2, 2)
+temperature = 1
+plt.bar(next_words, softmax(x, temperature), color=colors)
+plt.title(f"Temp = {temperature}")
+
+temperature = 10
+plt.subplot(2, 2, 3)
+plt.bar(next_words, softmax(x, temperature), color=colors)
+plt.title(f"Temp = {temperature}")
+
+plt.subplot(2, 2, 4)
+temperature = 100
+plt.bar(next_words, softmax(x, temperature), color=colors)
+plt.title(f"Temp = {temperature}")
+
+# Clean up the layout.
+plt.tight_layout()
+
+plt.show()
+```
+::: footer
+Idea inspired by Mehta (2023), [The need for sampling temperature and differences between whisper, GPT-3, and probabilistic model's temperature](https://shivammehta25.github.io/posts/temperature-in-language-models-open-ai-whisper-probabilistic-machine-learning/)
+:::
 
 ## Generating Laub (temp = 0.01)
 
 > _In today's lecture we will_ be different situation.
 > So, next one is what they rective that each commit to be able to learn some relationships from the course, and that is part of the image that it's very clese and black problems that you're trying to fit the neural network to do there instead of like a specific though shef series of layers mean about full of the chosen the baseline of car was in the right, but that's an important facts and it's a very small summary with very scrort by the beginning of the sentence.
 
-## Generating Laub (temp = 0.25)
+## Generating Laub (temp = 0.25) {data-visibility="uncounted"}
 
 > _In today's lecture we will_ decreas before model that we that we have to think about it, this mightsks better, for chattely the same project, because you might use the test set because it's to be picked up the things that I wanted to heard of things that I like that even real you and you're using the same thing again now because we need to understand what it's doing the same thing but instead of putting it in particular week, and we can say that's a thing I mainly link it's three columns.
 
-## Generating Laub (temp = 0.5)
+## Generating Laub (temp = 0.5) {data-visibility="uncounted"}
 
 > _In today's lecture we will_ probably the adw n wait lots of ngobs teulagedation to calculate the gradient and then I'll be less than one layer the next slide will br input over and over the threshow you ampaigey the one that we want to apply them quickly. So, here this is the screen here the main top kecw onct three thing to told them, and the output is a vertical variables and Marceparase of things that you're moving the blurring and that just data set is to maybe kind of categorical variants here but there's more efficiently not basically replace that with respect to the best and be the same thing.
 
-## Generating Laub (temp = 1)
+## Generating Laub (temp = 1) {data-visibility="uncounted"}
 
 > _In today's lecture we will_ put it different shates to touch on last week, so I want to ask what are you object frod current.
 > They don't have any zero into it, things like that which mistakes. 10 claims that the average version was relden distever ditgs and Python for the whole term wo long right to really.
@@ -499,7 +263,7 @@ Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflo
 > There are in that seems to be modified version. If you look at when you're putting numbers into your, that that's over.
 > And I went backwards, up, if they'rina functional pricing working with.
 
-## Generating Laub (temp = 1.5)
+## Generating Laub (temp = 1.5) {data-visibility="uncounted"}
 
 > In today's lecture we will put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming.
 > If there was a large. It's gonua draltionation.
@@ -523,6 +287,9 @@ Source: Payne (2021), [What is beam search](https://www.width.ai/post/what-is-be
 Source: Doshi (2021), [Foundations of NLP Explained Visually: Beam Search, How It Works](https://towardsdatascience.com/foundations-of-nlp-explained-visually-beam-search-how-it-works-1586b9849a24), towardsdatascience.com.
 :::
 
+
+{{< include _hf-transformers.qmd >}}
+
 # Image Generation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
 
 ## Reverse-engineering a CNN
@@ -537,7 +304,7 @@ However, it is possible to _not train_ the network but to modify $\mathbf{x}$, l
 
 $$ \mathbf{x}^*\ =\  \underset{\mathbf{x}}{\mathrm{argmin}} \,\, \text{Loss} \bigl( f_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y} \bigr). $$
 
-This is very slow as we do a lot more gradient descent.
+This is very slow as we do gradient descent every single time.
 
 ## Adversarial examples
 
@@ -555,6 +322,11 @@ Source: Goodfellow et al. (2015), [Explaining and Harnessing Adversarial Example
 Source: The Verge (2018), [These stickers make computer vision software hallucinate things that aren’t there](https://www.theverge.com/2018/1/3/16844842/ai-computer-vision-trick-adversarial-patches-google).
 :::
 
+## Adversarial text
+
+"[TextAttack](https://github.com/QData/TextAttack) 🐙 is a Python framework for adversarial attacks, data augmentation, and model training in NLP"
+
+<img src="https://jxmo.io/files/textattack.gif" alt="TextAttack Demo GIF" style="display: block; margin: 0 auto;" />
 
 ## Deep Dream 
 
@@ -567,7 +339,6 @@ Source: Wikipedia, [DeepDream page](https://commons.wikimedia.org/wiki/File:Aure
 ## DeepDream
 
 - Even though many deep learning models are black boxes, convnets are quite interpretable via visualization. Some visualization techniques are: visualizing convnet outputs shows how convnet layers transform the input, visualizing convnet filters shows what visual patterns or concept each filter is receptive to, etc.
-- The output of a layer is often called its activation, the output of the activation function.
 - The activations of the first few layers of the network carries more information about the visual contents, while deeper layers encode higher, more abstract concepts.
 
 ## DeepDream
@@ -576,13 +347,6 @@ Source: Wikipedia, [DeepDream page](https://commons.wikimedia.org/wiki/File:Aure
 - DeepDream maximizes the activation of the entire convnet layer rather than that of a specific filter, thus mixing together many visual patterns all at once.
 - DeepDream starts with an existing image, latches on to preexisting visual patterns, distorting elements of the image in a somewhat artistic fashion.
 
-## Many passes over the image 
-
-![Input images are processed at different scales (called octaves), which further improve the quality of the visualization.](chollet-deepdream2-blur.png)
-
-::: footer
-Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.6.
-:::
 
 ## Original
 
@@ -612,6 +376,7 @@ Applying the style of a reference image to a target image while conserving the c
 ::: footer
 Source: François Chollet (2021), _Deep Learning with Python_, Second Edition, Figure 12.9.
 :::
+
 
 ## Goal of NST
 
@@ -702,7 +467,7 @@ Taking derivatives with respect to the input image can be a first step toward ex
 
 An autoencoder takes a data/image, maps it to a latent space via en encoder module, then decodes it back to an output with the same dimensions via a decoder module.
 
-![Schematic of an autoencoder.](autoencoder.svg)
+![Schematic of an autoencoder.](autoencoder.png)
 
 ::: footer
 Source: Marcus Lautier (2022).
@@ -723,7 +488,17 @@ For image editing, an image can be projected onto a latent space and moved insid
 
 {{< include _variational-autoencoder.qmd >}}
 
-{{< include _gans.qmd >}}
+
+# Diffusion Models {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Using KerasCV
+
+<center>
+
+{{< video https://www.youtube.com/watch?v=pstsh2C2roc width="1000px" height="600px" >}}
+
+</center>
+
 
 # {data-visibility="uncounted"}
 
@@ -731,27 +506,23 @@ For image editing, an image can be projected onto a latent space and moved insid
 
 ::: columns
 :::: column
-- autoencoder
+- autoencoder (variational)
+- beam search
 - bias
+- ChatGPT (& RLHF)
 - DeepDream
 - greedy sampling
-- GloVe
-- Grad-CAM
-- language model
 ::::
 :::: column
+- HuggingFace
+- language model
 - latent space
 - neural style transfer
 - softmax temperature
 - stochastic sampling
-- word embeddings/vectors
-- word2vec
 ::::
 :::
 
-<!-- ## DALL-E 2
-<iframe width="560" height="315" src="https://www.youtube.com/embed/yCBEumeXY4A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
- -->
 
 <script defer>
     // Remove the highlight.js class for the 'compile', 'min', 'max'

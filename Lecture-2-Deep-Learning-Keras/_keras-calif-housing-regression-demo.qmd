@@ -4,7 +4,10 @@
 
 ```{python}
 from sklearn.datasets import fetch_california_housing
-features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+
+features, target = fetch_california_housing(
+    as_frame=True, return_X_y=True
+)
 features
 ```
 
@@ -14,12 +17,162 @@ features
 target
 ```
 
+## The dataset 
+
+> The target variable is the median house value for California districts, expressed in hundreds of thousands of dollars ($100,000).
+>
+>This dataset was derived from the 1990 U.S. census, using one row per census block group. A block group is the smallest geographical unit for which the U.S. Census Bureau publishes sample data (a block group typically has a population of 600 to 3,000 people).
+
+::: footer
+Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
+:::
+
+## Columns
+
+- `MedInc` median income in block group
+- `HouseAge` median house age in block group
+- `AveRooms` average number of rooms per household
+- `AveBedrms` average # of bedrooms per household
+- `Population` block group population
+- `AveOccup` average number of household members
+- `Latitude` block group latitude
+- `Longitude` block group longitude
+
+::: footer
+Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
+:::
+
+## An entire ML project
+
+![ML life cycle](ml-lifecycle.png)
+
+::: footer
+Source: Actuaries Institute, [Do Data Better](https://dodatabetter.com.au/wp-content/uploads/2023/02/Advantage-Graph_1.mp4).
+:::
+
+## Questions to answer in ML project
+
+<br>
+
+You fit a few models to the training set, then ask:
+
+<br>
+
+1. __(Selection)__ Which of these models is the best?
+2. __(Future Performance)__ How good should we expect the final model to be on unseen data?
+
+
+## Set aside a fraction for a test set
+
+```{python}
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    features, target, random_state=42
+)
+```
+
+::: columns
+::: {.column width="70%"}
+
+![Illustration of a typical training/test split.](heaton-train-test-split.png)
+
+::: {.smaller}
+Note: Compare `X_`/`y_` names, capitals & lowercase.
+:::
+
+:::
+::: {.column width="30%"}
+![Our use of sklearn.](scikit-learn-what-is-my-purpose.png)
+:::
+:::
+
+::: footer
+Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/e4bdc124b0c45b592d9bdbed0d2ef6c63c0245d6/t81_558_class_02_1_python_pandas.ipynb), Part 2.1: Introduction to Pandas, and [this random site](https://journeys.dartmouth.edu/folklorearchive/2020/06/03/purpose-of-scikit-learn-is-to-split-the-data/).
+:::
+
+## Basic ML workflow
+
+![Splitting the data.](wiki-ML_dataset_training_validation_test_sets.png)
+
+1. For each model, fit it to the _training set_.
+2. Compute the error for each model on the _validation set_.
+3. Select the model with the lowest validation error.
+4. Compute the error of the final model on the _test set_.
+
+::: footer
+Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ML_dataset_training_validation_test_sets.png#filelinks).
+:::
+
+## Split three ways
+
+<br>
+
+```{python}
+# Thanks https://datascience.stackexchange.com/a/15136
+X_main, X_test, y_main, y_test = train_test_split(
+    features, target, test_size=0.2, random_state=1
+)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = train_test_split(
+    X_main, y_main, test_size=0.25, random_state=1
+)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## Why not use test set for both?
+
+_Thought experiment_: have $m$ classifiers: $f_1(\mathbf{x})$, $\dots$, $f_m(\mathbf{x})$.
+
+They are just as good as each other in the long run
+$$
+\mathbb{P}(\, f_i(\mathbf{X}) = Y \,)\ =\ 90\% , \quad \text{for } i=1,\dots,m .
+$$
+
+::: columns
+::: {.column width="40%"}
+Evaluate each model on the test set, some will be better than others.
+
+:::
+::: {.column width="60%"}
+```{python}
+#| echo: false
+# set_square_figures()
+import seaborn
+
+np.random.seed(123)
+m = 50
+x = np.random.normal(loc=0.9, scale=0.03, size=m)
+seaborn.distplot(x)
+plt.scatter(x, np.zeros_like(x))
+plt.xlabel("Accuracy of each model on test set")
+plt.axvline(0.9, ls="--", c="k")
+plt.axvline(np.max(x), ls="--", c="r")
+plt.tight_layout()
+# set_rectangular_figures()
+```
+:::
+:::
+
+Take the best, you'd think it has $\approx 98\%$ accuracy!
+
+# EDA & Baseline Model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## The training set {.smaller}
+
+```{python}
+X_train
+```
+
 ## Location
 
 Python's `matplotlib` package $\approx$ R's basic `plot`s.
 
 ```{python}
 import matplotlib.pyplot as plt
+
 plt.scatter(features["Longitude"], features["Latitude"])
 ```
 
@@ -29,66 +182,29 @@ Python's `seaborn` package $\approx$ R's `ggplot2`.
 
 ```{python}
 import seaborn as sns
+
 sns.scatterplot(x="Longitude", y="Latitude", data=features);
 ```
 
 ## Features
 
 ```{python}
-features.columns
+print(list(features.columns))
 ```
 
 How many?
 
 ```{python}
-NUM_FEATURES = len(features.columns)
-NUM_FEATURES
+num_features = len(features.columns)
+num_features
 ```
 
 Or
 
 ```{python}
-NUM_FEATURES = features.shape[1]
+num_features = features.shape[1]
 features.shape
 ```
-
-## Set aside a fraction for a test set
-
-
-```{python}
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = \
-    train_test_split(features, target, random_state=42)
-```
-
-
-::: columns
-::: {.column width="70%"}
-
-![Illustration of a typical training/test split.](heaton-train-test-split.png)
-
-:::
-::: {.column width="30%"}
-![Our use of sklearn.](scikit-learn-what-is-my-purpose.png)
-:::
-:::
-
-
-::: footer
-Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/e4bdc124b0c45b592d9bdbed0d2ef6c63c0245d6/t81_558_class_02_1_python_pandas.ipynb), Part 2.1: Introduction to Pandas, and [this random site](https://journeys.dartmouth.edu/folklorearchive/2020/06/03/purpose-of-scikit-learn-is-to-split-the-data/).
-:::
-
-## The training set {.smaller}
-
-```{python}
-X_train
-```
-
-::: {.callout-tip}
-Why is the `X_` in the variable name in capitals and the `y_` in lowercase?
-:::
-
-# Simple baseline model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
 
 ## Linear Regression
 
@@ -96,6 +212,7 @@ $$ \hat{y} = w_0 + \sum_{i=1}^N w_i x_i .$$
 
 ```{python}
 from sklearn.linear_model import LinearRegression
+
 lr = LinearRegression()
 lr.fit(X_train, y_train);
 ```
@@ -145,11 +262,11 @@ add_diagonal_line()
 ::: column
 ```{python}
 #| echo: false
-y_pred = lr.predict(X_test)
-plt.scatter(y_pred, y_test)
+y_pred = lr.predict(X_val)
+plt.scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
-plt.title("Test set")
+plt.title("Validation set")
 add_diagonal_line()
 ```
 :::
@@ -164,9 +281,10 @@ set_rectangular_figures()
 
 ```{python}
 import pandas as pd
+
 y_pred = lr.predict(X_train)
 df = pd.DataFrame({"Predictions": y_pred, "True values": y_train})
-df["Squared Error"] = (df["Predictions"] - df["True values"])**2
+df["Squared Error"] = (df["Predictions"] - df["True values"]) ** 2
 df.head(4)
 ```
 
@@ -181,39 +299,38 @@ df["Squared Error"].mean()
 ```
 
 ```{python}
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error as mse
 
-mean_squared_error(y_train, y_pred)
+mse(y_train, y_pred)
 ```
 
 Store the results in a dictionary:
 
 ```{python}
-mse_lr_train = mean_squared_error(y_train, lr.predict(X_train))
-mse_lr_test = mean_squared_error(y_test, lr.predict(X_test))
+mse_lr_train = mse(y_train, lr.predict(X_train))
+mse_lr_val = mse(y_val, lr.predict(X_val))
 
 mse_train = {"Linear Regression": mse_lr_train}
-mse_test = {"Linear Regression": mse_lr_test}
+mse_val = {"Linear Regression": mse_lr_val}
 ```
 
 
 # Our First Neural Network {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
 
-## Decide on the architecture
+## What are Keras and TensorFlow?
 
-![A simple network with one hidden layer with 30 neurons.](nn.svg)
+Keras is common way of specifying, training, and using neural networks.
+It gives a simple interface to _various backend_ libraries, including Tensorflow. 
 
-::: footer
-Generated used the [NN-SVG](http://alexlenail.me/NN-SVG/index.html) tool.
+![Keras as a independent interface, and Keras as part of Tensorflow.](Geron-mls2_1010.png)
+
+:::footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-10.
 :::
 
 ## Create a Keras ANN model
 
-```{python}
-#| echo: false
-import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
-```
+Decide on the architecture: a simple fully-connected network with one hidden layer with 30 neurons.
 
 Create the model:
 
@@ -221,10 +338,9 @@ Create the model:
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 
-model = Sequential([
-    Dense(30, input_dim=NUM_FEATURES, activation="relu"),
-    Dense(1)
-])
+model = Sequential(
+    [Dense(30, input_dim=num_features, activation="relu"), Dense(1)]
+)
 ```
 
 ## Inspect the model
@@ -236,40 +352,31 @@ model.summary()
 ## The model is initialised randomly
 
 ```{python}
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
-])
-model.predict(X_test.head(3), verbose=0)
+model = Sequential([Dense(30, activation="relu"), Dense(1)])
+model.predict(X_val.head(3), verbose=0)
 ```
 
 ```{python}
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
-])
-model.predict(X_test.head(3), verbose=0)
+model = Sequential([Dense(30, activation="relu"), Dense(1)])
+model.predict(X_val.head(3), verbose=0)
 ```
 
 ## Controlling the randomness
 
 ```{python}
-#| code-line-numbers: "|1-2,10"
+#| code-line-numbers: "|1-3,9"
 import random
-random.seed(123)
-
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)])
-
-display(model.predict(X_test.head(3), verbose=0))
 
 random.seed(123)
-model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)])
 
-display(model.predict(X_test.head(3), verbose=0))
+model = Sequential([Dense(30, activation="relu"), Dense(1)])
+
+display(model.predict(X_val.head(3), verbose=0))
+
+random.seed(123)
+model = Sequential([Dense(30, activation="relu"), Dense(1)])
+
+display(model.predict(X_val.head(3), verbose=0))
 ```
 
 ## Fit the model
@@ -331,11 +438,11 @@ add_diagonal_line()
 
 ```{python}
 #| echo: false
-y_pred = model.predict(X_test, verbose=0)
-plt.scatter(y_pred, y_test)
+y_pred = model.predict(X_val, verbose=0)
+plt.scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
-plt.title("Test set")
+plt.title("Validation set")
 add_diagonal_line()
 ```
 :::
@@ -349,24 +456,26 @@ set_rectangular_figures()
 ## Assess the model
 
 ```{python}
-y_pred = model.predict(X_test, verbose=0)
-mean_squared_error(y_test, y_pred)
+y_pred = model.predict(X_val, verbose=0)
+mse(y_val, y_pred)
 ```
 
 ```{python}
-mse_train["Basic ANN"] = mean_squared_error(y_train, model.predict(X_train, verbose=0))
-mse_test["Basic ANN"] = mean_squared_error(y_test, model.predict(X_test, verbose=0))
+mse_train["Basic ANN"] = mse(
+    y_train, model.predict(X_train, verbose=0)
+)
+mse_val["Basic ANN"] = mse(y_val, model.predict(X_val, verbose=0))
 ```
 
 Some predictions are negative:
 
 ```{python}
-y_pred = model.predict(X_test, verbose=0)
+y_pred = model.predict(X_val, verbose=0)
 y_pred.min(), y_pred.max()
 ```
 
 ```{python}
-y_test.min(), y_test.max()
+y_val.min(), y_val.max()
 ```
 
 
@@ -407,7 +516,7 @@ plt.ylabel("MSE");
 ## Predictions
 
 ```{python}
-y_pred = model.predict(X_test, verbose=0)
+y_pred = model.predict(X_val, verbose=0)
 print(f"Min prediction: {y_pred.min():.2f}")
 print(f"Max prediction: {y_pred.max():.2f}")
 ```
@@ -416,7 +525,7 @@ print(f"Max prediction: {y_pred.max():.2f}")
 ::: column
 ```{python}
 #| eval: false
-plt.scatter(y_pred, y_test)
+plt.scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
 add_diagonal_line()
@@ -425,8 +534,10 @@ add_diagonal_line()
 <div style="margin-top: 1em;">
 
 ```{python}
-mse_train["Long run ANN"] = mean_squared_error(y_train, model.predict(X_train, verbose=0))
-mse_test["Long run ANN"] = mean_squared_error(y_test, model.predict(X_test, verbose=0))
+mse_train["Long run ANN"] = mse(
+    y_train, model.predict(X_train, verbose=0)
+)
+mse_val["Long run ANN"] = mse(y_val, model.predict(X_val, verbose=0))
 ```
 
 </div>
@@ -438,7 +549,7 @@ mse_test["Long run ANN"] = mean_squared_error(y_test, model.predict(X_test, verb
 
 ```{python}
 #| echo: false
-square_fig().scatter(y_pred, y_test)
+square_fig().scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
 add_diagonal_line()
@@ -459,32 +570,40 @@ add_diagonal_line()
 import tensorflow.keras.activations as acts
 import numpy as np
 
-def plot_activation(activation, ax, name, hide_x=False):
+
+def plot_activation(activation, ax, name, hideX=False):
     x = np.linspace(-5, 5, 100)
     y = activation(x)
-    
+
     ax.plot(x, y)
     if y.numpy().min() < 0:
-        ax.axhline(0, ls='--', c='black', lw=0.5)
+        ax.axhline(0, ls="--", c="black", lw=0.5)
 
     # Annotate the top-left corner of the subplot with the name
     # of the activation function
-    ax.annotate(name, xy=(0.2, 1), xycoords='axes fraction',
-                xytext=(-5, -5), textcoords='offset points',
-                ha='left', va='top')
-    
-    if hide_x:
+    ax.annotate(
+        name,
+        xy=(0.2, 1),
+        xycoords="axes fraction",
+        xytext=(-5, -5),
+        textcoords="offset points",
+        ha="left",
+        va="top",
+    )
+
+    if hideX:
         ax.xaxis.set_visible(False)
 
-fig, axs = plt.subplots(2, 2)
-plot_activation(acts.tanh, axs[0,0], "tanh", hide_x=True)
-plot_activation(acts.sigmoid, axs[0,1], "sigmoid", hide_x=True)
-plot_activation(acts.relu, axs[1,0], "ReLU")
-plot_activation(acts.exponential, axs[1,1], "exponential")
 
-axs[0,0].set(ylabel="Output")
-axs[1,0].set(xlabel="Input", ylabel="Output")
-axs[1,1].set(xlabel="Input");
+fig, axs = plt.subplots(2, 2)
+plot_activation(acts.tanh, axs[0, 0], "tanh", hideX=True)
+plot_activation(acts.sigmoid, axs[0, 1], "sigmoid", hideX=True)
+plot_activation(acts.relu, axs[1, 0], "ReLU")
+plot_activation(acts.exponential, axs[1, 1], "exponential")
+
+axs[0, 0].set(ylabel="Output")
+axs[1, 0].set(xlabel="Input", ylabel="Output")
+axs[1, 1].set(xlabel="Input");
 ```
 
 ## Enforce positive outputs (ReLU)
@@ -530,11 +649,11 @@ plt.title("Training set");
 
 ```{python}
 #| echo: false
-y_pred = model.predict(X_test, verbose=0)
-plt.scatter(y_pred, y_test)
+y_pred = model.predict(X_val, verbose=0)
+plt.scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
-plt.title("Test set");
+plt.title("Validation set");
 ```
 :::
 :::
@@ -574,6 +693,7 @@ scaler = StandardScaler()
 scaler.fit(X_train)
 
 X_train_sc = scaler.transform(X_train)
+X_val_sc = scaler.transform(X_val)
 X_test_sc = scaler.transform(X_test)
 ```
 
@@ -582,22 +702,17 @@ X_test_sc = scaler.transform(X_test)
 ```{python}
 #| output-location: default
 #| eval: false
-plt.hist(X_train.iloc[:,0])
-plt.hist(X_train_sc[:,0])
-plt.legend([
-    "Original",
-    "Scaled"
-]);
+plt.hist(X_train.iloc[:, 0])
+plt.hist(X_train_sc[:, 0])
+plt.legend(["Original", "Scaled"]);
 ```
 :::
 ::: column
 ```{python}
 #| echo: false
-plt.hist(X_train.iloc[:,0])
-plt.hist(X_train_sc[:,0])
-plt.legend([
-        "Original",
-        "Scaled"]);
+plt.hist(X_train.iloc[:, 0])
+plt.hist(X_train_sc[:, 0])
+plt.legend(["Original", "Scaled"]);
 ```
 :::
 :::
@@ -641,7 +756,7 @@ plt.ylabel("MSE");
 ## Predictions
 
 ```{python}
-y_pred = model.predict(X_test_sc, verbose=0)
+y_pred = model.predict(X_val_sc, verbose=0)
 print(f"Min prediction: {y_pred.min():.2f}")
 print(f"Max prediction: {y_pred.max():.2f}")
 ```
@@ -650,7 +765,7 @@ print(f"Max prediction: {y_pred.max():.2f}")
 ::: column
 ```{python}
 #| eval: false
-plt.scatter(y_pred, y_test)
+plt.scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
 add_diagonal_line()
@@ -659,8 +774,10 @@ add_diagonal_line()
 <div style="margin-top: 1em;">
 
 ```{python}
-mse_train["Exp ANN"] = mean_squared_error(y_train, model.predict(X_train_sc, verbose=0))
-mse_test["Exp ANN"] = mean_squared_error(y_test, model.predict(X_test_sc, verbose=0))
+mse_train["Exp ANN"] = mse(
+    y_train, model.predict(X_train_sc, verbose=0)
+)
+mse_val["Exp ANN"] = mse(y_val, model.predict(X_val_sc, verbose=0))
 ```
 
 </div>
@@ -672,7 +789,7 @@ mse_test["Exp ANN"] = mean_squared_error(y_test, model.predict(X_test_sc, verbos
 
 ```{python}
 #| echo: false
-square_fig().scatter(y_pred, y_test)
+square_fig().scatter(y_pred, y_val)
 plt.xlabel("Predictions")
 plt.ylabel("True values")
 add_diagonal_line()
@@ -691,26 +808,191 @@ On training data:
 mse_train
 ```
 
-On test data (expect _worse_, i.e. bigger):
+On validation data (expect _worse_, i.e. bigger):
 
 ```{python}
-mse_test
+mse_val
 ```
 
-## Comparing models (in sample) {data-visibility="uncounted"}
+## Comparing models (train) {data-visibility="uncounted"}
 
 ```{python}
-train_results = pd.DataFrame({
-    "Model": mse_train.keys(), "MSE": mse_train.values()
-})
+train_results = pd.DataFrame(
+    {"Model": mse_train.keys(), "MSE": mse_train.values()}
+)
 train_results.sort_values("MSE", ascending=False)
 ```
 
-## Comparing models (out sample) {data-visibility="uncounted"}
+## Comparing models (validation) {data-visibility="uncounted"}
 
 ```{python}
-test_results = pd.DataFrame({
-    "Model": mse_test.keys(), "MSE": mse_test.values()
-})
-test_results.sort_values("MSE", ascending=False)
+val_results = pd.DataFrame(
+    {"Model": mse_val.keys(), "MSE": mse_val.values()}
+)
+val_results.sort_values("MSE", ascending=False)
+```
+
+<!--
+## California housing dataset {data-visibility="uncounted"}
+
+```{python}
+features.sample(3, random_state=4)
+```
+
+```{python}
+target.sample(3, random_state=4)
+```
+
+-->
+
+# Early Stopping {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Choosing when to stop training
+
+![Illustrative loss curves over time.](heaton-error-over-time.png)
+
+::: footer
+Source: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/master/t81_558_class_03_4_early_stop.ipynb), Part 3.4: Early Stopping.
+:::
+
+## Try early stopping
+
+Hinton calls it a "beautiful free lunch"
+
+```{python}
+#| code-line-numbers: "|1,10,13"
+from tensorflow.keras.callbacks import EarlyStopping
+
+random.seed(123)
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1, activation="exponential")
+])
+model.compile("adam", "mse")
+
+es = EarlyStopping(restore_best_weights=True, patience=15)
+
+%time hist = model.fit(X_train_sc, y_train, epochs=1_000, \
+    callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)
+print(f"Keeping model at epoch #{len(hist.history['loss'])-10}.")
+```
+
+## Loss curve
+
+```{python}
+plt.plot(hist.history["loss"])
+plt.plot(hist.history["val_loss"])
+plt.legend(["Training", "Validation"]);
+```
+
+## Loss curve II
+
+```{python}
+plt.plot(hist.history["loss"])
+plt.plot(hist.history["val_loss"])
+plt.ylim([0, 8])
+plt.legend(["Training", "Validation"]);
+```
+
+## Predictions
+
+```{python}
+#| echo: false
+set_square_figures()
+```
+
+::: columns
+::: column
+```{python}
+#| echo: false
+y_pred = model.predict(X_train_sc, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+```
+:::
+::: column
+```{python}
+#| echo: false
+y_pred = model.predict(X_val_sc, verbose=0)
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Validation set")
+add_diagonal_line()
+```
+:::
+:::
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+```
+
+```{python}
+#| echo: false
+# Store the results
+mse_train["Early stop ANN"] = model.evaluate(
+    X_train_sc, y_train, verbose=False
+)
+mse_val["Early stop ANN"] = model.evaluate(
+    X_val_sc, y_val, verbose=False
+)
+```
+
+## Comparing models (validation) {data-visibility="uncounted"}
+
+<br>
+
+```{python}
+#| echo: false
+valResults = pd.DataFrame(
+    {"Model": mse_val.keys(), "MSE": mse_val.values()}
+)
+valResults.sort_values("MSE", ascending=False)
+```
+
+## The test set
+
+Evaluate _only the final/selected model_ on the test set.
+
+```{python}
+mse(y_test, model.predict(X_test_sc, verbose=0))
+```
+
+```{python}
+model.evaluate(X_test_sc, y_test, verbose=False)
+```
+
+## Another useful callback
+
+```{python}
+from pathlib import Path
+from tensorflow.keras.callbacks import ModelCheckpoint
+
+random.seed(123)
+model = Sequential(
+    [Dense(30, activation="relu"), Dense(1, activation="exponential")]
+)
+model.compile("adam", "mse")
+mc = ModelCheckpoint(
+    "best-model.h5", monitor="val_loss", save_best_only=True
+)
+es = EarlyStopping(restore_best_weights=True, patience=5)
+hist = model.fit(
+    X_train_sc,
+    y_train,
+    epochs=100,
+    validation_split=0.1,
+    callbacks=[mc, es],
+    verbose=False,
+)
+Path("best-model.h5").stat().st_size
+```
+
+```{python}
+#| echo: false
+Path("best-model.h5").unlink()
 ```

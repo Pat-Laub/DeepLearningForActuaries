@@ -1,0 +1,499 @@
+---
+title: Generative Adversarial Networks
+---
+
+# Traditional GANs {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Before GANs we had autoencoders
+
+An autoencoder takes a data/image, maps it to a latent space via en encoder module, then decodes it back to an output with the same dimensions via a decoder module.
+
+![Schematic of an autoencoder.](autoencoder.png)
+
+::: footer
+Source: Marcus Lautier (2022).
+:::
+
+## GAN faces
+
+::: columns
+::: column
+![](fakeface1.jpeg)
+:::
+::: column
+![](fakeface2.jpeg)
+:::
+:::
+
+Try out [https://www.whichfaceisreal.com](https://www.whichfaceisreal.com).
+
+::: footer
+Source: [https://thispersondoesnotexist.com](https://thispersondoesnotexist.com).
+:::
+
+## Example StyleGAN2-ADA outputs
+
+<br>
+<center>
+<iframe width="800" height="500" src="https://www.youtube.com/embed/kbDd5lW6rkM?start=171" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</center>
+
+::: footer
+Source: Jeff Heaton (2021), [Training a GAN from your Own Images: StyleGAN2](https://youtu.be/kbDd5lW6rkM).
+:::
+
+## GAN structure
+
+![A schematic of a generative adversarial network.](gan-diagram.png)
+
+::: footer
+Source: Thales Silva (2018), [An intuitive introduction to Generative Adversarial Networks (GANs)](https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394), freeCodeCamp.
+:::
+
+## GAN intuition
+
+![](google-devs-bad_gan.svg)
+![](google-devs-ok_gan.svg)
+![](google-devs-good_gan.svg)
+
+::: footer
+Source: Google Developers, [Overview of GAN Structure](https://developers.google.com/machine-learning/gan/gan_structure), Google Machine Learning Education.
+:::
+
+
+## Intuition about GANs {.smaller}
+
+- A forger creates a fake Picasso painting to sell to an art dealer. 
+- The art dealer assesses the painting.
+
+How they best each other:
+
+- The art dealer is given both authentic paintings and fake paintings to look at. Later on, the validity his assessment is evaluated and he trains to become better at detecting fakes. Over time, he becomes increasingly expert at authenticating Picasso's artwork.
+- The forger receives an assessment from the art dealer everytime he gives him a fake. He knows he has to perfect his craft if the art dealer can detect his fake. He becomes increasingly adept at imitating Picasso's style.
+
+## Generative adversarial networks
+
+
+- A GAN is made up of two parts:
+  - Generator network: the forger. Takes a random point in the latent space, and decodes it into a synthetic data/image.
+  - Discriminator network (or adversary): the expert. Takes a data/image and decide whether it exists in the original data set (the training set) or was created by the generator network.
+
+  
+## Discriminator
+
+```python
+lrelu = layers.LeakyReLU(alpha=0.2)
+
+discriminator = keras.Sequential([
+    keras.Input(shape=(28, 28, 1)),
+    layers.Conv2D(64, 3, strides=2, padding="same", activation=lrelu),
+    layers.Conv2D(128, 3, strides=2, padding="same", activation=lrelu),
+    layers.GlobalMaxPooling2D(),
+    layers.Dense(1)])
+
+discriminator.summary(print_fn=skip_empty)
+```
+
+## Generator
+
+```python
+latent_dim = 128
+generator = keras.Sequential([
+    layers.Dense(7 * 7 * 128, input_dim=latent_dim, activation=lrelu),
+    layers.Reshape((7, 7, 128)),
+    layers.Conv2DTranspose(128, 4, strides=2, padding="same", activation=lrelu),
+    layers.Conv2DTranspose(128, 4, strides=2, padding="same", activation=lrelu),
+    layers.Conv2D(1, 7, padding="same", activation="sigmoid")])
+generator.summary(print_fn=skip_empty)
+```
+
+
+# Training GANs {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## GAN cost functions
+
+![The loss function à la 3Blue1Brown.](GANLoss.mp4)
+
+## GAN - Schematic process
+
+First step: Training *discriminator*:
+
+- Draw random points in the latent space (random noise).
+- Use *generator* to generate data from this random noise.
+- Mix generated data with real data and input them into the *discriminator*. The training targets are the correct labels of *real data* or *fake data*. Use *discriminator* to give feedback on the mixed data whether they are real or synthetic. Train *discriminator* to minimize the loss function which is the difference between the *discriminator*'s feedback and the correct labels.
+
+## GAN - Schematic process II
+
+Second step: Training *generator*: 
+
+- Draw random points in the latent space and generate data with *generator*.
+- Use *discriminator* to give feedback on the generated data. What the generator tries to achieve is to fool the *discriminator* into thinking all generated data are real data. Train *generator* to minimize the loss function which is the difference between the discriminator's feedback and the desired feedback: "All data are real data" (which is not true).
+
+## GAN - Schematic process III
+
+- When training, the discriminator may end up dominating the generator because the loss function for training the discriminator tends to zero faster. In that case, try reducing the learning rate and increase the dropout rate of the discriminator.
+- There are a few tricks for implementing GANS such as introducing stochasticity by adding random noise to the labels for the discriminator, using stride instead of pooling in the discriminator, using kernel size that is divisible by stride size, etc.
+
+
+## Train step
+
+```python
+# Separate optimisers for discriminator and generator.
+d_optimizer = keras.optimizers.Adam(learning_rate=0.0003)
+g_optimizer = keras.optimizers.Adam(learning_rate=0.0004)
+
+# Instantiate a loss function.
+loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)
+
+@tf.function
+def train_step(real_images):
+  # Sample random points in the latent space
+  random_latent_vectors = tf.random.normal(shape=(batch_size, latent_dim))
+  # Decode them to fake images
+  generated_images = generator(random_latent_vectors)
+  # Combine them with real images
+  combined_images = tf.concat([generated_images, real_images], axis=0)
+
+  # Assemble labels discriminating real from fake images
+  labels = tf.concat([
+    tf.zeros((batch_size, 1)),
+    tf.ones((real_images.shape[0], 1))], axis=0)
+
+  # Add random noise to the labels - important trick!
+  labels += 0.05 * tf.random.uniform(labels.shape)
+
+  # Train the discriminator
+  with tf.GradientTape() as tape:
+    predictions = discriminator(combined_images)
+    d_loss = loss_fn(labels, predictions)
+  grads = tape.gradient(d_loss, discriminator.trainable_weights)
+  d_optimizer.apply_gradients(zip(grads, discriminator.trainable_weights))
+
+  # Sample random points in the latent space
+  random_latent_vectors = tf.random.normal(shape=(batch_size, latent_dim))
+
+  # Assemble labels that say "all real images"
+  misleading_labels = tf.ones((batch_size, 1))
+
+  # Train the generator (note that we should *not* update the weights
+  # of the discriminator)!
+  with tf.GradientTape() as tape:
+    predictions = discriminator(generator(random_latent_vectors))
+    g_loss = loss_fn(misleading_labels, predictions)
+
+  grads = tape.gradient(g_loss, generator.trainable_weights)
+  g_optimizer.apply_gradients(zip(grads, generator.trainable_weights))
+  return d_loss, g_loss, generated_images
+```
+
+
+## Grab the data
+
+```python
+# Prepare the dataset.
+# We use both the training & test MNIST digits.
+batch_size = 64
+(x_train, _), (x_test, _) = keras.datasets.mnist.load_data()
+all_digits = np.concatenate([x_train, x_test])
+all_digits = all_digits.astype("float32") / 255.0
+all_digits = np.reshape(all_digits, (-1, 28, 28, 1))
+dataset = tf.data.Dataset.from_tensor_slices(all_digits)
+dataset = dataset.shuffle(buffer_size=1024).batch(batch_size)
+
+# In practice you need at least 20 epochs to generate nice digits.
+epochs = 1
+save_dir = "./"
+```
+
+## Train the GAN
+```python
+%%time
+for epoch in range(epochs):
+  for step, real_images in enumerate(dataset):
+    # Train the discriminator & generator on one batch of real images.
+    d_loss, g_loss, generated_images = train_step(real_images)
+
+    # Logging.
+    if step % 200 == 0:
+      # Print metrics
+      print(f"Discriminator loss at step {step}: {d_loss:.2f}")
+      print(f"Adversarial loss at step {step}: {g_loss:.2f}")
+      break # Remove this if really training the GAN
+```
+
+# Conditional GANs {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Unconditional GANs
+
+![Analogy for an unconditional GAN](coursera-unconditional-gan.png)
+
+::: footer
+Source: Sharon Zhou, _Conditional Generation: Intuition_ Build Basic Generative Adversarial Networks (Week 4), DeepLearning.AI on Coursera.
+:::
+
+## Conditional GANs
+
+![Analogy for a conditional GAN](coursera-conditional-gan.png)
+
+::: footer
+Source: Sharon Zhou, _Conditional Generation: Intuition_ Build Basic Generative Adversarial Networks (Week 4), DeepLearning.AI on Coursera.
+:::
+
+## Hurricane example data
+
+![Original data](hurricane/reals.jpeg)
+
+## Hurricane example {data-visibility="uncounted"}
+
+![Initial fakes](hurricane/fakes_init.jpeg)
+
+## Hurricane example (after 54s) {data-visibility="uncounted"}
+
+![Fakes after 1 iteration](hurricane/fakes000000.jpeg)
+
+## Hurricane example (after 21m) {data-visibility="uncounted"}
+
+![Fakes after 100 kimg](hurricane/fakes000100.jpeg)
+
+## Hurricane example (after 47m) {data-visibility="uncounted"}
+
+![Fakes after 200 kimg](hurricane/fakes000200.jpeg)
+
+## Hurricane example (after 4h10m) {data-visibility="uncounted"}
+
+![Fakes after 1000 kimg](hurricane/fakes001000.jpeg)
+
+## Hurricane example (after 14h41m) {data-visibility="uncounted"}
+
+![Fakes after 3700 kimg](hurricane/fakes003700.jpeg)
+
+# Image-to-image translation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+
+## Example: Deoldify images #1
+
+
+![A deoldified version of the famous "Migrant Mother" photograph.](deoldify-migrant-mother.jpeg)
+
+:::footer
+Source: [Deoldify package](https://github.com/jantic/DeOldify).
+:::
+
+## Example: Deoldify images #2
+
+![A deoldified Golden Gate Bridge under construction.](deoldify-golden-gate-bridge.jpeg)
+
+:::footer
+Source: [Deoldify package](https://github.com/jantic/DeOldify).
+:::
+
+## Example: Deoldify images #3
+
+::: columns
+::: column
+
+![](dog-bw.jpeg)
+
+:::
+
+::: column
+
+![](dog-colour.jpeg)
+
+:::
+:::
+
+## Explore the latent space
+
+<center>
+
+{{< video https://youtu.be/rr_ARby64lw width="1000px" height="600px" >}}
+
+</center>
+
+## Generator can't generate everything
+
+::: columns
+::: column
+
+![Target](StyleGAN2-ADA-Latent-Space/target.png)
+
+:::
+::: column
+
+![Projection](StyleGAN2-ADA-Latent-Space/proj.png)
+
+:::
+:::
+
+# Problems with GANs {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## They are slow to train
+
+<br>
+StyleGAN2-ADA training times on V100s (1024x1024):
+
+| GPUs | 1000 kimg | 25000 kimg | sec / kimg          | GPU mem | CPU mem
+| :-: | :---------: | :--------: | :----: | :------: | :---------:
+| 1    | 1d 20h    | 46d 03h    | 158 | 8.1 GB  | 5.3 GB
+| 2    | 23h 09m   | 24d 02h    | 83   | 8.6 GB  | 11.9 GB
+| 4    | 11h 36m   | 12d 02h    | 40   | 8.4 GB  | 21.9 GB
+| 8    | 5h 54m    | 6d 03h     | 20   | 8.3 GB  | 44.7 GB
+
+
+::: footer
+Source: NVIDIA's Github, [StyleGAN2-ADA — Official PyTorch implementation](https://github.com/NVlabs/stylegan2-ada-pytorch/).
+:::
+
+## Uncertain convergence
+
+Converges to a Nash equilibrium.. if at all.
+
+![Analogy of minimax update failure.](lilian-weng-unstable-convergence.png)
+
+::: footer
+Source: Lilian Weng (2019), _From GAN to WGAN_, ArXiV.
+:::
+
+## Mode collapse {.smaller}
+
+::: columns
+:::{.column width=50%"}
+![Example of mode collapse](gan-mode-collapse.png)
+:::
+:::{.column width="50%"}
+![](xkcd-random_number.png)
+
+:::
+:::
+
+::: footer
+Source: Metz et al. (2017), [Unrolled Generative Adversarial Networks](https://arxiv.org/pdf/1611.02163.pdf) and Randall Munroe (2007), [xkcd #221: Random Number](https://xkcd.com/221/).
+:::
+
+## Generation is harder
+
+![A schematic of a generative adversarial network.](gan-diagram.png)
+
+```python
+# Separate optimisers for discriminator and generator.
+d_optimizer = keras.optimizers.Adam(learning_rate=0.0003)
+g_optimizer = keras.optimizers.Adam(learning_rate=0.0004)
+```
+
+::: footer
+Source: Thales Silva (2018), [An intuitive introduction to Generative Adversarial Networks (GANs)](https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394), freeCodeCamp.
+:::
+
+## Advanced image layers {.smaller}
+
+::: {.absolute top=120 left=250}
+Conv2D
+:::
+
+::: {.absolute top=270 left=60}
+GlobalMaxPool2D
+:::
+
+::: {.absolute top=270 right=100}
+Conv2DTranspose
+:::
+
+![](2d_global_max_pooling_pa1.png){.absolute bottom=0 left=0 width="550"}
+
+![](conv2d.gif){.absolute top=75 left=350 width="300"}
+
+![](conv2dTranspose.gif){.absolute bottom=0 right=50 width="300"}
+
+::: footer
+Sources: Pröve (2017), [An Introduction to different Types of Convolutions in Deep Learning](https://towardsdatascience.com/types-of-convolutions-in-deep-learning-717013397f4d), and Peltarion Knowledge Center, [Global max pooling 2D](https://peltarion.com/knowledge-center/documentation/modeling-view/build-an-ai-model/blocks/global-max-pooling-2d).
+:::
+
+## Vanishing gradients (I)
+
+![When the discriminator is too good, vanishing gradients](coursera-vanishing-gradients.png)
+
+::: footer
+Source: Sharon Zhou, _Problem with BCE Loss_, Build Basic Generative Adversarial Networks (Week 3), DeepLearning.AI on Coursera.
+::::
+
+## Vanishing gradients (II)
+
+![Vanishing gradients](lilian-weng-vanishing-gradients.png)
+
+::: footer
+Source: Lilian Weng (2019), _From GAN to WGAN_, ArXiV.
+:::
+
+# Wasserstein GAN {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+
+## We're comparing distributions
+
+<br>
+
+Trying to minimise the distance between the _distribution of generated samples_ and the _distribution of real data_.
+
+<br>
+
+Vanilla GAN is equivalent to minimising the Jensen–Shannon Divergence between the two.
+
+<br>
+
+An alternative distance between distributions is the _Wasserstein distance_.
+
+## ~~Discriminator~~ Critic
+
+Critic $D : \text{Input} \to \mathbb{R}$ how "authentic" the input looks.
+It can't discriminate real from fake exactly.
+
+Critic's goal is
+
+$$ \max_{D \in \mathscr{D}} \mathbb{E}[ D(X) ] - \mathbb{E}[ D(G(Z)) ] $$
+
+where we $\mathscr{D}$ is space of 1-Lipschitz functions.
+Either use _gradient clipping_ or penalise gradients far from 1:
+
+$$ \max_{D} \mathbb{E}[ D(X) ] - \mathbb{E}[ D(G(Z)) ] + \lambda \mathbb{E} \Bigl[ ( \bigl|\bigl| \nabla D \bigr|\bigr| - 1)^2 \Bigr] .  $$
+
+
+## Schematic
+
+![Wasserstein](wasserstein-schematic.png)
+
+::: footer
+Source: Côté et al. (2020), _Synthesizing Property & Casualty Ratemaking Datasets using Generative Adversarial Networks_, Working Paper?.
+:::
+
+# Appendix {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+
+## Links
+
+- Dongyu Liu (2021), [TadGAN: Time Series Anomaly Detection Using Generative Adversarial Networks](https://youtu.be/jIDj2dhU99k)
+- Jeff Heaton (2022), [GANs for Tabular Synthetic Data Generation (7.5)](https://youtu.be/yujdA46HKwA)
+- Jeff Heaton (2022), [GANs to Enhance Old Photographs Deoldify (7.4)](https://youtu.be/0OTd5GlHRx4)
+
+
+<script defer>
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["abs", "compile", "eval", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>
