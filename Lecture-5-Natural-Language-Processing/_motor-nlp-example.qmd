@@ -1,0 +1,804 @@
+
+# Car Crash Police Reports {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Downloading the dataset
+
+Look at the (U.S.) National Highway Traffic Safety Administration's (NHTSA) [National Motor Vehicle Crash Causation Survey](https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/812506) (NMVCCS) dataset.
+
+```{python}
+from pathlib import Path
+
+if not Path("NHTSA_NMVCCS_extract.parquet.gzip").exists():
+    print("Downloading dataset")
+    !wget https://github.com/JSchelldorfer/ActuarialDataScience/raw/master/12%20-%20NLP%20Using%20Transformers/NHTSA_NMVCCS_extract.parquet.gzip
+
+df = pd.read_parquet("NHTSA_NMVCCS_extract.parquet.gzip")
+print(f"shape of DataFrame: {df.shape}")
+```
+
+## Features {.smaller}
+
+- `level_0`, `index`, `SCASEID`: all useless row numbers
+- `SUMMARY_EN` and `SUMMARY_GE`: summaries of the accident
+- `NUMTOTV`: total number of vehicles involved in the accident
+- `WEATHER1` to `WEATHER8`: 
+    - `WEATHER1`: cloudy
+    - `WEATHER2`: snow
+    - `WEATHER3`: fog, smog, smoke
+    - `WEATHER4`: rain
+    - `WEATHER5`: sleet, hail (freezing drizzle or rain)
+    - `WEATHER6`: blowing snow
+    - `WEATHER7`: severe crosswinds
+    - `WEATHER8`: other
+- `INJSEVA` and `INJSEVB`: injury severity & (binary) presence of bodily injury
+
+::: footer
+Source: [JSchelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
+:::
+
+## Crash summaries
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 6
+```
+
+```{python}
+df["SUMMARY_EN"]
+```
+
+```{python}
+df["SUMMARY_EN"].map(lambda summary: len(summary)).hist(grid=False);
+```
+
+## A crash summary
+
+```{python}
+df["SUMMARY_EN"].iloc[1]
+```
+
+## Carriage returns
+```{python}
+#| eval: false
+print(df["SUMMARY_EN"].iloc[1])
+```
+
+```{python}
+#| echo: false
+summary_after_carriage_return = "The Critical Precrash Event for the driver of V2 was other vehicle encroachment from adjacent lane over left lane line.  The Critical Reason for the Critical Event was not coded for this vehicle and the driver of V2 was not thought to have contributed to the crash.r corrective lenses and felt rested.  She was not injured in the crash. of V2.  Both vehicles came to final rest on the roadway at impact."
+print(summary_after_carriage_return)
+```
+
+```{python}
+# Replace every \r with \n
+def replace_carriage_return(summary):
+    return summary.replace("\r", "\n")
+
+df["SUMMARY_EN"] = df["SUMMARY_EN"].map(replace_carriage_return)
+print(df["SUMMARY_EN"].iloc[1][:500])
+```
+
+## Target
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 10
+```
+
+::: columns
+::: column
+Predict number of vehicles in the crash.
+
+```{python}
+df["NUMTOTV"].value_counts()\
+    .sort_index()
+```
+
+```{python}
+np.sum(df["NUMTOTV"] > 3)
+```
+:::
+::: column
+Simplify the target to just:
+
+- 1 vehicle
+- 2 vehicles
+- 3+ vehicles
+
+```{python}
+df["NUM_VEHICLES"] = \
+  df["NUMTOTV"].map(lambda x: \
+    str(x) if x <= 2 else "3+")
+df["NUM_VEHICLES"].value_counts()\
+  .sort_index()
+```
+:::
+:::
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 6
+```
+
+## Just ignore this for now...
+
+<!-- # Go through every summary and find the words "V1", "V2" and "V3".
+# For each summary, replace "V1" with a random number like "V1623", and "V2" with a different random number like "V1234". -->
+
+```{python}
+rnd.seed(123)
+
+for i, summary in enumerate(df["SUMMARY_EN"]):
+    word_numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+    num_cars = 10
+    new_car_nums = [f"V{rnd.randint(100, 10000)}" for _ in range(num_cars)]
+    num_spaces = 4
+
+    for car in range(1, num_cars+1):
+        new_num = new_car_nums[car-1]
+        summary = summary.replace(f"V-{car}", new_num)
+        summary = summary.replace(f"Vehicle {word_numbers[car-1]}", new_num).replace(f"vehicle {word_numbers[car-1]}", new_num)
+        summary = summary.replace(f"Vehicle #{word_numbers[car-1]}", new_num).replace(f"vehicle #{word_numbers[car-1]}", new_num)
+        summary = summary.replace(f"Vehicle {car}", new_num).replace(f"vehicle {car}", new_num)
+        summary = summary.replace(f"Vehicle #{car}", new_num).replace(f"vehicle #{car}", new_num)
+        summary = summary.replace(f"Vehicle # {car}", new_num).replace(f"vehicle # {car}", new_num)
+
+        for j in range(num_spaces+1):
+            summary = summary.replace(f"V{' '*j}{car}", new_num).replace(f"V{' '*j}#{car}", new_num).replace(f"V{' '*j}# {car}", new_num)
+            summary = summary.replace(f"v{' '*j}{car}", new_num).replace(f"v{' '*j}#{car}", new_num).replace(f"v{' '*j}# {car}", new_num)
+         
+    df.loc[i, "SUMMARY_EN"] = summary
+```
+
+## Convert $y$ to integers & split the data
+
+```{python}
+from sklearn.preprocessing import LabelEncoder
+target_labels = df["NUM_VEHICLES"]
+target = LabelEncoder().fit_transform(target_labels)
+target
+```
+
+```{python}
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df[["SUMMARY_EN"] + weather_cols]
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+```{python}
+print([np.mean(y_train == y) for y in [0, 1, 2]])
+```
+
+# Text Vectorisation {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+ 
+## Grab the start of a few summaries
+
+```{python}
+first_summaries = X_train["SUMMARY_EN"].iloc[:3]
+first_summaries
+```
+
+```{python}
+first_words = first_summaries.map(lambda txt: txt.split(" ")[:7])
+first_words
+```
+
+```{python}
+start_of_summaries = first_words.map(lambda txt: " ".join(txt))
+start_of_summaries
+```
+
+## Count words in the first summaries
+
+```{python}
+from sklearn.feature_extraction.text import CountVectorizer
+
+vect = CountVectorizer()
+counts = vect.fit_transform(start_of_summaries)
+vocab = vect.get_feature_names_out()
+print(len(vocab), vocab)
+```
+
+```{python}
+counts
+```
+
+```{python}
+counts.toarray()
+```
+
+## Encode new sentences to BoW
+
+```{python}
+vect.transform([
+    "first car hit second car in a crash",
+    "ipad os 16 beta released",
+])
+```
+
+```{python}
+vect.transform([
+    "first car hit second car in a crash",
+    "ipad os 16 beta released",
+]).toarray()
+```
+
+```{python}
+print(vocab)
+```
+
+## Bag of $n$-grams
+
+```{python}
+vect = CountVectorizer(ngram_range=(1, 2))
+counts = vect.fit_transform(start_of_summaries)
+vocab = vect.get_feature_names_out()
+print(len(vocab), vocab)
+```
+
+```{python}
+counts.toarray()
+```
+
+See: [Google Books  Ngram Viewer](https://books.google.com/ngrams)
+
+## TF-IDF
+
+Stands for _term frequency-inverse document frequency_.
+
+![Infographic explaining TF-IDF](tf-idf-graphic.png)
+
+::: footer
+Source: FiloTechnologia (2014), [A simple Java class for TF-IDF scoring](http://filotechnologia.blogspot.com/2014/01/a-simple-java-class-for-tfidf-scoring.html), Blog post.
+:::
+
+# Bag Of Words {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Count words in all the summaries
+
+```{python}
+vect = CountVectorizer()
+vect.fit(X_train["SUMMARY_EN"])
+vocab = list(vect.get_feature_names_out())
+len(vocab)
+```
+
+```{python}
+vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:]
+```
+
+## Create the $X$ matrices
+
+```{python}
+def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):
+    X_vects = vect.transform(X[txt_col]).toarray()
+    X_other = X.drop(txt_col, axis=1)
+
+    if not dataframe:
+        return np.concatenate([X_vects, X_other], axis=1)
+    else:
+        # Add column names and indices to the combined dataframe.
+        vocab = list(vect.get_feature_names_out())
+        X_vects_df = pd.DataFrame(X_vects, columns=vocab, index=X.index)
+        return pd.concat([X_vects_df, X_other], axis=1)
+```
+
+```{python}
+X_train_ct = vectorise_dataset(X_train, vect)
+X_val_ct = vectorise_dataset(X_val, vect)
+X_test_ct = vectorise_dataset(X_test, vect)
+```
+
+## Check the input matrix
+
+```{python}
+vectorise_dataset(X_train, vect, dataframe=True)
+```
+
+## Make a simple dense model
+
+```{python}
+num_features = X_train_ct.shape[1]
+num_cats = 3 # 1, 2, 3+ vehicles
+
+def build_model(num_features, num_cats):
+    random.seed(42)
+    
+    model = Sequential([
+        Dense(100, input_dim=num_features, activation="relu"),
+        Dense(num_cats, activation="softmax")
+    ])
+    
+    topk = SparseTopKCategoricalAccuracy(k=2, name="topk")
+    model.compile("adam", "SparseCategoricalCrossentropy",
+        metrics=["accuracy", topk])
+    
+    return model
+```
+
+## Inspect the model
+
+```{python}
+model = build_model(num_features, num_cats)
+model.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate the model
+
+```{python}
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+%time hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+```
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+
+# Limiting The Vocabulary {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## The `max_features` value
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=10)
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab)
+```
+
+## Remove stop words
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=10, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab)
+```
+
+## Keep 1,000 most frequent words 
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
+```
+
+Create the $X$ matrices:
+
+```{python}
+X_train_ct = vectorise_dataset(X_train, vect)
+X_val_ct = vectorise_dataset(X_val, vect)
+X_test_ct = vectorise_dataset(X_test, vect)
+```
+
+## Check the input matrix
+
+```{python}
+vectorise_dataset(X_train, vect, dataframe=True)
+```
+
+## Make & inspect the model
+
+```{python}
+num_features = X_train_ct.shape[1]
+model = build_model(num_features, num_cats)
+model.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate the model
+
+```{python}
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+%time hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+```
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+
+# Intelligently Limit The Vocabulary {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Keep 1,000 most frequent words 
+
+<br>
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
+```
+
+## Install spacy
+
+```{python}
+#| eval: false
+!pip install spacy
+!python -m spacy download en_core_web_sm
+```
+
+```{python}
+#| echo: false
+try:
+    import spacy
+except:
+    !pip install spacy
+
+try:
+    nlp = spacy.load("en_core_web_sm")
+except:
+    !python -m spacy download en_core_web_sm
+```
+
+```{python}
+import spacy
+
+nlp = spacy.load("en_core_web_sm")
+doc = nlp("Apple is looking at buying U.K. startup for $1 billion")
+for token in doc:
+    print(token.text, token.pos_, token.dep_)
+```
+
+## Lemmatize the text 
+
+```{python}
+def lemmatize(txt):
+    doc = nlp(txt)
+    good_tokens = [token.lemma_.lower() for token in doc \
+        if not token.like_num and \
+           not token.is_punct and \
+           not token.is_space and \
+           not token.is_currency and \
+           not token.is_stop]
+    return " ".join(good_tokens)
+```
+
+```{python}
+test_str = "Incident at 100kph and '10 incidents -13.3%' are incidental?\t $5"
+lemmatize(test_str)
+```
+
+```{python}
+test_str = "I interviewed 5-years ago, 150 interviews every year at 10:30 are.."
+lemmatize(test_str)
+```
+
+## Apply to the whole dataset
+
+```{python}
+#| eval: false
+df["SUMMARY_EN_LEMMA"] = df["SUMMARY_EN"].map(lemmatize)
+```
+
+```{python}
+#| include: false
+if Path("lemmas.csv").exists():
+    lemmas = pandas.read_csv("lemmas.csv")
+    lemmas.index = df.index
+    df["SUMMARY_EN_LEMMA"] = lemmas["SUMMARY_EN_LEMMA"]
+else:
+    print("Generating lemmas")
+    df["SUMMARY_EN_LEMMA"] = df["SUMMARY_EN"].map(lemmatize)
+    df["SUMMARY_EN_LEMMA"].to_csv("lemmas.csv")
+```
+
+```{python}
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df[["SUMMARY_EN_LEMMA"] + weather_cols]
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## Keep 1,000 most frequent lemmas
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN_LEMMA"])
+vocab = vect.get_feature_names_out()
+len(vocab)
+```
+
+```{python}
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
+```
+
+Create the $X$ matrices:
+
+```{python}
+X_train_ct = vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA")
+X_val_ct = vectorise_dataset(X_val, vect, "SUMMARY_EN_LEMMA")
+X_test_ct = vectorise_dataset(X_test, vect, "SUMMARY_EN_LEMMA")
+```
+
+## Check the input matrix
+
+```{python}
+vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", dataframe=True)
+```
+
+## Make & inspect the model
+
+```{python}
+num_features = X_train_ct.shape[1]
+model = build_model(num_features, num_cats)
+model.summary(print_fn=skip_empty)
+```
+
+## Fit & evaluate the model
+
+```{python}
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+%time hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+```
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+
+# Interrogate The Model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+
+## Permutation importance algorithm {.smaller}
+
+Taken directly from scikit-learn documentation: 
+
+- Inputs: fitted predictive model $m$, tabular dataset (training or
+  validation) $D$.
+- Compute the reference score $s$ of the model $m$ on data
+  $D$ (for instance the accuracy for a classifier or the $R^2$ for
+  a regressor).
+- For each feature $j$ (column of $D$):
+
+  - For each repetition $k$ in ${1, \dots, K}$:
+
+    - Randomly shuffle column $j$ of dataset $D$ to generate a
+      corrupted version of the data named $\tilde{D}_{k,j}$.
+    - Compute the score $s_{k,j}$ of model $m$ on corrupted data
+      $\tilde{D}_{k,j}$.
+
+  - Compute importance $i_j$ for feature $f_j$ defined as:
+
+    $$ i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} $$
+
+::: footer
+Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
+:::
+
+## Find important inputs
+
+```{python}
+def permutation_test(model, X, y, num_reps=1, seed=42):
+    """
+    Run the permutation test for variable importance.
+    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
+    """
+    rnd.seed(seed)
+    scores = []    
+
+    for j in range(X.shape[1]):
+        original_column = np.copy(X[:, j])
+        col_scores = []
+
+        for r in range(num_reps):
+            rnd.shuffle(X[:,j])
+            col_scores.append(model.evaluate(X, y, verbose=0))
+
+        scores.append(np.mean(col_scores, axis=0))
+        X[:,j] = original_column
+    
+    return np.array(scores)
+```
+
+## Run the permutation test
+
+<br>
+
+```{python}
+perm_scores = permutation_test(model, X_val_ct, y_val)[:,1]
+plt.plot(perm_scores);
+plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
+```
+
+## Find the most significant inputs
+
+```{python}
+vocab = vect.get_feature_names_out()
+input_cols = list(vocab) + weather_cols
+
+best_input_inds = np.argsort(perm_scores)[:100]
+best_inputs = [input_cols[idx] for idx in best_input_inds]
+
+print(best_inputs)
+```
+
+## How about a simple decision tree?
+
+<br>
+
+```{python}
+from sklearn import tree
+clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)
+clf.fit(X_train_ct[:, best_input_inds], y_train);
+```
+
+```{python}
+print(clf.score(X_train_ct[:, best_input_inds], y_train))
+print(clf.score(X_val_ct[:, best_input_inds], y_val))
+```
+
+## Decision tree 
+
+```{python}
+#| eval: false
+tree.plot_tree(clf, feature_names=best_inputs, filled=True);
+```
+
+```{python}
+#| echo: false
+import graphviz
+dot_data = tree.export_graphviz(clf, out_file=None, 
+            feature_names=best_inputs,  
+            class_names=["1", "2", "3+"],
+            rounded=True,  
+            filled=True
+)  
+graph = graphviz.Source(dot_data)  
+graph 
+```
+
+```{python}
+print(np.where(clf.feature_importances_ > 0)[0])
+[best_inputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
+```
+
+## Using the original dataset
+
+```{python}
+#| echo: false
+#| output: false
+df_raw = pd.read_parquet("NHTSA_NMVCCS_extract.parquet.gzip")
+
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df_raw[["SUMMARY_EN"] + weather_cols]
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+
+X_train_ct = vectorise_dataset(X_train, vect)
+X_val_ct = vectorise_dataset(X_val, vect)
+X_test_ct = vectorise_dataset(X_test, vect)
+
+num_features = X_train_ct.shape[1]
+model = build_model(num_features, num_cats)
+
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+hist = model.fit(X_train_ct, y_train, epochs=10, \
+    callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
+
+# model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+<br>
+
+```{python}
+perm_scores = permutation_test(model, X_val_ct, y_val)[:,1]
+plt.plot(perm_scores);
+plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
+```
+
+## Find the most significant inputs
+
+```{python}
+vocab = vect.get_feature_names_out()
+input_cols = list(vocab) + weather_cols
+
+best_input_inds = np.argsort(perm_scores)[:100]
+best_inputs = [input_cols[idx] for idx in best_input_inds]
+
+print(best_inputs)
+```
+
+## How about a simple decision tree?
+
+<br>
+
+```{python}
+clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)
+clf.fit(X_train_ct[:, best_input_inds], y_train);
+```
+
+```{python}
+print(clf.score(X_train_ct[:, best_input_inds], y_train))
+print(clf.score(X_val_ct[:, best_input_inds], y_val))
+```
+
+## Decision tree 
+
+```{python}
+#| eval: false
+tree.plot_tree(clf, feature_names=best_inputs, filled=True);
+```
+
+```{python}
+#| echo: false
+dot_data = tree.export_graphviz(clf, out_file=None, 
+            feature_names=best_inputs,  
+            class_names=["1", "2", "3+"],
+            rounded=True,  
+            filled=True
+)  
+graph = graphviz.Source(dot_data)  
+graph 
+```
+
+```{python}
+print(np.where(clf.feature_importances_ > 0)[0])
+[best_inputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
+```

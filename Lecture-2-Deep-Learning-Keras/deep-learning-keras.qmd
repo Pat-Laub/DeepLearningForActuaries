@@ -1,90 +1,73 @@
 ---
 title: Deep Learning with Keras
-subtitle: ACTL3143 & ACTL5111 Deep Learning for Actuaries
-author: Dr Patrick Laub
-format:
-  revealjs:
-    theme: [serif, custom.scss]
-    controls: true
-    controls-tutorial: true
-    logo: unsw-logo.svg
-    footer: "Slides: [Dr Patrick Laub](https://pat-laub.github.io) (@PatrickLaub)."
-    title-slide-attributes:
-      data-background-image: unsw-yellow-shape.png
-      data-background-size: contain !important
-    transition: none
-    slide-number: c/t
-    strip-comments: true
-    preview-links: false
-    margin: 0.12
-    width: 1000
-    chalkboard:
-      boardmarker-width: 6
-      grid: false
-      background:
-        - "rgba(255,255,255,0.0)"
-        - "https://github.com/rajgoel/reveal.js-plugins/raw/master/chalkboard/img/blackboard.png"
-    include-before: <div class="line right"></div>
-    include-after: <script>registerRevealCallbacks();</script>
-highlight-style: breeze
-jupyter: python3
-execute:
-  keep-ipynb: true
-  echo: true
 ---
 
 ```{python}
 #| echo: false
 import matplotlib
+
+# TDOO: Update following section
 import matplotlib.pyplot as plt
 import cycler
+
 colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
 plt.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
 
+
 def set_square_figures():
-  plt.rcParams['figure.figsize'] = (2.0, 2.0)
+    plt.rcParams["figure.figsize"] = (2.0, 2.0)
+
 
 def set_rectangular_figures():
-  plt.rcParams['figure.figsize'] = (5.0, 2.0)
+    plt.rcParams["figure.figsize"] = (5.0, 2.0)
+
 
 set_rectangular_figures()
-plt.rcParams['figure.dpi'] = 350
-plt.rcParams['savefig.bbox'] = "tight"
-plt.rcParams['font.family'] = "serif"
+plt.rcParams["figure.dpi"] = 350
+plt.rcParams["savefig.bbox"] = "tight"
+plt.rcParams["font.family"] = "serif"
 
-plt.rcParams['axes.spines.right'] = False
-plt.rcParams['axes.spines.top'] = False
+plt.rcParams["axes.spines.right"] = False
+plt.rcParams["axes.spines.top"] = False
 
-import pandas as pandas
-pandas.options.display.max_rows = 6
-
-import tensorflow
-tensorflow.random.set_seed(1)
-tensorflow.get_logger().setLevel('ERROR')
-tensorflow.config.set_visible_devices([], 'GPU')
 
 def square_fig():
     return plt.figure(figsize=(2, 2), dpi=350).gca()
 
+
 def add_diagonal_line():
     xl = plt.xlim()
     yl = plt.ylim()
-    shortest_side = min(xl[1], yl[1])
-    plt.plot([0, shortest_side], [0, shortest_side], color="black", linestyle="--")
+    shortestSide = min(xl[1], yl[1])
+    plt.plot(
+        [0, shortestSide],
+        [0, shortestSide],
+        color="black",
+        linestyle="--",
+    )
 
 
-import pandas as pd
-pd.options.display.max_rows = 6
+import pandas as pandas
 
-from tensorflow.random import set_seed
+pandas.options.display.max_rows = 6
 
-set_seed(1)
+import random
 
-import tensorflow as tf
-tf.get_logger().setLevel('ERROR')
+random.seed(1234)
 
-tf.config.set_visible_devices([], 'GPU')
+import tensorflow
+
+tensorflow.random.set_seed(1)
+tensorflow.get_logger().setLevel("ERROR")
+tensorflow.config.set_visible_devices([], "GPU")
 ```
+
+## Lecture Outline
+
+<br>
+
+- Neural networks
+- Regression demo with Keras
 
 # Deep Learning {background-image="unsw-yellow-shape.png" background-size="85%"}
 
@@ -96,7 +79,7 @@ Source: Freepik, [Woman sitting in lotus position on the books above the clouds]
 
 ## How do real neurons work?
 
-<iframe width="1000" height="600" src="https://www.youtube.com/embed/6qS83wD29PY" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+{{< video https://www.youtube.com/embed/6qS83wD29PY width="100%" height="80%" >}}
 
 ## A neuron 'firing'
 
@@ -106,14 +89,20 @@ import numpy as np
 
 x = [-5, -1e-10, 0, 5]
 y = [x_i >= 0 for x_i in x]
-    
+
 plt.plot(x, y)
 
 # Annotate the top-left corner of the plot with the name
 # of the activation function
-plt.annotate("Step function", xy=(0.2, 1), xycoords='axes fraction',
-            xytext=(-5, -5), textcoords='offset points',
-            ha='left', va='top')
+plt.annotate(
+    "Step function",
+    xy=(0.2, 1),
+    xycoords="axes fraction",
+    xytext=(-5, -5),
+    textcoords="offset points",
+    ha="left",
+    va="top",
+)
 
 plt.xlabel("Input")
 plt.ylabel("Output");
@@ -121,7 +110,7 @@ plt.ylabel("Output");
 
 ## An artificial neuron 
 
-![A neuron in a neural network with a ReLU activation.](single-neuron.svg)
+![A neuron in a neural network with a ReLU activation.](single-neuron.png)
 
 ::: footer
 Source: Marcus Lautier (2022).
@@ -130,7 +119,7 @@ Source: Marcus Lautier (2022).
 ## One neuron
 
 ::: columns
-::: column
+::: {.column width="55%"}
 $$ \begin{aligned}
   z~=~&x_1 \times w_1 + \\
     &x_2 \times w_2 + \\
@@ -138,21 +127,20 @@ $$ \begin{aligned}
   \end{aligned}
 $$
 
-$$ \begin{aligned}
-  a &= \text{step}(z) \\
-    &= \begin{cases}
-    1 & \text{if } z > 0 \\
+$$
+  a = \begin{cases}
+    z & \text{if } z > 0 \\
     0 & \text{if } z \leq 0
     \end{cases}
-  \end{aligned}
 $$
-:::
-::: column
-![A neuron in a neural network with a ReLU activation.](single-neuron.svg)
-:::
-:::
 
 Here, $x_1$, $x_2$, $x_3$ is just some fixed data.
+
+:::
+::: {.column width="45%"}
+![A neuron in a neural network with a ReLU activation.](single-neuron.png)
+:::
+:::
 
 The weights $w_1$, $w_2$, $w_3$ should be 'learned'.
 
@@ -163,7 +151,7 @@ Source: Marcus Lautier (2022).
 ## One neuron with bias
 
 ::: columns
-::: column
+::: {.column width="55%"}
 $$ \begin{aligned}
   z~=~&x_1 \times w_1 + \\
     &x_2 \times w_2 + \\
@@ -171,31 +159,59 @@ $$ \begin{aligned}
   \end{aligned}
 $$
 
-$$ \begin{aligned}
-  a &= \text{step}(z) \\
-    &= \begin{cases}
-    1 & \text{if } z > 0 \\
+$$
+  a = \begin{cases}
+    z & \text{if } z > 0 \\
     0 & \text{if } z \leq 0
     \end{cases}
-  \end{aligned}
 $$
-:::
-::: column
-![A neuron in a neural network with a ReLU activation.](single-neuron.svg)
-:::
-:::
-
-See [interactive plot](bias-activation-function.html).
 
 The weights $w_1$, $w_2$, $w_3$ and bias $b$ should be 'learned'.
+:::
+::: {.column width="45%"}
 
-::: footer
-Source: Marcus Lautier (2022).
+::: {.panel-tabset}
+
+### Bias = -4
+
+```{python}
+#| echo: false
+def plot_relu_with_bias(bias):
+    xs = np.linspace(-10, 10, 1_000)
+    xs_with_bias = xs + bias
+    ys = xs_with_bias * (xs_with_bias >= 0)
+
+    square_fig().plot(xs, ys)
+    plt.xlim([-5, 5])
+    plt.ylim([-1, 7])
+    plt.xlabel("Weighted Sum Input")
+    plt.ylabel("Output")
+
+
+plot_relu_with_bias(-4)
+```
+
+### 0
+
+```{python}
+#| echo: false
+plot_relu_with_bias(0) 
+```
+
+### 4
+
+```{python}
+#| echo: false
+plot_relu_with_bias(4) 
+```
+
+:::
+:::
 :::
 
 ## A basic neural network
 
-![A basic fully-connected/dense network.](basic-neural-network.svg)
+![A basic fully-connected/dense network.](basic-neural-network.png)
 
 ::: footer
 Source: Marcus Lautier (2022).
@@ -206,14 +222,16 @@ Source: Marcus Lautier (2022).
 ### Perceptrons
 
 Brains and computers are binary, so make a perceptron with binary data.
-Seemed like a reasonable idea.
+Seemed reasonable, impossible to train.
 
 ### Modern neural network
 
 Replace binary state with continuous state.
-Invent fast training algorithm.
-Still slow and tedious to create without open source libraries.
+Still rather slow to train.
 
+::: {.callout-note}
+It's a neur**al** network made of neur**on**s, not a "neuron network".
+:::
 
 ## Try different activation functions
 
@@ -223,77 +241,72 @@ Still slow and tedious to create without open source libraries.
 #| echo: false
 import numpy as np
 
-def plot_activation(x, y, ax, name, hide_x=False):
+
+def plot_activation(x, y, ax, name, hideX=False):
     ax.plot(x, y)
     if y.min() < 0:
-        ax.axhline(0, ls='--', c='black', lw=0.5)
+        ax.axhline(0, ls="--", c="black", lw=0.5)
 
     # Annotate the top-left corner of the subplot with the name
     # of the activation function
-    ax.annotate(name, xy=(0.2, 1), xycoords='axes fraction',
-                xytext=(-5, -5), textcoords='offset points',
-                ha='left', va='top')
-    
-    if hide_x:
+    ax.annotate(
+        name,
+        xy=(0.2, 1),
+        xycoords="axes fraction",
+        xytext=(-5, -5),
+        textcoords="offset points",
+        ha="left",
+        va="top",
+    )
+
+    if hideX:
         ax.xaxis.set_visible(False)
+
 
 x = np.linspace(-5, 5, 500)
 
 fig, axs = plt.subplots(2, 2)
 y = x
-plot_activation(x, y, axs[0,0], "Linear", hide_x=True)
+plot_activation(x, y, axs[0, 0], "Linear", hideX=True)
 y = x > 0
-plot_activation(x, y, axs[0,1], "Step", hide_x=True)
+plot_activation(x, y, axs[0, 1], "Step", hideX=True)
 y = np.tanh(x)
-plot_activation(x, y, axs[1,0], "tanh")
+plot_activation(x, y, axs[1, 0], "tanh")
 y = x * (x > 0)
-plot_activation(x, y, axs[1,1], "ReLU")
+plot_activation(x, y, axs[1, 1], "ReLU")
 
-axs[0,0].set(ylabel="Output")
-axs[1,0].set(xlabel="Input", ylabel="Output")
-axs[1,1].set(xlabel="Input");
+axs[0, 0].set(ylabel="Output")
+axs[1, 0].set(xlabel="Input", ylabel="Output")
+axs[1, 1].set(xlabel="Input");
 ```
 
 ## Flexible
 
-![](universal-approximator.png)
+<br>
+
+> One can show that an MLP is a **universal approximator**, meaning 
+> it can model any suitably smooth function, given enough hidden units,
+> to any desired level of accuracy (Hornik 1991). One can either make
+> the model be "wide" or "deep"; the latter has some advantages...
 
 ::: footer
-Source: Shan-Hung Wu (2022), [_CS565600 Deep Learning Lecture Slides_](https://nthu-datalab.github.io/ml/slides/10_NN_Design.pdf), Lecture 10 Slide 44.
+Source: Murphy (2012), Machine Learning: A Probabilistic Perspective, 1st Ed, p. 566.
 :::
 
 ## Feature engineering
 
 ::: columns
-::: column
-![](feature-engineering.svg)
+::: {.column width="55%"}
+![](feature-engineering.png)
 :::
-::: column
-![](modelling-ratio.svg)
+::: {.column width="45%"}
+![](facial-recognition.jpeg)
+![](modelling-ratio.png)
 :::
 :::
 
 ::: footer
-Source: Marcus Lautier (2022).
-:::
-
-## Example: Facial recognition
-
-![Example of manual feature engineering.](facial-recognition.jpeg)
-
-::: footer
-Source: Fenjiro (2019), [_Face Id: Deep Learning for Face Recognition_](https://medium.com/@fenjiro/face-id-deep-learning-for-face-recognition-324b50d916d1), Medium.
-:::
-
-## What are Keras and TensorFlow?
-
-Keras is common way of specifying, training, and using neural networks.
-It gives a simple interface to _various backend_ libraries, including Tensorflow. 
-
-![Keras as a independent interface, and Keras as part of Tensorflow.](Geron-mls2_1010-blur.png)
-
-:::footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-10.
+Sources: Marcus Lautier (2022) & Fenjiro (2019), [_Face Id: Deep Learning for Face Recognition_](https://medium.com/@fenjiro/face-id-deep-learning-for-face-recognition-324b50d916d1), Medium.
 :::
 
 ## The deep learning hammer
@@ -333,167 +346,16 @@ Source: Dertat (2017), [_Applied Deep Learning - Part 1: Artificial Neural Netwo
 
 {{< include _keras-calif-housing-regression-demo.qmd >}}
 
-{{< include _keras-calif-housing-early-stopping-demo.qmd >}}
-
-{{< include _keras-iris-classification-demo.qmd >}}
-
-
-# Quiz {data-background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
-
-```{python}
-#| echo: false
-import numpy
-
-numpy.random.seed(123)
-x = numpy.random.rand(100)
-y = 1_000 * numpy.random.rand(100)
-z = 2*x + 0.001 * y + 1 + 1 * numpy.random.rand(100)
-
-# X = np.c_[x, y]
-# features = X
-features = pandas.DataFrame({"$x_1$": x, "$x_2$": y})
-targets = z
-```
-
-## Critique this 💩 regression code
-
-```{python}
-#| echo: false
-from tensorflow.keras.callbacks import EarlyStopping
-tf.get_logger().setLevel('ERROR')
-```
-
-```{python}
-X_train = features[:80]; X_test = features[81:]
-y_train = targets[:80]; y_test = targets[81:]
-```
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU', input_dim=2),
-   Dense(32, activation='ReLU', input_dim=2),
-  Dense(1, activation='sigmoid')
-])
-model.compile(optimizer="adam", loss='mse')
-es = EarlyStopping(patience=10)
-fitted_model = model.fit(X_train, y_train, epochs=5,
-  callbacks=[es], verbose=False)
-```
-```{python}
-train_mae = model.evaluate(X_train, y_train, verbose=False)
-hist = model.fit(X_test, y_test, epochs=5,
-  callbacks=[es], verbose=False)
-hist.history["loss"]
-test_mae = model.evaluate(X_test, y_test, verbose=False)
-```
-
-```{python}
-f"Train MAE: {test_mae:.2f} Test MAE: {train_mae:.2f}"
-```
-
-## The data
-
-```{python}
-#| echo: false
-set_square_figures()
-```
-
-::: columns
-::: column
-```{python}
-sns.scatterplot(
-  x="$x_1$", y="$x_2$",
-  c=targets, data=features);
-```
-:::
-::: column
-```{python}
-sns.distplot(targets);
-```
-
-:::
-:::
-
-```{python}
-#| echo: false
-set_rectangular_figures()
-```
-
-## With warnings enabled
-
-```{python}
-#| echo: false
-tf.get_logger().setLevel("WARN")
-```
-
-```{python}
-model.fit(X_train, y_train, epochs=5,
-  callbacks=[es], verbose=False);
-```
-
-```{python}
-es = EarlyStopping(restore_best_weights=True, patience=10)
-model.fit(X_train, y_train, epochs=5, validation_split=0.1,
-  callbacks=[es], verbose=False);
-```
-
-## Later `input_dim` ignored
-
-```{python}
-#| echo: false
-def skip_empty(line):
-  if line.strip() != "":
-    print(line.strip())
-```
-
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU', input_dim=2),
-  Dense(32, activation='ReLU', input_dim=2),
-  Dense(1, activation='ReLU')
-])
-
-model.compile(optimizer='adam', loss='mse')
-model.summary(print_fn=skip_empty)
-```
-
-## Later `input_dim` ignored {data-visibility="uncounted"}
-
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU', input_dim=2),
-  Dense(32, activation='ReLU'),
-  Dense(1, activation='ReLU')
-])
-
-model.compile(optimizer='adam', loss='mse')
-model.summary(print_fn=skip_empty)
-```
-
-## Later `input_dim` ignored {data-visibility="uncounted"}
-
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU'),
-  Dense(32, activation='ReLU'),
-  Dense(1, activation='ReLU')
-])
-model.compile(optimizer='adam', loss='mse')
-model.fit(X_train, y_train, epochs=5, verbose=False)
-model.summary(print_fn=skip_empty)
-```
-
-{{< include _sw2-poisson-regression.qmd >}}
-
-{{< include _stroke-prediction.qmd >}}
+{{< include _regression-quiz.qmd >}}
 
 # {.smaller data-visibility="uncounted"}
 
 <h2>Glossary</h2>
 
+
 ::: columns
 ::: column
 - activations, activation function
-- artificial intelligence vs machine learning
 - artificial neural network
 - biases (in neurons)
 - callbacks

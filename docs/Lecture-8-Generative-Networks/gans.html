@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.264">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Patrick Laub">
+
+<title>AI for Actuaries - Generative Adversarial Networks</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Lecture-8-Generative-Networks/generative-networks.html">Module 8</a></li><li class="breadcrumb-item"><a href="../Lecture-8-Generative-Networks/gans.html">Generative Adversarial Networks</a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">AI for Actuaries</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Module 1</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/course-overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/python.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Python</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">Module 2</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-2-Deep-Learning-Keras/deep-learning-keras.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Deep Learning with Keras</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-2-Deep-Learning-Keras/project.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Project Details</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Module 3</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-3-Tabular-Data/categorical-variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Categorical Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-3-Tabular-Data/classification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classification</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text">Module 4</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-4-Computer-Vision/computer-vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text">Module 5</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-5-Natural-Language-Processing/natural-language-processing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text">Module 6</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-6-Uncertainty-Quantification/uncertainty-quantification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Uncertainty Quantification</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true">
+ <span class="menu-text">Module 7</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-7-Recurrent-Neural-Networks-And-Time-Series/rnns-and-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Recurrent Neural Networks</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true">
+ <span class="menu-text">Module 8</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-8-Generative-Networks/generative-networks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-8-Generative-Networks/gans.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Generative Adversarial Networks</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true">
+ <span class="menu-text">Module 9</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-9-Advanced-Topics/interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interpretability</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-9-Advanced-Topics/exam-revision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Examinable Topics for Revision</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar,#quarto-sidebar-glass"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#traditional-gans" id="toc-traditional-gans" class="nav-link active" data-scroll-target="#traditional-gans">Traditional GANs</a>
+  <ul class="collapse">
+  <li><a href="#before-gans-we-had-autoencoders" id="toc-before-gans-we-had-autoencoders" class="nav-link" data-scroll-target="#before-gans-we-had-autoencoders">Before GANs we had autoencoders</a></li>
+  <li><a href="#gan-faces" id="toc-gan-faces" class="nav-link" data-scroll-target="#gan-faces">GAN faces</a></li>
+  <li><a href="#example-stylegan2-ada-outputs" id="toc-example-stylegan2-ada-outputs" class="nav-link" data-scroll-target="#example-stylegan2-ada-outputs">Example StyleGAN2-ADA outputs</a></li>
+  <li><a href="#gan-structure" id="toc-gan-structure" class="nav-link" data-scroll-target="#gan-structure">GAN structure</a></li>
+  <li><a href="#gan-intuition" id="toc-gan-intuition" class="nav-link" data-scroll-target="#gan-intuition">GAN intuition</a></li>
+  <li><a href="#intuition-about-gans" id="toc-intuition-about-gans" class="nav-link" data-scroll-target="#intuition-about-gans">Intuition about GANs</a></li>
+  <li><a href="#generative-adversarial-networks" id="toc-generative-adversarial-networks" class="nav-link" data-scroll-target="#generative-adversarial-networks">Generative adversarial networks</a></li>
+  <li><a href="#discriminator" id="toc-discriminator" class="nav-link" data-scroll-target="#discriminator">Discriminator</a></li>
+  <li><a href="#generator" id="toc-generator" class="nav-link" data-scroll-target="#generator">Generator</a></li>
+  </ul></li>
+  <li><a href="#training-gans" id="toc-training-gans" class="nav-link" data-scroll-target="#training-gans">Training GANs</a>
+  <ul class="collapse">
+  <li><a href="#gan-cost-functions" id="toc-gan-cost-functions" class="nav-link" data-scroll-target="#gan-cost-functions">GAN cost functions</a></li>
+  <li><a href="#gan---schematic-process" id="toc-gan---schematic-process" class="nav-link" data-scroll-target="#gan---schematic-process">GAN - Schematic process</a></li>
+  <li><a href="#gan---schematic-process-ii" id="toc-gan---schematic-process-ii" class="nav-link" data-scroll-target="#gan---schematic-process-ii">GAN - Schematic process II</a></li>
+  <li><a href="#gan---schematic-process-iii" id="toc-gan---schematic-process-iii" class="nav-link" data-scroll-target="#gan---schematic-process-iii">GAN - Schematic process III</a></li>
+  <li><a href="#train-step" id="toc-train-step" class="nav-link" data-scroll-target="#train-step">Train step</a></li>
+  <li><a href="#grab-the-data" id="toc-grab-the-data" class="nav-link" data-scroll-target="#grab-the-data">Grab the data</a></li>
+  <li><a href="#train-the-gan" id="toc-train-the-gan" class="nav-link" data-scroll-target="#train-the-gan">Train the GAN</a></li>
+  </ul></li>
+  <li><a href="#conditional-gans" id="toc-conditional-gans" class="nav-link" data-scroll-target="#conditional-gans">Conditional GANs</a>
+  <ul class="collapse">
+  <li><a href="#unconditional-gans" id="toc-unconditional-gans" class="nav-link" data-scroll-target="#unconditional-gans">Unconditional GANs</a></li>
+  <li><a href="#conditional-gans-1" id="toc-conditional-gans-1" class="nav-link" data-scroll-target="#conditional-gans-1">Conditional GANs</a></li>
+  <li><a href="#hurricane-example-data" id="toc-hurricane-example-data" class="nav-link" data-scroll-target="#hurricane-example-data">Hurricane example data</a></li>
+  <li><a href="#hurricane-example" id="toc-hurricane-example" class="nav-link" data-scroll-target="#hurricane-example">Hurricane example</a></li>
+  <li><a href="#hurricane-example-after-54s" id="toc-hurricane-example-after-54s" class="nav-link" data-scroll-target="#hurricane-example-after-54s">Hurricane example (after 54s)</a></li>
+  <li><a href="#hurricane-example-after-21m" id="toc-hurricane-example-after-21m" class="nav-link" data-scroll-target="#hurricane-example-after-21m">Hurricane example (after 21m)</a></li>
+  <li><a href="#hurricane-example-after-47m" id="toc-hurricane-example-after-47m" class="nav-link" data-scroll-target="#hurricane-example-after-47m">Hurricane example (after 47m)</a></li>
+  <li><a href="#hurricane-example-after-4h10m" id="toc-hurricane-example-after-4h10m" class="nav-link" data-scroll-target="#hurricane-example-after-4h10m">Hurricane example (after 4h10m)</a></li>
+  <li><a href="#hurricane-example-after-14h41m" id="toc-hurricane-example-after-14h41m" class="nav-link" data-scroll-target="#hurricane-example-after-14h41m">Hurricane example (after 14h41m)</a></li>
+  </ul></li>
+  <li><a href="#image-to-image-translation" id="toc-image-to-image-translation" class="nav-link" data-scroll-target="#image-to-image-translation">Image-to-image translation</a>
+  <ul class="collapse">
+  <li><a href="#example-deoldify-images-1" id="toc-example-deoldify-images-1" class="nav-link" data-scroll-target="#example-deoldify-images-1">Example: Deoldify images #1</a></li>
+  <li><a href="#example-deoldify-images-2" id="toc-example-deoldify-images-2" class="nav-link" data-scroll-target="#example-deoldify-images-2">Example: Deoldify images #2</a></li>
+  <li><a href="#example-deoldify-images-3" id="toc-example-deoldify-images-3" class="nav-link" data-scroll-target="#example-deoldify-images-3">Example: Deoldify images #3</a></li>
+  <li><a href="#explore-the-latent-space" id="toc-explore-the-latent-space" class="nav-link" data-scroll-target="#explore-the-latent-space">Explore the latent space</a></li>
+  <li><a href="#generator-cant-generate-everything" id="toc-generator-cant-generate-everything" class="nav-link" data-scroll-target="#generator-cant-generate-everything">Generator can’t generate everything</a></li>
+  </ul></li>
+  <li><a href="#problems-with-gans" id="toc-problems-with-gans" class="nav-link" data-scroll-target="#problems-with-gans">Problems with GANs</a>
+  <ul class="collapse">
+  <li><a href="#they-are-slow-to-train" id="toc-they-are-slow-to-train" class="nav-link" data-scroll-target="#they-are-slow-to-train">They are slow to train</a></li>
+  <li><a href="#uncertain-convergence" id="toc-uncertain-convergence" class="nav-link" data-scroll-target="#uncertain-convergence">Uncertain convergence</a></li>
+  <li><a href="#mode-collapse" id="toc-mode-collapse" class="nav-link" data-scroll-target="#mode-collapse">Mode collapse</a></li>
+  <li><a href="#generation-is-harder" id="toc-generation-is-harder" class="nav-link" data-scroll-target="#generation-is-harder">Generation is harder</a></li>
+  <li><a href="#advanced-image-layers" id="toc-advanced-image-layers" class="nav-link" data-scroll-target="#advanced-image-layers">Advanced image layers</a></li>
+  <li><a href="#vanishing-gradients-i" id="toc-vanishing-gradients-i" class="nav-link" data-scroll-target="#vanishing-gradients-i">Vanishing gradients (I)</a></li>
+  <li><a href="#vanishing-gradients-ii" id="toc-vanishing-gradients-ii" class="nav-link" data-scroll-target="#vanishing-gradients-ii">Vanishing gradients (II)</a></li>
+  </ul></li>
+  <li><a href="#wasserstein-gan" id="toc-wasserstein-gan" class="nav-link" data-scroll-target="#wasserstein-gan">Wasserstein GAN</a>
+  <ul class="collapse">
+  <li><a href="#were-comparing-distributions" id="toc-were-comparing-distributions" class="nav-link" data-scroll-target="#were-comparing-distributions">We’re comparing distributions</a></li>
+  <li><a href="#discriminator-critic" id="toc-discriminator-critic" class="nav-link" data-scroll-target="#discriminator-critic"><del>Discriminator</del> Critic</a></li>
+  <li><a href="#schematic" id="toc-schematic" class="nav-link" data-scroll-target="#schematic">Schematic</a></li>
+  </ul></li>
+  <li><a href="#appendix" id="toc-appendix" class="nav-link" data-scroll-target="#appendix">Appendix</a>
+  <ul class="collapse">
+  <li><a href="#links" id="toc-links" class="nav-link" data-scroll-target="#links">Links</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="gans.slides.html"><i class="bi bi-file-slides"></i>RevealJS</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Lecture-8-Generative-Networks/generative-networks.html">Module 8</a></li><li class="breadcrumb-item"><a href="../Lecture-8-Generative-Networks/gans.html">Generative Adversarial Networks</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Generative Adversarial Networks</h1>
+<p class="subtitle lead">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Patrick Laub </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+<section id="traditional-gans" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Traditional GANs</h1>
+<section id="before-gans-we-had-autoencoders" class="level2">
+<h2 class="anchored" data-anchor-id="before-gans-we-had-autoencoders">Before GANs we had autoencoders</h2>
+<p>An autoencoder takes a data/image, maps it to a latent space via en encoder module, then decodes it back to an output with the same dimensions via a decoder module.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="autoencoder.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Schematic of an autoencoder.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Marcus Lautier (2022).</p>
+</div>
+</section>
+<section id="gan-faces" class="level2">
+<h2 class="anchored" data-anchor-id="gan-faces">GAN faces</h2>
+<div class="columns">
+<div class="column">
+<p><img src="fakeface1.jpeg" class="img-fluid"></p>
+</div><div class="column">
+<p><img src="fakeface2.jpeg" class="img-fluid"></p>
+</div>
+</div>
+<p>Try out <a href="https://www.whichfaceisreal.com">https://www.whichfaceisreal.com</a>.</p>
+<div class="footer">
+<p>Source: <a href="https://thispersondoesnotexist.com">https://thispersondoesnotexist.com</a>.</p>
+</div>
+</section>
+<section id="example-stylegan2-ada-outputs" class="level2">
+<h2 class="anchored" data-anchor-id="example-stylegan2-ada-outputs">Example StyleGAN2-ADA outputs</h2>
+<br>
+<center>
+<iframe width="800" height="500" src="https://www.youtube.com/embed/kbDd5lW6rkM?start=171" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen="">
+</iframe>
+</center>
+<div class="footer">
+<p>Source: Jeff Heaton (2021), <a href="https://youtu.be/kbDd5lW6rkM">Training a GAN from your Own Images: StyleGAN2</a>.</p>
+</div>
+</section>
+<section id="gan-structure" class="level2">
+<h2 class="anchored" data-anchor-id="gan-structure">GAN structure</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="gan-diagram.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">A schematic of a generative adversarial network.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Thales Silva (2018), <a href="https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394">An intuitive introduction to Generative Adversarial Networks (GANs)</a>, freeCodeCamp.</p>
+</div>
+</section>
+<section id="gan-intuition" class="level2">
+<h2 class="anchored" data-anchor-id="gan-intuition">GAN intuition</h2>
+<p><img src="google-devs-bad_gan.svg" class="img-fluid"> <img src="google-devs-ok_gan.svg" class="img-fluid"> <img src="google-devs-good_gan.svg" class="img-fluid"></p>
+<div class="footer">
+<p>Source: Google Developers, <a href="https://developers.google.com/machine-learning/gan/gan_structure">Overview of GAN Structure</a>, Google Machine Learning Education.</p>
+</div>
+</section>
+<section id="intuition-about-gans" class="level2 smaller">
+<h2 class="smaller anchored" data-anchor-id="intuition-about-gans">Intuition about GANs</h2>
+<ul>
+<li>A forger creates a fake Picasso painting to sell to an art dealer.</li>
+<li>The art dealer assesses the painting.</li>
+</ul>
+<p>How they best each other:</p>
+<ul>
+<li>The art dealer is given both authentic paintings and fake paintings to look at. Later on, the validity his assessment is evaluated and he trains to become better at detecting fakes. Over time, he becomes increasingly expert at authenticating Picasso’s artwork.</li>
+<li>The forger receives an assessment from the art dealer everytime he gives him a fake. He knows he has to perfect his craft if the art dealer can detect his fake. He becomes increasingly adept at imitating Picasso’s style.</li>
+</ul>
+</section>
+<section id="generative-adversarial-networks" class="level2">
+<h2 class="anchored" data-anchor-id="generative-adversarial-networks">Generative adversarial networks</h2>
+<ul>
+<li>A GAN is made up of two parts:
+<ul>
+<li>Generator network: the forger. Takes a random point in the latent space, and decodes it into a synthetic data/image.</li>
+<li>Discriminator network (or adversary): the expert. Takes a data/image and decide whether it exists in the original data set (the training set) or was created by the generator network.</li>
+</ul></li>
+</ul>
+</section>
+<section id="discriminator" class="level2">
+<h2 class="anchored" data-anchor-id="discriminator">Discriminator</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>lrelu <span class="op">=</span> layers.LeakyReLU(alpha<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>discriminator <span class="op">=</span> keras.Sequential([</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    keras.Input(shape<span class="op">=</span>(<span class="dv">28</span>, <span class="dv">28</span>, <span class="dv">1</span>)),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">128</span>, <span class="dv">3</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    layers.GlobalMaxPooling2D(),</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">1</span>)])</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>discriminator.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="generator" class="level2">
+<h2 class="anchored" data-anchor-id="generator">Generator</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>latent_dim <span class="op">=</span> <span class="dv">128</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>generator <span class="op">=</span> keras.Sequential([</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">7</span> <span class="op">*</span> <span class="dv">7</span> <span class="op">*</span> <span class="dv">128</span>, input_dim<span class="op">=</span>latent_dim, activation<span class="op">=</span>lrelu),</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((<span class="dv">7</span>, <span class="dv">7</span>, <span class="dv">128</span>)),</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    layers.Conv2DTranspose(<span class="dv">128</span>, <span class="dv">4</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    layers.Conv2DTranspose(<span class="dv">128</span>, <span class="dv">4</span>, strides<span class="op">=</span><span class="dv">2</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span>lrelu),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">1</span>, <span class="dv">7</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"sigmoid"</span>)])</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>generator.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="training-gans" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Training GANs</h1>
+<section id="gan-cost-functions" class="level2">
+<h2 class="anchored" data-anchor-id="gan-cost-functions">GAN cost functions</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><video src="GANLoss.mp4" class="img-fluid" controls=""><a href="GANLoss.mp4">Video</a></video></p>
+<figcaption class="figure-caption">The loss function à la 3Blue1Brown.</figcaption>
+</figure>
+</div>
+</section>
+<section id="gan---schematic-process" class="level2">
+<h2 class="anchored" data-anchor-id="gan---schematic-process">GAN - Schematic process</h2>
+<p>First step: Training <em>discriminator</em>:</p>
+<ul>
+<li>Draw random points in the latent space (random noise).</li>
+<li>Use <em>generator</em> to generate data from this random noise.</li>
+<li>Mix generated data with real data and input them into the <em>discriminator</em>. The training targets are the correct labels of <em>real data</em> or <em>fake data</em>. Use <em>discriminator</em> to give feedback on the mixed data whether they are real or synthetic. Train <em>discriminator</em> to minimize the loss function which is the difference between the <em>discriminator</em>’s feedback and the correct labels.</li>
+</ul>
+</section>
+<section id="gan---schematic-process-ii" class="level2">
+<h2 class="anchored" data-anchor-id="gan---schematic-process-ii">GAN - Schematic process II</h2>
+<p>Second step: Training <em>generator</em>:</p>
+<ul>
+<li>Draw random points in the latent space and generate data with <em>generator</em>.</li>
+<li>Use <em>discriminator</em> to give feedback on the generated data. What the generator tries to achieve is to fool the <em>discriminator</em> into thinking all generated data are real data. Train <em>generator</em> to minimize the loss function which is the difference between the discriminator’s feedback and the desired feedback: “All data are real data” (which is not true).</li>
+</ul>
+</section>
+<section id="gan---schematic-process-iii" class="level2">
+<h2 class="anchored" data-anchor-id="gan---schematic-process-iii">GAN - Schematic process III</h2>
+<ul>
+<li>When training, the discriminator may end up dominating the generator because the loss function for training the discriminator tends to zero faster. In that case, try reducing the learning rate and increase the dropout rate of the discriminator.</li>
+<li>There are a few tricks for implementing GANS such as introducing stochasticity by adding random noise to the labels for the discriminator, using stride instead of pooling in the discriminator, using kernel size that is divisible by stride size, etc.</li>
+</ul>
+</section>
+<section id="train-step" class="level2">
+<h2 class="anchored" data-anchor-id="train-step">Train step</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Separate optimisers for discriminator and generator.</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>d_optimizer <span class="op">=</span> keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.0003</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>g_optimizer <span class="op">=</span> keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.0004</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Instantiate a loss function.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>loss_fn <span class="op">=</span> keras.losses.BinaryCrossentropy(from_logits<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="at">@tf.function</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> train_step(real_images):</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Sample random points in the latent space</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  random_latent_vectors <span class="op">=</span> tf.random.normal(shape<span class="op">=</span>(batch_size, latent_dim))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Decode them to fake images</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  generated_images <span class="op">=</span> generator(random_latent_vectors)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Combine them with real images</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  combined_images <span class="op">=</span> tf.concat([generated_images, real_images], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assemble labels discriminating real from fake images</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  labels <span class="op">=</span> tf.concat([</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>    tf.zeros((batch_size, <span class="dv">1</span>)),</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>    tf.ones((real_images.shape[<span class="dv">0</span>], <span class="dv">1</span>))], axis<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add random noise to the labels - important trick!</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  labels <span class="op">+=</span> <span class="fl">0.05</span> <span class="op">*</span> tf.random.uniform(labels.shape)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Train the discriminator</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>    predictions <span class="op">=</span> discriminator(combined_images)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    d_loss <span class="op">=</span> loss_fn(labels, predictions)</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>  grads <span class="op">=</span> tape.gradient(d_loss, discriminator.trainable_weights)</span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>  d_optimizer.apply_gradients(<span class="bu">zip</span>(grads, discriminator.trainable_weights))</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Sample random points in the latent space</span></span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>  random_latent_vectors <span class="op">=</span> tf.random.normal(shape<span class="op">=</span>(batch_size, latent_dim))</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-35"><a href="#cb3-35" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assemble labels that say "all real images"</span></span>
+<span id="cb3-36"><a href="#cb3-36" aria-hidden="true" tabindex="-1"></a>  misleading_labels <span class="op">=</span> tf.ones((batch_size, <span class="dv">1</span>))</span>
+<span id="cb3-37"><a href="#cb3-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Train the generator (note that we should *not* update the weights</span></span>
+<span id="cb3-39"><a href="#cb3-39" aria-hidden="true" tabindex="-1"></a>  <span class="co"># of the discriminator)!</span></span>
+<span id="cb3-40"><a href="#cb3-40" aria-hidden="true" tabindex="-1"></a>  <span class="cf">with</span> tf.GradientTape() <span class="im">as</span> tape:</span>
+<span id="cb3-41"><a href="#cb3-41" aria-hidden="true" tabindex="-1"></a>    predictions <span class="op">=</span> discriminator(generator(random_latent_vectors))</span>
+<span id="cb3-42"><a href="#cb3-42" aria-hidden="true" tabindex="-1"></a>    g_loss <span class="op">=</span> loss_fn(misleading_labels, predictions)</span>
+<span id="cb3-43"><a href="#cb3-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-44"><a href="#cb3-44" aria-hidden="true" tabindex="-1"></a>  grads <span class="op">=</span> tape.gradient(g_loss, generator.trainable_weights)</span>
+<span id="cb3-45"><a href="#cb3-45" aria-hidden="true" tabindex="-1"></a>  g_optimizer.apply_gradients(<span class="bu">zip</span>(grads, generator.trainable_weights))</span>
+<span id="cb3-46"><a href="#cb3-46" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span> d_loss, g_loss, generated_images</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="grab-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="grab-the-data">Grab the data</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Prepare the dataset.</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># We use both the training &amp; test MNIST digits.</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>batch_size <span class="op">=</span> <span class="dv">64</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>(x_train, _), (x_test, _) <span class="op">=</span> keras.datasets.mnist.load_data()</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>all_digits <span class="op">=</span> np.concatenate([x_train, x_test])</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>all_digits <span class="op">=</span> all_digits.astype(<span class="st">"float32"</span>) <span class="op">/</span> <span class="fl">255.0</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>all_digits <span class="op">=</span> np.reshape(all_digits, (<span class="op">-</span><span class="dv">1</span>, <span class="dv">28</span>, <span class="dv">28</span>, <span class="dv">1</span>))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>dataset <span class="op">=</span> tf.data.Dataset.from_tensor_slices(all_digits)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>dataset <span class="op">=</span> dataset.shuffle(buffer_size<span class="op">=</span><span class="dv">1024</span>).batch(batch_size)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># In practice you need at least 20 epochs to generate nice digits.</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>save_dir <span class="op">=</span> <span class="st">"./"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="train-the-gan" class="level2">
+<h2 class="anchored" data-anchor-id="train-the-gan">Train the GAN</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="op">%%</span>time</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(epochs):</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> step, real_images <span class="kw">in</span> <span class="bu">enumerate</span>(dataset):</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Train the discriminator &amp; generator on one batch of real images.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    d_loss, g_loss, generated_images <span class="op">=</span> train_step(real_images)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Logging.</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> step <span class="op">%</span> <span class="dv">200</span> <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Print metrics</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="ss">f"Discriminator loss at step </span><span class="sc">{</span>step<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>d_loss<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      <span class="bu">print</span>(<span class="ss">f"Adversarial loss at step </span><span class="sc">{</span>step<span class="sc">}</span><span class="ss">: </span><span class="sc">{</span>g_loss<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="cf">break</span> <span class="co"># Remove this if really training the GAN</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="conditional-gans" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Conditional GANs</h1>
+<section id="unconditional-gans" class="level2">
+<h2 class="anchored" data-anchor-id="unconditional-gans">Unconditional GANs</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="coursera-unconditional-gan.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Analogy for an unconditional GAN</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Sharon Zhou, <em>Conditional Generation: Intuition</em> Build Basic Generative Adversarial Networks (Week 4), DeepLearning.AI on Coursera.</p>
+</div>
+</section>
+<section id="conditional-gans-1" class="level2">
+<h2 class="anchored" data-anchor-id="conditional-gans-1">Conditional GANs</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="coursera-conditional-gan.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Analogy for a conditional GAN</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Sharon Zhou, <em>Conditional Generation: Intuition</em> Build Basic Generative Adversarial Networks (Week 4), DeepLearning.AI on Coursera.</p>
+</div>
+</section>
+<section id="hurricane-example-data" class="level2">
+<h2 class="anchored" data-anchor-id="hurricane-example-data">Hurricane example data</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/reals.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Original data</figcaption>
+</figure>
+</div>
+</section>
+<section id="hurricane-example" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="hurricane-example">Hurricane example</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/fakes_init.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Initial fakes</figcaption>
+</figure>
+</div>
+</section>
+<section id="hurricane-example-after-54s" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="hurricane-example-after-54s">Hurricane example (after 54s)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/fakes000000.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Fakes after 1 iteration</figcaption>
+</figure>
+</div>
+</section>
+<section id="hurricane-example-after-21m" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="hurricane-example-after-21m">Hurricane example (after 21m)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/fakes000100.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Fakes after 100 kimg</figcaption>
+</figure>
+</div>
+</section>
+<section id="hurricane-example-after-47m" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="hurricane-example-after-47m">Hurricane example (after 47m)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/fakes000200.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Fakes after 200 kimg</figcaption>
+</figure>
+</div>
+</section>
+<section id="hurricane-example-after-4h10m" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="hurricane-example-after-4h10m">Hurricane example (after 4h10m)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/fakes001000.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Fakes after 1000 kimg</figcaption>
+</figure>
+</div>
+</section>
+<section id="hurricane-example-after-14h41m" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="hurricane-example-after-14h41m">Hurricane example (after 14h41m)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="hurricane/fakes003700.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Fakes after 3700 kimg</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="image-to-image-translation" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Image-to-image translation</h1>
+<section id="example-deoldify-images-1" class="level2">
+<h2 class="anchored" data-anchor-id="example-deoldify-images-1">Example: Deoldify images #1</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="deoldify-migrant-mother.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">A deoldified version of the famous “Migrant Mother” photograph.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: <a href="https://github.com/jantic/DeOldify">Deoldify package</a>.</p>
+</div>
+</section>
+<section id="example-deoldify-images-2" class="level2">
+<h2 class="anchored" data-anchor-id="example-deoldify-images-2">Example: Deoldify images #2</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="deoldify-golden-gate-bridge.jpeg" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">A deoldified Golden Gate Bridge under construction.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: <a href="https://github.com/jantic/DeOldify">Deoldify package</a>.</p>
+</div>
+</section>
+<section id="example-deoldify-images-3" class="level2">
+<h2 class="anchored" data-anchor-id="example-deoldify-images-3">Example: Deoldify images #3</h2>
+<div class="columns">
+<div class="column">
+<p><img src="dog-bw.jpeg" class="img-fluid"></p>
+</div><div class="column">
+<p><img src="dog-colour.jpeg" class="img-fluid"></p>
+</div>
+</div>
+</section>
+<section id="explore-the-latent-space" class="level2">
+<h2 class="anchored" data-anchor-id="explore-the-latent-space">Explore the latent space</h2>
+<center>
+<div class="quarto-video"><iframe data-external="1" src="https://www.youtube.com/embed/rr_ARby64lw" width="1000px" height="600px" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
+</center>
+</section>
+<section id="generator-cant-generate-everything" class="level2">
+<h2 class="anchored" data-anchor-id="generator-cant-generate-everything">Generator can’t generate everything</h2>
+<div class="columns">
+<div class="column">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="StyleGAN2-ADA-Latent-Space/target.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Target</figcaption>
+</figure>
+</div>
+</div><div class="column">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="StyleGAN2-ADA-Latent-Space/proj.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Projection</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="problems-with-gans" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Problems with GANs</h1>
+<section id="they-are-slow-to-train" class="level2">
+<h2 class="anchored" data-anchor-id="they-are-slow-to-train">They are slow to train</h2>
+<p><br> StyleGAN2-ADA training times on V100s (1024x1024):</p>
+<table class="table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 22%">
+<col style="width: 20%">
+<col style="width: 12%">
+<col style="width: 16%">
+<col style="width: 22%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">GPUs</th>
+<th style="text-align: center;">1000 kimg</th>
+<th style="text-align: center;">25000 kimg</th>
+<th style="text-align: center;">sec / kimg</th>
+<th style="text-align: center;">GPU mem</th>
+<th style="text-align: center;">CPU mem</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">1</td>
+<td style="text-align: center;">1d 20h</td>
+<td style="text-align: center;">46d 03h</td>
+<td style="text-align: center;">158</td>
+<td style="text-align: center;">8.1 GB</td>
+<td style="text-align: center;">5.3 GB</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">23h 09m</td>
+<td style="text-align: center;">24d 02h</td>
+<td style="text-align: center;">83</td>
+<td style="text-align: center;">8.6 GB</td>
+<td style="text-align: center;">11.9 GB</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">11h 36m</td>
+<td style="text-align: center;">12d 02h</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">8.4 GB</td>
+<td style="text-align: center;">21.9 GB</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">5h 54m</td>
+<td style="text-align: center;">6d 03h</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">8.3 GB</td>
+<td style="text-align: center;">44.7 GB</td>
+</tr>
+</tbody>
+</table>
+<div class="footer">
+<p>Source: NVIDIA’s Github, <a href="https://github.com/NVlabs/stylegan2-ada-pytorch/">StyleGAN2-ADA — Official PyTorch implementation</a>.</p>
+</div>
+</section>
+<section id="uncertain-convergence" class="level2">
+<h2 class="anchored" data-anchor-id="uncertain-convergence">Uncertain convergence</h2>
+<p>Converges to a Nash equilibrium.. if at all.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="lilian-weng-unstable-convergence.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Analogy of minimax update failure.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Lilian Weng (2019), <em>From GAN to WGAN</em>, ArXiV.</p>
+</div>
+</section>
+<section id="mode-collapse" class="level2 smaller">
+<h2 class="smaller anchored" data-anchor-id="mode-collapse">Mode collapse</h2>
+<div class="columns">
+<div class="column" style="width:50%&quot;;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="gan-mode-collapse.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Example of mode collapse</figcaption>
+</figure>
+</div>
+</div><div class="column" style="width:50%;">
+<p><img src="xkcd-random_number.png" class="img-fluid"></p>
+</div>
+</div>
+<div class="footer">
+<p>Source: Metz et al.&nbsp;(2017), <a href="https://arxiv.org/pdf/1611.02163.pdf">Unrolled Generative Adversarial Networks</a> and Randall Munroe (2007), <a href="https://xkcd.com/221/">xkcd #221: Random Number</a>.</p>
+</div>
+</section>
+<section id="generation-is-harder" class="level2">
+<h2 class="anchored" data-anchor-id="generation-is-harder">Generation is harder</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="gan-diagram.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">A schematic of a generative adversarial network.</figcaption>
+</figure>
+</div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Separate optimisers for discriminator and generator.</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>d_optimizer <span class="op">=</span> keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.0003</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>g_optimizer <span class="op">=</span> keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.0004</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="footer">
+<p>Source: Thales Silva (2018), <a href="https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394">An intuitive introduction to Generative Adversarial Networks (GANs)</a>, freeCodeCamp.</p>
+</div>
+</section>
+<section id="advanced-image-layers" class="level2 smaller">
+<h2 class="smaller anchored" data-anchor-id="advanced-image-layers">Advanced image layers</h2>
+<div class="absolute" data-top="120" data-left="250">
+<p>Conv2D</p>
+</div>
+<div class="absolute" data-top="270" data-left="60">
+<p>GlobalMaxPool2D</p>
+</div>
+<div class="absolute" data-top="270" data-right="100">
+<p>Conv2DTranspose</p>
+</div>
+<p><img src="2d_global_max_pooling_pa1.png" class="absolute img-fluid" data-bottom="0" data-left="0" width="550"></p>
+<p><img src="conv2d.gif" class="absolute img-fluid" data-top="75" data-left="350" width="300"></p>
+<p><img src="conv2dTranspose.gif" class="absolute img-fluid" data-bottom="0" data-right="50" width="300"></p>
+<div class="footer">
+<p>Sources: Pröve (2017), <a href="https://towardsdatascience.com/types-of-convolutions-in-deep-learning-717013397f4d">An Introduction to different Types of Convolutions in Deep Learning</a>, and Peltarion Knowledge Center, <a href="https://peltarion.com/knowledge-center/documentation/modeling-view/build-an-ai-model/blocks/global-max-pooling-2d">Global max pooling 2D</a>.</p>
+</div>
+</section>
+<section id="vanishing-gradients-i" class="level2">
+<h2 class="anchored" data-anchor-id="vanishing-gradients-i">Vanishing gradients (I)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="coursera-vanishing-gradients.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">When the discriminator is too good, vanishing gradients</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Sharon Zhou, <em>Problem with BCE Loss</em>, Build Basic Generative Adversarial Networks (Week 3), DeepLearning.AI on Coursera.</p>
+</div>
+</section>
+<section id="vanishing-gradients-ii" class="level2">
+<h2 class="anchored" data-anchor-id="vanishing-gradients-ii">Vanishing gradients (II)</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="lilian-weng-vanishing-gradients.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Vanishing gradients</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Lilian Weng (2019), <em>From GAN to WGAN</em>, ArXiV.</p>
+</div>
+</section>
+</section>
+<section id="wasserstein-gan" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Wasserstein GAN</h1>
+<section id="were-comparing-distributions" class="level2">
+<h2 class="anchored" data-anchor-id="were-comparing-distributions">We’re comparing distributions</h2>
+<p><br></p>
+<p>Trying to minimise the distance between the <em>distribution of generated samples</em> and the <em>distribution of real data</em>.</p>
+<p><br></p>
+<p>Vanilla GAN is equivalent to minimising the Jensen–Shannon Divergence between the two.</p>
+<p><br></p>
+<p>An alternative distance between distributions is the <em>Wasserstein distance</em>.</p>
+</section>
+<section id="discriminator-critic" class="level2">
+<h2 class="anchored" data-anchor-id="discriminator-critic"><del>Discriminator</del> Critic</h2>
+<p>Critic <span class="math inline">\(D : \text{Input} \to \mathbb{R}\)</span> how “authentic” the input looks. It can’t discriminate real from fake exactly.</p>
+<p>Critic’s goal is</p>
+<p><span class="math display">\[ \max_{D \in \mathscr{D}} \mathbb{E}[ D(X) ] - \mathbb{E}[ D(G(Z)) ] \]</span></p>
+<p>where we <span class="math inline">\(\mathscr{D}\)</span> is space of 1-Lipschitz functions. Either use <em>gradient clipping</em> or penalise gradients far from 1:</p>
+<p><span class="math display">\[ \max_{D} \mathbb{E}[ D(X) ] - \mathbb{E}[ D(G(Z)) ] + \lambda \mathbb{E} \Bigl[ ( \bigl|\bigl| \nabla D \bigr|\bigr| - 1)^2 \Bigr] .  \]</span></p>
+</section>
+<section id="schematic" class="level2">
+<h2 class="anchored" data-anchor-id="schematic">Schematic</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="wasserstein-schematic.png" class="img-fluid figure-img"></p>
+<figcaption class="figure-caption">Wasserstein</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Côté et al.&nbsp;(2020), <em>Synthesizing Property &amp; Casualty Ratemaking Datasets using Generative Adversarial Networks</em>, Working Paper?.</p>
+</div>
+</section>
+</section>
+<section id="appendix" class="level1" data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">
+<h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">Appendix</h1>
+<section id="links" class="level2">
+<h2 class="anchored" data-anchor-id="links">Links</h2>
+<ul>
+<li>Dongyu Liu (2021), <a href="https://youtu.be/jIDj2dhU99k">TadGAN: Time Series Anomaly Detection Using Generative Adversarial Networks</a></li>
+<li>Jeff Heaton (2022), <a href="https://youtu.be/yujdA46HKwA">GANs for Tabular Synthetic Data Generation (7.5)</a></li>
+<li>Jeff Heaton (2022), <a href="https://youtu.be/0OTd5GlHRx4">GANs to Enhance Old Photographs Deoldify (7.4)</a></li>
+</ul>
+<script defer="">
+    // Remove the highlight.js class for the 'compile', 'min', 'max'
+    // as there's a bug where they are treated like the Python built-in
+    // global functions but we only ever see it as methods like
+    // 'model.compile()' or 'predictions.max()'
+    buggyBuiltIns = ["abs", "compile", "eval", "min", "max", "round", "sum"];
+
+    document.querySelectorAll('.bu').forEach((elem) => {
+        if (buggyBuiltIns.includes(elem.innerHTML)) {
+            elem.classList.remove('bu');
+        }
+    })
+
+    var registerRevealCallbacks = function() {
+        Reveal.on('overviewshown', event => {
+            document.querySelector(".line.right").hidden = true;
+        });
+        Reveal.on('overviewhidden', event => {
+            document.querySelector(".line.right").hidden = false;
+        });
+    };
+</script>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        for (let i = 0; i < 2; i++) {
+          container.appendChild(note.children[i].cloneNode(true));
+        }
+        return container.innerHTML
+      } else {
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      return note.innerHTML;
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
