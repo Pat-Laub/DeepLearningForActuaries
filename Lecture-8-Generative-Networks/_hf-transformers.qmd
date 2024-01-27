@@ -1,6 +1,10 @@
 
 # Transformers {visibility="uncounted"}
 
+::: {.content-visible unless-format="revealjs"}
+Transformers are a special type of neural networks that are proven to be highly effective in NLP tasks. They can captre long-run dependencies in the sequential data that is useful for generating predictions with contextual meaning. It makes use of the _self-attention_ mechanism which studies all inputs in the sequence together, tries to undertand the dependencies among them, and then utilizes the information about long-run dependencies to predcit the output sequence.
+:::
+
 ## Transformer architecture
 
 > GPT makes use of a mechanism known as attention, which removes the need for recurrent layers (e.g., LSTMs). It works like an information retrieval system, utilizing queries, keys, and values to decide how much information it wants to extract from each input token.
@@ -21,16 +25,30 @@ Source: David Foster (2023), Generative Deep Learning, 2nd Edition, O'Reilly Med
 
 ## 🤗 Transformers package
 
-```{python}
-import transformers
-from transformers import pipeline
-generator = pipeline(task="text-generation", model="gpt2", revision="6c0e608")
-```
+::: {.content-visible unless-format="revealjs"}
+The following code uses tansformers library from _Hugging Face_ to create a text generation pipeline using the GPT2 (Generative Pre-trained Transformer 2).
+:::
 
 ```{python}
-transformers.set_seed(1)
-print(generator("It's the holidays so I'm going to enjoy")[0]["generated_text"])
+import transformers                                                                 #<1>
+from transformers import pipeline                                                   #<2>
+generator = pipeline(task="text-generation", model="gpt2", revision="6c0e608")      #<3>
 ```
+1. Imports the `transformers` library
+2. Imports the class `pipeline`
+3. Creates a pipeline object called the `generator`, whose task would be to generate text, using the pretrained model GPT2. `revision="6c0e608"` specifies the specific revision of the model to refer
+
+```{python}
+transformers.set_seed(1)                                                                #<1>
+print(generator("It's the holidays so I'm going to enjoy")[0]["generated_text"])        #<2>
+```
+
+1. Sets the seed for reproducibility
+2. Applies the `generator` object to generate a text based on the input _It's the holidays so I'm going to enjoy_. The result from egenrator would be a list of generated texts. To select the first output sequence hence, we pass the command `[0]["generated_text"]`
+
+::: {.content-visible unless-format="revealjs"}
+We can try the same code with a different seed value, and it would give a very different output.
+:::
 
 ```{python}
 transformers.set_seed(1337)
@@ -38,6 +56,10 @@ print(generator("It's the holidays so I'm going to enjoy")[0]["generated_text"])
 ```
 
 ## Reading the course profile
+
+::: {.content-visible unless-format="revealjs"}
+Another application of pipeline is the ability to generate texts in the answer format. The following is an example of how a pretrained model can be used to answer questions by relating it to a body of text information(context).
+:::
 
 ```{python}
 context = """
@@ -65,12 +87,16 @@ The exam will test the concepts presented in the lectures. For example, students
 
 ## Question answering 
 ```{python}
-qa = pipeline("question-answering", model="distilbert-base-cased-distilled-squad", revision="626af31")
+qa = pipeline("question-answering", model="distilbert-base-cased-distilled-squad", revision="626af31")      #<1>
 ```
 
+1. Creates a _question and answer_ style pipeline object by referring to the pretrained model pre-trained _DistilBERT_ model (fine-tuned on the SQuAD: Stanford Question Answering Dataset) with revision `626af31`
+
 ```{python}
-qa(question="What weight is the exam?", context=context)
+qa(question="What weight is the exam?", context=context)                    #<1>
 ```
+
+1. Answers the questions _What weight is the exam_ given the context specified
 
 ```{python}
 qa(question="What topics are in the exam?", context=context)

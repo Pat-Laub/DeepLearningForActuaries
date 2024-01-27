@@ -74,6 +74,10 @@ plt.imshow(X_train[42], cmap="gray");
 
 ## A compression game
 
+::: {.content-visible unless-format="revealjs"}
+Encoding is the overall process of compressing an input with containing data in a high dimnesional space to a low dimension space. Compressing is the action of identifying necessary information in the data (versus redundant data)  and representing the input in a more concised form. The following slides show two different ways of representing the same data. The second representation is more concise (and smarter) than the first.
+:::
+
 ::: columns
 ::: column
 ```{python}
@@ -95,6 +99,10 @@ print(img_width * img_height)
 
 
 ## Make a basic autoencoder
+::: {.content-visible unless-format="revealjs"}
+The following code is an example of constructing a basic autoencoder. The high-level idea here is to take an image, compress the information of the image from 6400 pixels to 400 pixels (encoding stage) and decode it back to the original image size (decoding stage). Note that we train the neural network keeping the input and the output the same. 
+:::
+
 
 ```{python}
 num_hidden_layer = 400
@@ -102,24 +110,36 @@ print(f"Compress from {img_height * img_width} pixels to {num_hidden_layer} late
 ```
 
 ```{python}
-random.seed(123)
+random.seed(123)                                                                #<1>
 
 model = keras.models.Sequential([
-    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
-    layers.Flatten(),
-    layers.Dense(num_hidden_layer, "relu"),
-    layers.Dense(img_height*img_width, "sigmoid"),
-    layers.Reshape((img_height, img_width, 1)),
-    layers.Rescaling(255),
+    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),           #<2>
+    layers.Flatten(),                                                           #<3>
+    layers.Dense(num_hidden_layer, "relu"),                                     #<4>
+    layers.Dense(img_height*img_width, "sigmoid"),                              #<5>
+    layers.Reshape((img_height, img_width, 1)),                                 #<6>
+    layers.Rescaling(255),                                                      #<7>
 ])
 
-model.compile("adam", "mse")
-epochs = 1_000
+model.compile("adam", "mse")                                                    #<8>
+epochs = 1_000                                                                  #<9>
 es = keras.callbacks.EarlyStopping(
-    patience=5, restore_best_weights=True)
+    patience=5, restore_best_weights=True)                                      #<10>
 model.fit(X_train, X_train, epochs=epochs, verbose=0,
-    validation_data=(X_val, X_val), callbacks=es);
+    validation_data=(X_val, X_val), callbacks=es);                              #<11>
 ```
+
+1. Sets the random seed for reproducibility
+2. Scales the image input by the number of pixels so that the input is scaled to [0,1] range
+3. Reshapes the 2D input into a 1D representation
+4. Condenses the information from 6400 variables to 400 latent variables (the encoding stage ends here)
+5. Convers the condensed representation from 400 to 6400 again. Note that the sigmoid activation is used to ensure output is between [0,1]
+6. Reshapes the 1D representation to a 2D array
+7. Resclaes the input information back to the actual input scaling by multiplying with 255 (this completes the decoding stage, and now the input is in its original shape)
+8. Compiles the model with the loss function and the optimizer
+9. Specifies the number of epochs to run the algorithm
+10. Specifies the early stopping criteria. Here, the early stopping activates after 5 iterations with no improvement in the validation loss
+11. Fits the model specifying the train set, validation set, the number of epochs to run, and the early stopping criteria.
 
 ## The model
 
@@ -150,7 +170,14 @@ plt.imshow(X_val_rec[42], cmap="gray");
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The recovered image is not as sharp as the original image, however, we can see that the high-level representation of the original picture is reconstrcuted. 
+:::
 ## Invert the images
+
+::: {.content-visible unless-format="revealjs"}
+Another way to attempt the autoencoder would be to invert the colours of the image. Following example shows, how the colours in the images are swapped. The areas which were previously in white are now in black and vice versa. The motivation behind inverting the colours is to make the input more suited for the `relu` activation. `relu` returns _zeros_, and zero corresponds to the black colour. If the image has more black colour, there is a chance the neural network might train more efficiently. Hence we try inverting the colours as a preprocessing before we pass it through the encoding stage. 
+:::
 
 ::: columns
 ::: column
@@ -167,16 +194,21 @@ plt.imshow(255 - X_train[42], cmap="gray");
 
 ## Try inverting the images
 
+::: {.content-visible unless-format="revealjs"}
+Following code shows how the same code as before is implemented, but with an additional step for inverting the pixel values of the data before parsing it through the encoding step.
+:::
+
+
 ```{python}
 random.seed(123)
 
 model = keras.models.Sequential([
     layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
-    layers.Lambda(lambda x: 1 - x),
+    layers.Lambda(lambda x: 1 - x),                                         #<1>
     layers.Flatten(),
     layers.Dense(num_hidden_layer, "relu"),
     layers.Dense(img_height*img_width, "sigmoid"),
-    layers.Lambda(lambda x: 1 - x),
+    layers.Lambda(lambda x: 1 - x),                                         #<2>
     layers.Reshape((img_height, img_width, 1)),
     layers.Rescaling(255),
 ])
@@ -185,11 +217,8 @@ model.compile("adam", "mse")
 model.fit(X_train, X_train, epochs=epochs, verbose=0,
     validation_data=(X_val, X_val), callbacks=es);
 ```
-
-
-<!-- and here (Trouble between here ... -->
-
-
+1. Inverts the colours by mapping the function with `x: 1-x` 
+2. Reverses the inversion to make sure the same input image is reconstructed
 
 ## The model
 
@@ -220,40 +249,51 @@ plt.imshow(X_val_rec[42], cmap="gray");
 ```
 :::
 :::
-
+::: {.content-visible unless-format="revealjs"}
+The recovered image is not too different to the image from the previous example.
+:::
 ## CNN-enhanced encoder
+::: {.content-visible unless-format="revealjs"}
+To further improve the process, we can try neural networks specialized for image processing. Here we use a Convolutional Neural Netowrk with convolutional and pooling layers. The following example shows how we first specify the encoder, and then the deconder. The two architectures are combined at the final stage.
+:::
 
 ```{python}
-random.seed(123)
+random.seed(123)                                                            #<1>
 
-encoder = keras.models.Sequential([
-    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
-    layers.Lambda(lambda x: 1 - x),
-    layers.Conv2D(16, 3, padding="same", activation="relu"),
-    layers.MaxPooling2D(),
-    layers.Conv2D(32, 3, padding="same", activation="relu"),
-    layers.MaxPooling2D(),
-    layers.Conv2D(64, 3, padding="same", activation="relu"),
-    layers.MaxPooling2D(),
-    layers.Flatten(),
-    layers.Dense(num_hidden_layer, "relu")
+encoder = keras.models.Sequential([                                         #<2>
+    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),       #<3>
+    layers.Lambda(lambda x: 1 - x),                                         #<4>
+    layers.Conv2D(16, 3, padding="same", activation="relu"),                #<5>
+    layers.MaxPooling2D(),                                                  #<6>
+    layers.Conv2D(32, 3, padding="same", activation="relu"),                #<7>
+    layers.MaxPooling2D(),                                                  #<8>
+    layers.Conv2D(64, 3, padding="same", activation="relu"),                #<9>
+    layers.MaxPooling2D(),                                                  #<10>
+    layers.Flatten(),                                                       #<11>
+    layers.Dense(num_hidden_layer, "relu")                                  #<12>
 ])
 ```
-
+1. Sets the random seed for reproducibility
+2. Starts specifying the encoder 
+3. Rescales the image pixel values to range between [0,1]
+4. Inverts the colours of the image
+5. Applies a 2D convolutional layer with 16 filters, each of size 3 $\times$ 3, and having the `same` padding. `same` padding ensures that the output from the layer has the same heigh and width as the input
+6. Performs maxpooling to reduce the dimnesion of the feature space
+7. 
 ## CNN-enhanced decoder
 
 ```{python}
-decoder = keras.models.Sequential([
-    keras.Input(shape=(num_hidden_layer,)),
-    layers.Dense(20*20),
-    layers.Reshape((20, 20, 1)),
-    layers.Conv2D(128, 3, padding="same", activation="relu"),
-    layers.UpSampling2D(),
-    layers.Conv2D(64, 3, padding="same", activation="relu"),
-    layers.UpSampling2D(),
-    layers.Conv2D(1, 1, padding="same", activation="relu"),
-    layers.Lambda(lambda x: 1 - x),
-    layers.Rescaling(255),
+decoder = keras.models.Sequential([                                          #<1>
+    keras.Input(shape=(num_hidden_layer,)),                                  #<2>
+    layers.Dense(20*20),                                                     #<3>
+    layers.Reshape((20, 20, 1)),                                             #<5>
+    layers.Conv2D(128, 3, padding="same", activation="relu"),                #<6>
+    layers.UpSampling2D(),                                                   #<7>
+    layers.Conv2D(64, 3, padding="same", activation="relu"),                 #<8>
+    layers.UpSampling2D(),                                                   #<9>   
+    layers.Conv2D(1, 1, padding="same", activation="relu"),                  #<10>
+    layers.Lambda(lambda x: 1 - x),                                          #<11>
+    layers.Rescaling(255),                                                   #<12>
 ])
 
 model = keras.models.Sequential([encoder, decoder])

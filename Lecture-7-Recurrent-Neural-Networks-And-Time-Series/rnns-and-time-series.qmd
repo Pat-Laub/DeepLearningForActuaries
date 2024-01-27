@@ -89,12 +89,20 @@ X = np.arange(12).reshape(3,4)
 X
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The above code creates an array with values from 0 to 11 and converts that array into a matrix with 3 rows and 4 columns.
+:::
+
 ::: columns
 ::: column
 `axis=0`: $(3, 4) \leadsto (4,)$.
 ```{python}
 X.sum(axis=0)
 ```
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above code returns the column sum. This changes the shape of the matrix from $(3,4)$ to $(4,)$. Similarly, `X.sum(axis=1)` returns row sums and will change the shape of the matrix from $(3,4)$ to $(3,)$.
 :::
 ::: column
 `axis=1`: $(3, 4) \leadsto (3,)$.
@@ -169,6 +177,10 @@ the batch $\mathbf{X}$ would have shape $(b, n)$ & rank 2.
 
 ## Multivariate time series
 
+::: {.content-visible unless-format="revealjs"}
+Multivariate time series consists of more than 1 variable observation at a given time point. Following example has two variables `x` and `y`. 
+:::
+
 ::: columns
 ::: {.column width="35%"}
 
@@ -219,6 +231,10 @@ Source: Wikipedia, [Recurrence relation](https://en.wikipedia.org/wiki/Recurrenc
 
 The RNN processes each data in the sequence one by one, while keeping memory of what came before.
 
+::: {.content-visible unless-format="revealjs"}
+The following figure shows how the recurrent neural network combines an input `X_l` with a preprocessed state of the process `A_l` to produce the output `O_l`. RNNs have a cyclic information processing structure that enables them to pass information sequentially from previous inputs. RNNs can capture dependencies and patterns in sequential data, making them useful for analyzing time series data.
+:::
+
 ![Schematic of a simple recurrent neural network. E.g. SimpleRNN, LSTM, or GRU.](ISLR2-10_12.svg)
 
 ::: footer
@@ -251,7 +267,15 @@ $$
 \end{aligned}
 $$
 
+::: {.content-visible unless-format="revealjs"}
+At each time step, a simple Recurrent Neural Network (RNN) takes an input vector `x_t`, incorporate it with the information from the previous hidden state `{y}_{t-1}` and produces an output vector at each time step `y_t`. The hidden state helps the network remember the context of the previous words, enabling it to make informed predictions about what comes next in the sequence. In a simple RNN, the output at time `(t-1)` is the same as the hidden state at time `t`.
+:::
+
 ## SimpleRNN (in batches)
+
+::: {.content-visible unless-format="revealjs"}
+The difference between RNN and RNNs with batch processing lies in the way how the neural network handles sequences of input data. With batch processing, the model processes multiple ($b$) input sequences simultaneously. The training data is grouped into batches, and the weights are updated based on the average error across the entire batch. Batch processing often results in more stable weight updates, as the model learns from a diverse set of examples in each batch, reducing the impact of noise in individual sequences. 
+:::
 
 Say we operate on batches of size $b$, then $\mathbf{Y}_t \in \mathbb{R}^{b \times d}$.
 
@@ -272,47 +296,62 @@ Remember, $\mathbf{X} \in \mathbb{R}^{b \times n \times m}$, $\mathbf{Y} \in \ma
 ## Simple Keras demo
 
 ```{python}
-num_obs = 4
-num_time_steps = 3
-num_time_series = 2
+num_obs = 4                                                                     #<1>
+num_time_steps = 3                                                              #<2>
+num_time_series = 2                                                             #<3>
 
 X = np.arange(num_obs*num_time_steps*num_time_series).astype(np.float32) \
-        .reshape([num_obs, num_time_steps, num_time_series])
+        .reshape([num_obs, num_time_steps, num_time_series])                    #<4>
 
-output_size = 1
+output_size = 1                                                                 
 y = np.array([0, 0, 1, 1])
 ```
-
+1. Defines the number of observations
+2. Defines the number of time steps
+3. Defines the number of time series
+4. Reshapes the array to a range 3 tensor (4,3,2)
 ::: columns
-::: column
-```{python}
-X[:2]
-```
-:::
-::: column
-```{python}
-X[2:]
-```
-:::
-:::
 
+
+
+::: column
+```{python}
+X[:2]               #<1>
+```
+1. Selects the first two slices along the first dimension. Since the tensor of dimensions (4,3,2), `X[:2]` selects the first two slices (0 and 1) along the first dimension, and returns a sub-tensor of shape (2,3,2). 
+:::
+::: column
+```{python}
+X[2:]              #<1>
+```
+1. Selects the last two slices along the first dimension. The first dimension (axis=0) has size 4. Therefore, `X[2:]`  selects the last two slices (2 and 3) along the first dimension, and returns a sub-tensor of shape (2,3,2). 
+:::
+:::
 
 ## Keras' SimpleRNN
 
 As usual, the `SimpleRNN` is just a layer in Keras. 
 
 ```{python}
-from tensorflow.keras.layers import SimpleRNN
+from tensorflow.keras.layers import SimpleRNN                       #<1>
 
-random.seed(1234)
+random.seed(1234)                                                   #<2>
 model = Sequential([
-  SimpleRNN(output_size, activation="sigmoid")
+  SimpleRNN(output_size, activation="sigmoid")                      #<3>
 ])
-model.compile(loss="binary_crossentropy", metrics=["accuracy"])
+model.compile(loss="binary_crossentropy", metrics=["accuracy"])     #<4>
 
-hist = model.fit(X, y, epochs=500, verbose=False)
-model.evaluate(X, y, verbose=False)
+hist = model.fit(X, y, epochs=500, verbose=False)                   #<5>
+model.evaluate(X, y, verbose=False)                                 #<6>
 ```
+
+1. Imports the SimpleRNN layer from the Keras library
+2. Sets the seed for the random number generator to ensure reproducibility
+3. Defines a simple RNN with one output node and sigmoid activation function
+4. Specifies binary crossentropy as the loss function (usually used in classification problems), and specifies "accuracy" as the metric to be monitored during training
+5. Trains the model for 500 epochs and saves output as `hist`
+6. Evaluates the model to obtain a value for the loss and accuracy
+
 
 The predicted probabilities on the training set are:
 
@@ -321,6 +360,11 @@ model.predict(X, verbose=0)
 ```
 
 ## SimpleRNN weights
+
+::: {.content-visible unless-format="revealjs"}
+To verify the results of predicted probabilities, we can obtain the weights of the fitted model and calculate the outcome manually as follows.
+:::
+
 ```{python}
 model.get_weights()
 ```
@@ -343,6 +387,10 @@ Y
 
 ## LSTM internals
 
+::: {.content-visible unless-format="revealjs"}
+Simple RNN structures encounter vanishing gradient problems, hence, struggle with learning long term dependecies. LSTM are designed to overcome this problem. LSTMs have a more complex network structure (contains more memory cells and gating mechanisms) and can better regulate the information flow. 
+:::
+
 ![Diagram of an LSTM cell.](colah-LSTM3-chain.png)
 ![Notation for the diagram.](colah-LSTM2-notation.png)
 
@@ -351,6 +399,10 @@ Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.gith
 :::
 
 ## GRU internals
+
+::: {.content-visible unless-format="revealjs"}
+GRUs are simpler compared to LSTM, hence, computationally more efficient than LSTMs. 
+:::
 
 ![Diagram of a GRU cell.](colah-LSTM3-var-GRU.png)
 
