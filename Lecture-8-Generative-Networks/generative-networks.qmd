@@ -110,12 +110,20 @@ Source: Alex Graves (2013), [Generating Sequences With Recurrent Neural Networks
 Source: Marcus Lautier (2022).
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The way how word-level language models work is that, it first takes in the input text and then generates the probability distribution of the next word. This distribution tells us how likely a certain word is to be the next word. Thereafter, the model implements a appropriate sampling strategy to select the next word. Once the next word is predicted, it is appended to the input text and then passed in to the model again to predict the next word. The idea here is to predict the word after word. 
+:::
+
 ## Character-level language model
 
 ![Diagram of a character-level language model (Char-RNN)](tensorflow-text_generation_sampling.png)
 
 ::: footer
 Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflow.org/text/tutorials/text_generation).
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Character-level language predtics the next character given a certain input character. They capture patterns at a much granular level and do not aim to capture semantics of words.
 :::
 
 ## Useful for speech recognition
@@ -135,7 +143,14 @@ Examples of transcriptions directly from the RNN with errors that are fixed by a
 Source: Hannun et al. (2014), [Deep Speech: Scaling up end-to-end speech recognition](https://arxiv.org/pdf/1412.5567.pdf), arXiv:1412.5567, Table 1.
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The above example shows how RNN predictions (for sequential data processing) can be improved by fixing errors using a language model.
+:::
 ## Generating Shakespeare I
+
+::: {.content-visible unless-format="revealjs"}
+The following is an example how a language model trained on works of Shakespeare starts predicting words after we input a string. This is an example of a character-level prediction, where we aim to predict the most likely character, not the word.
+:::
 
 > | ROMEO:
 | Why, sir, what think you, sir?
@@ -182,6 +197,10 @@ Source: Tensorflow tutorial, [Text generation with an RNN](https://www.tensorflo
 #
 
 <h2>Sampling strategy</h2>
+
+::: {.content-visible unless-format="revealjs"}
+The sampling strategy refers to the way how we pick the next word/character as the prediction after observing the distribution. There are different sampling strategies and they aim to serve different levels of trade-offs between exploration and exploitation when generating text sequences. 
+:::
 
 - *Greedy sampling* will choose the token with the highest probability. It makes the resulting sentence repetitive and predictable.
 - *Stochastic sampling*: if a word has probability 0.3 of being next in the sentence according to the model, we’ll choose it 30% of the time. But the result is still not interesting enough and still quite predictable.
@@ -237,6 +256,15 @@ plt.show()
 Idea inspired by Mehta (2023), [The need for sampling temperature and differences between whisper, GPT-3, and probabilistic model's temperature](https://shivammehta25.github.io/posts/temperature-in-language-models-open-ai-whisper-probabilistic-machine-learning/)
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The graphical illustration above shows how the distribution of words change with different levels of `Temp` values. Higher levels of temperatures result in less predictable(more interesting) outcomes. If we continue to increase the `Temp` levels, after a certain point, outcomes will be picked completely at random. This predictions after this point might not be meaningful. Hence, attention to the trade-off between predictability and interestingness is important when deciding the `Temp` levels.
+:::
+
+
+::: {.content-visible unless-format="revealjs"}
+The following sections show how a neural network turned on the same dataset, and given the same starting input string _In today's lecture we will_ shall generate very different sequences of text as predictions. `Temp=0.25` may give interesting outputs compared to `Temp=0.01` and `Temp=0.50` may give interesting outputs compared to `Temp=0.25`. However, when we keep on increasing `Temp` levels, the neural network starts giving out random(meaningless) outcomes.
+:::
+
 ## Generating Laub (temp = 0.01)
 
 > _In today's lecture we will_ be different situation.
@@ -260,13 +288,17 @@ Idea inspired by Mehta (2023), [The need for sampling temperature and difference
 
 ## Generating Laub (temp = 1.5) {data-visibility="uncounted"}
 
-> In today's lecture we will put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming.
+> _In today's lecture we will_ put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming.
 > If there was a large. It's gonua draltionation.
 > Tow many, up, would that black and 53% that's girter thankAty will get you jast typically stickK thing.
 > But maybe. Anyway, I'm going to work on this libry two, past, at shit citcs jast
 > pleming to memorize overcamples like pre pysing, why wareed to smart a one in this reportbryeccuriay.
 
 ## Generate the most likely sequence
+
+::: {.content-visible unless-format="revealjs"}
+Similar to other sequence generating tasks such as generating the next word or generating the next character, generating an entire sequence of words is also useful. The task involves generating the most likely sequence after observing model predictions. 
+:::
 
 ![An example sequence-to-sequence chatbot model.](chatbot.png)
 
@@ -276,18 +308,29 @@ Source: Payne (2021), [What is beam search](https://www.width.ai/post/what-is-be
 
 ## Beam search
 
+::: {.content-visible unless-format="revealjs"}
+Instead of trying to carry forward only the highest probable prediction, beam search carries forward several high probable predcitions, and then decide the highest probable combination of predictions. Beam search helps expand the exploration horizon for predictions which can contirbute to more contextually relevant model predicitons. However, this comes at a certain computational complexity.
+:::
+
 ![Illustration of a beam search.](beam-search.png)
 
 ::: footer
 Source: Doshi (2021), [Foundations of NLP Explained Visually: Beam Search, How It Works](https://towardsdatascience.com/foundations-of-nlp-explained-visually-beam-search-how-it-works-1586b9849a24), towardsdatascience.com.
 :::
 
-
 {{< include _hf-transformers.qmd >}}
 
 # Image Generation {visibility="uncounted"}
 
 ## Reverse-engineering a CNN
+
+::: {.content-visible unless-format="revealjs"}
+Reverse engineering is a process where we manipulate the inputs _x_ while keeping the loss function and the model architecture the same. This is useful in undertsanding the inner workings of the model, especially when we do not have access to the model architecture or the original train dataset. The idea here is to tweak/distort the input feature data and observe how model predcitions vary. This provides meaningful insights in to what patterns in the input data are most critical to making model predictions. 
+:::
+
+::: {.content-visible unless-format="revealjs"}
+This task however requires computing the gradients of the model's outputs with respect to all input features, hence, can be time consuming. 
+:::
 
 A CNN is a function $f_{\boldsymbol{\theta}}(\mathbf{x})$ that takes a vector (image) $\mathbf{x}$ and returns a vector (distribution) $\widehat{\mathbf{y}}$.
 
@@ -303,12 +346,19 @@ This is very slow as we do gradient descent every single time.
 
 ## Adversarial examples
 
+::: {.content-visible unless-format="revealjs"}
+An adversarial attack referes to a small carefully created modifications to the input data that aims to trick the model in to making wrong predictions while keeping the _y_true_ same. The goal is to identify instances where subtle modifications in the input data (which are not instantaneously recognized) can lead to errorneous model predictions.
+:::
+
 ![A demonstration of fast adversarial example generation applied to GoogLeNet on ImageNet. By adding an imperceptibly small vector whose elements are equal to the sign of the elements of the gradient of the cost function with respect to the input, we can change GoogLeNet’s classification of the image.](adversarial-example.png)
 
 ::: footer
 Source: Goodfellow et al. (2015), [Explaining and Harnessing Adversarial Examples](https://arxiv.org/pdf/1412.6572.pdf), ICLR.
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The above example shows how a small perturbation to the image of a panda led to the model predicting the image as a gibbon with high confidence. This indicates that there may be certain patterns in the inout data which are not clearly seen by the human eye, but the model is relying on them to make predictions. Identifying these sensitivies/vulnerabilities are important to understand how a model is making its predictions.
+:::
 ## Adversarial stickers
 
 ![Adversarial stickers.](the-verge-adversarial_patch_.0.gif)
@@ -317,7 +367,16 @@ Source: Goodfellow et al. (2015), [Explaining and Harnessing Adversarial Example
 Source: The Verge (2018), [These stickers make computer vision software hallucinate things that aren’t there](https://www.theverge.com/2018/1/3/16844842/ai-computer-vision-trick-adversarial-patches-google).
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The above graphical illustration shows how adding a metal component changes the model predictions from _Banana_ to _toaster_ with high confidence.
+:::
+
 ## Adversarial text
+
+::: {.content-visible unless-format="revealjs"}
+Adversarial attacks on text generation models help users get an understanding of the inner workings NLP models. This includes identifying input patterns that are critical to model predictions, and assessing performance of NLP models for robustness. 
+:::
+
 
 "[TextAttack](https://github.com/QData/TextAttack) 🐙 is a Python framework for adversarial attacks, data augmentation, and model training in NLP"
 
@@ -462,6 +521,10 @@ Taking derivatives with respect to the input image can be a first step toward ex
 
 An autoencoder takes a data/image, maps it to a latent space via en encoder module, then decodes it back to an output with the same dimensions via a decoder module.
 
+::: {.content-visible unless-format="revealjs"}
+They are useful in learning latent representations of the data.
+:::
+
 ![Schematic of an autoencoder.](autoencoder.png)
 
 ::: footer
@@ -483,6 +546,9 @@ For image editing, an image can be projected onto a latent space and moved insid
 
 {{< include _variational-autoencoder.qmd >}}
 
+::: {.content-visible unless-format="revealjs"}
+Both autoencoders and variational autoencoders aim to obtain latent representations of input data that carry same information but in a lower dimensional space. The difference between the two is that, autoencoders outputs the latent representations as vectors, while variational auto encoders first identifies the distribution of the input in the latent space, and then sample an observation from that as the vector. Autoencoders are better suited for dimnesionality reduction and feature learning tasks. Variation autoencoders are better suited for generative modeling tasks and uncertainty estimation.
+:::
 
 # Diffusion Models {visibility="uncounted"}
 

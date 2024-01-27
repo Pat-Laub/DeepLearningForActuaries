@@ -83,6 +83,9 @@ X_test.shape, y_test.shape
 Source: Marcus Lautier (2022).
 :::
 
+::: {.content-visible unless-format="revealjs"}
+Since the task is a classification problem, we use `softmax` activation function. The softmax function takes in the input and returns a probability vector, which tells us about the probability of a data point belonging to a certain class.
+:::
 ## Create a classifier model
 
 ```{python}
@@ -111,6 +114,9 @@ model.compile("adam", "SparseCategoricalCrossentropy")
 
 model.fit(X_train, y_train, epochs=5, verbose=2);
 ```
+::: {.content-visible unless-format="revealjs"}
+Since the problem at hand is a classification problem, we define the optimizer and loss function accordingly. Optimizer is `adam` and the loss function is `SparseCategoricalCrossentropy`. If the response variable represents the category directly using an integer (i.e. if the response variable is not one-hot encoded), we must use `SparseCategoricalCrossentropy`. If the response variable (y label) is already one-hot encoded we can use `CategoricalCrossentropy`. 
+:::
 
 ## Track accuracy as the model trains
 
@@ -120,9 +126,14 @@ model.compile("adam", "SparseCategoricalCrossentropy", \
         metrics=["accuracy"])
 model.fit(X_train, y_train, epochs=5, verbose=2);
 ```
+::: {.content-visible unless-format="revealjs"}
+We can also specify which loss metric to monitor in assessing the performance during the training. The metric that is usually used in classification tasks is `accuracy`, which tracks the fraction of all predcitions which identified the class accurately. The metrics are not used for optimizing. They are only used to keep track of how well the model is performing during the optimization.  By setting `verbose=2` , we are not princting the output, and we can see how the loss is reducing and accuracy is improving.
+:::
 
 ## Run a long fit
-
+::: {.content-visible unless-format="revealjs"}
+Run the model training for 500 epochs.
+:::
 ```{python}
 
 model = build_model()
@@ -140,17 +151,23 @@ model.evaluate(X_test, y_test, verbose=False)
 ## Add early stopping
 
 ```{python}
-model = build_model()
-model.compile("adam", "SparseCategoricalCrossentropy", \
-        metrics=["accuracy"])
+model = build_model()                                                   #<1>
+model.compile("adam", "SparseCategoricalCrossentropy", \                
+        metrics=["accuracy"])                                           #<2>
 
-es = EarlyStopping(restore_best_weights=True, patience=50,
-        monitor="val_accuracy")
-%time hist_es = model.fit(X_train, y_train, epochs=500, \
-        validation_split=0.25, callbacks=[es], verbose=False);
+es = EarlyStopping(restore_best_weights=True, patience=50,              #<3>
+        monitor="val_accuracy")                                         
+%time hist_es = model.fit(X_train, y_train, epochs=500, \               
+        validation_split=0.25, callbacks=[es], verbose=False);          #<4>
 
 print(f"Stopped after {len(hist_es.history['loss'])} epochs.")
 ```
+::: {.content-visible unless-format="revealjs"}
+1. Defines a new model with the same architecture as `model_build` which is already constructed
+2. Compiles the model with optimizer, loss function and metric
+3. Defines the early stopping object as usual, with one slight change. The code is specified to activate the early stopping by monitoring the validation accuracy (`val_accuracy`), not the loss. 
+4. Fits the model
+:::
 
 Evaluation on test set:
 ```{python}
@@ -198,6 +215,9 @@ plt.xlabel("Epoch");
 set_rectangular_figures()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+Left hand side plots show how loss behaved without and with early stopping. Right hand side plots show how accuracy performed without and with early stopping.
+:::
 ## What is the softmax activation?
 
 It creates a "probability" vector: $\text{Softmax}(\boldsymbol{x}) = \frac{\mathrm{e}^x_i}{\sum_j \mathrm{e}^x_j} \,.$
@@ -219,11 +239,16 @@ tf.keras.activations.softmax(out).numpy().round(3)
 ```{python}
 y_test[:4]
 ```
-
+::: {.content-visible unless-format="revealjs"}
+Response variable _y_ is an array with numeric integers, where each integer represents the class the data belongs to. However, the `model.predict()` function returns an array with probabilities not an array with integers. The array displays the probabilities of belonging to each category.
+:::
 ```{python}
 y_pred = model.predict(X_test.head(4), verbose=0)
 y_pred
 ```
+::: {.content-visible unless-format="revealjs"}
+Using `np.argmax()` which returns index of the maximum value in an array, we can obtain the predicted class.
+:::
 
 ```{python}
 # Add 'keepdims=True' to get a column vector.
@@ -257,6 +282,10 @@ plt.plot(p, (1-p)**2)
 plt.plot(p, -np.log(p))
 plt.legend(["MSE", "Cross-entropy"]);
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The above plot shows how MSE and cross-entrphy penalize wrong predictions. The x-axis inidicates the severity of misclassification. Suppose the neural network predicted that there is near-zero probability of an observation being in class "1" when the actual class is "1". This represents a strong misclassification. The above graph shows how MSE does not impose heavy penalities for the misclassifications near zero. It displays a linear increment across the severity of misclassification. On the other hand, cross-entrophy penalizes bad predcitions strongly. Also, the misclassification penalty grows exponentially. This makes cross entrophy more suitable.
+:::
 
 ## One-hot encoding {data-visibility="uncounted"}
 

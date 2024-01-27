@@ -6,15 +6,21 @@
 Look at the (U.S.) National Highway Traffic Safety Administration's (NHTSA) [National Motor Vehicle Crash Causation Survey](https://crashstats.nhtsa.dot.gov/Api/Public/ViewPublication/812506) (NMVCCS) dataset.
 
 ```{python}
-from pathlib import Path
+from pathlib import Path                                                                        #<1>
 
-if not Path("NHTSA_NMVCCS_extract.parquet.gzip").exists():
-    print("Downloading dataset")
+if not Path("NHTSA_NMVCCS_extract.parquet.gzip").exists():                                      #<2>
+    print("Downloading dataset")                                    
     !wget https://github.com/JSchelldorfer/ActuarialDataScience/raw/master/12%20-%20NLP%20Using%20Transformers/NHTSA_NMVCCS_extract.parquet.gzip
-
-df = pd.read_parquet("NHTSA_NMVCCS_extract.parquet.gzip")
-print(f"shape of DataFrame: {df.shape}")
+                                                                                                #<3>
+df = pd.read_parquet("NHTSA_NMVCCS_extract.parquet.gzip")                                       #<4>
+print(f"shape of DataFrame: {df.shape}")                                                        #<5>
 ```
+
+1. Imports `Path` class from `pathlib` library
+2. Checks whether the zip folder already exists
+3. If it doesn't, gets the folder from the given location
+4. Reads the zipped `parquet` file and stores it as a data frame. `parquet` is an efficient data storage format, similar to `.csv`
+5. Prints the shape of the data frame
 
 ## Features {.smaller}
 
@@ -36,6 +42,10 @@ print(f"shape of DataFrame: {df.shape}")
 Source: [JSchelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The analysis will ignore variables `level_0`, `index`, `SCASEID`, `SUMMARY_GE` and `INJSEVA`.
+:::
+
 ## Crash summaries
 
 ```{python}
@@ -47,27 +57,46 @@ pandas.options.display.max_rows = 6
 df["SUMMARY_EN"]
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The `SUMMARY_EN` column contains summary of the accidents. There are 6949 rows corresponding to 6949 accidents. The data type is `object`, therefore, it will perform string (not mathematical) operations on the data. The folowing code shows how to generate a histogram for the length of the string. It looks at each entry of the column `SUMMARY_EN`, computes the length of the string(number of letters in the string), and create a historgram. The histogram shows that summaries are 2000 characters long on average. 
+:::
+
 ```{python}
 df["SUMMARY_EN"].map(lambda summary: len(summary)).hist(grid=False);
 ```
 
 ## A crash summary
 
+::: {.content-visible unless-format="revealjs"}
+The following code looks at the data entry for integer location 1 from the `SUMMARY_EN` data column in the dataframe `df`.
+:::
+
 ```{python}
 df["SUMMARY_EN"].iloc[1]
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Note that the output is with in double quotations. Further, we can see characters like `\r` `\t` in the output. This allows us to copy the entire output, and insert it in any python code for running codes. It is different from printing the output. 
+:::
 
 ## Carriage returns
 ```{python}
 #| eval: false
 print(df["SUMMARY_EN"].iloc[1])
 ```
+::: {.content-visible unless-format="revealjs"}
+Passing the `print` command for `df["SUMMARY_EN"].iloc[1]` returns an output without the double quotations. Furthermore, the characters like `\r` `\t` are now activated in to 'carriage return' and 'tab' controls respectively. If 'carriage return' characters are activated (without newline character `\n` preceeding `\r` character), then it can over the previous lines and create confusions in the text processing.
+:::
 
 ```{python}
 #| echo: false
 summary_after_carriage_return = "The Critical Precrash Event for the driver of V2 was other vehicle encroachment from adjacent lane over left lane line.  The Critical Reason for the Critical Event was not coded for this vehicle and the driver of V2 was not thought to have contributed to the crash.r corrective lenses and felt rested.  She was not injured in the crash. of V2.  Both vehicles came to final rest on the roadway at impact."
 print(summary_after_carriage_return)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+To avoid such confusions in text processing, we can write a function to replace `\r` character with `\n` in the following manner, and apply the function to the entire `SUMMARY_EN` column using the `map` function.
+:::
 
 ```{python}
 # Replace every \r with \n
@@ -91,8 +120,9 @@ Predict number of vehicles in the crash.
 
 ```{python}
 df["NUMTOTV"].value_counts()\
-    .sort_index()
+    .sort_index()                   #<1>
 ```
+1. The code selects the column with total number of vehicles `NUMTOTV`, obtain the value counts for each categories, returns the sorted vector.
 
 ```{python}
 np.sum(df["NUMTOTV"] > 3)
@@ -108,12 +138,14 @@ Simplify the target to just:
 ```{python}
 df["NUM_VEHICLES"] = \
   df["NUMTOTV"].map(lambda x: \
-    str(x) if x <= 2 else "3+")
+    str(x) if x <= 2 else "3+")             #<1>
 df["NUM_VEHICLES"].value_counts()\
   .sort_index()
 ```
 :::
 :::
+1. Writes a function to reduce categories to 3, by combining all categories with 3 or more vehicles into one category
+ 
 
 ```{python}
 #| echo: false
@@ -153,32 +185,43 @@ for i, summary in enumerate(df["SUMMARY_EN"]):
 ## Convert $y$ to integers & split the data
 
 ```{python}
-from sklearn.preprocessing import LabelEncoder
-target_labels = df["NUM_VEHICLES"]
-target = LabelEncoder().fit_transform(target_labels)
+from sklearn.preprocessing import LabelEncoder                  #<1>
+target_labels = df["NUM_VEHICLES"]                              #<2>
+target = LabelEncoder().fit_transform(target_labels)            #<3>
 target
 ```
+1. Imports the `LabelEncoder` from `sklearn.preprocessing` library
+2. Defines the target variable
+3. Fit and transform the target variable using LabelEncoder
 
 ```{python}
-weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
-features = df[["SUMMARY_EN"] + weather_cols]
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]                         #<1>
+features = df[["SUMMARY_EN"] + weather_cols]                                #<2>
 
-X_main, X_test, y_main, y_test = \
-    train_test_split(features, target, test_size=0.2, random_state=1)
+X_main, X_test, y_main, y_test = \                              
+    train_test_split(features, target, test_size=0.2, random_state=1)       #<3>
 
 # As 0.25 x 0.8 = 0.2
 X_train, X_val, y_train, y_val = \
-    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)        #<4>
 
-X_train.shape, X_val.shape, X_test.shape
+X_train.shape, X_val.shape, X_test.shape                                    #<5>
 ```
-
+1. Creates a list that returns column names of weather conditions, i.e. `['WEATHER1', 'WEATHER2', 'WEATHER3', 'WEATHER4', 'WEATHER5', 'WEATHER6', 'WEATHER7', 'WEATHER8']` 
+2. Defines the feature vector by selecting relevant columns from the data frame `df`
+3. Splits the data into train and validation sets
+4. Further divides the validation set into validation set and test set
+5. Prints the dimensions of the data frames
 ```{python}
 print([np.mean(y_train == y) for y in [0, 1, 2]])
 ```
 
 # Text Vectorisation {visibility="uncounted"}
  
+::: {.content-visible unless-format="revealjs"}
+Text vectorisation is a method to convert text into a numerical representation.
+:::
+
 ## Grab the start of a few summaries
 
 ```{python}
@@ -187,33 +230,46 @@ first_summaries
 ```
 
 ```{python}
-first_words = first_summaries.map(lambda txt: txt.split(" ")[:7])
+first_words = first_summaries.map(lambda txt: txt.split(" ")[:7])       #<1>
 first_words
 ```
-
+1. Takes the `first_summaries`, converts the string of words in to a list of words by breaking the string at spaces and returns the first 7 words
 ```{python}
-start_of_summaries = first_words.map(lambda txt: " ".join(txt))
+start_of_summaries = first_words.map(lambda txt: " ".join(txt))     #<1>
 start_of_summaries
 ```
+1. Joint the words in the list with a space in between to return a string
 
 ## Count words in the first summaries
 
 ```{python}
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer             #<1>
 
-vect = CountVectorizer()
-counts = vect.fit_transform(start_of_summaries)
-vocab = vect.get_feature_names_out()
-print(len(vocab), vocab)
+vect = CountVectorizer()                                                #<2>
+counts = vect.fit_transform(start_of_summaries)                         #<3>
+vocab = vect.get_feature_names_out()                                    #<4>
+print(len(vocab), vocab)                                                #<4>       
 ```
+1. Imports the `CountVectorizer` class from the `sklearn.feature_extraction.text` library. `CountVectorizer` goes through a text document, identifies distinct words in it, and returns a sparse matrix.
+2. Applies `fit_transform` function to the `start_of_summaries`
+3. Stores the distinct words in the vector `vocab`
+4. Returns the number of distinct words, and the words themselves 
 
 ```{python}
 counts
 ```
+::: {.content-visible unless-format="revealjs"}
+Giving the command to return `counts` does not return the matrix in full form. Since python saves the matrix in a Therefore, we use the following code.
+:::
+
 
 ```{python}
 counts.toarray()
 ```
+
+::: {.content-visible unless-format="revealjs"}
+In the above matrix, rows correpsond to the data entries(strings), columns correspond to distrinct words, and cell entries correspond to the frequencies of distinct words in each row
+:::
 
 ## Encode new sentences to BoW
 
@@ -221,8 +277,14 @@ counts.toarray()
 vect.transform([
     "first car hit second car in a crash",
     "ipad os 16 beta released",
-])
+])                                                  #<1>
 ```
+
+1. Applies `transform` to two new lines of data. `vect.transform` applies the already fitted transmation to the new data. It goes through the new data entries, identifies words that were seen during `fit_transform` stage, and returns a matrix containing the counts of distinct words (identified during fitting stage).
+
+::: {.content-visible unless-format="revealjs"}
+Note that the matrix is stored in a special format in python, hence, we must pass the command to convert it to an array using the following code. 
+:::
 
 ```{python}
 vect.transform([
@@ -231,11 +293,18 @@ vect.transform([
 ]).toarray()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+There are couple issues with the output. Since the `transform` function, will identify only the words trauned during the `fit_transform` stage, it will not recognize the new words. The returned matrix can only say whether new data contains words seen during the fitting stage or not. We can see how the matrix returns an entire row of zero values for the second line.
+:::
+
 ```{python}
 print(vocab)
 ```
 
 ## Bag of $n$-grams
+::: {.content-visible unless-format="revealjs"}
+The same `CountVectorizer` class can be customized to look at 2 words too. This is useful in some situations. For example, the word 'new' and 'york' separately might not be meaningful, but together, it can. This motivates the $n$-grams option. The following code  `CountVectorizer(ngram_range=(1, 2))` is an example of giving instructions to look for phrases with one word and two words. 
+:::
 
 ```{python}
 vect = CountVectorizer(ngram_range=(1, 2))
@@ -260,36 +329,65 @@ Stands for _term frequency-inverse document frequency_.
 Source: FiloTechnologia (2014), [A simple Java class for TF-IDF scoring](http://filotechnologia.blogspot.com/2014/01/a-simple-java-class-for-tfidf-scoring.html), Blog post.
 :::
 
+
+::: {.content-visible unless-format="revealjs"}
+_term frequency-inverse document frequency_ measures the importance of a word across documents. It first computes the frequency of term _x_ in the document _y_ and weights it by a measure of how common it is. The intuition here is that, the more the word _x_ appears across documents, the less important it becomes.
+:::
+
+
 # Bag Of Words {visibility="uncounted"}
 
 ## Count words in all the summaries
 
 ```{python}
-vect = CountVectorizer()
-vect.fit(X_train["SUMMARY_EN"])
-vocab = list(vect.get_feature_names_out())
-len(vocab)
+vect = CountVectorizer()                                #<1>
+vect.fit(X_train["SUMMARY_EN"])                         #<2>
+vocab = list(vect.get_feature_names_out())              #<3>
+len(vocab)                                              #<4>
 ```
+1. Defines the class `CountVectorizer() ` as `vect`
+2. Fits the vectorizer to the entire column of `SUMMARY_EN`
+3. Stores the distinct words as a list
+4. Returns the number of unique words 
+
+::: {.content-visible unless-format="revealjs"}
+The above code returns 18866 number of unique words.
+:::
+
 
 ```{python}
-vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:]
+vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:]             #<1>
 ```
+1. Returns (i) the first five elements, (ii) the middle five elements and (iii) the last five elements  of the array.
+
 
 ## Create the $X$ matrices
 
-```{python}
-def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):
-    X_vects = vect.transform(X[txt_col]).toarray()
-    X_other = X.drop(txt_col, axis=1)
+::: {.content-visible unless-format="revealjs"}
+The following function is designed to select and vectorize the text column of a given dataset, and then combine it with the other non-textual columns of the same dataset. 
+:::
 
-    if not dataframe:
-        return np.concatenate([X_vects, X_other], axis=1)
+```{python}
+def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):              #<1>
+    X_vects = vect.transform(X[txt_col]).toarray()                                  #<2>
+    X_other = X.drop(txt_col, axis=1)                                               #<3>
+
+    if not dataframe:                                                               #<4>
+        return np.concatenate([X_vects, X_other], axis=1)                           
     else:
         # Add column names and indices to the combined dataframe.
-        vocab = list(vect.get_feature_names_out())
-        X_vects_df = pd.DataFrame(X_vects, columns=vocab, index=X.index)
-        return pd.concat([X_vects_df, X_other], axis=1)
+        vocab = list(vect.get_feature_names_out())                                  #<5>
+        X_vects_df = pd.DataFrame(X_vects, columns=vocab, index=X.index)            #<6>
+        return pd.concat([X_vects_df, X_other], axis=1)                             #<7>
 ```
+
+1. Defines the function `vectorise_dataset` which takes in the dataframe _X_, vectorizer class, the name of the text column, a boolean function defining whether we want the output in dataframe format or numpy array format
+2. Transforms the text column based on a already fitted vectorizer function
+3. Drops the column containing text data from the dataframe
+4. If `dataframe=False`, then returns a numpy array by concatenating non-textual data and vectorized text data
+5. Otherwise, extracts the unique words as a list
+6. Generates a dataframe, with columns names `vocab`, while preserving the index from the original dataset _X_
+7. Concatenates `X_vects_df` with the remaining non-textual data and returns the output as a dataframe
 
 ```{python}
 X_train_ct = vectorise_dataset(X_train, vect)
@@ -302,34 +400,47 @@ X_test_ct = vectorise_dataset(X_test, vect)
 ```{python}
 vectorise_dataset(X_train, vect, dataframe=True)
 ```
+::: {.content-visible unless-format="revealjs"}
+The above code returns the output matrix and it contains 4169 rows with 18874 columns. Next, we build a simple neural network on the data, to predcit the probabilities of number of vehicles involved in the accident. 
+:::
 
 ## Make a simple dense model
 
 ```{python}
-num_features = X_train_ct.shape[1]
-num_cats = 3 # 1, 2, 3+ vehicles
+num_features = X_train_ct.shape[1]                                  #<1>
+num_cats = 3 # 1, 2, 3+ vehicles                                    #<2>
 
-def build_model(num_features, num_cats):
-    random.seed(42)
+def build_model(num_features, num_cats):                            #<3>
+    random.seed(42)                                                 #<4>
     
     model = Sequential([
         Dense(100, input_dim=num_features, activation="relu"),
         Dense(num_cats, activation="softmax")
-    ])
+    ])                                                              #<5>
     
-    topk = SparseTopKCategoricalAccuracy(k=2, name="topk")
+    topk = SparseTopKCategoricalAccuracy(k=2, name="topk")          #<6>
     model.compile("adam", "SparseCategoricalCrossentropy",
-        metrics=["accuracy", topk])
+        metrics=["accuracy", topk])                                 #<7>
     
-    return model
+    return model                                                    #<8>
 ```
-
+1. Stores the number of input features in `num_features`
+2. Stores the number of output features in `num_cats`
+3. Starts building the model by giving number of input and output features as paramaters
+4. Sets the random seed for reproducibility
+5. Constructs the neural network with 2 dense layers. Since the output must be a vector of probabilities, we choose `softmax` activation in the output layer
+6. Defines the a customized metric to keep track of during the training. The metric will compute the accuracy by looking at top 2 classes(the 2 classes with highest predicted probability) and checking if either of them contains the true class
+7. Compiles the model with the `adam` optimizer, loss function and metrics to monitor. Here we ask the model to optimize `SparseCategoricalCrossentropy` loss while keeping track of `SparseCategoricalCrossentropy` for the top 2 classes
 ## Inspect the model
 
 ```{python}
 model = build_model(num_features, num_cats)
 model.summary(print_fn=skip_empty)
 ```
+::: {.content-visible unless-format="revealjs"}
+The model summary shows that there are 1,887,803 parameters to learn. This is because we have 188500 (18874*100 weights + 100 biases) parameters to train in the first layer.
+:::
+
 
 ## Fit & evaluate the model
 
@@ -339,6 +450,10 @@ es = EarlyStopping(patience=1, restore_best_weights=True,
 %time hist = model.fit(X_train_ct, y_train, epochs=10, \
     callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Results from training the neural network shows that the model performs almost perfectly for the in sample data, and with very high accuracies for both validation and test data.
+:::
 
 ```{python}
 model.evaluate(X_train_ct, y_train, verbose=0)
@@ -354,7 +469,16 @@ model.evaluate(X_test_ct, y_test, verbose=0)
 
 # Limiting The Vocabulary {visibility="uncounted"}
 
+::: {.content-visible unless-format="revealjs"}
+Although the previous model performed really well, it had a very large number of parameters to train. Thereofre, it is worth checking whether there is a way to limit the vocabulary. One way would be to look at only the most frequent words occuring 
+:::
+
+
 ## The `max_features` value
+
+::: {.content-visible unless-format="revealjs"}
+One way would be to select the most frequent words. The following code shows how we can choose `max_features` option to select the 10 words that occur most. This simplies the problem, however, we might miss out on important words that might add value to the task. For example, _and_, _for_ and _of_ are among the selected words, but they are less meaningful.
+:::
 
 ```{python}
 vect = CountVectorizer(max_features=10)
@@ -368,6 +492,9 @@ print(vocab)
 ```
 
 ## Remove stop words
+::: {.content-visible unless-format="revealjs"}
+One way to overcome selecting less meaningful words would be to use the option `'stop_words="english'` option. This option checks if the set of selected words contain common words, and ignore them when selecting the most frequent words.
+:::
 
 ```{python}
 vect = CountVectorizer(max_features=10, stop_words="english")
@@ -392,6 +519,9 @@ len(vocab)
 ```{python}
 print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
 ```
+::: {.content-visible unless-format="revealjs"}
+The above output shows, how selecting just 1000 words would still contain less meaningful phrases. Also, we can see how the same word(but slightly differently spelled) are appearing together. This redundancy does not add value either. For example _year_ and _years_.
+:::
 
 Create the $X$ matrices:
 
@@ -414,6 +544,9 @@ num_features = X_train_ct.shape[1]
 model = build_model(num_features, num_cats)
 model.summary(print_fn=skip_empty)
 ```
+::: {.content-visible unless-format="revealjs"}
+From the above summary, we can see how we have brought down the number of parameters to be trained down to 101,203. That is done by reducing the number of covariates, not by reducing the number of neurons.
+:::
 
 ## Fit & evaluate the model
 
@@ -423,6 +556,9 @@ es = EarlyStopping(patience=1, restore_best_weights=True,
 %time hist = model.fit(X_train_ct, y_train, epochs=10, \
     callbacks=[es], validation_data=(X_val_ct, y_val), verbose=0);
 ```
+::: {.content-visible unless-format="revealjs"}
+The following results show how despite dropping so many covariates, the trained model is still able to achieve a performance similar to the previous case. 
+:::
 
 ```{python}
 model.evaluate(X_train_ct, y_train, verbose=0)
@@ -433,6 +569,10 @@ model.evaluate(X_val_ct, y_val, verbose=0)
 ```
 
 # Intelligently Limit The Vocabulary {visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+While it is helpful to reduce complexity and redundancy in natural language processing using options like `max_features` and `stop_words`, they alone are not enough. The following code shows how despite using above commands, we still end up with similar words which do not add value for the processing task. Therefore, looking for ways to intelligently limit vocabulary is useful.
+:::
 
 ## Keep 1,000 most frequent words 
 
@@ -446,14 +586,19 @@ len(vocab)
 ```{python}
 print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
 ```
+::: {.content-visible unless-format="revealjs"}
+Spacy is a popular open-source library that is used to analyze data and carry out prediction tasks related to natural language processing.
+:::
 
 ## Install spacy
 
 ```{python}
 #| eval: false
-!pip install spacy
-!python -m spacy download en_core_web_sm
+!pip install spacy                              #<1>
+!python -m spacy download en_core_web_sm        #<2>
 ```
+1. Installs the library `spacy`
+2. Downloads the trained model `en_core_web_sm` which a small, effient english language model trained using text data. It can be used for tasks like lemmatization, tokenization etc. 
 
 ```{python}
 #| echo: false
@@ -469,28 +614,39 @@ except:
 ```
 
 ```{python}
-import spacy
+import spacy                                                                #<1>
 
-nlp = spacy.load("en_core_web_sm")
-doc = nlp("Apple is looking at buying U.K. startup for $1 billion")
+nlp = spacy.load("en_core_web_sm")                                          #<2>
+doc = nlp("Apple is looking at buying U.K. startup for $1 billion")         #<3>
 for token in doc:
-    print(token.text, token.pos_, token.dep_)
+    print(token.text, token.pos_, token.dep_)                               #<4>      
 ```
+1. Imports the library
+2. Loads the model and stores it as `nlp`
+3. Applies `nlp` model to the given string for processing. Processing involves tokenization, part-of-speech application, dependency application etc. 
+4. Returns information about each token(word) in the line. `token.text` returns each word in the string, `token.pos_` returns the part-of-speech; the grammatical category of the word,  and `token.dep_` which provides information about the syntactic relationship of the word to the rest of the words in the string. 
 
 ## Lemmatize the text 
 
+::: {.content-visible unless-format="revealjs"}
+Lemmatization refers to the act of reducing the words in to its base form. For example; reduced form of _looking_ would be _look_. The following code shows how we can lemmatize the a text, by first processing it with `nlp`. 
+:::
+
 ```{python}
-def lemmatize(txt):
-    doc = nlp(txt)
-    good_tokens = [token.lemma_.lower() for token in doc \
+def lemmatize(txt):                                                 #<1>
+    doc = nlp(txt)                                                  #<2>
+    good_tokens = [token.lemma_.lower() for token in doc \          
         if not token.like_num and \
            not token.is_punct and \
            not token.is_space and \
            not token.is_currency and \
-           not token.is_stop]
-    return " ".join(good_tokens)
+           not token.is_stop]                                       #<3>
+    return " ".join(good_tokens)                                    #<4>
 ```
-
+1. Starts defining the function which taken in a string of text as input
+2. Sends the text through `nlp` model
+3. For each token(word) in the document, first it takes the lemma of the token, converts it to lower case and then applies several filters on the lemmatized token to select only the good tokens. The filtering process filters out numbers, punctuation marks, white spaces, currency signs and stop words like _the_ and _and_
+4. Joins the good tokens and returns it as a string
 ```{python}
 test_str = "Incident at 100kph and '10 incidents -13.3%' are incidental?\t $5"
 lemmatize(test_str)
@@ -500,6 +656,14 @@ lemmatize(test_str)
 test_str = "I interviewed 5-years ago, 150 interviews every year at 10:30 are.."
 lemmatize(test_str)
 ```
+::: {.content-visible unless-format="revealjs"}
+The output above shows how stop words, numbers and punctuation marks are removed. We can also see how _incident_ and _incidental_ are treated as separate words.
+:::
+
+
+::: {.content-visible unless-format="revealjs"}
+Lemmatizing data in the above manner, giving each string at a time is quite inefficient. We can use `map(lemmatize)` function to map the function to the entire column at once.
+:::
 
 ## Apply to the whole dataset
 
@@ -507,6 +671,10 @@ lemmatize(test_str)
 #| eval: false
 df["SUMMARY_EN_LEMMA"] = df["SUMMARY_EN"].map(lemmatize)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Lemmatized version of the column is now stored in `SUMMARY_EN_LEMM`. Next we merge the non-textual columns of the dataset `df` with the lemmatized column and create the final dataset. This dataset will be split in to _train_, _val_ and _test_ sets for trianing the neural network.
+:::
 
 ```{python}
 #| include: false
@@ -521,18 +689,23 @@ else:
 ```
 
 ```{python}
-weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
-features = df[["SUMMARY_EN_LEMMA"] + weather_cols]
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]                     #<1>
+features = df[["SUMMARY_EN_LEMMA"] + weather_cols]                      #<2>
 
 X_main, X_test, y_main, y_test = \
-    train_test_split(features, target, test_size=0.2, random_state=1)
+    train_test_split(features, target, test_size=0.2, random_state=1)   #<3>
 
 # As 0.25 x 0.8 = 0.2
 X_train, X_val, y_train, y_val = \
-    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)    #<4>
 
-X_train.shape, X_val.shape, X_test.shape
+X_train.shape, X_val.shape, X_test.shape                                #<5>
 ```
+1. Defines the names of the columns that will be used for creating the final dataset
+2. Selects the relevant input feature columns and stores it in `features` column
+3. Splits the data in to _main_ and _test_ sets
+4. Further splits the _main_ set in to _train_ and _val_ sets
+5. Returns the dimensions of the datasets 
 
 ## Keep 1,000 most frequent lemmas
 
@@ -543,9 +716,23 @@ vocab = vect.get_feature_names_out()
 len(vocab)
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The output after lemmatization, when compared with the previous output(with 1000 words) does not contain similar words. 
+:::
+
+
 ```{python}
 print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
 ```
+
+
+::: {.content-visible unless-format="revealjs"}
+The following code demonstrates the steps for training a neural network using lemmatized datasets:
+
+1. We start by using the vectorise_dataset function to convert the text data into numerical vectors.
+2. Next, we train the neural network model using the vectorized dataset.
+3. Finally, we assess the model's performance
+:::
 
 Create the $X$ matrices:
 
@@ -587,6 +774,10 @@ model.evaluate(X_val_ct, y_val, verbose=0)
 ```
 
 # Interrogate The Model {visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+Trained neural networks performing really well on predictions does not necessarily imply good performance. Interrogating the model can help us understand inside workings of the model to ensure there are no underlying problems with model.
+:::
 
 ## Permutation importance algorithm {.smaller}
 
@@ -642,35 +833,58 @@ def permutation_test(model, X, y, num_reps=1, seed=42):
 ## Run the permutation test
 
 ```{python}
-perm_scores = permutation_test(model, X_val_ct, y_val)[:,1]
-plt.plot(perm_scores);
-plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
+perm_scores = permutation_test(model, X_val_ct, y_val)[:,1]                 #<1>
+plt.plot(perm_scores);                                                      #<2>
+plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");            #<3>
 ```
+1. The `permutation_test`, aims to evaluate the model's performance on different sets of unseen data. The idea here is to shuffle the order of the _val_ set, and compare the `model` performance. `[:,1]` part will extract the accuracy of the output from the model evaluation and store is as a vector. 
+2. Plots the permutation scores
+3. Labels _x_ and _y_ axes
+
+::: {.content-visible unless-format="revealjs"}
+The above method on a high-level says that, if we corrupt the information contained in a feature by chaging the order of the data in that feature column,  then we are able to see how much information the variable brings in. If a certain variable is not contributing to the predcition accuracy, then changing the order of the variable will not result in a notable drop in accuracy. However, if a certain variable is highly important, then changing the order of data will result in a larger drop. This is an indication of variable importance. The plot above shows how model's accuracy fluctuates across variables, and we can see how certain variables result in larger drops of accuracies.
+:::
+
 
 ## Find the most significant inputs
 
 ```{python}
-vocab = vect.get_feature_names_out()
-input_cols = list(vocab) + weather_cols
+vocab = vect.get_feature_names_out()                            #<1>
+input_cols = list(vocab) + weather_cols                         #<2>
 
-best_input_inds = np.argsort(perm_scores)[:100]
-best_inputs = [input_cols[idx] for idx in best_input_inds]
+best_input_inds = np.argsort(perm_scores)[:100]                 #<3>
+best_inputs = [input_cols[idx] for idx in best_input_inds]      #<4>
 
-print(best_inputs)
+print(best_inputs)                                              #<5>
 ```
+1. Extracts the names of the features in a vectorizer object
+2. Combines the the list of names in the vectorizer object with the weather columns
+3. Sorts the `perm_scores` in the ascending order and select the 100 observation which had the most impact on model's accuracy
+4. Find the names of the input features by mapping the index
+5. Prints the output
 
 ## How about a simple decision tree?
 
+::: {.content-visible unless-format="revealjs"}
+We can try building a simpler model using only the most important features. Here, we chose a classification decision tree.
+:::
+
 ```{python}
-from sklearn import tree
-clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)
-clf.fit(X_train_ct[:, best_input_inds], y_train);
+from sklearn import tree                                                #<1>
+clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)     #<2>
+clf.fit(X_train_ct[:, best_input_inds], y_train);                       #<3>
 ```
+1. Imports `tree` class from `sklearn`
+2. Specifies a decision tree with 3 leaf nodes. `max_leaf_nodes=3` ensures that the fitted tree will have at most 3 leaf nodes
+3. Fits the decision tree on the selected dataset. Here we only select the `best_input_inds` columns from the train set
 
 ```{python}
 print(clf.score(X_train_ct[:, best_input_inds], y_train))
 print(clf.score(X_val_ct[:, best_input_inds], y_val))
 ```
+::: {.content-visible unless-format="revealjs"}
+The decision tree ends up giving pretty good results.
+:::
 
 ## Decision tree 
 
@@ -769,6 +983,10 @@ print(clf.score(X_val_ct[:, best_input_inds], y_val))
 #| eval: false
 tree.plot_tree(clf, feature_names=best_inputs, filled=True);
 ```
+::: {.content-visible unless-format="revealjs"}
+The tree shows how, the model would check for the word _v3_, and decides the prediction as _3+_. This is not very meaningful, because having _v3_ in the input is a direct indication of the number of vehicles. 
+:::
+
 
 ```{python}
 #| echo: false

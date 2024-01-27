@@ -90,15 +90,15 @@ X_train["smoking_status"].value_counts()
 ## Scikit-learn column transformer
 
 ```{python}
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import make_pipeline                                              #<1>
 
-cat_vars =  ["gender", "ever_married", "Residence_type",
-    "work_type", "smoking_status"]
+cat_vars =  ["gender", "ever_married", "Residence_type",                                #<2>
+    "work_type", "smoking_status"]                  
 
 ct = make_column_transformer(
-  (OneHotEncoder(sparse_output=False, handle_unknown="ignore"), cat_vars),
-  ("passthrough", ["hypertension", "heart_disease"]),
-  remainder=make_pipeline(SimpleImputer(), StandardScaler()),
+  (OneHotEncoder(sparse_output=False, handle_unknown="ignore"), cat_vars),              #<3>
+  ("passthrough", ["hypertension", "heart_disease"]),                                   #<4>
+  remainder=make_pipeline(SimpleImputer(), StandardScaler()),                           #<5>
   verbose_feature_names_out=False
 )
 
@@ -106,11 +106,19 @@ X_train_ct = ct.fit_transform(X_train)
 X_val_ct = ct.transform(X_val)
 X_test_ct = ct.transform(X_test)
 
-for name, X in zip(("train", "val", "test"), (X_train_ct, X_val_ct, X_test_ct)):
+for name, X in zip(("train", "val", "test"), (X_train_ct, X_val_ct, X_test_ct)):        #<6>
     num_na = X.isna().sum().sum()
     print(f"The {name} set has shape {X_train_ct.shape} & with {num_na} NAs.")
 ```
 
+::: {.content-visible unless-format="revealjs"}
+1. Imports `make_pipeline` class from `sklearn.pipeline` library. `make_pipeline` is used to streamline the data pre processing. In the above example, `make_pipeline` is used to first treat for missing values and then scale numerical values
+2. Stores categorical variables in `cat_vars`
+3. Specifies the one-hot encoding for all categorical variables. We set the `sparse_output=False`, to return a dense array rather than a sparse matrix. `handle_unknown` specifies how the neural network should handle unseen categories. By setting `handle_unknown="ignore"`, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it will interrupt the model's operation after deployment
+4. Passes through `hypertension` and `heart_disease` without any pre processing
+5. Makes a pipeline that first applies `SimpleImputer()` to replace missing values with the mean and then applies `StandardScaler()` to scale the nunmerical values 
+6. Prints out the missing values to ensure the `SimpleImputer()` has worked
+:::
 ## Handling unseen categories
 
 ::: columns
@@ -126,6 +134,9 @@ X_val["gender"].value_counts()
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupit the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below.
+:::
 ::: columns
 ::: column
 ```{python}
@@ -141,6 +152,9 @@ gender_cols.iloc[ind-1:ind+3]
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+However, to give such instructions on handling unseen categories, we would first have to know what those possible categories could be. We should also have specific knowledge on what value to assign incase they come up during model performance. One easy way to tackle it would be to use `handle_unknown="ignore"` during encoding, as mentioned before.
+:::
 
 ## Setup a binary classification model
 
@@ -153,26 +167,40 @@ def create_model(seed=42):
     model.add(Dense(1, "sigmoid"))
     return model
 ```
+::: {.content-visible unless-format="revealjs"}
+Since the problem relates to a binary classification, we use `sigmoid` activation function.
+:::
 
 ```{python}
 model = create_model()
 model.summary(print_fn=skip_empty)
 ```
+::: {.content-visible unless-format="revealjs"}
+`model.summary()` returns the summary of the constructed neural network. by specifiying `print_fn=skip_empty`, we instruct the output to avoid printing layers without trainable weights. This includes reshape layers, concatenating layers etc..
+:::
 
 ## Add metrics, compile, and fit
 
 ```{python}
-model = create_model()
+model = create_model()                                                  #<1>
 
-pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
-model.compile(optimizer="adam", loss="BinaryCrossentropy",
-    metrics=["accuracy", "AUC", pr_auc])
+pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")                #<2>
+model.compile(optimizer="adam", loss="BinaryCrossentropy",              #<3>
+    metrics=["accuracy", "AUC", pr_auc])                                
 
 es = EarlyStopping(patience=50, restore_best_weights=True,
     monitor="val_pr_auc", verbose=1)
 model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
   validation_data=(X_val_ct, y_val));
 ```
+
+::: {.content-visible unless-format="revealjs"}
+1. Brings in the created model
+2. Creates an instance `pr_auc` to store the AUC (Area Under Curve) metric for the PR (Precision-Recall) curve
+3. Compiles the model with an appropriate loss function, optimizer and relevant metrics. Since the above problem is a binary classification, we would optimize the `BinaryCrossentropy`, chose to monitor both `accuracy` and `AUC` and `pr_auc`.  
+
+Tracking AUC and `pr_auc` on top of the accuracy is important, particularly in the cases where there is a class imbalance. Suppose a data has 95% `TRUE` classe and only 5% `FALSE` class, then, even a random classifier that predcits `TRUE` 95% of the time will have a high accuracy. To avoid such issues, it is advisable to monitor both accuracy and AUC.
+:::
 
 ::: columns
 ::: column
@@ -195,10 +223,14 @@ model.compile(optimizer="adam", loss="BinaryCrossentropy",
 
 es = EarlyStopping(patience=50, restore_best_weights=True,
     monitor="val_pr_auc", verbose=1)
-model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
+model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,                    #<1>
   validation_data=(X_val_ct, y_val), class_weight={0: 1, 1: 10});
 ```
 
+::: {.content-visible unless-format="revealjs"}
+Another way to treat class imbalance would be to assign a higher wieght to the minority class during model fitting.
+1. Fits the model by assigning a higher weight to the misclassification in the minor class. This above class weight assignment says that misclassifying an observation from class 1 will be penalized 10 times more than misclassifying an observation from class 0. The weights can be assigned in relation to the level of data imbalance.
+:::
 ::: columns
 ::: column
 ```{python}
