@@ -400,7 +400,7 @@ from tensorflow.keras.optimizers import Adam
 model.compile(optimizer=Adam(), loss=poisson)
 ```
 ::: {.content-visible unless-format="revealjs"}
-This is similar to setting the activation function. Here, setting `optimizer="adam"` and `loss="poisson"` (with in strings) is same as setting `optimizer=Adam()` and `loss=poisson` after bringing in the `Adam` from `tensorflow.keras.optimizers` and `poisson` from `tensorflow.keras.losses`. Another important thing to note here is that, the loss function is no longer `mse`. Since we assume a poisson distribution for the target variable, and the goal is to optimize the algorithm for count data, poisson loss is more appropriate.
+This is similar to setting the activation function. Here, setting `optimizer="adam"` and `loss="poisson"` (with in strings) is same as setting `optimizer=Adam()` and `loss=poisson` after bringing in the `Adam` from `tensorflow.keras.optimizers` and `poisson` from `tensorflow.keras.losses`. Another important thing to note here is that, the loss function is no longer `mse`. Since we assume a Poisson distribution for the target variable, and the goal is to optimise the algorithm for count data, Poisson loss is more appropriate.
 :::
 
 Why do this manually? To adjust the object:
@@ -465,7 +465,7 @@ X_train["Region"].value_counts()
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-`data["column_name"].value_counts()` function provides counts of each category for a categorical variable. In this dataset, variables `Area` and `VehGas` are assumed to have natural orderings where as `VehBrand` and `Region` are not not considered to have such natural orderings. Therefore, the two sets of categorical variables will have to be treated differently.
+`data["column_name"].value_counts()` function provides counts of each category for a categorical variable. In this dataset, variables `Area` and `VehGas` are assumed to have natural orderings whereas `VehBrand` and `Region` are not considered to have such natural orderings. Therefore, the two sets of categorical variables will have to be treated differently.
 :::
 
 ## Ordinal & binary categories are easy
@@ -480,7 +480,7 @@ oe.categories_                                                #<4>
 `OrdinalEncoder` can assign numerical values to each category of the ordinal variable. The nice thing about `OrdinalEncoder` is that it can preserve the information about ordinal relationships in the data. Furthermore, this encoding is more efficient in terms of memory usage. 
 1. Imports the `OrdinalEncoder` from `sklearn.preprocessing` library
 2. Defines the `OrdinalEncoder` object as `oe`
-3. Selects the two columns with ordinal variables from <i>X_train</i> and fits the ordinal encoder
+3. Selects the two columns with ordinal variables from `X_train` and fits the ordinal encoder
 4. Gives out the number of unique categories in each ordinal variable
 :::
 
@@ -638,7 +638,7 @@ print(list(X_train["Region"][:5]))
 X_train_oh.head()
 ```
 ::: {.content-visible unless-format="revealjs"}
-One hot encoding is a way to assign numerical values to nominal variables. One hot encoding is different from ordinal encoding in the way in which it transforms the data. Ordinal encoding assigns a numerical integer to each unique category of the data column and returns one one integer column. In contrast, one hot encoding returns a binary vector for each unique category. As a result, what we get from one hot encoding is not a single column vector, but a matrix with number of columns equal to the number of unique categories in that nominal data column.
+One hot encoding is a way to assign numerical values to nominal variables. One hot encoding is different from ordinal encoding in the way in which it transforms the data. Ordinal encoding assigns a numerical integer to each unique category of the data column and returns one integer column. In contrast, one hot encoding returns a binary vector for each unique category. As a result, what we get from one hot encoding is not a single column vector, but a matrix with number of columns equal to the number of unique categories in that nominal data column.
 :::
 
 ## Train on one-hot inputs
@@ -679,7 +679,7 @@ X = every_category.to_numpy()                       #<1>
 model.layers[0](X)                                  #<2>
 ```
 ::: {.content-visible unless-format="revealjs"}
-We can extract each layer saparately from a trained neural network and observe its output given a specific input. 
+We can extract each layer separately from a trained neural network and observe its output given a specific input. 
 1. Converts the dataframe to a numpy array
 2. Takes out the first layer and feeds in the numpy array _X_. This returns an array with 2 columns
 :::
@@ -771,7 +771,7 @@ model.layers
 ```
 ::: {.content-visible unless-format="revealjs"}
 Embedding layer can learn the optimal representation for a category of a categorical variable, during training. 
-In the above example, encoding the variable _Region_ using ordinal encoding and passing it through an embedding layer learns the optimal representation for the region during training. Ordinal encoding followed with an embedding layer is a better alternative to one-hot encoding. It is computationally less expensive (compared to generatinng large matrices in one-hot encoding) particularly when the number of categories is high.
+In the above example, encoding the variable _Region_ using ordinal encoding and passing it through an embedding layer learns the optimal representation for the region during training. Ordinal encoding followed with an embedding layer is a better alternative to one-hot encoding. It is computationally less expensive (compared to generating large matrices in one-hot encoding) particularly when the number of categories is high.
 :::
 
 ## Keras' Embedding Layer
@@ -798,7 +798,7 @@ enc_tensor.numpy().squeeze()                    #<5>
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-1. Returns the weights of the Embedding layer. The function `model.layers[0].get_weights()[0]` returns a 22 $\times$ 2 weights matrix with optimal representations for each category. Here 22 corresponds to the number of unique catogories, and 2 corresponds to the size of the lower dimensional space using which we represent each category. 
+1. Returns the weights of the Embedding layer. The function `model.layers[0].get_weights()[0]` returns a 22 $\times$ 2 weights matrix with optimal representations for each category. Here 22 corresponds to the number of unique categories, and 2 corresponds to the size of the lower dimensional space using which we represent each category. 
 2. Returns the first 4 rows of train set
 3. Converts first 4 rows to a numpy array
 4. Sends the numpy array through the Embedding layer to retrieve corresponding weights
@@ -821,7 +821,7 @@ for i in range(num_regions):
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-While it not always the case, entity embeddings at times be meaningful instead of just being representations. The above figure shows how plotting the learned embeddings help reveal regions which might be similar (e.g. coastal areas, hilly areas etc.).
+While it not always the case, entity embeddings can at times be meaningful instead of just being useful representations. The above figure shows how plotting the learned embeddings help reveal regions which might be similar (e.g. coastal areas, hilly areas etc.).
 :::
 
 ## Entity embeddings 
@@ -835,7 +835,7 @@ Source: Marcus Lautier (2022).
 ## Embeddings & other inputs
 
 ::: {.content-visible unless-format="revealjs"}
-Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data in to the the neural network. Numerical variables are inherently numeric hence, do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.
+Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data in to the neural network. Numerical variables are inherently numeric hence, do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.
 :::
 
 ![Illustration of a neural network with both continuous and categorical inputs.](nn-with-entity-embedding-diagram.png)
@@ -905,7 +905,7 @@ hist.history["val_loss"][-1]
 Cf. [one-length tuples](https://pat-laub.github.io/DeepLearningMaterials/2023/Lecture-1-Artificial-Intelligence/python.html#/one-length-tuples).
 
 ::: {.content-visible unless-format="revealjs"}
-The above code shows how to construct the same neural network using sequential models and Keras functional API. There are some differences in the construction. In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer. `model = Model(inputs, out)` function specifies the input and output of the model. This manner of specificying the inputs and outputs of the model allow the user to combine several inputs (inputs which are preprocessed in differnet ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
+The above code shows how to construct the same neural network using sequential models and Keras functional API. There are some differences in the construction. In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer. `model = Model(inputs, out)` function specifies the input and output of the model. This manner of specifying the inputs and outputs of the model allow the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
 :::
 
 ## Wide & Deep network
@@ -1003,8 +1003,8 @@ X_test_ct = ct.transform(X_test)                                            #<6>
 2. Contructs columns transformer by first ordinally encoding all categorical variables. Ordinal variables are ordinal encoded because it is the sensible thing. Nominal variables are ordinal encoded as an intermediate step before passing through an entity embedding layer 
 3. Applies standard scaling to all other numerical variables
 4. `verbose_feature_names_out=False` stops unnecessarily printing out the outputs of the process
-5. Fits the column transformer to the train set and tranforms it
-6. Transforms the test set using the column transofrmer fitted using the train set
+5. Fits the column transformer to the train set and transforms it
+6. Transforms the test set using the column transformer fitted using the train set
 :::
 
 Split the brand and region data apart from the rest:
@@ -1043,9 +1043,9 @@ x = Concatenate(name="combined")([veh_brand_ee, region_ee, other_inputs])       
 
 ::: {.content-visible unless-format="revealjs"}
 1. Imports `Reshape` class from `tensorflow.keras.layers` library
-2. Contructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimnesions we want the input to be summarized in to)
+2. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimensions we want the input to be summarised in to)
 3. Reshapes the output to match the format required at the model building step
-4. Contructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension
+4. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension
 5. Reshapes the output to match the format required at the model building step
 6. Combines the entity embedded matrices and other inputs together
 :::
