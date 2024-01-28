@@ -441,7 +441,6 @@ window.Quarto = {
   <li><a href="#the-model-1" id="toc-the-model-1" class="nav-link" data-scroll-target="#the-model-1">The model</a></li>
   <li><a href="#some-recovered-image-1" id="toc-some-recovered-image-1" class="nav-link" data-scroll-target="#some-recovered-image-1">Some recovered image</a></li>
   <li><a href="#cnn-enhanced-encoder" id="toc-cnn-enhanced-encoder" class="nav-link" data-scroll-target="#cnn-enhanced-encoder">CNN-enhanced encoder</a></li>
-  <li><a href="#cnn-enhanced-decoder" id="toc-cnn-enhanced-decoder" class="nav-link" data-scroll-target="#cnn-enhanced-decoder">CNN-enhanced decoder</a></li>
   <li><a href="#encoder-summary" id="toc-encoder-summary" class="nav-link" data-scroll-target="#encoder-summary">Encoder summary</a></li>
   <li><a href="#decoder-summary" id="toc-decoder-summary" class="nav-link" data-scroll-target="#decoder-summary">Decoder summary</a></li>
   <li><a href="#some-recovered-image-2" id="toc-some-recovered-image-2" class="nav-link" data-scroll-target="#some-recovered-image-2">Some recovered image</a></li>
@@ -506,7 +505,7 @@ window.Quarto = {
 </section>
 <section id="load-packages" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="load-packages">Load packages</h2>
-<div id="9910b060" class="cell" data-execution_count="2">
+<div id="a79c67a2" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -566,6 +565,7 @@ tensorflow: 2.12.0
 <div class="footer">
 <p>Source: Marcus Lautier (2022).</p>
 </div>
+<p>The way how word-level language models work is that, it first takes in the input text and then generates the probability distribution of the next word. This distribution tells us how likely a certain word is to be the next word. Thereafter, the model implements a appropriate sampling strategy to select the next word. Once the next word is predicted, it is appended to the input text and then passed in to the model again to predict the next word. The idea here is to predict the word after word.</p>
 </section>
 <section id="character-level-language-model" class="level2">
 <h2 class="anchored" data-anchor-id="character-level-language-model">Character-level language model</h2>
@@ -578,6 +578,7 @@ tensorflow: 2.12.0
 <div class="footer">
 <p>Source: Tensorflow tutorial, <a href="https://www.tensorflow.org/text/tutorials/text_generation">Text generation with an RNN</a>.</p>
 </div>
+<p>Character-level language predtics the next character given a certain input character. They capture patterns at a much granular level and do not aim to capture semantics of words.</p>
 </section>
 <section id="useful-for-speech-recognition" class="level2">
 <h2 class="anchored" data-anchor-id="useful-for-speech-recognition">Useful for speech recognition</h2>
@@ -619,9 +620,11 @@ Figure&nbsp;1: Examples of transcriptions directly from the RNN with errors that
 <div class="footer">
 <p>Source: Hannun et al.&nbsp;(2014), <a href="https://arxiv.org/pdf/1412.5567.pdf">Deep Speech: Scaling up end-to-end speech recognition</a>, arXiv:1412.5567, Table 1.</p>
 </div>
+<p>The above example shows how RNN predictions (for sequential data processing) can be improved by fixing errors using a language model.</p>
 </section>
 <section id="generating-shakespeare-i" class="level2">
 <h2 class="anchored" data-anchor-id="generating-shakespeare-i">Generating Shakespeare I</h2>
+<p>The following is an example how a language model trained on works of Shakespeare starts predicting words after we input a string. This is an example of a character-level prediction, where we aim to predict the most likely character, not the word.</p>
 <blockquote class="blockquote">
 <div class="line-block">ROMEO:<br>
 Why, sir, what think you, sir?<br>
@@ -672,6 +675,7 @@ The heavens so dim by day. A savage clamour!<br>
 <h2 class="anchored" data-anchor-id="section">
 Sampling strategy
 </h2>
+<p>The sampling strategy refers to the way how we pick the next word/character as the prediction after observing the distribution. There are different sampling strategies and they aim to serve different levels of trade-offs between exploration and exploitation when generating text sequences.</p>
 <ul>
 <li><em>Greedy sampling</em> will choose the token with the highest probability. It makes the resulting sentence repetitive and predictable.</li>
 <li><em>Stochastic sampling</em>: if a word has probability 0.3 of being next in the sentence according to the model, we’ll choose it 30% of the time. But the result is still not interesting enough and still quite predictable.</li>
@@ -686,7 +690,7 @@ Sampling strategy
 </section>
 <section id="i-am-a" class="level2">
 <h2 class="anchored" data-anchor-id="i-am-a">“I am a” …</h2>
-<div id="fdd0b088" class="cell" data-execution_count="3">
+<div id="e2f9d2f8" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -698,6 +702,8 @@ Sampling strategy
 <div class="footer">
 <p>Idea inspired by Mehta (2023), <a href="https://shivammehta25.github.io/posts/temperature-in-language-models-open-ai-whisper-probabilistic-machine-learning/">The need for sampling temperature and differences between whisper, GPT-3, and probabilistic model’s temperature</a></p>
 </div>
+<p>The graphical illustration above shows how the distribution of words change with different levels of <code>Temp</code> values. Higher levels of temperatures result in less predictable(more interesting) outcomes. If we continue to increase the <code>Temp</code> levels, after a certain point, outcomes will be picked completely at random. This predictions after this point might not be meaningful. Hence, attention to the trade-off between predictability and interestingness is important when deciding the <code>Temp</code> levels.</p>
+<p>The following sections show how a neural network turned on the same dataset, and given the same starting input string <em>In today’s lecture we will</em> shall generate very different sequences of text as predictions. <code>Temp=0.25</code> may give interesting outputs compared to <code>Temp=0.01</code> and <code>Temp=0.50</code> may give interesting outputs compared to <code>Temp=0.25</code>. However, when we keep on increasing <code>Temp</code> levels, the neural network starts giving out random(meaningless) outcomes.</p>
 </section>
 <section id="generating-laub-temp-0.01" class="level2">
 <h2 class="anchored" data-anchor-id="generating-laub-temp-0.01">Generating Laub (temp = 0.01)</h2>
@@ -726,11 +732,12 @@ Sampling strategy
 <section id="generating-laub-temp-1.5" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="generating-laub-temp-1.5">Generating Laub (temp = 1.5)</h2>
 <blockquote class="blockquote">
-<p>In today’s lecture we will put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming. If there was a large. It’s gonua draltionation. Tow many, up, would that black and 53% that’s girter thankAty will get you jast typically stickK thing. But maybe. Anyway, I’m going to work on this libry two, past, at shit citcs jast pleming to memorize overcamples like pre pysing, why wareed to smart a one in this reportbryeccuriay.</p>
+<p><em>In today’s lecture we will</em> put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming. If there was a large. It’s gonua draltionation. Tow many, up, would that black and 53% that’s girter thankAty will get you jast typically stickK thing. But maybe. Anyway, I’m going to work on this libry two, past, at shit citcs jast pleming to memorize overcamples like pre pysing, why wareed to smart a one in this reportbryeccuriay.</p>
 </blockquote>
 </section>
 <section id="generate-the-most-likely-sequence" class="level2">
 <h2 class="anchored" data-anchor-id="generate-the-most-likely-sequence">Generate the most likely sequence</h2>
+<p>Similar to other sequence generating tasks such as generating the next word or generating the next character, generating an entire sequence of words is also useful. The task involves generating the most likely sequence after observing model predictions.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="chatbot.png" class="img-fluid figure-img"></p>
@@ -743,6 +750,7 @@ Sampling strategy
 </section>
 <section id="beam-search" class="level2">
 <h2 class="anchored" data-anchor-id="beam-search">Beam search</h2>
+<p>Instead of trying to carry forward only the highest probable prediction, beam search carries forward several high probable predictions, and then decide the highest probable combination of predictions. Beam search helps expand the exploration horizon for predictions which can contribute to more contextually relevant model predictions. However, this comes at a certain computational complexity.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="beam-search.png" class="img-fluid figure-img"></p>
@@ -756,6 +764,7 @@ Sampling strategy
 </section>
 <section id="transformers" class="level1" data-visibility="uncounted">
 <h1 data-visibility="uncounted">Transformers</h1>
+<p>Transformers are a special type of neural networks that are proven to be highly effective in NLP tasks. They can capture long-run dependencies in the sequential data that is useful for generating predictions with contextual meaning. It makes use of the <em>self-attention</em> mechanism which studies all inputs in the sequence together, tries to understand the dependencies among them, and then utilizes the information about long-run dependencies to predict the output sequence.</p>
 <section id="transformer-architecture" class="level2">
 <h2 class="anchored" data-anchor-id="transformer-architecture">Transformer architecture</h2>
 <blockquote class="blockquote">
@@ -774,18 +783,47 @@ Sampling strategy
 </section>
 <section id="transformers-package" class="level2">
 <h2 class="anchored" data-anchor-id="transformers-package">🤗 Transformers package</h2>
-<div id="185c498f" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> transformers</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> pipeline</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>generator <span class="op">=</span> pipeline(task<span class="op">=</span><span class="st">"text-generation"</span>, model<span class="op">=</span><span class="st">"gpt2"</span>, revision<span class="op">=</span><span class="st">"6c0e608"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The following code uses transformers library from <em>Hugging Face</em> to create a text generation pipeline using the GPT2 (Generative Pre-trained Transformer 2).</p>
+<div id="bfb1d056" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="annotated-cell-2"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-2-1" class="code-annotation-target"><a href="#annotated-cell-2-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> transformers</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-2-2" class="code-annotation-target"><a href="#annotated-cell-2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> pipeline</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-2-3" class="code-annotation-target"><a href="#annotated-cell-2-3" aria-hidden="true" tabindex="-1"></a>generator <span class="op">=</span> pipeline(task<span class="op">=</span><span class="st">"text-generation"</span>, model<span class="op">=</span><span class="st">"gpt2"</span>, revision<span class="op">=</span><span class="st">"6c0e608"</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-2" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="1" data-code-annotation="1">Imports the <code>transformers</code> library</span>
+</dd>
+<dt data-target-cell="annotated-cell-2" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="2" data-code-annotation="2">Imports the class <code>pipeline</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-2" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="3" data-code-annotation="3">Creates a pipeline object called the <code>generator</code>, whose task would be to generate text, using the pretrained model GPT2. <code>revision="6c0e608"</code> specifies the specific revision of the model to refer</span>
+</dd>
+</dl>
+</div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Xformers is not installed correctly. If you want to use memorry_efficient_attention to accelerate training use the following command to install Xformers
 pip install xformers.</code></pre>
 </div>
 </div>
-<div id="1d43b8c1" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>transformers.set_seed(<span class="dv">1</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="01002867" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="annotated-cell-3"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-3" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-3-1" class="code-annotation-target"><a href="#annotated-cell-3-1" aria-hidden="true" tabindex="-1"></a>transformers.set_seed(<span class="dv">1</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-3" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-3-2" class="code-annotation-target"><a href="#annotated-cell-3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-3" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-3" data-code-lines="1" data-code-annotation="1">Sets the seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-3" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-3" data-code-lines="2" data-code-annotation="2">Applies the <code>generator</code> object to generate a text based on the input <em>It’s the holidays so I’m going to enjoy</em>. The result from genrator would be a list of generated texts. To select the first output sequence hence, we pass the command <code>[0]["generated_text"]</code></span>
+</dd>
+</dl>
+</div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Setting `pad_token_id` to `eos_token_id`:50256 for open-end generation.
 /Users/plaub/anaconda3/envs/ai/lib/python3.10/site-packages/transformers/generation/utils.py:1346: UserWarning: Using `max_length`'s default (50) to control the generation length. This behaviour is deprecated and will be removed from the config in v5 of Transformers -- we recommend using `max_new_tokens` to control the maximum length of the generation.
@@ -795,9 +833,10 @@ pip install xformers.</code></pre>
 <pre><code>It's the holidays so I'm going to enjoy the rest of the time and look forward to this week with new friends!"</code></pre>
 </div>
 </div>
-<div id="d078fb64" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>transformers.set_seed(<span class="dv">1337</span>)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>We can try the same code with a different seed value, and it would give a very different output.</p>
+<div id="ef1e4522" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>transformers.set_seed(<span class="dv">1337</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Setting `pad_token_id` to `eos_token_id`:50256 for open-end generation.</code></pre>
 </div>
@@ -812,43 +851,60 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
 </section>
 <section id="reading-the-course-profile" class="level2">
 <h2 class="anchored" data-anchor-id="reading-the-course-profile">Reading the course profile</h2>
-<div id="3fb8ecdf" class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> <span class="st">"""</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="st">StoryWall Formative Discussions: An initial StoryWall, worth 2%, is due by noon on June 3. The following StoryWalls are worth 4</span><span class="sc">% e</span><span class="st">ach (taking the best 7 of 9) and are due at noon on the following dates:</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="st">The project will be submitted in stages: draft due at noon on July 1 (10%), recorded presentation due at noon on July 22 (15%), final report due at noon on August 1 (15%).</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="st">As a student at UNSW you are expected to display academic integrity in your work and interactions. Where a student breaches the UNSW Student Code with respect to academic integrity, the University may take disciplinary action under the Student Misconduct Procedure. To assure academic integrity, you may be required to demonstrate reasoning, research and the process of constructing work submitted for assessment.</span></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="st">To assist you in understanding what academic integrity means, and how to ensure that you do comply with the UNSW Student Code, it is strongly recommended that you complete the Working with Academic Integrity module before submitting your first assessment task. It is a free, online self-paced Moodle module that should take about one hour to complete.</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="st">StoryWall (30%)</span></span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="st">The StoryWall format will be used for small weekly questions. Each week of questions will be released on a Monday, and most of them will be due the following Monday at midday (see assessment table for exact dates). Students will upload their responses to the question sets, and give comments on another student's submission. Each week will be worth 4%, and the grading is pass/fail, with the best 7 of 9 being counted. The first week's basic 'introduction' StoryWall post is counted separately and is worth 2%.</span></span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="st">Project (40%)</span></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="st">Over the term, students will complete an individual project. There will be a selection of deep learning topics to choose from (this will be outlined during Week 1).</span></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="st">The deliverables for the project will include: a draft/progress report mid-way through the term, a presentation (recorded), a final report including a written summary of the project and the relevant Python code (Jupyter notebook).</span></span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="st">Exam (30%)</span></span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="st">The exam will test the concepts presented in the lectures. For example, students will be expected to: provide definitions for various deep learning terminology, suggest neural network designs to solve risk and actuarial problems, give advice to mock deep learning engineers whose projects have hit common roadblocks, find/explain common bugs in deep learning Python code.</span></span>
-<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Another application of pipeline is the ability to generate texts in the answer format. The following is an example of how a pretrained model can be used to answer questions by relating it to a body of text information(context).</p>
+<div id="9e820b90" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="st">StoryWall Formative Discussions: An initial StoryWall, worth 2%, is due by noon on June 3. The following StoryWalls are worth 4</span><span class="sc">% e</span><span class="st">ach (taking the best 7 of 9) and are due at noon on the following dates:</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="st">The project will be submitted in stages: draft due at noon on July 1 (10%), recorded presentation due at noon on July 22 (15%), final report due at noon on August 1 (15%).</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="st">As a student at UNSW you are expected to display academic integrity in your work and interactions. Where a student breaches the UNSW Student Code with respect to academic integrity, the University may take disciplinary action under the Student Misconduct Procedure. To assure academic integrity, you may be required to demonstrate reasoning, research and the process of constructing work submitted for assessment.</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="st">To assist you in understanding what academic integrity means, and how to ensure that you do comply with the UNSW Student Code, it is strongly recommended that you complete the Working with Academic Integrity module before submitting your first assessment task. It is a free, online self-paced Moodle module that should take about one hour to complete.</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="st">StoryWall (30%)</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="st">The StoryWall format will be used for small weekly questions. Each week of questions will be released on a Monday, and most of them will be due the following Monday at midday (see assessment table for exact dates). Students will upload their responses to the question sets, and give comments on another student's submission. Each week will be worth 4%, and the grading is pass/fail, with the best 7 of 9 being counted. The first week's basic 'introduction' StoryWall post is counted separately and is worth 2%.</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="st">Project (40%)</span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="st">Over the term, students will complete an individual project. There will be a selection of deep learning topics to choose from (this will be outlined during Week 1).</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a><span class="st">The deliverables for the project will include: a draft/progress report mid-way through the term, a presentation (recorded), a final report including a written summary of the project and the relevant Python code (Jupyter notebook).</span></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="st">Exam (30%)</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a><span class="st">The exam will test the concepts presented in the lectures. For example, students will be expected to: provide definitions for various deep learning terminology, suggest neural network designs to solve risk and actuarial problems, give advice to mock deep learning engineers whose projects have hit common roadblocks, find/explain common bugs in deep learning Python code.</span></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="question-answering" class="level2">
 <h2 class="anchored" data-anchor-id="question-answering">Question answering</h2>
-<div id="1bd1fab0" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> pipeline(<span class="st">"question-answering"</span>, model<span class="op">=</span><span class="st">"distilbert-base-cased-distilled-squad"</span>, revision<span class="op">=</span><span class="st">"626af31"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="6f895a57" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="annotated-cell-6"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-6-1" class="code-annotation-target"><a href="#annotated-cell-6-1" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> pipeline(<span class="st">"question-answering"</span>, model<span class="op">=</span><span class="st">"distilbert-base-cased-distilled-squad"</span>, revision<span class="op">=</span><span class="st">"626af31"</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-6" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-6" data-code-lines="1" data-code-annotation="1">Creates a <em>question and answer</em> style pipeline object by referring to the pretrained model pre-trained <em>DistilBERT</em> model (fine-tuned on the SQuAD: Stanford Question Answering Dataset) with revision <code>626af31</code></span>
+</dd>
+</dl>
 </div>
-<div id="1c54718c" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"What weight is the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="1d7b66ea" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="annotated-cell-7"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-7-1" class="code-annotation-target"><a href="#annotated-cell-7-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"What weight is the exam?"</span>, context<span class="op">=</span>context)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-7" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="1" data-code-annotation="1">Answers the questions <em>What weight is the exam</em> given the context specified</span>
+</dd>
+</dl>
+</div>
 <div class="cell-output cell-output-display" data-execution_count="9">
 <pre><code>{'score': 0.5019680857658386, 'start': 2092, 'end': 2095, 'answer': '30%'}</code></pre>
 </div>
 </div>
-<div id="65fb9ab3" class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"What topics are in the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="40d0d953" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"What topics are in the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="10">
 <pre><code>{'score': 0.21275846660137177,
  'start': 1778,
@@ -856,8 +912,8 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
  'answer': 'deep learning'}</code></pre>
 </div>
 </div>
-<div id="2ec8d60e" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"When is the presentation due?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b25e95c1" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"When is the presentation due?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="11">
 <pre><code>{'score': 0.5296498537063599,
  'start': 1319,
@@ -865,8 +921,8 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
  'answer': 'Monday at midday'}</code></pre>
 </div>
 </div>
-<div id="4679711a" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"How many StoryWall tasks are there?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="ebe4a1d5" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"How many StoryWall tasks are there?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
 <pre><code>{'score': 0.2139086276292801, 'start': 1155, 'end': 1158, 'answer': '30%'}</code></pre>
 </div>
@@ -922,6 +978,8 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
 <h1 data-visibility="uncounted">Image Generation</h1>
 <section id="reverse-engineering-a-cnn" class="level2">
 <h2 class="anchored" data-anchor-id="reverse-engineering-a-cnn">Reverse-engineering a CNN</h2>
+<p>Reverse engineering is a process where we manipulate the inputs <em>x</em> while keeping the loss function and the model architecture the same. This is useful in understanding the inner workings of the model, especially when we do not have access to the model architecture or the original train dataset. The idea here is to tweak/distort the input feature data and observe how model predictions vary. This provides meaningful insights in to what patterns in the input data are most critical to making model predictions.</p>
+<p>This task however requires computing the gradients of the model’s outputs with respect to all input features, hence, can be time consuming.</p>
 <p>A CNN is a function <span class="math inline">\(f_{\boldsymbol{\theta}}(\mathbf{x})\)</span> that takes a vector (image) <span class="math inline">\(\mathbf{x}\)</span> and returns a vector (distribution) <span class="math inline">\(\widehat{\mathbf{y}}\)</span>.</p>
 <p>Normally, we train it by modifying <span class="math inline">\(\boldsymbol{\theta}\)</span> so that</p>
 <p><span class="math display">\[ \boldsymbol{\theta}^*\ =\  \underset{\boldsymbol{\theta}}{\mathrm{argmin}} \,\, \text{Loss} \bigl( f_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y} \bigr). \]</span></p>
@@ -931,6 +989,7 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
 </section>
 <section id="adversarial-examples" class="level2">
 <h2 class="anchored" data-anchor-id="adversarial-examples">Adversarial examples</h2>
+<p>An adversarial attack refers to a small carefully created modifications to the input data that aims to trick the model in to making wrong predictions while keeping the <em>y_true</em> same. The goal is to identify instances where subtle modifications in the input data (which are not instantaneously recognized) can lead to erroneous model predictions.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="adversarial-example.png" class="img-fluid figure-img"></p>
@@ -940,6 +999,7 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
 <div class="footer">
 <p>Source: Goodfellow et al.&nbsp;(2015), <a href="https://arxiv.org/pdf/1412.6572.pdf">Explaining and Harnessing Adversarial Examples</a>, ICLR.</p>
 </div>
+<p>The above example shows how a small perturbation to the image of a panda led to the model predicting the image as a gibbon with high confidence. This indicates that there may be certain patterns in the data which are not clearly seen by the human eye, but the model is relying on them to make predictions. Identifying these sensitivities/vulnerabilities are important to understand how a model is making its predictions.</p>
 </section>
 <section id="adversarial-stickers" class="level2">
 <h2 class="anchored" data-anchor-id="adversarial-stickers">Adversarial stickers</h2>
@@ -952,9 +1012,11 @@ On Thursday, Labor leader Bill Shorten made another announcement about his party
 <div class="footer">
 <p>Source: The Verge (2018), <a href="https://www.theverge.com/2018/1/3/16844842/ai-computer-vision-trick-adversarial-patches-google">These stickers make computer vision software hallucinate things that aren’t there</a>.</p>
 </div>
+<p>The above graphical illustration shows how adding a metal component changes the model predictions from <em>Banana</em> to <em>toaster</em> with high confidence.</p>
 </section>
 <section id="adversarial-text" class="level2">
 <h2 class="anchored" data-anchor-id="adversarial-text">Adversarial text</h2>
+<p>Adversarial attacks on text generation models help users get an understanding of the inner workings NLP models. This includes identifying input patterns that are critical to model predictions, and assessing performance of NLP models for robustness.</p>
 <p>“<a href="https://github.com/QData/TextAttack">TextAttack</a> 🐙 is a Python framework for adversarial attacks, data augmentation, and model training in NLP”</p>
 <p><img src="https://jxmo.io/files/textattack.gif" alt="TextAttack Demo GIF" style="display: block; margin: 0 auto;"></p>
 </section>
@@ -1146,7 +1208,8 @@ Question
 <h1 data-visibility="uncounted">Autoencoders</h1>
 <section id="autoencoder" class="level2">
 <h2 class="anchored" data-anchor-id="autoencoder">Autoencoder</h2>
-<p>An autoencoder takes a data/image, maps it to a latent space via en encoder module, then decodes it back to an output with the same dimensions via a decoder module.</p>
+<p>An autoencoder takes a data/image, maps it to a latent space via an encoder module, then decodes it back to an output with the same dimensions via a decoder module.</p>
+<p>They are useful in learning latent representations of the data.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="autoencoder.png" class="img-fluid figure-img"></p>
@@ -1174,8 +1237,8 @@ Question
 <p>Loading the dataset off-screen (using <a href="https://pat-laub.github.io/DeepLearningMaterials/Lecture-6-Computer-Vision/computer-vision.html#/downloading-the-dataset">Lecture 6 code</a>).</p>
 <div class="columns">
 <div class="column">
-<div id="4890cd91" class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">0</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="19ea2633" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">0</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1185,8 +1248,8 @@ Question
 </div>
 </div>
 </div><div class="column">
-<div id="ed875d13" class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b84d90b0" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1200,11 +1263,12 @@ Question
 </section>
 <section id="a-compression-game" class="level2">
 <h2 class="anchored" data-anchor-id="a-compression-game">A compression game</h2>
+<p>Encoding is the overall process of compressing an input with containing data in a high dimensional space to a low dimension space. Compressing is the action of identifying necessary information in the data (versus redundant data) and representing the input in a more concise form. The following slides show two different ways of representing the same data. The second representation is more concise (and smarter) than the first.</p>
 <div class="columns">
 <div class="column">
-<div id="839f840e" class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(img_width <span class="op">*</span> img_height)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="a15a44df" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(img_width <span class="op">*</span> img_height)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>6400</code></pre>
 </div>
@@ -1230,37 +1294,86 @@ Question
 </section>
 <section id="make-a-basic-autoencoder" class="level2">
 <h2 class="anchored" data-anchor-id="make-a-basic-autoencoder">Make a basic autoencoder</h2>
-<div id="d31fc3e3" class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>num_hidden_layer <span class="op">=</span> <span class="dv">400</span></span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Compress from </span><span class="sc">{</span>img_height <span class="op">*</span> img_width<span class="sc">}</span><span class="ss"> pixels to </span><span class="sc">{</span>num_hidden_layer<span class="sc">}</span><span class="ss"> latent variables."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The following code is an example of constructing a basic autoencoder. The high-level idea here is to take an image, compress the information of the image from 6400 pixels to 400 pixels (encoding stage) and decode it back to the original image size (decoding stage). Note that we train the neural network keeping the input and the output the same.</p>
+<div id="750088e8" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>num_hidden_layer <span class="op">=</span> <span class="dv">400</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Compress from </span><span class="sc">{</span>img_height <span class="op">*</span> img_width<span class="sc">}</span><span class="ss"> pixels to </span><span class="sc">{</span>num_hidden_layer<span class="sc">}</span><span class="ss"> latent variables."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Compress from 6400 pixels to 400 latent variables.</code></pre>
 </div>
 </div>
-<div id="958888d4" class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>, input_shape<span class="op">=</span>(img_height, img_width, <span class="dv">1</span>)),</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>),</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>    layers.Dense(img_height<span class="op">*</span>img_width, <span class="st">"sigmoid"</span>),</span>
-<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((img_height, img_width, <span class="dv">1</span>)),</span>
-<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
-<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>])</span>
-<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> <span class="dv">1_000</span></span>
-<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> keras.callbacks.EarlyStopping(</span>
-<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>    patience<span class="op">=</span><span class="dv">5</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="6ab3d441" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="annotated-cell-12"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-12-1" class="code-annotation-target"><a href="#annotated-cell-12-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="annotated-cell-12-2"><a href="#annotated-cell-12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-12-3"><a href="#annotated-cell-12-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-12-4" class="code-annotation-target"><a href="#annotated-cell-12-4" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>, input_shape<span class="op">=</span>(img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-12-5" class="code-annotation-target"><a href="#annotated-cell-12-5" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-12-6" class="code-annotation-target"><a href="#annotated-cell-12-6" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-12-7" class="code-annotation-target"><a href="#annotated-cell-12-7" aria-hidden="true" tabindex="-1"></a>    layers.Dense(img_height<span class="op">*</span>img_width, <span class="st">"sigmoid"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-12-8" class="code-annotation-target"><a href="#annotated-cell-12-8" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-12-9" class="code-annotation-target"><a href="#annotated-cell-12-9" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
+<span id="annotated-cell-12-10"><a href="#annotated-cell-12-10" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-12-11"><a href="#annotated-cell-12-11" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="8" onclick="event.preventDefault();">8</a><span id="annotated-cell-12-12" class="code-annotation-target"><a href="#annotated-cell-12-12" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="9" onclick="event.preventDefault();">9</a><span id="annotated-cell-12-13" class="code-annotation-target"><a href="#annotated-cell-12-13" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> <span class="dv">1_000</span></span>
+<span id="annotated-cell-12-14"><a href="#annotated-cell-12-14" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> keras.callbacks.EarlyStopping(</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="10" onclick="event.preventDefault();">10</a><span id="annotated-cell-12-15" class="code-annotation-target"><a href="#annotated-cell-12-15" aria-hidden="true" tabindex="-1"></a>    patience<span class="op">=</span><span class="dv">5</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>)</span>
+<span id="annotated-cell-12-16"><a href="#annotated-cell-12-16" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="11" onclick="event.preventDefault();">11</a><span id="annotated-cell-12-17" class="code-annotation-target"><a href="#annotated-cell-12-17" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-12" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="1" data-code-annotation="1">Sets the random seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="4" data-code-annotation="2">Scales the image input by the number of pixels so that the input is scaled to [0,1] range</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="5" data-code-annotation="3">Reshapes the 2D input into a 1D representation</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="6" data-code-annotation="4">Condenses the information from 6400 variables to 400 latent variables (the encoding stage ends here)</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="7" data-code-annotation="5">Convers the condensed representation from 400 to 6400 again. Note that the sigmoid activation is used to ensure output is between [0,1]</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="8" data-code-annotation="6">Reshapes the 1D representation to a 2D array</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="7">7</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="9" data-code-annotation="7">Rescales the input information back to the actual input scaling by multiplying with 255 (this completes the decoding stage, and now the input is in its original shape)</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="8">8</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="12" data-code-annotation="8">Compiles the model with the loss function and the optimizer</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="9">9</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="13" data-code-annotation="9">Specifies the number of epochs to run the algorithm</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="10">10</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="15" data-code-annotation="10">Specifies the early stopping criteria. Here, the early stopping activates after 5 iterations with no improvement in the validation loss</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="11">11</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="17" data-code-annotation="11">Fits the model specifying the train set, validation set, the number of epochs to run, and the early stopping criteria.</span>
+</dd>
+</dl>
+</div>
 </div>
 </section>
 <section id="the-model" class="level2">
 <h2 class="anchored" data-anchor-id="the-model">The model</h2>
-<div id="d2f9ca0c" class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>model.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cd713683" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>model.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Model: "sequential"
 _________________________________________________________________
@@ -1279,8 +1392,8 @@ Non-trainable params: 0
 _________________________________________________________________</code></pre>
 </div>
 </div>
-<div id="e3fc8343" class="cell" data-execution_count="20">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="4df2da3d" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="20">
 <pre><code>2262.6767578125</code></pre>
 </div>
@@ -1288,13 +1401,13 @@ _________________________________________________________________</code></pre>
 </section>
 <section id="some-recovered-image" class="level2">
 <h2 class="anchored" data-anchor-id="some-recovered-image">Some recovered image</h2>
-<div id="14c7e3a0" class="cell" data-execution_count="21">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="6b6af90b" class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="columns">
 <div class="column">
-<div id="48becf20" class="cell" data-execution_count="22">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="0289eb47" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1304,8 +1417,8 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="aa53a92e" class="cell" data-execution_count="23">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="799ef9b2" class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1316,13 +1429,15 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div>
+<p>The recovered image is not as sharp as the original image, however, we can see that the high-level representation of the original picture is reconstrcuted.</p>
 </section>
 <section id="invert-the-images" class="level2">
 <h2 class="anchored" data-anchor-id="invert-the-images">Invert the images</h2>
+<p>Another way to attempt the autoencoder would be to invert the colours of the image. Following example shows, how the colours in the images are swapped. The areas which were previously in white are now in black and vice versa. The motivation behind inverting the colours is to make the input more suited for the <code>relu</code> activation. <code>relu</code> returns <em>zeros</em>, and zero corresponds to the black colour. If the image has more black colour, there is a chance the neural network might train more efficiently. Hence we try inverting the colours as a preprocessing before we pass it through the encoding stage.</p>
 <div class="columns">
 <div class="column">
-<div id="bdc435a8" class="cell" data-execution_count="24">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">0</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="54a84aa6" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">0</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1332,8 +1447,8 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="16f366f6" class="cell" data-execution_count="25">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="514176f4" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1347,30 +1462,42 @@ _________________________________________________________________</code></pre>
 </section>
 <section id="try-inverting-the-images" class="level2">
 <h2 class="anchored" data-anchor-id="try-inverting-the-images">Try inverting the images</h2>
-<div id="d7c2afb2" class="cell" data-execution_count="26">
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([</span>
-<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>, input_shape<span class="op">=</span>(img_height, img_width, <span class="dv">1</span>)),</span>
-<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
-<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
-<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>),</span>
-<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>    layers.Dense(img_height<span class="op">*</span>img_width, <span class="st">"sigmoid"</span>),</span>
-<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
-<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((img_height, img_width, <span class="dv">1</span>)),</span>
-<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
-<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>])</span>
-<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Following code shows how the same code as before is implemented, but with an additional step for inverting the pixel values of the data before parsing it through the encoding step.</p>
+<div id="3057d5fc" class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="annotated-cell-16"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-16-1"><a href="#annotated-cell-16-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="annotated-cell-16-2"><a href="#annotated-cell-16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-16-3"><a href="#annotated-cell-16-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([</span>
+<span id="annotated-cell-16-4"><a href="#annotated-cell-16-4" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>, input_shape<span class="op">=</span>(img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-16-5" class="code-annotation-target"><a href="#annotated-cell-16-5" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<span id="annotated-cell-16-6"><a href="#annotated-cell-16-6" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<span id="annotated-cell-16-7"><a href="#annotated-cell-16-7" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>),</span>
+<span id="annotated-cell-16-8"><a href="#annotated-cell-16-8" aria-hidden="true" tabindex="-1"></a>    layers.Dense(img_height<span class="op">*</span>img_width, <span class="st">"sigmoid"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-16-9" class="code-annotation-target"><a href="#annotated-cell-16-9" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<span id="annotated-cell-16-10"><a href="#annotated-cell-16-10" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((img_height, img_width, <span class="dv">1</span>)),</span>
+<span id="annotated-cell-16-11"><a href="#annotated-cell-16-11" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
+<span id="annotated-cell-16-12"><a href="#annotated-cell-16-12" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-16-13"><a href="#annotated-cell-16-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-16-14"><a href="#annotated-cell-16-14" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="annotated-cell-16-15"><a href="#annotated-cell-16-15" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-16-16"><a href="#annotated-cell-16-16" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-16" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-16" data-code-lines="5" data-code-annotation="1">Inverts the colours by mapping the function with <code>x: 1-x</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-16" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-16" data-code-lines="9" data-code-annotation="2">Reverses the inversion to make sure the same input image is reconstructed</span>
+</dd>
+</dl>
 </div>
-<!-- and here (Trouble between here ... -->
+</div>
 </section>
 <section id="the-model-1" class="level2">
 <h2 class="anchored" data-anchor-id="the-model-1">The model</h2>
-<div id="f77edd61" class="cell" data-execution_count="27">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>model.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="7a1e5c63" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>model.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Model: "sequential_1"
 _________________________________________________________________
@@ -1391,8 +1518,8 @@ Non-trainable params: 0
 _________________________________________________________________</code></pre>
 </div>
 </div>
-<div id="8ce5fc3a" class="cell" data-execution_count="28">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="5ca03bc1" class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="28">
 <pre><code>2345.42431640625</code></pre>
 </div>
@@ -1400,13 +1527,13 @@ _________________________________________________________________</code></pre>
 </section>
 <section id="some-recovered-image-1" class="level2">
 <h2 class="anchored" data-anchor-id="some-recovered-image-1">Some recovered image</h2>
-<div id="6f8e98ee" class="cell" data-execution_count="29">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="48c91bf4" class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="columns">
 <div class="column">
-<div id="b92d0b98" class="cell" data-execution_count="30">
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="9f1ae8e7" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1416,8 +1543,8 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="f119f672" class="cell" data-execution_count="31">
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="0aee3d4c" class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1428,52 +1555,83 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div>
+<p>The recovered image is not too different to the image from the previous example.</p>
 </section>
 <section id="cnn-enhanced-encoder" class="level2">
 <h2 class="anchored" data-anchor-id="cnn-enhanced-encoder">CNN-enhanced encoder</h2>
-<div id="6bfd9741" class="cell" data-execution_count="32">
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>encoder <span class="op">=</span> keras.models.Sequential([</span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>, input_shape<span class="op">=</span>(img_height, img_width, <span class="dv">1</span>)),</span>
-<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
-<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">16</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
-<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">32</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
-<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
-<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
-<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>)</span>
-<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>To further improve the process, we can try neural networks specialized for image processing. Here we use a Convolutional Neural Network lith convolutional and pooling layers. The following example shows how we first specify the encoder, and then the decoder. The two architectures are combined at the final stage.</p>
+<div id="10a91076" class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="annotated-cell-20"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-20-1" class="code-annotation-target"><a href="#annotated-cell-20-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="annotated-cell-20-2"><a href="#annotated-cell-20-2" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-20-3" class="code-annotation-target"><a href="#annotated-cell-20-3" aria-hidden="true" tabindex="-1"></a>encoder <span class="op">=</span> keras.models.Sequential([</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-20-4" class="code-annotation-target"><a href="#annotated-cell-20-4" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>, input_shape<span class="op">=</span>(img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-20-5" class="code-annotation-target"><a href="#annotated-cell-20-5" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-20-6" class="code-annotation-target"><a href="#annotated-cell-20-6" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">16</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-20-7" class="code-annotation-target"><a href="#annotated-cell-20-7" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-20-8" class="code-annotation-target"><a href="#annotated-cell-20-8" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">32</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-20-9"><a href="#annotated-cell-20-9" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
+<span id="annotated-cell-20-10"><a href="#annotated-cell-20-10" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-20-11"><a href="#annotated-cell-20-11" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
+<span id="annotated-cell-20-12"><a href="#annotated-cell-20-12" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<span id="annotated-cell-20-13"><a href="#annotated-cell-20-13" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>)</span>
+<span id="annotated-cell-20-14"><a href="#annotated-cell-20-14" aria-hidden="true" tabindex="-1"></a>])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-20" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="1" data-code-annotation="1">Sets the random seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="3" data-code-annotation="2">Starts specifying the encoder</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="4" data-code-annotation="3">Rescales the image pixel values to range between [0,1]</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="5" data-code-annotation="4">Inverts the colours of the image</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="6" data-code-annotation="5">Applies a 2D convolutional layer with 16 filters, each of size 3 <span class="math inline">\(\times\)</span> 3, and having the <code>same</code> padding. <code>same</code> padding ensures that the output from the layer has the same heigh and width as the input</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="7" data-code-annotation="6">Performs max-pooling to reduce the dimension of the feature space</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="7">7</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="8" data-code-annotation="7">CNN-enhanced decoder</span>
+</dd>
+</dl>
 </div>
-</section>
-<section id="cnn-enhanced-decoder" class="level2">
-<h2 class="anchored" data-anchor-id="cnn-enhanced-decoder">CNN-enhanced decoder</h2>
-<div id="6a007026" class="cell" data-execution_count="33">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>decoder <span class="op">=</span> keras.models.Sequential([</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    keras.Input(shape<span class="op">=</span>(num_hidden_layer,)),</span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">20</span><span class="op">*</span><span class="dv">20</span>),</span>
-<span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((<span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">1</span>)),</span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">128</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>    layers.UpSampling2D(),</span>
-<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>    layers.UpSampling2D(),</span>
-<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">1</span>, <span class="dv">1</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
-<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
-<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
-<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a>])</span>
-<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([encoder, decoder])</span>
-<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="58312c3c" class="cell" data-execution_count="33">
+<div class="sourceCode cell-code" id="annotated-cell-21"><pre class="sourceCode python code-annotation-code code-with-copy"><code class="sourceCode python"><span id="annotated-cell-21-1"><a href="#annotated-cell-21-1" aria-hidden="true" tabindex="-1"></a>decoder <span class="op">=</span> keras.models.Sequential([</span>
+<span id="annotated-cell-21-2"><a href="#annotated-cell-21-2" aria-hidden="true" tabindex="-1"></a>    keras.Input(shape<span class="op">=</span>(num_hidden_layer,)),</span>
+<span id="annotated-cell-21-3"><a href="#annotated-cell-21-3" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">20</span><span class="op">*</span><span class="dv">20</span>),</span>
+<span id="annotated-cell-21-4"><a href="#annotated-cell-21-4" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((<span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">1</span>)),</span>
+<span id="annotated-cell-21-5"><a href="#annotated-cell-21-5" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">128</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-21-6"><a href="#annotated-cell-21-6" aria-hidden="true" tabindex="-1"></a>    layers.UpSampling2D(),</span>
+<span id="annotated-cell-21-7"><a href="#annotated-cell-21-7" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-21-8"><a href="#annotated-cell-21-8" aria-hidden="true" tabindex="-1"></a>    layers.UpSampling2D(),</span>
+<span id="annotated-cell-21-9"><a href="#annotated-cell-21-9" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">1</span>, <span class="dv">1</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-21-10"><a href="#annotated-cell-21-10" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<span id="annotated-cell-21-11"><a href="#annotated-cell-21-11" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
+<span id="annotated-cell-21-12"><a href="#annotated-cell-21-12" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-21-13"><a href="#annotated-cell-21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-21-14"><a href="#annotated-cell-21-14" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([encoder, decoder])</span>
+<span id="annotated-cell-21-15"><a href="#annotated-cell-21-15" aria-hidden="true" tabindex="-1"></a>model.<span class="bu">compile</span>(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="annotated-cell-21-16"><a href="#annotated-cell-21-16" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-21-17"><a href="#annotated-cell-21-17" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="encoder-summary" class="level2">
 <h2 class="anchored" data-anchor-id="encoder-summary">Encoder summary</h2>
-<div id="0b26b7b4" class="cell" data-execution_count="34">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>encoder.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="d438baa9" class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>encoder.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Model: "sequential_2"
 _________________________________________________________________
@@ -1502,8 +1660,8 @@ _________________________________________________________________</code></pre>
 </section>
 <section id="decoder-summary" class="level2">
 <h2 class="anchored" data-anchor-id="decoder-summary">Decoder summary</h2>
-<div id="ecc8e05a" class="cell" data-execution_count="35">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>decoder.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="3817cf91" class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>decoder.summary(print_fn<span class="op">=</span>skip_empty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Model: "sequential_3"
 _________________________________________________________________
@@ -1527,8 +1685,8 @@ Non-trainable params: 0
 _________________________________________________________________</code></pre>
 </div>
 </div>
-<div id="6e0cb325" class="cell" data-execution_count="36">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="c6c41393" class="cell" data-execution_count="36">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="36">
 <pre><code>1833.0885009765625</code></pre>
 </div>
@@ -1536,13 +1694,13 @@ _________________________________________________________________</code></pre>
 </section>
 <section id="some-recovered-image-2" class="level2">
 <h2 class="anchored" data-anchor-id="some-recovered-image-2">Some recovered image</h2>
-<div id="aa1d734c" class="cell" data-execution_count="37">
-<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="cef21b93" class="cell" data-execution_count="37">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="columns">
 <div class="column">
-<div id="1b6ea78a" class="cell" data-execution_count="38">
-<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="866e04a0" class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1552,8 +1710,8 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="546938ed" class="cell" data-execution_count="39">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="7bb15b3c" class="cell" data-execution_count="39">
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1584,9 +1742,9 @@ _________________________________________________________________</code></pre>
 <h2 class="anchored" data-anchor-id="intentionally-add-noise-to-inputs">Intentionally add noise to inputs</h2>
 <div class="columns">
 <div class="column">
-<div id="318cf044" class="cell" data-execution_count="40">
-<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> rnd.random(size<span class="op">=</span>X_train.shape[<span class="dv">1</span>:]) <span class="op">&lt;</span> <span class="fl">0.5</span></span>
-<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>plt.imshow(mask <span class="op">*</span> (<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">0</span>]), cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="9d7eb798" class="cell" data-execution_count="40">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> rnd.random(size<span class="op">=</span>X_train.shape[<span class="dv">1</span>:]) <span class="op">&lt;</span> <span class="fl">0.5</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>plt.imshow(mask <span class="op">*</span> (<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">0</span>]), cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1596,9 +1754,9 @@ _________________________________________________________________</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="b6462921" class="cell" data-execution_count="41">
-<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> rnd.random(size<span class="op">=</span>X_train.shape[<span class="dv">1</span>:]) <span class="op">&lt;</span> <span class="fl">0.5</span></span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>plt.imshow(mask <span class="op">*</span> (<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">42</span>]) <span class="op">*</span> mask, cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="82b54e0f" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> rnd.random(size<span class="op">=</span>X_train.shape[<span class="dv">1</span>:]) <span class="op">&lt;</span> <span class="fl">0.5</span></span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>plt.imshow(mask <span class="op">*</span> (<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">42</span>]) <span class="op">*</span> mask, cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1680,6 +1838,7 @@ _________________________________________________________________</code></pre>
 <center>
 <div class="quarto-video"><iframe data-external="1" src="https://www.youtube.com/embed/7Rb4s9wNOmc" width="1000px" height="600px" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
 </center>
+<p>Both autoencoders and variational autoencoders aim to obtain latent representations of input data that carry same information but in a lower dimensional space. The difference between the two is that, autoencoders outputs the latent representations as vectors, while variational auto encoders first identifies the distribution of the input in the latent space, and then sample an observation from that as the vector. Autoencoders are better suited for dimensionality reduction and feature learning tasks. Variation autoencoders are better suited for generative modelling tasks and uncertainty estimation.</p>
 </section>
 </section>
 <section id="diffusion-models" class="level1" data-visibility="uncounted">
