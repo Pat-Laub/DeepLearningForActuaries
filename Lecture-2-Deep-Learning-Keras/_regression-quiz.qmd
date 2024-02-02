@@ -4,7 +4,7 @@
 ```{python}
 #| echo: false
 import numpy
-import tensorflow as tf
+import keras
 
 numpy.random.seed(123)
 x = numpy.random.rand(100)
@@ -21,8 +21,8 @@ targets = z
 
 ```{python}
 #| echo: false
-from tensorflow.keras.callbacks import EarlyStopping
-tf.get_logger().setLevel('ERROR')
+from keras.callbacks import EarlyStopping
+# tf.get_logger().setLevel('ERROR')
 ```
 
 ```{python}
@@ -31,8 +31,9 @@ y_train = targets[:80]; y_test = targets[81:]
 ```
 ```{python}
 model = Sequential([
-  Dense(32, activation='ReLU', input_dim=2),
-   Dense(32, activation='ReLU', input_dim=2),
+   Input((2,)),
+  Dense(32, activation='relu'),
+   Dense(32, activation='relu'),
   Dense(1, activation='sigmoid')
 ])
 model.compile(optimizer="adam", loss='mse')
@@ -74,72 +75,3 @@ sns.distplot(targets);
 
 :::
 :::
-
-```{python}
-#| echo: false
-set_rectangular_figures()
-```
-
-## With warnings enabled
-
-```{python}
-#| echo: false
-tf.get_logger().setLevel("WARN")
-```
-
-```{python}
-model.fit(X_train, y_train, epochs=5,
-  callbacks=[es], verbose=False);
-```
-
-```{python}
-es = EarlyStopping(restore_best_weights=True, patience=10)
-model.fit(X_train, y_train, epochs=5, validation_split=0.1,
-  callbacks=[es], verbose=False);
-```
-
-## Later `input_dim` ignored
-
-```{python}
-#| echo: false
-def skip_empty(line):
-  if line.strip() != "":
-    print(line.strip())
-```
-
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU', input_dim=2),
-  Dense(32, activation='ReLU', input_dim=2),
-  Dense(1, activation='ReLU')
-])
-
-model.compile(optimizer='adam', loss='mse')
-model.summary(print_fn=skip_empty)
-```
-
-## Later `input_dim` ignored {data-visibility="uncounted"}
-
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU', input_dim=2),
-  Dense(32, activation='ReLU'),
-  Dense(1, activation='ReLU')
-])
-
-model.compile(optimizer='adam', loss='mse')
-model.summary(print_fn=skip_empty)
-```
-
-## Later `input_dim` ignored {data-visibility="uncounted"}
-
-```{python}
-model = Sequential([
-  Dense(32, activation='ReLU'),
-  Dense(32, activation='ReLU'),
-  Dense(1, activation='ReLU')
-])
-model.compile(optimizer='adam', loss='mse')
-model.fit(X_train, y_train, epochs=5, verbose=False)
-model.summary(print_fn=skip_empty)
-```

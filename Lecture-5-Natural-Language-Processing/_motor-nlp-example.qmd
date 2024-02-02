@@ -142,9 +142,9 @@ df["NUM_VEHICLES"] = \
 df["NUM_VEHICLES"].value_counts()\
   .sort_index()
 ```
-:::
-:::
 1. Writes a function to reduce categories to 3, by combining all categories with 3 or more vehicles into one category
+:::
+:::
  
 
 ```{python}
@@ -414,12 +414,13 @@ def build_model(num_features, num_cats):                            #<3>
     random.seed(42)                                                 #<4>
     
     model = Sequential([
-        Dense(100, input_dim=num_features, activation="relu"),
+        Input((num_features,)),
+        Dense(100, activation="relu"),
         Dense(num_cats, activation="softmax")
     ])                                                              #<5>
     
     topk = SparseTopKCategoricalAccuracy(k=2, name="topk")          #<6>
-    model.compile("adam", "SparseCategoricalCrossentropy",
+    model.compile("adam", "sparse_categorical_crossentropy",
         metrics=["accuracy", topk])                                 #<7>
     
     return model                                                    #<8>
@@ -430,12 +431,12 @@ def build_model(num_features, num_cats):                            #<3>
 4. Sets the random seed for reproducibility
 5. Constructs the neural network with 2 dense layers. Since the output must be a vector of probabilities, we choose `softmax` activation in the output layer
 6. Defines the a customized metric to keep track of during the training. The metric will compute the accuracy by looking at top 2 classes(the 2 classes with highest predicted probability) and checking if either of them contains the true class
-7. Compiles the model with the `adam` optimizer, loss function and metrics to monitor. Here we ask the model to optimize `SparseCategoricalCrossentropy` loss while keeping track of `SparseCategoricalCrossentropy` for the top 2 classes
+7. Compiles the model with the `adam` optimizer, loss function and metrics to monitor. Here we ask the model to optimize `sparse_categorical_crossentropy` loss while keeping track of `sparse_categorical_crossentropy` for the top 2 classes
 ## Inspect the model
 
 ```{python}
 model = build_model(num_features, num_cats)
-model.summary(print_fn=skip_empty)
+model.summary()
 ```
 ::: {.content-visible unless-format="revealjs"}
 The model summary shows that there are 1,887,803 parameters to learn. This is because we have 188500 (18874*100 weights + 100 biases) parameters to train in the first layer.
@@ -542,7 +543,7 @@ vectorise_dataset(X_train, vect, dataframe=True)
 ```{python}
 num_features = X_train_ct.shape[1]
 model = build_model(num_features, num_cats)
-model.summary(print_fn=skip_empty)
+model.summary()
 ```
 ::: {.content-visible unless-format="revealjs"}
 From the above summary, we can see how we have brought down the number of parameters to be trained down to 101,203. That is done by reducing the number of covariates, not by reducing the number of neurons.
@@ -602,6 +603,7 @@ Spacy is a popular open-source library that is used to analyse data and carry ou
 
 ```{python}
 #| echo: false
+#| output: false
 try:
     import spacy
 except:
@@ -753,7 +755,7 @@ vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", dataframe=True)
 ```{python}
 num_features = X_train_ct.shape[1]
 model = build_model(num_features, num_cats)
-model.summary(print_fn=skip_empty)
+model.summary()
 ```
 
 ## Fit & evaluate the model

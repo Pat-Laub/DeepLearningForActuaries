@@ -1,10 +1,17 @@
 ---
 title: Uncertainty Quantification
 author: Eric Dong & Patrick Laub
+jupyter: ai2023
+keep-ipynb: true
 ---
 
 ```{python}
 #| echo: false
+#| output: false 
+import os
+os.environ["KERAS_BACKEND"] = "torch"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 import matplotlib
 
 # TDOO: Update following section
@@ -44,6 +51,35 @@ import tensorflow
 tensorflow.random.set_seed(1)
 tensorflow.get_logger().setLevel("ERROR")
 tensorflow.config.set_visible_devices([], "GPU")
+```
+
+## Load packages {data-visibility="uncounted"}
+
+```{python}
+import random
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.random as rnd
+
+from sklearn import set_config
+set_config(transform_output="pandas")
+
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Input, Dense, Concatenate
+from tensorflow.keras.models import Model
+from tensorflow.keras.initializers import Constant
+
+from sklearn.model_selection import train_test_split
+from sklearn.compose import make_column_transformer
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OrdinalEncoder
+
+%load_ext watermark
+%watermark -p numpy,pandas,keras,torch,tensorflow
 ```
 
 # Uncertainty {visibility="uncounted"}
@@ -114,35 +150,6 @@ Let's go back to the question at the beginning:
 ::: {.content-visible unless-format="revealjs"}
 The following sections show how we prepare the datasets for studying uncertainty.
 :::
-
-## Load packages {data-visibility="uncounted"}
-
-```{python}
-import random
-import matplotlib.pyplot as plt
-import numpy as np
-import numpy.random as rnd
-
-from sklearn import set_config
-set_config(transform_output="pandas")
-
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Dense, Concatenate
-from tensorflow.keras.models import Model
-from tensorflow.keras.initializers import Constant
-
-from sklearn.model_selection import train_test_split
-from sklearn.compose import make_column_transformer
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OrdinalEncoder
-
-%load_ext watermark
-%watermark -p numpy,pandas,tensorflow
-```
 
 ## Code: Data
 
@@ -307,7 +314,7 @@ X_train_design = sm.add_constant(X_train)
 
 # Create a Gamma GLM with a log link function
 gamma_GLM = sm.GLM(y_train, X_train_design,                   
-            family=sm.families.Gamma(sm.families.links.log()))
+            family=sm.families.Gamma(sm.families.links.Log()))
 
 # Fit the model
 gamma_GLM = gamma_GLM.fit()
@@ -341,12 +348,16 @@ The Combined Actuarial Neural Network is a novel actuarial neural network archit
 ## Code: Architecture
 
 ```{python}
+gamma_GLM.params
+```
+
+```{python}
 # Ensure reproducibility
 random.seed(1); tf.random.set_seed(1)                                   #<1>
 
 # Pre-defined constants
-glm_weights = (gamma_GLM.params)[1:]                                    #<2>
-glm_bias = (gamma_GLM.params)[0]                                        #<3>
+glm_weights = gamma_GLM.params.iloc[1:]                                    #<2>
+glm_bias = gamma_GLM.params.iloc[0]                                        #<3>
 
 # Define model inputs
 inputs = Input(shape=X_train.shape[1:])                                 #<4>
@@ -474,10 +485,11 @@ Suppose there are two types of claims:
 
 The density of the actual claim amount $Y|\boldsymbol{x}$ follows
 $$
-    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
-    =\pi_1(\boldsymbol{x})\cdot \frac{\beta_1(\boldsymbol{x})^{\alpha_1(\boldsymbol{x})}}{\Gamma(\alpha_1(\boldsymbol{x}))}\mathrm{e}^{-\beta_1(\boldsymbol{x})y}y^{\alpha_1(\boldsymbol{x})-1} \\
-    \quad \quad\quad \quad\quad \quad +
-    (1-\pi_1(\boldsymbol{x}))\cdot \frac{\beta_2(\boldsymbol{x})^{\alpha_2(\boldsymbol{x})}}{\Gamma(\alpha_2(\boldsymbol{x}))}\mathrm{e}^{-\beta_2(\boldsymbol{x})y}y^{\alpha_2(\boldsymbol{x})-1}.
+    \begin{align*}
+        f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
+        &= \pi_1(\boldsymbol{x})\cdot \frac{\beta_1(\boldsymbol{x})^{\alpha_1(\boldsymbol{x})}}{\Gamma(\alpha_1(\boldsymbol{x}))}\mathrm{e}^{-\beta_1(\boldsymbol{x})y}y^{\alpha_1(\boldsymbol{x})-1} \\
+        &\quad + (1-\pi_1(\boldsymbol{x}))\cdot \frac{\beta_2(\boldsymbol{x})^{\alpha_2(\boldsymbol{x})}}{\Gamma(\alpha_2(\boldsymbol{x}))}\mathrm{e}^{-\beta_2(\boldsymbol{x})y}y^{\alpha_2(\boldsymbol{x})-1}.
+    \end{align*}
 $$
 where $\pi_1(\boldsymbol{x})$ is the probability of a Type I claim given $\boldsymbol{x}$.
 
@@ -489,16 +501,16 @@ $$
 $$
 for the Gamma mixture density network $\mathcal{M}_{\boldsymbol{w}^*}$ that outputs the mixing weights, shapes and scales of $Y$ given the input features $\boldsymbol{x}$, i.e.,
 $$
-    \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})=(
-        \pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
-        \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
-        \quad \quad \quad \quad \quad 
-        \alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
-        \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*),\\ 
-        \quad \quad \quad \quad \quad \quad 
-        \beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
-        \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
+    \begin{align*}
+        \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})
+        = ( &\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
+             \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
+            &\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
+            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*),\\ 
+            &\beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
+            \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
         ).
+    \end{align*}
 $$
 
 ## Architecture
@@ -635,6 +647,7 @@ Continuous Ranked Probability Score (CRPS)
 
 ```{python}
 from scipy.stats import gamma
+
 def gamma_nll(mean, dispersion, y):
     # Calculate shape and scale parameters from mean and dispersion
     shape = 1 / dispersion; scale = mean * dispersion
@@ -732,7 +745,7 @@ model = Sequential([
 ])
 
 model.compile("adam", "mse")
-model.fit(X_train, y_train, epochs=4, verbose=0)
+model.fit(X_train, y_train, epochs=4, verbose=0);
 ```
 
 ## Code: Dropout after training

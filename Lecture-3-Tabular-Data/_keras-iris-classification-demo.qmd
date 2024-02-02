@@ -3,10 +3,9 @@
 ```{python}
 #| echo: false
 import numpy as np
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.callbacks import EarlyStopping
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import EarlyStopping
 from sklearn.model_selection import train_test_split
 
 pandas.options.display.max_rows = 4
@@ -110,19 +109,19 @@ def build_model(seed=42):
 
 ```{python}
 model = build_model()
-model.compile("adam", "SparseCategoricalCrossentropy")
+model.compile("adam", "sparse_categorical_crossentropy")
 
 model.fit(X_train, y_train, epochs=5, verbose=2);
 ```
 ::: {.content-visible unless-format="revealjs"}
-Since the problem at hand is a classification problem, we define the optimizer and loss function accordingly. Optimizer is `adam` and the loss function is `SparseCategoricalCrossentropy`. If the response variable represents the category directly using an integer (i.e. if the response variable is not one-hot encoded), we must use `SparseCategoricalCrossentropy`. If the response variable (y label) is already one-hot encoded we can use `CategoricalCrossentropy`. 
+Since the problem at hand is a classification problem, we define the optimizer and loss function accordingly. Optimizer is `adam` and the loss function is `sparse_categorical_crossentropy`. If the response variable represents the category directly using an integer (i.e. if the response variable is not one-hot encoded), we must use `sparse_categorical_crossentropy`. If the response variable (y label) is already one-hot encoded we can use `categorical_crossentropy`. 
 :::
 
 ## Track accuracy as the model trains
 
 ```{python}
 model = build_model()
-model.compile("adam", "SparseCategoricalCrossentropy", \
+model.compile("adam", "sparse_categorical_crossentropy", \
         metrics=["accuracy"])
 model.fit(X_train, y_train, epochs=5, verbose=2);
 ```
@@ -137,7 +136,7 @@ Run the model training for 500 epochs.
 ```{python}
 
 model = build_model()
-model.compile("adam", "SparseCategoricalCrossentropy", \
+model.compile("adam", "sparse_categorical_crossentropy", \
         metrics=["accuracy"])
 %time hist = model.fit(X_train, y_train, epochs=500, \
         validation_split=0.25, verbose=False)
@@ -152,7 +151,7 @@ model.evaluate(X_test, y_test, verbose=False)
 
 ```{python}
 model = build_model()                                                   #<1>
-model.compile("adam", "SparseCategoricalCrossentropy", \
+model.compile("adam", "sparse_categorical_crossentropy", \
         metrics=["accuracy"])                                           #<2>
 
 es = EarlyStopping(restore_best_weights=True, patience=50,              #<3>
@@ -230,8 +229,8 @@ out = np.array([5, -1, 6])
 
 In TensorFlow:
 ```{python}
-out = tf.constant([[5.0, -1.0, 6.0]])
-tf.keras.activations.softmax(out).numpy().round(3)
+# out = tf.constant([[5.0, -1.0, 6.0]])
+# tf.keras.activations.softmax(out).numpy().round(3)
 ```
 
 ## Prediction using classifiers
@@ -261,6 +260,22 @@ iris.target_names[np.argmax(y_pred, axis=1)]
 
 ## Cross-entropy loss: ELI5
 
+::: {.content-visible unless-format="revealjs"}
+::: columns
+::: column
+
+{{< video https://www.youtube.com/embed/6ArSys5qHAU aspect-ratio="1x1" >}}
+
+:::
+::: column
+
+{{< video https://www.youtube.com/embed/xBEh66V9gZo aspect-ratio="1x1" >}}
+
+:::
+:::
+:::
+
+::: {.content-hidden unless-format="revealjs"}
 ::: columns
 ::: column
 
@@ -273,6 +288,8 @@ iris.target_names[np.argmax(y_pred, axis=1)]
 
 :::
 :::
+:::
+
 
 ## Why use cross-entropy loss?
 
@@ -317,7 +334,7 @@ Create the model (_new loss function_):
 ```{python}
 #| code-line-numbers: "|3"
 model = build_model()
-model.compile("adam", "CategoricalCrossentropy", \
+model.compile("adam", "categorical_crossentropy", \
     metrics=["accuracy"])
 ```
 

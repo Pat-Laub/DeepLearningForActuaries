@@ -4,6 +4,11 @@ title: Recurrent Neural Networks
 
 ```{python}
 #| echo: false
+#| output: false 
+import os
+os.environ["KERAS_BACKEND"] = "torch"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 import matplotlib
 
 import cycler
@@ -46,11 +51,8 @@ import numpy
 numpy.set_printoptions(precision=2)
 numpy.random.seed(123)
 
-import tensorflow
-tensorflow.random.set_seed(1)
-tensorflow.config.set_visible_devices([], 'GPU') # Crashes on GPU
-
-tensorflow.get_logger().setLevel('ERROR')
+import keras
+keras.utils.set_random_seed(1)
 ```
 
 ## Load packages {data-visibility="uncounted"}
@@ -60,14 +62,13 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import tensorflow as tf
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.callbacks import EarlyStopping
+from keras.models import Sequential
+from keras.layers import Dense, Input
+from keras.callbacks import EarlyStopping
 
 %load_ext watermark
-%watermark -p numpy,pandas,tensorflow
+%watermark -p numpy,pandas,keras,torch,tensorflow
 ```
 
 # Tensors & Time Series {visibility="uncounted"}
@@ -99,10 +100,11 @@ The above code creates an array with values from 0 to 11 and converts that array
 ```{python}
 X.sum(axis=0)
 ```
-:::
 
 ::: {.content-visible unless-format="revealjs"}
 The above code returns the column sum. This changes the shape of the matrix from $(3,4)$ to $(4,)$. Similarly, `X.sum(axis=1)` returns row sums and will change the shape of the matrix from $(3,4)$ to $(3,)$.
+:::
+
 :::
 ::: column
 `axis=1`: $(3, 4) \leadsto (3,)$.
@@ -310,10 +312,8 @@ y = np.array([0, 0, 1, 1])
 2. Defines the number of time steps
 3. Defines the number of time series
 4. Reshapes the array to a range 3 tensor (4,3,2)
+
 ::: columns
-
-
-
 ::: column
 ```{python}
 X[:2]               #<1>
@@ -333,7 +333,7 @@ X[2:]              #<1>
 As usual, the `SimpleRNN` is just a layer in Keras. 
 
 ```{python}
-from tensorflow.keras.layers import SimpleRNN                       #<1>
+from keras.layers import SimpleRNN                       #<1>
 
 random.seed(1234)                                                   #<2>
 model = Sequential([
@@ -553,7 +553,7 @@ set_rectangular_figures()
 Keras has a built-in method for converting a time series into subsequences/chunks.
 
 ```{python}
-from tensorflow.keras.utils import timeseries_dataset_from_array
+from keras.utils import timeseries_dataset_from_array
 
 integers = range(10)                                
 dummy_dataset = timeseries_dataset_from_array(
@@ -579,7 +579,7 @@ Source: Code snippet in Chapter 10 of Chollet.
 If you have a lot of time series data, then use:
 
 ```{python}
-from tensorflow.keras.utils import timeseries_dataset_from_array
+from keras.utils import timeseries_dataset_from_array
 data = range(20); seq = 3; ts = data[:-seq]; target = data[seq:]
 nTrain = int(0.5 * len(ts)); nVal = int(0.25 * len(ts))
 nTest = len(ts) - nTrain - nVal
@@ -823,10 +823,10 @@ y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ## A dense network
 
 ```{python}
-from tensorflow.keras.layers import Input, Flatten
+from keras.layers import Input, Flatten
 random.seed(1)
 model_dense = Sequential([
-    Input(shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
     Flatten(),
     Dense(50, activation="leaky_relu"),
     Dense(20, activation="leaky_relu"),
@@ -842,7 +842,7 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 
 ## Plot the model
 ```{python}
-from tensorflow.keras.utils import plot_model
+from keras.utils import plot_model
 plot_model(model_dense, show_shapes=True)
 ```
 
@@ -883,7 +883,8 @@ plt.legend(frameon=False);
 random.seed(1)
 
 model_simple = Sequential([
-    SimpleRNN(50, input_shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
+    SimpleRNN(50),
     Dense(1, activation="linear")
 ])
 model_simple.compile(loss="mse", optimizer="adam")
@@ -933,12 +934,13 @@ plt.legend(frameon=False);
 ## A `LSTM` layer
 
 ```{python}
-from tensorflow.keras.layers import LSTM
+from keras.layers import LSTM
 
 random.seed(1)
 
 model_lstm = Sequential([
-    LSTM(50, input_shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
+    LSTM(50),
     Dense(1, activation="linear")
 ])
 
@@ -985,12 +987,13 @@ plt.legend(frameon=False);
 ## A `GRU` layer
 
 ```{python}
-from tensorflow.keras.layers import GRU
+from keras.layers import GRU
 
 random.seed(1)
 
 model_gru = Sequential([
-    GRU(50, input_shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
+    GRU(50),
     Dense(1, activation="linear")
 ])
 
@@ -1040,7 +1043,8 @@ plt.legend(frameon=False);
 random.seed(1)
 
 model_two_grus = Sequential([
-    GRU(50, input_shape=(seq_length, num_ts), return_sequences=True),
+    Input((seq_length, num_ts)),
+    GRU(50, return_sequences=True),
     GRU(50),
     Dense(1, activation="linear")
 ])
@@ -1190,7 +1194,7 @@ Y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ```{python}
 random.seed(1)
 model_dense = Sequential([
-    Input(shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
     Flatten(),
     Dense(50, activation="leaky_relu"),
     Dense(20, activation="leaky_relu"),
@@ -1272,7 +1276,8 @@ plt.legend(frameon=False);
 random.seed(1)
 
 model_simple = Sequential([
-    SimpleRNN(50, input_shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
+    SimpleRNN(50),
     Dense(num_ts, activation="linear")
 ])
 model_simple.compile(loss="mse", optimizer="adam")
@@ -1351,7 +1356,8 @@ plt.legend(frameon=False);
 random.seed(1)
 
 model_lstm = Sequential([
-    LSTM(50, input_shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
+    LSTM(50),
     Dense(num_ts, activation="linear")
 ])
 
@@ -1425,7 +1431,8 @@ plt.legend(frameon=False);
 random.seed(1)
 
 model_gru = Sequential([
-    GRU(50, input_shape=(seq_length, num_ts)),
+    Input((seq_length, num_ts)),
+    GRU(50),
     Dense(num_ts, activation="linear")
 ])
 
@@ -1499,7 +1506,8 @@ plt.legend(frameon=False);
 random.seed(1)
 
 model_two_grus = Sequential([
-    GRU(50, input_shape=(seq_length, num_ts), return_sequences=True),
+    Input((seq_length, num_ts)),
+    GRU(50, return_sequences=True),
     GRU(50),
     Dense(num_ts, activation="linear")
 ])

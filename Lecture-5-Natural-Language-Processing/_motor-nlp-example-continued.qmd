@@ -49,12 +49,13 @@ pd.DataFrame(X_train_txt, columns=vocab, index=X_train.index)
 ```{python}
 random.seed(42)
 tfidf_model = keras.models.Sequential([
-    layers.Dense(250, "relu", input_dim=X_train_txt.shape[1]),
+    layers.Input((X_train_txt.shape[1],)),
+    layers.Dense(250, "relu"),
     layers.Dense(1, "sigmoid")
 ])
 
-tfidf_model.compile("adam", "BinaryCrossentropy", metrics=["accuracy"])
-tfidf_model.summary(print_fn=skip_empty)
+tfidf_model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
+tfidf_model.summary()
 ```
 
 ## Fit & evaluate
@@ -63,12 +64,12 @@ tfidf_model.summary(print_fn=skip_empty)
 es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
-if not Path("tfidf-model.h5").exists():
+if not Path("tfidf-model.keras").exists():
     tfidf_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
         validation_data=(X_val_txt, y_val), verbose=0)
-    tfidf_model.save("tfidf-model.h5")
+    tfidf_model.save("tfidf-model.keras")
 else:
-    tfidf_model = keras.models.load_model("tfidf-model.h5")
+    tfidf_model = keras.models.load_model("tfidf-model.keras")
 ```
 ```{python}
 tfidf_model.evaluate(X_train_txt, y_train, verbose=0, batch_size=1_000)
@@ -109,14 +110,14 @@ X_train_txt[0]
 ```{python}
 random.seed(42)
 inputs = keras.Input(shape=(max_length,), dtype="int64")
-onehot = tf.one_hot(inputs, depth=max_tokens)
+onehot = keras.ops.one_hot(inputs, max_tokens)
 x = layers.Bidirectional(layers.LSTM(24))(onehot)
 x = layers.Dropout(0.5)(x) 
 outputs = layers.Dense(1, activation="sigmoid")(x)    
 one_hot_model = keras.Model(inputs, outputs)
-one_hot_model.compile(optimizer="rmsprop",
+one_hot_model.compile(optimizer="adam",
     loss="binary_crossentropy", metrics=["accuracy"])
-one_hot_model.summary(print_fn=skip_empty)
+one_hot_model.summary()
 ```
 
 ## Fit & evaluate
@@ -125,12 +126,12 @@ one_hot_model.summary(print_fn=skip_empty)
 es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
-if not Path("one-hot-model.h5").exists():
-    one_hot_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
-        validation_data=(X_val_txt, y_val), verbose=0);
-    one_hot_model.save("one-hot-model.h5")
-else:
-    one_hot_model = keras.models.load_model("one-hot-model.h5")
+# if not Path("one-hot-model.keras").exists():
+one_hot_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+    validation_data=(X_val_txt, y_val), verbose=0);
+one_hot_model.save("one-hot-model.keras")
+# else:
+#     one_hot_model = keras.models.load_model("one-hot-model.keras")
 ```
 
 ```{python}
@@ -150,8 +151,8 @@ x = layers.Bidirectional(layers.LSTM(24))(embedded)
 x = layers.Dropout(0.5)(x)
 outputs = layers.Dense(1, activation="sigmoid")(x)
 embed_lstm = keras.Model(inputs, outputs)
-embed_lstm.compile("rmsprop", "binary_crossentropy", metrics=["accuracy"])
-embed_lstm.summary(print_fn=skip_empty)
+embed_lstm.compile("adam", "binary_crossentropy", metrics=["accuracy"])
+embed_lstm.summary()
 ```
 
 ## Fit & evaluate
@@ -160,12 +161,12 @@ embed_lstm.summary(print_fn=skip_empty)
 es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
-if not Path("embed-lstm.h5").exists():
-    embed_lstm.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
-        validation_data=(X_val_txt, y_val), verbose=0);
-    embed_lstm.save("embed-lstm.h5")
-else:
-    embed_lstm = keras.models.load_model("embed-lstm.h5")
+# if not Path("embed-lstm.keras").exists():
+embed_lstm.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+    validation_data=(X_val_txt, y_val), verbose=0);
+embed_lstm.save("embed-lstm.keras")
+# else:
+#     embed_lstm = keras.models.load_model("embed-lstm.keras")
 ```
 
 ```{python}

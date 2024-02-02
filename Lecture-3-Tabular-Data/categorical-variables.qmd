@@ -1,9 +1,16 @@
 ---
 title: Categorical Variables
+jupyter: ai2023
+keep-ipynb: true
 ---
 
 ```{python}
 #| echo: false
+#| output: false 
+import os
+os.environ["KERAS_BACKEND"] = "torch"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+ 
 import matplotlib
 
 import cycler
@@ -40,13 +47,8 @@ import numpy
 numpy.set_printoptions(precision=2)
 numpy.random.seed(123)
 
-import tensorflow
-tensorflow.random.set_seed(1)
-tensorflow.config.set_visible_devices([], 'GPU')
-
-def skip_empty(line):
-  if line.strip() != "":
-    print(line.strip())
+import keras
+keras.utils.set_random_seed(1)
 ```
 
 ## Lecture outline
@@ -63,9 +65,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.callbacks import EarlyStopping
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import EarlyStopping
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -73,7 +75,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
 
 %load_ext watermark
-%watermark -p numpy,pandas,sklearn,tensorflow
+%watermark -p numpy,pandas,sklearn,keras,torch,tensorflow
 ```
 
 # Preprocessing {visibility="uncounted"}
@@ -357,7 +359,7 @@ $$
 In Keras, string options are used for convenience to reference specific functions or settings.
 
 ::: {.content-visible unless-format="revealjs"}
-Meaning that setting `activation="relu"` (with in strings) is same as setting `activation=relu` after bringing in the `relu` function from `tensorflow.keras.activations`. 
+Meaning that setting `activation="relu"` (with in strings) is same as setting `activation=relu` after bringing in the `relu` function from `keras.activations`. 
 :::
 
 ```{python}
@@ -370,7 +372,7 @@ model = Sequential([
 is the same as
 
 ```{python}
-from tensorflow.keras.activations import relu, exponential
+from keras.activations import relu, exponential
 
 model = Sequential([
     Dense(30, activation=relu),
@@ -398,13 +400,13 @@ model.compile(optimizer="adam", loss="poisson")
 it is equivalent to
 
 ```{python}
-from tensorflow.keras.losses import poisson
-from tensorflow.keras.optimizers import Adam
+from keras.losses import poisson
+from keras.optimizers import Adam
 
 model.compile(optimizer=Adam(), loss=poisson)
 ```
 ::: {.content-visible unless-format="revealjs"}
-This is akin to specifying the activation function directly. Setting `optimizer="adam"` and `loss="poisson"` as strings is equivalent to using `optimizer=Adam()` and `loss=poisson` after importing `Adam` from `tensorflow.keras.optimizers` and `poisson` from `tensorflow.keras.losses`. Another important thing to note here is that, the loss function is no longer `mse`. Since we assume a Poisson distribution for the target variable, and the goal is to optimise the algorithm for count data, Poisson loss is more appropriate.
+This is akin to specifying the activation function directly. Setting `optimizer="adam"` and `loss="poisson"` as strings is equivalent to using `optimizer=Adam()` and `loss=poisson` after importing `Adam` from `keras.optimizers` and `poisson` from `keras.losses`. Another important thing to note here is that, the loss function is no longer `mse`. Since we assume a Poisson distribution for the target variable, and the goal is to optimise the algorithm for count data, Poisson loss is more appropriate.
 :::
 
 Why do this manually? To adjust the object:
@@ -422,10 +424,10 @@ or to get help.
 ## Keras' "poisson" loss
 
 ```{python}
-help(tensorflow.keras.losses.poisson)
+help(keras.losses.poisson)
 ```
 ::: {.content-visible unless-format="revealjs"}
-Using the help function in this case provides information about the Poisson loss function in the `tensorflow.keras.losses library`. It shows that how `poisson` loss is calculated, by taking two inputs, (i) actual values and (ii) predicted values.
+Using the help function in this case provides information about the Poisson loss function in the `keras.losses library`. It shows that how `poisson` loss is calculated, by taking two inputs, (i) actual values and (ii) predicted values.
 :::
 
 # Ordinal Variables {visibility="uncounted"}
@@ -749,7 +751,7 @@ for i, reg in enumerate(oe.categories_[0][:3]):
 ## Embedding
 
 ```{python}
-from tensorflow.keras.layers import Embedding
+from keras.layers import Embedding
 num_regions = len(np.unique(X_train[["Region"]]))
 
 random.seed(12)
@@ -859,8 +861,8 @@ Sequential models are easy to use and do not require many specifications, howeve
 ## Converting Sequential models
 
 ```{python}
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input
+from keras.models import Model
+from keras.layers import Input
 ```
 
 ::: columns
@@ -922,7 +924,7 @@ The above code shows how to construct the same neural network using sequential m
 Add a _skip connection_ from input to output layers.
 
 ```{python}
-from tensorflow.keras.layers \
+from keras.layers \
     import Concatenate
 
 inp = Input(shape=X_train.shape[1:])
@@ -958,7 +960,7 @@ model = Model(inputs=[input_], outputs=[output])
 ## Inspecting a complex model
 
 ```{python}
-from tensorflow.keras.utils import plot_model
+from keras.utils import plot_model
 ```
 
 ::: columns
@@ -970,7 +972,7 @@ plot_model(model)
 ::: {.column width="70%"}
 ::: {.smaller}
 ```{python}
-model.summary(print_fn=skip_empty, line_length=75)
+model.summary(line_length=75)
 ```
 :::
 :::
@@ -1031,7 +1033,7 @@ other_inputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
 ```
 Create embeddings and join them with the other inputs. 
 ```{python}
-from tensorflow.keras.layers import Reshape                                     #<1>
+from keras.layers import Reshape                                     #<1>
 
 random.seed(1337)
 veh_brand_ee = Embedding(input_dim=num_brands, output_dim=2,                    #<2>
@@ -1046,7 +1048,7 @@ x = Concatenate(name="combined")([veh_brand_ee, region_ee, other_inputs])       
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-1. Imports `Reshape` class from `tensorflow.keras.layers` library
+1. Imports `Reshape` class from `keras.layers` library
 2. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimensions we want the input to be summarised in to)
 3. Reshapes the output to match the format required at the model building step
 4. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension
@@ -1082,7 +1084,7 @@ plot_model(model)
 ## Why we need to reshape
 
 ```{python}
-plot_model(model, layer_range=("", "combined"), show_shapes=True)
+plot_model(model, show_shapes=True)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -1163,7 +1165,7 @@ lambda_ = Dense(1, "exponential", name="lambda")(x)
 ```
 
 ```{python}
-from tensorflow.keras.layers import Multiply
+from keras.layers import Multiply
 
 out = Multiply(name="out")([lambda_, exposure])
 model = Model([exposure, other_inputs], out)
