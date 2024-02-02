@@ -384,16 +384,18 @@ Decide on the architecture: a simple fully-connected network with one hidden lay
 Create the model:
 
 ```{python}
-from tensorflow.keras.models import Sequential                              #<1>
-from tensorflow.keras.layers import Dense                                   #<2>
+from keras.models import Sequential                              #<1>
+from keras.layers import Dense, Input                            #<2>
 
 model = Sequential(
-    [Dense(30, input_dim=num_features, activation="relu"), Dense(1)]
-)                                                                           #<3>
+    [Input((num_features,)),
+     Dense(30, activation="relu"),
+     Dense(1)]
+)                                                                #<3>
 ```
 
-1. Imports `Sequential` from `tensorflow.keras.models`
-2. Imports `Dense` from `tensorflow.keras.layers`
+1. Imports `Sequential` from `keras.models`
+2. Imports `Dense` from `keras.layers`
 3. Defines the model architecture using `Sequential()` function
 
 ::: {.content-visible unless-format="revealjs"}
@@ -646,7 +648,7 @@ add_diagonal_line()
 
 ```{python}
 #| echo: false
-import tensorflow.keras.activations as acts
+import keras.activations as acts
 import numpy as np
 
 
@@ -949,7 +951,7 @@ Hinton calls it a "beautiful free lunch"
 
 ```{python}
 #| code-line-numbers: "|1,10,13"
-from tensorflow.keras.callbacks import EarlyStopping                            #<1>
+from keras.callbacks import EarlyStopping                                       #<1>
 
 random.seed(123)                                                                #<2>
 model = Sequential([                                                            #<3>
@@ -965,11 +967,11 @@ es = EarlyStopping(restore_best_weights=True, patience=15)                      
 print(f"Keeping model at epoch #{len(hist.history['loss'])-10}.")               #<7>              
 ```
 
-1. Imports EarlyStopping from tensorflow.keras.callbacks
+1. Imports `EarlyStopping` from `keras.callbacks`
 2. Sets the random seed
 3. Constructs the sequential model
 4. Configures the training process with optimiser and loss function
-5. Defines the early stopping object. Here, the 'patience' parameter tells how many epochs the neural network has to wait without no improvement before the process stops. 'patience=15' indicates that the neural network will wait for 15 epochs without any improvement before it stops training. 'restore_best_weights=True' ensures that model's weights will be restored to the best model, i.e., the model we saw before 15 epochs
+5. Defines the early stopping object. Here, the `patience` parameter tells how many epochs the neural network has to wait without no improvement before the process stops. `patience=15` indicates that the neural network will wait for 15 epochs without any improvement before it stops training. `restore_best_weights=True` ensures that model's weights will be restored to the best model, i.e., the model we saw before 15 epochs
 6. Fits the model with early stopping object passed in
 7. Prints the outs 
 
@@ -1071,7 +1073,7 @@ Since we configured the model to track 'mse' as the loss function, we can simply
 
 ```{python}
 from pathlib import Path
-from tensorflow.keras.callbacks import ModelCheckpoint                      #<1>
+from keras.callbacks import ModelCheckpoint                                 #<1>
 
 random.seed(123)
 model = Sequential(
@@ -1079,7 +1081,7 @@ model = Sequential(
 )
 model.compile("adam", "mse")
 mc = ModelCheckpoint(                                                       #<2>
-    "best-model.h5", monitor="val_loss", save_best_only=True                #<2>
+    "best-model.keras", monitor="val_loss", save_best_only=True             #<2>
 )                                                                           #<2>
 es = EarlyStopping(restore_best_weights=True, patience=5)
 hist = model.fit(                                                           #<3>
@@ -1090,7 +1092,7 @@ hist = model.fit(                                                           #<3>
     callbacks=[mc, es],                                                     #<3>
     verbose=False,                                                          #<3>
 )
-Path("best-model.h5").stat().st_size                                        #<4>
+Path("best-model.keras").stat().st_size                                     #<4>
 ```
 ::: {.content-visible unless-format="revealjs"}
 `ModelCheckpoint` is also another useful `callback` function that can be used to save the model at some intervals during training. This is useful when training large datasets. If the training process gets interrupted at some point, last saved set of weights from model checkpoints can be used to resume the training process instead of starting from the beginning.
@@ -1098,5 +1100,5 @@ Path("best-model.h5").stat().st_size                                        #<4>
 
 ```{python}
 #| echo: false
-Path("best-model.h5").unlink()
+Path("best-model.keras").unlink()
 ```

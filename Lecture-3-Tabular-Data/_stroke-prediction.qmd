@@ -162,7 +162,8 @@ However, to give such instructions on handling unseen categories, we would first
 def create_model(seed=42):
     random.seed(seed)
     model = Sequential()
-    model.add(Dense(32, "leaky_relu", input_shape=X_train_ct.shape[1:]))
+    model.add(Input(X_train_ct.shape[1:]))
+    model.add(Dense(32, "leaky_relu"))
     model.add(Dense(16, "leaky_relu"))
     model.add(Dense(1, "sigmoid"))
     return model
@@ -173,10 +174,10 @@ Since this is a binary classification problem, we use the sigmoid activation fun
 
 ```{python}
 model = create_model()
-model.summary(print_fn=skip_empty)
+model.summary()
 ```
 ::: {.content-visible unless-format="revealjs"}
-`model.summary()` returns the summary of the constructed neural network. The `print_fn=skip_empty` simply reformats the default output to remove blank lines; you don't need to do this.
+`model.summary()` returns the summary of the constructed neural network.
 :::
 
 ## Add metrics, compile, and fit
@@ -184,9 +185,9 @@ model.summary(print_fn=skip_empty)
 ```{python}
 model = create_model()                                                  #<1>
 
-pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")                #<2>
-model.compile(optimizer="adam", loss="BinaryCrossentropy",              #<3>
-    metrics=["accuracy", "AUC", pr_auc])                                
+pr_auc = keras.metrics.AUC(curve="PR", name="pr_auc")                #<2>
+model.compile(optimizer="adam", loss="binary_crossentropy",              #<3>
+    metrics=[pr_auc, "accuracy", "auc"])                                
 
 es = EarlyStopping(patience=50, restore_best_weights=True,
     monitor="val_pr_auc", verbose=1)
@@ -197,7 +198,7 @@ model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
 ::: {.content-visible unless-format="revealjs"}
 1. Brings in the created model
 2. Creates an instance `pr_auc` to store the AUC (Area Under Curve) metric for the PR (Precision-Recall) curve
-3. Compiles the model with an appropriate loss function, optimizer and relevant metrics. Since the above problem is a binary classification, we would optimize the `BinaryCrossentropy`, chose to monitor both `accuracy` and `AUC` and `pr_auc`.  
+3. Compiles the model with an appropriate loss function, optimizer and relevant metrics. Since the above problem is a binary classification, we would optimize the `binary_crossentropy`, chose to monitor both `accuracy` and `AUC` and `pr_auc`.  
 
 Tracking AUC and `pr_auc` on top of the accuracy is important, particularly in the cases where there is a class imbalance. Suppose a data has 95% `True` class and only 5% `False` class, then, even a random classifier that predicts `True` 95% of the time will have a high accuracy. To avoid such issues, it is advisable to monitor both accuracy and AUC.
 :::
@@ -217,9 +218,9 @@ model.evaluate(X_val_ct, y_val, verbose=0)
 ```{python}
 model = create_model()
 
-pr_auc = tf.keras.metrics.AUC(curve="PR", name="pr_auc")
-model.compile(optimizer="adam", loss="BinaryCrossentropy",
-    metrics=["accuracy", "AUC", pr_auc])
+pr_auc = keras.metrics.AUC(curve="PR", name="pr_auc")
+model.compile(optimizer="adam", loss="binary_crossentropy",
+    metrics=[pr_auc, "accuracy", "auc"])
 
 es = EarlyStopping(patience=50, restore_best_weights=True,
     monitor="val_pr_auc", verbose=1)
