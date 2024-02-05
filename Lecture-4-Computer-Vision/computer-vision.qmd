@@ -8,11 +8,14 @@ Computer vision is a field of Artificial Intelligence (AI) that focuses on extra
 
 ```{python}
 #| echo: false
-#| output: false 
+#| warning: false
 import os
 os.environ["KERAS_BACKEND"] = "torch"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
- 
+
+import torch
+torch.set_num_threads(1)
+
 import matplotlib
 
 import cycler
@@ -69,9 +72,11 @@ from keras.callbacks import EarlyStopping
 from keras.utils import plot_model
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+```
 
-%load_ext watermark
-%watermark -p numpy,pandas,keras,torch,tensorflow
+```{python}
+from watermark import watermark
+print(watermark(python=True, packages="sklearn,keras,torch,tensorflow"))
 ```
 
 # Images {visibility="uncounted"}
@@ -1066,9 +1071,12 @@ plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, test_ds.class_name
 ## Confidence of predictions
 
 ```{python}
-y_pred = keras.activations.softmax(model(X_test)).detach().numpy()
-y_pred_class = y_pred.argmax(axis=1)
+y_pred = keras.activations.softmax(model(X_test))
+y_pred_class = keras.ops.argmax(y_pred, axis=1)
 y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]
+
+y_pred_class = keras.ops.convert_to_numpy(y_pred_class)
+y_pred_prob = keras.ops.convert_to_numpy(y_pred_prob)
 
 confidence_when_correct = y_pred_prob[y_pred_class == y_test]
 confidence_when_wrong = y_pred_prob[y_pred_class != y_test]

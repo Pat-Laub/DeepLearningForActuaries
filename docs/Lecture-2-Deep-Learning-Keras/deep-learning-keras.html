@@ -107,8 +107,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
 
-  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
 
 <script type="text/javascript">
 const typesetMath = (el) => {
@@ -439,7 +453,7 @@ window.Quarto = {
   <li><a href="#try-different-activation-functions-1" id="toc-try-different-activation-functions-1" class="nav-link" data-scroll-target="#try-different-activation-functions-1">Try different activation functions</a></li>
   <li><a href="#enforce-positive-outputs-relu" id="toc-enforce-positive-outputs-relu" class="nav-link" data-scroll-target="#enforce-positive-outputs-relu">Enforce positive outputs (ReLU)</a></li>
   <li><a href="#plot-the-predictions-2" id="toc-plot-the-predictions-2" class="nav-link" data-scroll-target="#plot-the-predictions-2">Plot the predictions</a></li>
-  <li><a href="#enforce-positive-outputs-mathrmex" id="toc-enforce-positive-outputs-mathrmex" class="nav-link" data-scroll-target="#enforce-positive-outputs-mathrmex">Enforce positive outputs (<span class="math inline">\(\mathrm{e}^{\,x}\)</span>)</a></li>
+  <li><a href="#enforce-positive-outputs-mathrmex" id="toc-enforce-positive-outputs-mathrmex" class="nav-link" data-scroll-target="#enforce-positive-outputs-mathrmex">Enforce positive outputs (<span class="math inline">\mathrm{e}^{\,x}</span>)</a></li>
   </ul></li>
   <li><a href="#preprocessing" id="toc-preprocessing" class="nav-link" data-scroll-target="#preprocessing">Preprocessing</a>
   <ul class="collapse">
@@ -512,7 +526,7 @@ window.Quarto = {
 <section id="a-neuron-firing" class="level2">
 <h2 class="anchored" data-anchor-id="a-neuron-firing">A neuron ‘firing’</h2>
 <p>Similar to a biological neuron, an artificial neuron ‘fires’ when the combined input information exceeds a certain threshold. This activation can be seen as a step function. The difference is that the artificial neuron uses mathematical rules (e.g.&nbsp;weighted sum) to ‘fire’ whereas ‘firing’ in the biological neurons is far more complex and dynamic.</p>
-<div id="a43f20ca" class="cell" data-execution_count="2">
+<div id="c0362e41" class="cell" data-execution_count="2">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -539,19 +553,19 @@ window.Quarto = {
 <h2 class="anchored" data-anchor-id="one-neuron">One neuron</h2>
 <div class="columns">
 <div class="column" style="width:55%;">
-<p><span class="math display">\[ \begin{aligned}
+<p><span class="math display"> \begin{aligned}
   z~=~&amp;x_1 \times w_1 + \\
     &amp;x_2 \times w_2 + \\
     &amp;x_3 \times w_3 .
   \end{aligned}
-\]</span></p>
-<p><span class="math display">\[
+</span></p>
+<p><span class="math display">
   a = \begin{cases}
     z &amp; \text{if } z &gt; 0 \\
     0 &amp; \text{if } z \leq 0
     \end{cases}
-\]</span></p>
-<p>Here, <span class="math inline">\(x_1\)</span>, <span class="math inline">\(x_2\)</span>, <span class="math inline">\(x_3\)</span> is just some fixed data.</p>
+</span></p>
+<p>Here, <span class="math inline">x_1</span>, <span class="math inline">x_2</span>, <span class="math inline">x_3</span> is just some fixed data.</p>
 </div><div class="column" style="width:45%;">
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
@@ -561,7 +575,7 @@ window.Quarto = {
 </div>
 </div>
 </div>
-<p>The weights <span class="math inline">\(w_1\)</span>, <span class="math inline">\(w_2\)</span>, <span class="math inline">\(w_3\)</span> should be ‘learned’.</p>
+<p>The weights <span class="math inline">w_1</span>, <span class="math inline">w_2</span>, <span class="math inline">w_3</span> should be ‘learned’.</p>
 <div class="footer">
 <p>Source: Marcus Lautier (2022).</p>
 </div>
@@ -571,25 +585,25 @@ window.Quarto = {
 <p>The bias is a constant term added to the product of inputs and weights. It helps in shifting the entire activation function to either the negative or positive side. This shifting can either accelerate or delay the activation. For example, if the bias is negative, it will shift the entire curve to the right, making the activation harder. This is similar to delaying the activation.</p>
 <div class="columns">
 <div class="column" style="width:55%;">
-<p><span class="math display">\[ \begin{aligned}
+<p><span class="math display"> \begin{aligned}
   z~=~&amp;x_1 \times w_1 + \\
     &amp;x_2 \times w_2 + \\
     &amp;x_3 \times w_3 + b .
   \end{aligned}
-\]</span></p>
-<p><span class="math display">\[
+</span></p>
+<p><span class="math display">
   a = \begin{cases}
     z &amp; \text{if } z &gt; 0 \\
     0 &amp; \text{if } z \leq 0
     \end{cases}
-\]</span></p>
-<p>The weights <span class="math inline">\(w_1\)</span>, <span class="math inline">\(w_2\)</span>, <span class="math inline">\(w_3\)</span> and bias <span class="math inline">\(b\)</span> should be ‘learned’.</p>
+</span></p>
+<p>The weights <span class="math inline">w_1</span>, <span class="math inline">w_2</span>, <span class="math inline">w_3</span> and bias <span class="math inline">b</span> should be ‘learned’.</p>
 </div><div class="column" style="width:45%;">
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" aria-current="page">Bias = -4</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false">0</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false">4</a></li></ul>
 <div class="tab-content">
 <div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
-<div id="de5900b5" class="cell" data-execution_count="3">
+<div id="9511ef22" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -600,7 +614,7 @@ window.Quarto = {
 </div>
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<div id="4cf7b354" class="cell" data-execution_count="4">
+<div id="00af1c70" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -611,7 +625,7 @@ window.Quarto = {
 </div>
 </div>
 <div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
-<div id="f6fad92b" class="cell" data-execution_count="5">
+<div id="e6a32f54" class="cell" data-execution_count="5">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -634,7 +648,7 @@ window.Quarto = {
 <figcaption>A basic fully-connected/dense network.</figcaption>
 </figure>
 </div>
-<p>This neural network consists of an input layer with 2 neurons (<span class="math inline">\(x_1, x_2\)</span>), an output layer with 3 neurons, and 1 hidden layer with 4 neurons. Since every neuron is linked to every other neuron, this is called a fully connected neural network. Since we have 2 inputs and 1 bias in the input layer, each neuron in the hidden layer has 2+1=3 parameters to learn. Similarly, there are 4 neurons and 1 bias in the hidden layer. Hence, each neuron in the output layer has 4+1=5 parameters to learn.</p>
+<p>This neural network consists of an input layer with 2 neurons (<span class="math inline">x_1, x_2</span>), an output layer with 3 neurons, and 1 hidden layer with 4 neurons. Since every neuron is linked to every other neuron, this is called a fully connected neural network. Since we have 2 inputs and 1 bias in the input layer, each neuron in the hidden layer has 2+1=3 parameters to learn. Similarly, there are 4 neurons and 1 bias in the hidden layer. Hence, each neuron in the output layer has 4+1=5 parameters to learn.</p>
 <div class="footer">
 <p>Source: Marcus Lautier (2022).</p>
 </div>
@@ -665,7 +679,7 @@ Note
 </section>
 <section id="try-different-activation-functions" class="level2">
 <h2 class="anchored" data-anchor-id="try-different-activation-functions">Try different activation functions</h2>
-<div id="52b7c286" class="cell" data-execution_count="6">
+<div id="e48cef30" class="cell" data-execution_count="6">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -734,7 +748,7 @@ Note
 </div>
 </div>
 </div>
-<p>There are three inputs, hence, three features. There is one neuron in the output layer, hence, one target. There are <span class="math inline">\(3 \times 4 + 4 \times 4 + 4\times 1 = 32\)</span> arrows, hence, there are 32 weights in total. Since there is 1 bias for each neuron, there are 9 biases in total. The number of total parameters to learn equals to the sum of weights and biases, hence, there are <span class="math inline">\(32+9=41\)</span> parameters in total.</p>
+<p>There are three inputs, hence, three features. There is one neuron in the output layer, hence, one target. There are <span class="math inline">3 \times 4 + 4 \times 4 + 4\times 1 = 32</span> arrows, hence, there are 32 weights in total. Since there is 1 bias for each neuron, there are 9 biases in total. The number of total parameters to learn equals to the sum of weights and biases, hence, there are <span class="math inline">32+9=41</span> parameters in total.</p>
 <div class="footer">
 <p>Source: Dertat (2017), <a href="https://towardsdatascience.com/applied-deep-learning-part-1-artificial-neural-networks-d7834f67a4f6"><em>Applied Deep Learning - Part 1: Artificial Neural Networks</em></a>, Medium.</p>
 </div>
@@ -744,7 +758,7 @@ Note
 <h1 data-visibility="uncounted">California House Price Prediction</h1>
 <section id="import-the-data" class="level2 smaller">
 <h2 class="smaller anchored" data-anchor-id="import-the-data">Import the data</h2>
-<div id="e5d5746b" class="cell" data-execution_count="7">
+<div id="e719f43c" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="annotated-cell-1"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-1-1" class="code-annotation-target"><a href="#annotated-cell-1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_california_housing</span>
 <span id="annotated-cell-1-2"><a href="#annotated-cell-1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="annotated-cell-1-3"><a href="#annotated-cell-1-3" aria-hidden="true" tabindex="-1"></a>features, target <span class="op">=</span> fetch_california_housing(</span>
@@ -868,7 +882,7 @@ Note
 </section>
 <section id="what-is-the-target" class="level2">
 <h2 class="anchored" data-anchor-id="what-is-the-target">What is the target?</h2>
-<div id="140b6f59" class="cell" data-execution_count="8">
+<div id="7954bb48" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>target</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="8">
 <pre><code>0        4.526
@@ -931,7 +945,7 @@ Name: MedHouseVal, Length: 20640, dtype: float64</code></pre>
 </section>
 <section id="set-aside-a-fraction-for-a-test-set" class="level2">
 <h2 class="anchored" data-anchor-id="set-aside-a-fraction-for-a-test-set">Set aside a fraction for a test set</h2>
-<div id="80ba1e12" class="cell" data-execution_count="9">
+<div id="2f33eb1b" class="cell" data-execution_count="9">
 <div class="sourceCode cell-code" id="annotated-cell-3"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-3" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-3-1" class="code-annotation-target"><a href="#annotated-cell-3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
 <span id="annotated-cell-3-2"><a href="#annotated-cell-3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="annotated-cell-3-3"><a href="#annotated-cell-3-3" aria-hidden="true" tabindex="-1"></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
@@ -995,7 +1009,7 @@ Name: MedHouseVal, Length: 20640, dtype: float64</code></pre>
 </section>
 <section id="split-three-ways" class="level2">
 <h2 class="anchored" data-anchor-id="split-three-ways">Split three ways</h2>
-<div id="ddf15fc2" class="cell" data-execution_count="10">
+<div id="e1932290" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="annotated-cell-4"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-4-1"><a href="#annotated-cell-4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Thanks https://datascience.stackexchange.com/a/15136</span></span>
 <span id="annotated-cell-4-2"><a href="#annotated-cell-4-2" aria-hidden="true" tabindex="-1"></a>X_main, X_test, y_main, y_test <span class="op">=</span> train_test_split(</span>
 <span id="annotated-cell-4-3"><a href="#annotated-cell-4-3" aria-hidden="true" tabindex="-1"></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
@@ -1011,11 +1025,11 @@ Name: MedHouseVal, Length: 20640, dtype: float64</code></pre>
 <dl class="code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-4" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-4" data-code-lines="4" data-code-annotation="1">Splits the entire dataset into two parts. Sets aside <span class="math inline">\(20\%\)</span> of the data as the test set.</span>
+<span data-code-cell="annotated-cell-4" data-code-lines="4" data-code-annotation="1">Splits the entire dataset into two parts. Sets aside <span class="math inline">20\%</span> of the data as the test set.</span>
 </dd>
 <dt data-target-cell="annotated-cell-4" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-4" data-code-lines="9" data-code-annotation="2">Splits the first <span class="math inline">\(80\%\)</span> of the data (<code>X_main</code> and <code>y_main</code>) further into train and validation sets. Sets aside <span class="math inline">\(25\%\)</span> as the validation set</span>
+<span data-code-cell="annotated-cell-4" data-code-lines="9" data-code-annotation="2">Splits the first <span class="math inline">80\%</span> of the data (<code>X_main</code> and <code>y_main</code>) further into train and validation sets. Sets aside <span class="math inline">25\%</span> as the validation set</span>
 </dd>
 </dl>
 </div>
@@ -1023,21 +1037,21 @@ Name: MedHouseVal, Length: 20640, dtype: float64</code></pre>
 <pre><code>((12384, 8), (4128, 8), (4128, 8))</code></pre>
 </div>
 </div>
-<p>This results in <span class="math inline">\(60:20:20\)</span> three way split. While this is not a strict rule, it is widely used.</p>
+<p>This results in <span class="math inline">60:20:20</span> three way split. While this is not a strict rule, it is widely used.</p>
 </section>
 <section id="why-not-use-test-set-for-both" class="level2">
 <h2 class="anchored" data-anchor-id="why-not-use-test-set-for-both">Why not use test set for both?</h2>
-<p><em>Thought experiment</em>: have <span class="math inline">\(m\)</span> classifiers: <span class="math inline">\(f_1(\mathbf{x})\)</span>, <span class="math inline">\(\dots\)</span>, <span class="math inline">\(f_m(\mathbf{x})\)</span>.</p>
-<p>They are just as good as each other in the long run <span class="math display">\[
+<p><em>Thought experiment</em>: have <span class="math inline">m</span> classifiers: <span class="math inline">f_1(\mathbf{x})</span>, <span class="math inline">\dots</span>, <span class="math inline">f_m(\mathbf{x})</span>.</p>
+<p>They are just as good as each other in the long run <span class="math display">
 \mathbb{P}(\, f_i(\mathbf{X}) = Y \,)\ =\ 90\% , \quad \text{for } i=1,\dots,m .
-\]</span></p>
+</span></p>
 <div class="columns">
 <div class="column" style="width:40%;">
 <p>Evaluate each model on the test set, some will be better than others.</p>
 </div><div class="column" style="width:60%;">
-<div id="69b6986b" class="cell" data-execution_count="11">
+<div id="39857ffe" class="cell" data-execution_count="11">
 <div class="cell-output cell-output-stderr">
-<pre><code>/tmp/ipykernel_1277989/4029235944.py:7: UserWarning: 
+<pre><code>/tmp/ipykernel_43140/4029235944.py:7: UserWarning: 
 
 `distplot` is a deprecated function and will be removed in seaborn v0.14.0.
 
@@ -1059,7 +1073,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 </div>
 </div>
-<p>Take the best, you’d think it has <span class="math inline">\(\approx 98\%\)</span> accuracy!</p>
+<p>Take the best, you’d think it has <span class="math inline">\approx 98\%</span> accuracy!</p>
 <p>Using the same dataset for both validating and testing purposes can result in a data leakage. The information from supposedly ‘unseen’ data is now used by the model during its tuning. This results in a situation where the model is now ‘learning’ from the test data, and it could lead to overly optimistic results in the model evaluation stage.</p>
 </section>
 </section>
@@ -1067,7 +1081,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 <h1 data-background-image="unsw-yellow-shape.png" data-visibility="uncounted">EDA &amp; Baseline Model</h1>
 <section id="the-training-set" class="level2 smaller">
 <h2 class="smaller anchored" data-anchor-id="the-training-set">The training set</h2>
-<div id="fded5c4a" class="cell" data-execution_count="12">
+<div id="d5496a1b" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>X_train</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
 <div>
@@ -1175,8 +1189,8 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="location" class="level2">
 <h2 class="anchored" data-anchor-id="location">Location</h2>
-<p>Python’s <code>matplotlib</code> package <span class="math inline">\(\approx\)</span> R’s basic <code>plot</code>s.</p>
-<div id="bfd2d694" class="cell" data-execution_count="13">
+<p>Python’s <code>matplotlib</code> package <span class="math inline">\approx</span> R’s basic <code>plot</code>s.</p>
+<div id="84a66157" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>plt.scatter(features[<span class="st">"Longitude"</span>], features[<span class="st">"Latitude"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1191,8 +1205,8 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="location-2" class="level2">
 <h2 class="anchored" data-anchor-id="location-2">Location #2</h2>
-<p>Python’s <code>seaborn</code> package <span class="math inline">\(\approx\)</span> R’s <code>ggplot2</code>.</p>
-<div id="9b7cde55" class="cell" data-execution_count="14">
+<p>Python’s <code>seaborn</code> package <span class="math inline">\approx</span> R’s <code>ggplot2</code>.</p>
+<div id="4a42d540" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>sns.scatterplot(x<span class="op">=</span><span class="st">"Longitude"</span>, y<span class="op">=</span><span class="st">"Latitude"</span>, data<span class="op">=</span>features)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1207,14 +1221,14 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="features" class="level2">
 <h2 class="anchored" data-anchor-id="features">Features</h2>
-<div id="14c2aa8a" class="cell" data-execution_count="15">
+<div id="6d88c3c6" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="bu">list</span>(features.columns))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>['MedInc', 'HouseAge', 'AveRooms', 'AveBedrms', 'Population', 'AveOccup', 'Latitude', 'Longitude']</code></pre>
 </div>
 </div>
 <p>How many?</p>
-<div id="d006cdea" class="cell" data-execution_count="16">
+<div id="4847d228" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>num_features <span class="op">=</span> <span class="bu">len</span>(features.columns)</span>
 <span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>num_features</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="16">
@@ -1222,7 +1236,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 </div>
 <p>Or</p>
-<div id="b5cbfbc2" class="cell" data-execution_count="17">
+<div id="dac266bf" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>num_features <span class="op">=</span> features.shape[<span class="dv">1</span>]</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>features.shape</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="17">
@@ -1232,8 +1246,8 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="linear-regression" class="level2">
 <h2 class="anchored" data-anchor-id="linear-regression">Linear Regression</h2>
-<p><span class="math display">\[ \hat{y} = w_0 + \sum_{i=1}^N w_i x_i .\]</span></p>
-<div id="447317ba" class="cell" data-execution_count="18">
+<p><span class="math display"> \hat{y} = w_0 + \sum_{i=1}^N w_i x_i .</span></p>
+<div id="5f09fa2a" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="annotated-cell-11"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-11-1" class="code-annotation-target"><a href="#annotated-cell-11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span>
 <span id="annotated-cell-11-2"><a href="#annotated-cell-11-2" aria-hidden="true" tabindex="-1"></a></span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-11-3" class="code-annotation-target"><a href="#annotated-cell-11-3" aria-hidden="true" tabindex="-1"></a>lr <span class="op">=</span> LinearRegression()</span>
@@ -1255,8 +1269,8 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </dl>
 </div>
 </div>
-<p>The <span class="math inline">\(w_0\)</span> is in <code>lr.intercept_</code> and the others are in</p>
-<div id="c1803b9d" class="cell" data-execution_count="19">
+<p>The <span class="math inline">w_0</span> is in <code>lr.intercept_</code> and the others are in</p>
+<div id="02f53f2a" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(lr.coef_)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[ 4.34267965e-01  9.88284781e-03 -9.39592954e-02  5.86373944e-01
@@ -1266,7 +1280,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="make-some-predictions" class="level2">
 <h2 class="anchored" data-anchor-id="make-some-predictions">Make some predictions</h2>
-<div id="c8d536df" class="cell" data-execution_count="20">
+<div id="aaf8fcb6" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>X_train.head(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="20">
 <div>
@@ -1327,7 +1341,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 </div>
 <p><code>X_train.head(3)</code> returns the first three rows of the dataset <i>X_train</i>.</p>
-<div id="747e8e3e" class="cell" data-execution_count="21">
+<div id="6aefb14f" class="cell" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> lr.predict(X_train.head(<span class="dv">3</span>))</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>y_pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="21">
@@ -1335,8 +1349,8 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 </div>
 <p><code>lr.predict(X_train.head(3))</code> returns the predictions for the first three rows of the dataset <i>X_train</i>.</p>
-<p>We can manually calculate predictions using the linear regression model to verify the output of the <code>lr.predict()</code> function. In the following code, we first define <span class="math inline">\(w_0\)</span> as the intercept of the <code>lr</code> function (initial value for the prediction calculation), and then keep on adding the <span class="math inline">\(w_i \times x_i\)</span> terms</p>
-<div id="d39da1c6" class="cell" data-execution_count="22">
+<p>We can manually calculate predictions using the linear regression model to verify the output of the <code>lr.predict()</code> function. In the following code, we first define <span class="math inline">w_0</span> as the intercept of the <code>lr</code> function (initial value for the prediction calculation), and then keep on adding the <span class="math inline">w_i \times x_i</span> terms</p>
+<div id="4299430a" class="cell" data-execution_count="22">
 <div class="sourceCode cell-code" id="annotated-cell-15"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-15-1" class="code-annotation-target"><a href="#annotated-cell-15-1" aria-hidden="true" tabindex="-1"></a>prediction <span class="op">=</span> lr.intercept_</span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-15-2" class="code-annotation-target"><a href="#annotated-cell-15-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> w_i, x_i <span class="kw">in</span> <span class="bu">zip</span>(lr.coef_, X_train.iloc[<span class="dv">0</span>]):</span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-15-3" class="code-annotation-target"><a href="#annotated-cell-15-3" aria-hidden="true" tabindex="-1"></a>    prediction <span class="op">+=</span> w_i <span class="op">*</span> x_i</span>
@@ -1366,7 +1380,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 <h2 class="anchored" data-anchor-id="plot-the-predictions">Plot the predictions</h2>
 <div class="columns">
 <div class="column">
-<div id="7635d033" class="cell" data-execution_count="24">
+<div id="7e5c356c" class="cell" data-execution_count="24">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1376,7 +1390,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 </div>
 </div><div class="column">
-<div id="2f57dbbb" class="cell" data-execution_count="25">
+<div id="d257626b" class="cell" data-execution_count="25">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1391,7 +1405,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="calculate-mean-squared-error" class="level2">
 <h2 class="anchored" data-anchor-id="calculate-mean-squared-error">Calculate mean squared error</h2>
-<div id="361e2a1a" class="cell" data-execution_count="27">
+<div id="9a0ab751" class="cell" data-execution_count="27">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> lr.predict(X_train)</span>
@@ -1442,7 +1456,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 </div>
 </div>
-<div id="d0ce5fcf" class="cell" data-execution_count="28">
+<div id="4a119641" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"Squared Error"</span>].mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="28">
 <pre><code>0.5291948207479792</code></pre>
@@ -1451,14 +1465,14 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="using-mean_squared_error" class="level2">
 <h2 class="anchored" data-anchor-id="using-mean_squared_error">Using <code>mean_squared_error</code></h2>
-<div id="faeed6a3" class="cell" data-execution_count="29">
+<div id="5fff33f3" class="cell" data-execution_count="29">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>df[<span class="st">"Squared Error"</span>].mean()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="29">
 <pre><code>0.5291948207479792</code></pre>
 </div>
 </div>
 <p>We can compute the mean squared error to evaluate, on average, the accuracy of the predictions. To do this, we first create a data frame using pandas <code>DataFrame</code> function. It will have two columns, one with the predicted values and the other with the actual values. Next, we add another column to the same data frame using <code>df["Squared Error"]</code> that computes and stores the squared error for each row. Using the function <code>df["Squared Error"].mean()</code>, we extract the column ‘Squared Error’ from the data frame ‘df’ and calculate the ‘mean’.</p>
-<div id="af006af9" class="cell" data-execution_count="30">
+<div id="215461b5" class="cell" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> mean_squared_error <span class="im">as</span> mse</span>
 <span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>mse(y_train, y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1468,7 +1482,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </div>
 <p>We can also use the function <code>mean_squared_error</code> from <code>sklearn.metrics</code> library to calculate the same.</p>
 <p>Store the results in a dictionary:</p>
-<div id="9c18f195" class="cell" data-execution_count="31">
+<div id="a2d13939" class="cell" data-execution_count="31">
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>mse_lr_train <span class="op">=</span> mse(y_train, lr.predict(X_train))</span>
 <span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>mse_lr_val <span class="op">=</span> mse(y_val, lr.predict(X_val))</span>
 <span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1497,7 +1511,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 <h2 class="anchored" data-anchor-id="create-a-keras-ann-model">Create a Keras ANN model</h2>
 <p>Decide on the architecture: a simple fully-connected network with one hidden layer with 30 neurons.</p>
 <p>Create the model:</p>
-<div id="7e5b67d5" class="cell" data-execution_count="32">
+<div id="e24b519f" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="annotated-cell-21"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-21" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-21-1" class="code-annotation-target"><a href="#annotated-cell-21-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-21" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-21-2" class="code-annotation-target"><a href="#annotated-cell-21-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense, Input</span>
 <span id="annotated-cell-21-3"><a href="#annotated-cell-21-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1527,7 +1541,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="inspect-the-model" class="level2">
 <h2 class="anchored" data-anchor-id="inspect-the-model">Inspect the model</h2>
-<div id="29e30249" class="cell" data-execution_count="33">
+<div id="3eaa107e" class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>model.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display">
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "sequential"</span>
@@ -1559,7 +1573,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="the-model-is-initialised-randomly" class="level2">
 <h2 class="anchored" data-anchor-id="the-model-is-initialised-randomly">The model is initialised randomly</h2>
-<div id="56d47619" class="cell" data-execution_count="34">
+<div id="93b979dc" class="cell" data-execution_count="34">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"relu"</span>), Dense(<span class="dv">1</span>)])</span>
 <span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>model.predict(X_val.head(<span class="dv">3</span>), verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="34">
@@ -1568,7 +1582,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
        [ -20.18185]], dtype=float32)</code></pre>
 </div>
 </div>
-<div id="c84cdab0" class="cell" data-execution_count="35">
+<div id="97ba109f" class="cell" data-execution_count="35">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"relu"</span>), Dense(<span class="dv">1</span>)])</span>
 <span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>model.predict(X_val.head(<span class="dv">3</span>), verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="35">
@@ -1581,7 +1595,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="controlling-the-randomness" class="level2">
 <h2 class="anchored" data-anchor-id="controlling-the-randomness">Controlling the randomness</h2>
-<div id="3c3bcbdb" class="cell" data-execution_count="36">
+<div id="bacd87da" class="cell" data-execution_count="36">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1"></a><span class="im">import</span> random</span>
 <span id="cb33-2"><a href="#cb33-2"></a></span>
 <span id="cb33-3"><a href="#cb33-3"></a>random.seed(<span class="dv">123</span>)</span>
@@ -1609,7 +1623,7 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 </section>
 <section id="fit-the-model" class="level2">
 <h2 class="anchored" data-anchor-id="fit-the-model">Fit the model</h2>
-<div id="4666d36f" class="cell" data-execution_count="37">
+<div id="8f2c3838" class="cell" data-execution_count="37">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
@@ -1621,8 +1635,8 @@ https://gist.github.com/mwaskom/de44147ed2974457ad6372750bbe5751
 <span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>time hist <span class="op">=</span> model.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">5</span>, verbose<span class="op">=</span><span class="va">False</span>)</span>
 <span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"loss"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 2.99 s, sys: 535 ms, total: 3.52 s
-Wall time: 2.83 s</code></pre>
+<pre><code>CPU times: user 2.96 s, sys: 544 ms, total: 3.51 s
+Wall time: 2.84 s</code></pre>
 </div>
 <div class="cell-output cell-output-display" data-execution_count="37">
 <pre><code>[1294.4464111328125,
@@ -1638,7 +1652,7 @@ Wall time: 2.83 s</code></pre>
 </section>
 <section id="make-predictions" class="level2">
 <h2 class="anchored" data-anchor-id="make-predictions">Make predictions</h2>
-<div id="257fc0cf" class="cell" data-execution_count="38">
+<div id="70241ad9" class="cell" data-execution_count="38">
 <div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X_train[:<span class="dv">3</span>], verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>y_pred</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="38">
@@ -1658,7 +1672,7 @@ Note
 </div>
 <div class="callout-body-container callout-body">
 <p>The <code>.predict</code> gives us a ‘matrix’ not a ‘vector’. Calling <code>.flatten()</code> will convert it to a ‘vector’.</p>
-<div id="19904f54" class="cell" data-execution_count="39">
+<div id="b5d361c5" class="cell" data-execution_count="39">
 <div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Original shape: </span><span class="sc">{</span>y_pred<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
 <span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> y_pred.flatten()</span>
 <span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Flattened shape: </span><span class="sc">{</span>y_pred<span class="sc">.</span>shape<span class="sc">}</span><span class="ss">"</span>)</span>
@@ -1678,7 +1692,7 @@ Flattened shape: (3,)</code></pre>
 <h2 class="anchored" data-anchor-id="plot-the-predictions-1">Plot the predictions</h2>
 <div class="columns">
 <div class="column">
-<div id="0ec2ca25" class="cell" data-execution_count="41">
+<div id="ad2d5dda" class="cell" data-execution_count="41">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1688,7 +1702,7 @@ Flattened shape: (3,)</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="61942383" class="cell" data-execution_count="42">
+<div id="16434d3a" class="cell" data-execution_count="42">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1703,28 +1717,28 @@ Flattened shape: (3,)</code></pre>
 </section>
 <section id="assess-the-model" class="level2">
 <h2 class="anchored" data-anchor-id="assess-the-model">Assess the model</h2>
-<div id="0d4ea78a" class="cell" data-execution_count="44">
+<div id="54c1503d" class="cell" data-execution_count="44">
 <div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>mse(y_val, y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="44">
 <pre><code>0.8456477940379458</code></pre>
 </div>
 </div>
-<div id="b622881d" class="cell" data-execution_count="45">
+<div id="9eced7b7" class="cell" data-execution_count="45">
 <div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>mse_train[<span class="st">"Basic ANN"</span>] <span class="op">=</span> mse(</span>
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>    y_train, model.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>mse_val[<span class="st">"Basic ANN"</span>] <span class="op">=</span> mse(y_val, model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Some predictions are negative:</p>
-<div id="322adcbd" class="cell" data-execution_count="46">
+<div id="52e77e8a" class="cell" data-execution_count="46">
 <div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a>y_pred.<span class="bu">min</span>(), y_pred.<span class="bu">max</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="46">
 <pre><code>(-6.280052, 10.888557)</code></pre>
 </div>
 </div>
-<div id="460fd804" class="cell" data-execution_count="47">
+<div id="d5d7e311" class="cell" data-execution_count="47">
 <div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>y_val.<span class="bu">min</span>(), y_val.<span class="bu">max</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="47">
 <pre><code>(0.225, 5.00001)</code></pre>
@@ -1736,7 +1750,7 @@ Flattened shape: (3,)</code></pre>
 <h1 data-visibility="uncounted">Force positive predictions</h1>
 <section id="try-running-for-longer" class="level2">
 <h2 class="anchored" data-anchor-id="try-running-for-longer">Try running for longer</h2>
-<div id="01f57aa7" class="cell" data-execution_count="48">
+<div id="9358e411" class="cell" data-execution_count="48">
 <div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
 <span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
@@ -1749,15 +1763,15 @@ Flattened shape: (3,)</code></pre>
 <span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a><span class="op">%</span>time hist <span class="op">=</span> model.fit(X_train, y_train, <span class="op">\</span></span>
 <span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a>    epochs<span class="op">=</span><span class="dv">50</span>, verbose<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 27.7 s, sys: 0 ns, total: 27.7 s
-Wall time: 27.7 s</code></pre>
+<pre><code>CPU times: user 27.9 s, sys: 0 ns, total: 27.9 s
+Wall time: 27.9 s</code></pre>
 </div>
 </div>
 <p>We will train the same neural network architecture with more epochs (<code>epochs=50</code>) to see if the results improve.</p>
 </section>
 <section id="loss-curve" class="level2">
 <h2 class="anchored" data-anchor-id="loss-curve">Loss curve</h2>
-<div id="fc8d6cce" class="cell" data-execution_count="49">
+<div id="1cf1e531" class="cell" data-execution_count="49">
 <div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>plt.plot(<span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">51</span>), hist.history[<span class="st">"loss"</span>])</span>
 <span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Epoch"</span>)</span>
 <span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"MSE"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1773,7 +1787,7 @@ Wall time: 27.7 s</code></pre>
 </section>
 <section id="loss-curve-1" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="loss-curve-1">Loss curve</h2>
-<div id="111a8ac6" class="cell" data-execution_count="50">
+<div id="e2498d9a" class="cell" data-execution_count="50">
 <div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>plt.plot(<span class="bu">range</span>(<span class="dv">2</span>, <span class="dv">51</span>), hist.history[<span class="st">"loss"</span>][<span class="dv">1</span>:])</span>
 <span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Epoch"</span>)</span>
 <span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"MSE"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1789,7 +1803,7 @@ Wall time: 27.7 s</code></pre>
 </section>
 <section id="predictions" class="level2">
 <h2 class="anchored" data-anchor-id="predictions">Predictions</h2>
-<div id="87f4ec36" class="cell" data-execution_count="51">
+<div id="01ddb107" class="cell" data-execution_count="51">
 <div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb55-2"><a href="#cb55-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Min prediction: </span><span class="sc">{</span>y_pred<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
 <span id="cb55-3"><a href="#cb55-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Max prediction: </span><span class="sc">{</span>y_pred<span class="sc">.</span><span class="bu">max</span>()<span class="sc">:.2f}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1800,14 +1814,14 @@ Max prediction: 7.70</code></pre>
 </div>
 <div class="columns">
 <div class="column">
-<div id="acec5d0a" class="cell" data-execution_count="52">
+<div id="e0ac3eb1" class="cell" data-execution_count="52">
 <div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>plt.scatter(y_pred, y_val)</span>
 <span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Predictions"</span>)</span>
 <span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"True values"</span>)</span>
 <span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>add_diagonal_line()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div style="margin-top: 1em;">
-<div id="f5b4c82e" class="cell" data-execution_count="53">
+<div id="9a690560" class="cell" data-execution_count="53">
 <div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>mse_train[<span class="st">"Long run ANN"</span>] <span class="op">=</span> mse(</span>
 <span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>    y_train, model.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>)</span>
@@ -1816,7 +1830,7 @@ Max prediction: 7.70</code></pre>
 </div>
 </div><div class="column">
 <div style="position: relative; top: -3em;">
-<div id="7997fa39" class="cell" data-execution_count="54">
+<div id="05bc96ee" class="cell" data-execution_count="54">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1831,7 +1845,7 @@ Max prediction: 7.70</code></pre>
 </section>
 <section id="try-different-activation-functions-1" class="level2">
 <h2 class="anchored" data-anchor-id="try-different-activation-functions-1">Try different activation functions</h2>
-<div id="36efb041" class="cell" data-execution_count="55">
+<div id="69e6e59b" class="cell" data-execution_count="55">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1844,7 +1858,7 @@ Max prediction: 7.70</code></pre>
 </section>
 <section id="enforce-positive-outputs-relu" class="level2">
 <h2 class="anchored" data-anchor-id="enforce-positive-outputs-relu">Enforce positive outputs (ReLU)</h2>
-<div id="e97ee8e4" class="cell" data-execution_count="56">
+<div id="910406eb" class="cell" data-execution_count="56">
 <div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
 <span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
@@ -1861,8 +1875,8 @@ Max prediction: 7.70</code></pre>
 <span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a>losses <span class="op">=</span> np.<span class="bu">round</span>(hist.history[<span class="st">"loss"</span>], <span class="dv">2</span>)</span>
 <span id="cb59-15"><a href="#cb59-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(losses[:<span class="dv">5</span>], <span class="st">"..."</span>, losses[<span class="op">-</span><span class="dv">5</span>:])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 28 s, sys: 3.31 ms, total: 28 s
-Wall time: 28 s
+<pre><code>CPU times: user 27.9 s, sys: 16 ms, total: 27.9 s
+Wall time: 27.9 s
 [5.65 5.64 5.64 5.64 5.64] ... [5.64 5.64 5.64 5.64 5.64]</code></pre>
 </div>
 </div>
@@ -1871,7 +1885,7 @@ Wall time: 28 s
 <h2 class="anchored" data-anchor-id="plot-the-predictions-2">Plot the predictions</h2>
 <div class="columns">
 <div class="column">
-<div id="6b5f8780" class="cell" data-execution_count="58">
+<div id="d94a95b9" class="cell" data-execution_count="58">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1881,7 +1895,7 @@ Wall time: 28 s
 </div>
 </div>
 </div><div class="column">
-<div id="5a945f99" class="cell" data-execution_count="59">
+<div id="7b5cce19" class="cell" data-execution_count="59">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1895,8 +1909,8 @@ Wall time: 28 s
 <p>Plots illustrate how all the outputs were stuck at zero. Irrespective of how many epochs we run, the output would always be zero.</p>
 </section>
 <section id="enforce-positive-outputs-mathrmex" class="level2">
-<h2 class="anchored" data-anchor-id="enforce-positive-outputs-mathrmex">Enforce positive outputs (<span class="math inline">\(\mathrm{e}^{\,x}\)</span>)</h2>
-<div id="e96b4de9" class="cell" data-execution_count="61">
+<h2 class="anchored" data-anchor-id="enforce-positive-outputs-mathrmex">Enforce positive outputs (<span class="math inline">\mathrm{e}^{\,x}</span>)</h2>
+<div id="c72ff387" class="cell" data-execution_count="61">
 <div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1"></a>random.seed(<span class="dv">123</span>)</span>
 <span id="cb61-2"><a href="#cb61-2"></a></span>
 <span id="cb61-3"><a href="#cb61-3"></a>model <span class="op">=</span> Sequential([</span>
@@ -1911,8 +1925,8 @@ Wall time: 28 s
 <span id="cb61-12"><a href="#cb61-12"></a>losses <span class="op">=</span> hist.history[<span class="st">"loss"</span>]</span>
 <span id="cb61-13"><a href="#cb61-13"></a><span class="bu">print</span>(losses)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 2.81 s, sys: 4.01 ms, total: 2.81 s
-Wall time: 2.81 s
+<pre><code>CPU times: user 2.79 s, sys: 0 ns, total: 2.79 s
+Wall time: 2.79 s
 [25.2047176361084, 5.639228820800781, 5.653268814086914, 5.639529705047607, 5.6393961906433105]</code></pre>
 </div>
 </div>
@@ -1923,7 +1937,7 @@ Wall time: 2.81 s
 <h1 data-visibility="uncounted">Preprocessing</h1>
 <section id="re-scaling-the-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="re-scaling-the-inputs">Re-scaling the inputs</h2>
-<div id="fdd8c033" class="cell" data-execution_count="62">
+<div id="dd1879a3" class="cell" data-execution_count="62">
 <div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> StandardScaler, MinMaxScaler</span>
 <span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
@@ -1936,13 +1950,13 @@ Wall time: 2.81 s
 <p>Note: We apply both the <code>fit</code> and <code>transform</code> operations on the train data. However, we only apply <code>transform</code> on the validation and test data.</p>
 <div class="columns">
 <div class="column">
-<div id="52f79fea" class="cell" data-output-location="default" data-execution_count="63">
+<div id="9a1e9f5f" class="cell" data-output-location="default" data-execution_count="63">
 <div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>plt.hist(X_train.iloc[:, <span class="dv">0</span>])</span>
 <span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>plt.hist(X_train_sc[:, <span class="dv">0</span>])</span>
 <span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>plt.legend([<span class="st">"Original"</span>, <span class="st">"Scaled"</span>])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div><div class="column">
-<div id="1dfe7d22" class="cell" data-execution_count="64">
+<div id="525355cf" class="cell" data-execution_count="64">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -1957,7 +1971,7 @@ Wall time: 2.81 s
 </section>
 <section id="same-model-with-scaled-inputs" class="level2">
 <h2 class="anchored" data-anchor-id="same-model-with-scaled-inputs">Same model with scaled inputs</h2>
-<div id="8bdc76ee" class="cell" data-execution_count="65">
+<div id="6e6d480e" class="cell" data-execution_count="65">
 <div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1"></a>random.seed(<span class="dv">123</span>)</span>
 <span id="cb65-2"><a href="#cb65-2"></a></span>
 <span id="cb65-3"><a href="#cb65-3"></a>model <span class="op">=</span> Sequential([</span>
@@ -1973,14 +1987,14 @@ Wall time: 2.81 s
 <span id="cb65-13"><a href="#cb65-13"></a>    epochs<span class="op">=</span><span class="dv">50</span>, <span class="op">\</span></span>
 <span id="cb65-14"><a href="#cb65-14"></a>    verbose<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 28 s, sys: 543 µs, total: 28 s
-Wall time: 28 s</code></pre>
+<pre><code>CPU times: user 28.1 s, sys: 41.3 ms, total: 28.1 s
+Wall time: 28.1 s</code></pre>
 </div>
 </div>
 </section>
 <section id="loss-curve-2" class="level2">
 <h2 class="anchored" data-anchor-id="loss-curve-2">Loss curve</h2>
-<div id="a18f5291" class="cell" data-execution_count="66">
+<div id="a587ec38" class="cell" data-execution_count="66">
 <div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>plt.plot(<span class="bu">range</span>(<span class="dv">1</span>, <span class="dv">51</span>), hist.history[<span class="st">"loss"</span>])</span>
 <span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Epoch"</span>)</span>
 <span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"MSE"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1995,7 +2009,7 @@ Wall time: 28 s</code></pre>
 </section>
 <section id="loss-curve-3" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="loss-curve-3">Loss curve</h2>
-<div id="decee8b0" class="cell" data-execution_count="67">
+<div id="d1f7bc73" class="cell" data-execution_count="67">
 <div class="sourceCode cell-code" id="cb68"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>plt.plot(<span class="bu">range</span>(<span class="dv">2</span>, <span class="dv">51</span>), hist.history[<span class="st">"loss"</span>][<span class="dv">1</span>:])</span>
 <span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Epoch"</span>)</span>
 <span id="cb68-3"><a href="#cb68-3" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"MSE"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -2010,7 +2024,7 @@ Wall time: 28 s</code></pre>
 </section>
 <section id="predictions-1" class="level2">
 <h2 class="anchored" data-anchor-id="predictions-1">Predictions</h2>
-<div id="bf00df1b" class="cell" data-execution_count="68">
+<div id="8bee2233" class="cell" data-execution_count="68">
 <div class="sourceCode cell-code" id="cb69"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb69-1"><a href="#cb69-1" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> model.predict(X_val_sc, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb69-2"><a href="#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Min prediction: </span><span class="sc">{</span>y_pred<span class="sc">.</span><span class="bu">min</span>()<span class="sc">:.2f}</span><span class="ss">"</span>)</span>
 <span id="cb69-3"><a href="#cb69-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Max prediction: </span><span class="sc">{</span>y_pred<span class="sc">.</span><span class="bu">max</span>()<span class="sc">:.2f}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -2021,14 +2035,14 @@ Max prediction: 8.58</code></pre>
 </div>
 <div class="columns">
 <div class="column">
-<div id="db9d13ab" class="cell" data-execution_count="69">
+<div id="5218f37e" class="cell" data-execution_count="69">
 <div class="sourceCode cell-code" id="cb71"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a href="#cb71-1" aria-hidden="true" tabindex="-1"></a>plt.scatter(y_pred, y_val)</span>
 <span id="cb71-2"><a href="#cb71-2" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Predictions"</span>)</span>
 <span id="cb71-3"><a href="#cb71-3" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"True values"</span>)</span>
 <span id="cb71-4"><a href="#cb71-4" aria-hidden="true" tabindex="-1"></a>add_diagonal_line()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div style="margin-top: 1em;">
-<div id="57f7f190" class="cell" data-execution_count="70">
+<div id="19affbc2" class="cell" data-execution_count="70">
 <div class="sourceCode cell-code" id="cb72"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>mse_train[<span class="st">"Exp ANN"</span>] <span class="op">=</span> mse(</span>
 <span id="cb72-2"><a href="#cb72-2" aria-hidden="true" tabindex="-1"></a>    y_train, model.predict(X_train_sc, verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb72-3"><a href="#cb72-3" aria-hidden="true" tabindex="-1"></a>)</span>
@@ -2037,7 +2051,7 @@ Max prediction: 8.58</code></pre>
 </div>
 </div><div class="column">
 <div style="position: relative; top: -3em;">
-<div id="a20f7b8c" class="cell" data-execution_count="71">
+<div id="bef85eec" class="cell" data-execution_count="71">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -2054,7 +2068,7 @@ Max prediction: 8.58</code></pre>
 <section id="comparing-mse-smaller-is-better" class="level2">
 <h2 class="anchored" data-anchor-id="comparing-mse-smaller-is-better">Comparing MSE (smaller is better)</h2>
 <p>On training data:</p>
-<div id="9d3e7988" class="cell" data-execution_count="72">
+<div id="d3ab616f" class="cell" data-execution_count="72">
 <div class="sourceCode cell-code" id="cb73"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb73-1"><a href="#cb73-1" aria-hidden="true" tabindex="-1"></a>mse_train</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="69">
 <pre><code>{'Linear Regression': 0.5291948207479792,
@@ -2064,7 +2078,7 @@ Max prediction: 8.58</code></pre>
 </div>
 </div>
 <p>On validation data (expect <em>worse</em>, i.e.&nbsp;bigger):</p>
-<div id="d0b93251" class="cell" data-execution_count="73">
+<div id="46b878b1" class="cell" data-execution_count="73">
 <div class="sourceCode cell-code" id="cb75"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>mse_val</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="70">
 <pre><code>{'Linear Regression': 0.5059420205381367,
@@ -2077,7 +2091,7 @@ Max prediction: 8.58</code></pre>
 </section>
 <section id="comparing-models-train" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="comparing-models-train">Comparing models (train)</h2>
-<div id="8da084fa" class="cell" data-execution_count="74">
+<div id="e34fdaf6" class="cell" data-execution_count="74">
 <div class="sourceCode cell-code" id="cb77"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>train_results <span class="op">=</span> pd.DataFrame(</span>
 <span id="cb77-2"><a href="#cb77-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Model"</span>: mse_train.keys(), <span class="st">"MSE"</span>: mse_train.values()}</span>
 <span id="cb77-3"><a href="#cb77-3" aria-hidden="true" tabindex="-1"></a>)</span>
@@ -2124,7 +2138,7 @@ Max prediction: 8.58</code></pre>
 </section>
 <section id="comparing-models-validation" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="comparing-models-validation">Comparing models (validation)</h2>
-<div id="65ac649c" class="cell" data-execution_count="75">
+<div id="303b2e72" class="cell" data-execution_count="75">
 <div class="sourceCode cell-code" id="cb78"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>val_results <span class="op">=</span> pd.DataFrame(</span>
 <span id="cb78-2"><a href="#cb78-2" aria-hidden="true" tabindex="-1"></a>    {<span class="st">"Model"</span>: mse_val.keys(), <span class="st">"MSE"</span>: mse_val.values()}</span>
 <span id="cb78-3"><a href="#cb78-3" aria-hidden="true" tabindex="-1"></a>)</span>
@@ -2188,7 +2202,7 @@ Max prediction: 8.58</code></pre>
 <section id="try-early-stopping" class="level2">
 <h2 class="anchored" data-anchor-id="try-early-stopping">Try early stopping</h2>
 <p>Hinton calls it a “beautiful free lunch”</p>
-<div id="019f211b" class="cell" data-execution_count="76">
+<div id="24ebcd20" class="cell" data-execution_count="76">
 <div class="sourceCode cell-code" id="annotated-cell-47"><pre class="sourceCode numberSource python code-annotation-code number-lines code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-47" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-47-1" class="code-annotation-target"><a href="#annotated-cell-47-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
 <span id="annotated-cell-47-2"><a href="#annotated-cell-47-2"></a></span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-47" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-47-3" class="code-annotation-target"><a href="#annotated-cell-47-3"></a>random.seed(<span class="dv">123</span>)</span>
@@ -2236,7 +2250,7 @@ Max prediction: 8.58</code></pre>
 </dl>
 </div>
 <div class="cell-output cell-output-stdout">
-<pre><code>CPU times: user 1min 17s, sys: 7.91 ms, total: 1min 17s
+<pre><code>CPU times: user 1min 17s, sys: 197 ms, total: 1min 17s
 Wall time: 1min 17s
 Keeping model at epoch #101.</code></pre>
 </div>
@@ -2244,7 +2258,7 @@ Keeping model at epoch #101.</code></pre>
 </section>
 <section id="loss-curve-4" class="level2">
 <h2 class="anchored" data-anchor-id="loss-curve-4">Loss curve</h2>
-<div id="b491e044" class="cell" data-execution_count="77">
+<div id="3507985d" class="cell" data-execution_count="77">
 <div class="sourceCode cell-code" id="cb80"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a>plt.plot(hist.history[<span class="st">"loss"</span>])</span>
 <span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>plt.plot(hist.history[<span class="st">"val_loss"</span>])</span>
 <span id="cb80-3"><a href="#cb80-3" aria-hidden="true" tabindex="-1"></a>plt.legend([<span class="st">"Training"</span>, <span class="st">"Validation"</span>])<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -2259,7 +2273,7 @@ Keeping model at epoch #101.</code></pre>
 </section>
 <section id="loss-curve-ii" class="level2">
 <h2 class="anchored" data-anchor-id="loss-curve-ii">Loss curve II</h2>
-<div id="e55596a8" class="cell" data-execution_count="78">
+<div id="ce28f7b7" class="cell" data-execution_count="78">
 <div class="sourceCode cell-code" id="cb81"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>plt.plot(hist.history[<span class="st">"loss"</span>])</span>
 <span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>plt.plot(hist.history[<span class="st">"val_loss"</span>])</span>
 <span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a>plt.ylim([<span class="dv">0</span>, <span class="dv">8</span>])</span>
@@ -2277,7 +2291,7 @@ Keeping model at epoch #101.</code></pre>
 <h2 class="anchored" data-anchor-id="predictions-2">Predictions</h2>
 <div class="columns">
 <div class="column">
-<div id="c754a07b" class="cell" data-execution_count="80">
+<div id="c46bfb72" class="cell" data-execution_count="80">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -2287,7 +2301,7 @@ Keeping model at epoch #101.</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="3479bb07" class="cell" data-execution_count="81">
+<div id="4a7e58e2" class="cell" data-execution_count="81">
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
@@ -2301,7 +2315,7 @@ Keeping model at epoch #101.</code></pre>
 </section>
 <section id="comparing-models-validation-1" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="comparing-models-validation-1">Comparing models (validation)</h2>
-<div id="68912093" class="cell" data-execution_count="84">
+<div id="341da622" class="cell" data-execution_count="84">
 <div class="cell-output cell-output-display" data-execution_count="81">
 <div>
 
@@ -2351,13 +2365,13 @@ Keeping model at epoch #101.</code></pre>
 <section id="the-test-set" class="level2">
 <h2 class="anchored" data-anchor-id="the-test-set">The test set</h2>
 <p>Evaluate <em>only the final/selected model</em> on the test set.</p>
-<div id="64c53667" class="cell" data-execution_count="85">
+<div id="41e90ecd" class="cell" data-execution_count="85">
 <div class="sourceCode cell-code" id="cb82"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a>mse(y_test, model.predict(X_test_sc, verbose<span class="op">=</span><span class="dv">0</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="82">
 <pre><code>0.3123165514245335</code></pre>
 </div>
 </div>
-<div id="6a450f1b" class="cell" data-execution_count="86">
+<div id="2cf42ada" class="cell" data-execution_count="86">
 <div class="sourceCode cell-code" id="cb84"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_test_sc, y_test, verbose<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="83">
 <pre><code>0.31231650710105896</code></pre>
@@ -2367,7 +2381,7 @@ Keeping model at epoch #101.</code></pre>
 </section>
 <section id="another-useful-callback" class="level2">
 <h2 class="anchored" data-anchor-id="another-useful-callback">Another useful callback</h2>
-<div id="df87a7aa" class="cell" data-execution_count="87">
+<div id="f263b7de" class="cell" data-execution_count="87">
 <div class="sourceCode cell-code" id="annotated-cell-52"><pre class="sourceCode python code-annotation-code code-with-copy"><code class="sourceCode python"><span id="annotated-cell-52-1"><a href="#annotated-cell-52-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="annotated-cell-52-2"><a href="#annotated-cell-52-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> ModelCheckpoint</span>
 <span id="annotated-cell-52-3"><a href="#annotated-cell-52-3" aria-hidden="true" tabindex="-1"></a></span>
