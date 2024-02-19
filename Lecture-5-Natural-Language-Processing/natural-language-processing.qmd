@@ -202,6 +202,94 @@ repr("Hello,\rworld!")
 :::
 :::
 
+## Non-natural language processing I
+
+How would you evaluate
+
+> 10 + 2 * -3
+
+::: {.fragment}
+All that Python sees is a string of characters.
+
+```{python}
+[ord(c) for c in "10 + 2 * -3"]
+```
+:::
+
+::: {.fragment}
+```{python}
+10 + 2 * -3
+```
+:::
+
+## Non-natural language processing II
+
+Python first tokenizes the string:
+
+```{python}
+import tokenize
+import io
+
+code = "10 + 2 * -3"
+tokens = tokenize.tokenize(io.BytesIO(code.encode("utf-8")).readline)
+for token in tokens:
+    print(token)
+```
+
+## Non-natural language processing III
+
+Python needs to _parse_ the tokens into an abstract syntax tree.
+
+::: columns
+::: {.column width="70%"}
+
+```{python}
+import ast
+
+print(ast.dump(ast.parse("10 + 2 * -3"), indent="  "))
+```
+
+:::
+::: {.column width="30%"}
+
+```{mermaid}
+%%| echo: false
+graph TD;
+    Expr --> C[Add]
+    C --> D[10]
+    C --> E[Mult]
+    E --> F[2]
+    E --> G[USub]
+    G --> H[3]
+
+```
+
+:::
+:::
+
+## Non-natural language processing IV
+
+The abstract syntax tree is then compiled into bytecode.
+
+::: columns
+::: {.column width="60%"}
+```{python}
+import dis
+
+def expression(a, b, c):
+    return a + b * -c
+
+dis.dis(expression)
+```
+:::
+::: {.column width="40%"}
+
+![Running the bytecode](stack-anim.gif)
+
+:::
+:::
+
+
 ## Applications of NLP in Industry
 
 __1) Classifying documents__: Using the language within a body of text to classify it into a particular category, e.g.:
