@@ -1,19 +1,13 @@
 ---
 title: Uncertainty Quantification
 author: Eric Dong & Patrick Laub
-jupyter: ai2023
-keep-ipynb: true
 ---
 
 ```{python}
 #| echo: false
 #| warning: false
 import os
-os.environ["KERAS_BACKEND"] = "torch"
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
-
-import torch
-torch.set_num_threads(1)
 
 import matplotlib
 
@@ -49,6 +43,7 @@ import random
 
 random.seed(1234)
 
+import tf_keras
 import tensorflow
 
 tensorflow.random.set_seed(1)
@@ -67,14 +62,14 @@ import numpy.random as rnd
 from sklearn import set_config
 set_config(transform_output="pandas")
 
+import tf_keras
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Input, Dense, Concatenate
-from tensorflow.keras.models import Model
-from tensorflow.keras.initializers import Constant
+from tf_keras.callbacks import EarlyStopping
+from tf_keras.layers import Dense
+from tf_keras.models import Sequential
+from tf_keras.layers import Input, Dense, Concatenate
+from tf_keras.models import Model
+from tf_keras.initializers import Constant
 
 from sklearn.model_selection import train_test_split
 from sklearn.compose import make_column_transformer
@@ -84,7 +79,7 @@ from sklearn.preprocessing import OrdinalEncoder
 
 ```{python}
 from watermark import watermark
-print(watermark(python=True, packages="sklearn,keras,torch,tensorflow"))
+print(watermark(python=True, packages="sklearn,tf_keras,torch,tensorflow"))
 ```
 
 # Uncertainty {visibility="uncounted"}
@@ -209,14 +204,14 @@ Since this task does not apply entity embeddings, `VehBrand` and `Region` variab
 :::
 
 ```{python}
-#Transformation
+# Transformation
 ct = make_column_transformer(
   (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),
   remainder=StandardScaler(),
    verbose_feature_names_out=False
 )
 
-#We don't apply entity embedding 
+# We don't apply entity embedding 
 X_train_ct = ct.fit_transform(X_train)
 X_test_ct = ct.transform(X_test)
 X_train = X_train_ct.drop(["VehBrand", "Region"], axis=1)
@@ -324,7 +319,7 @@ gamma_GLM = sm.GLM(y_train, X_train_design,
 # Fit the model
 gamma_GLM = gamma_GLM.fit()
 
-#Dispersion Parameter
+# Dispersion Parameter
 mus = gamma_GLM.predict(X_train_design)
 residuals = mus-y_train
 variance = mus**2
@@ -540,7 +535,7 @@ pis = Dense(2, activation='softmax')(x) #mixing weights                 #<4>
 alphas = Dense(2, activation='exponential')(x) #shape parameters
 betas = Dense(2, activation='exponential')(x) #scale parameters
 
-#`y_pred` will now have 6 columns
+# `y_pred` will now have 6 columns
 gamma_mdn = Model(inputs, Concatenate(axis=1)([pis, alphas, betas]))    #<5>
 ```
 1. Sets the random seeds for reproducibility
@@ -600,7 +595,7 @@ def gamma_mixture_NLL(y_true, y_pred):
 ## Code: Model Training
 
 ```{python}
-#Employ the loss function from previous slide
+# Employ the loss function from previous slide
 gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_NLL)             #<1>
 
 hist = gamma_mdn.fit(X_train, y_train,
@@ -662,16 +657,16 @@ def gamma_nll(mean, dispersion, y):
     
     return -np.mean(gamma_dist.logpdf(y))
 
-#GLM
+# GLM
 X_test_design = sm.add_constant(X_test)
 mus = gamma_GLM.predict(X_test_design)
 NLL_GLM = gamma_nll(mus, phi_GLM, y_test)
 
-#CANN
+# CANN
 mus = np.exp(np.sum(CANN.predict(X_test, verbose=0), axis = 1))
 NLL_CANN = gamma_nll(mus, phi_CANN, y_test)
 
-#MDN
+# MDN
 NLL_MDN = gamma_mdn.evaluate(X_test, y_test, verbose=0)
 ```
 
@@ -737,8 +732,8 @@ The following code shows how we can apply a dropout to each hidden layer in the 
 :::
 
 ```{python} 
-from tensorflow.keras.layers import Dropout
-#Ensure reproducibility
+from tf_keras.layers import Dropout
+# Ensure reproducibility
 random.seed(2); tf.random.set_seed(2)
 
 model = Sequential([
@@ -846,7 +841,7 @@ i.e., a normal distribution with parameters $\boldsymbol{\theta}= (\boldsymbol{\
 
 ```{python}
 import tensorflow_probability as tfp                                            #<1>
-tfd = tfp.distributions #tensorflow prob. distributions                         #<2>
+tfd = tfp.distributions                                                         #<2>
 
 def prior(kernel_size, bias_size, dtype=None):                                  #<3>
     n = kernel_size + bias_size
@@ -943,8 +938,6 @@ inputs = Input(shape=X_train.shape[1:])                             #<2>
 # DenseVariational layer
 x = tfp.layers.DenseVariational(64, posterior, prior,
                 kl_weight=1/X_train.shape[0])(inputs)               #<3>
-x = tfp.layers.DenseVariational(64, posterior, prior,
-                kl_weight=1/X_train.shape[0])(inputs)
 outputs = Dense(2, activation = 'softplus')(x)
 
 # Construct the Gamma distribution on the last layer
@@ -967,7 +960,7 @@ def gamma_loss(y_true, y_pred):                                                 
     return -y_pred.log_prob(y_true)
 
 # Then use the loss function when compiling the model
-gamma_bnn.compile(optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.001),
+gamma_bnn.compile(optimizer=tf_keras.optimizers.Adam(learning_rate=0.001),
                 loss=gamma_loss)                                                            #<2>
 
 hist = gamma_bnn.fit(X_train, y_train,
@@ -1062,24 +1055,24 @@ K = 1 # number of mixtures
 def MDN_DE(num_ensembles):
   models = []
   for k in range(num_ensembles):
-    #Ensure reproducibility
+    # Ensure reproducibility
     random.seed(k); tf.random.set_seed(k)
     inputs = Input(shape=X_train.shape[1:])
 
-    #Two hidden layers 
+    # Two hidden layers 
     x = Dense(64, activation='relu')(inputs)
     x = Dense(64, activation='relu')(x)
 
-    pis = Dense(1, activation='softmax')(x) #mixing weights
-    alphas = Dense(1, activation='softplus')(x) #shape parameters
-    betas = Dense(1, activation='softplus')(x) #scale parameters
+    pis = Dense(1, activation='softmax')(x) # mixing weights
+    alphas = Dense(1, activation='softplus')(x) # shape parameters
+    betas = Dense(1, activation='softplus')(x) # scale parameters
 
-    #Concatenate by columns: `y_pred` will now have 6 columns
+    # Concatenate by columns: `y_pred` will now have 6 columns
     gamma_mdn_new = Model(inputs, Concatenate(axis=1)([pis, alphas, betas]))
     gamma_mdn_new.compile(optimizer="adam",
                           loss=gamma_mixture_NLL)
     gamma_mdn_new.fit(X_train, y_train,
-        epochs=300, callbacks=[EarlyStopping(patience=30)],  
+        epochs=100, callbacks=[EarlyStopping(patience=10)],  
         verbose=0, batch_size=64, validation_split=0.2)
     models.append(gamma_mdn_new)
 
@@ -1097,11 +1090,11 @@ MDN_models = MDN_DE(D)
 # Store all predictions in a list
 weights = [0]*D; alphas = [0]*D; betas = [0]*D
 
-#Store the paramters
+# Store the parameters
 for i in range(D):
   weights[i], alphas[i], betas[i] = MDN_models[i].predict(X_test[9:10], verbose=0)[0]
 
-#Predict the means and variances
+# Predict the means and variances
 means = np.array(alphas)/np.array(betas)
 variances = np.array(alphas)/np.array(betas)**2
 ```
