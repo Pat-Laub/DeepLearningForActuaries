@@ -1,6 +1,7 @@
 #!/bin/bash
 
 quarto render Lecture-1-Artificial-Intelligence/course-overview.qmd --no-execute-daemon
+(exit) && quarto render Lecture-1-Artificial-Intelligence/artificial-intelligence.qmd --no-execute-daemon
 (exit) && quarto render Lecture-1-Artificial-Intelligence/python.qmd --no-execute-daemon
 (exit) && quarto render Lecture-2-Deep-Learning-Keras/deep-learning-keras.qmd --no-execute-daemon
 (exit) && quarto render Lecture-3-Tabular-Data/categorical-variables.qmd --no-execute-daemon
