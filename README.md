@@ -14,6 +14,14 @@ conda activate ai
 pip install -r scripts/requirements.in
 ```
 
+Also, in the command-line `cd` to the main directory and run:
+
+```shell
+quarto install extension andrie/reveal-auto-agenda
+```
+
+This is to automatically generate the `agenda' slides inside the reveal.js slides (cf. [that extension's docs](https://github.com/andrie/reveal-auto-agenda#readme)).
+
 To generate the entire website and slides for the whole project, just run
 
 ```shell
