@@ -389,8 +389,8 @@ from keras.layers import Dense, Input                            #<2>
 
 model = Sequential(
     [Input((num_features,)),
-     Dense(30, activation="relu"),
-     Dense(1)]
+     Dense(30, activation="leaky_relu"),
+     Dense(1, activation="leaky_relu")]
 )                                                                #<3>
 ```
 
@@ -399,7 +399,7 @@ model = Sequential(
 3. Defines the model architecture using `Sequential()` function
 
 ::: {.content-visible unless-format="revealjs"}
-This neural network architecture includes one hidden layer with 30 neurons and an output layer with 1 neuron. While there is an activation function specified (`relu`) for the hidden layer, there is no activation function specified for the output layer. In situations where there is no specification, the output layer assumes a `linear` activation.
+This neural network architecture includes one hidden layer with 30 neurons and an output layer with 1 neuron. While there is an activation function specified (`leaky_relu`) for the hidden layer, there is no activation function specified for the output layer. In situations where there is no specification, the output layer assumes a `linear` activation.
 :::
 
 ## Inspect the model
@@ -411,12 +411,12 @@ model.summary()
 ## The model is initialised randomly
 
 ```{python}
-model = Sequential([Dense(30, activation="relu"), Dense(1)])
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
 model.predict(X_val.head(3), verbose=0)
 ```
 
 ```{python}
-model = Sequential([Dense(30, activation="relu"), Dense(1)])
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
 model.predict(X_val.head(3), verbose=0)
 ```
 ::: {.content-visible unless-format="revealjs"}
@@ -430,12 +430,12 @@ import random
 
 random.seed(123)
 
-model = Sequential([Dense(30, activation="relu"), Dense(1)])
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
 
 display(model.predict(X_val.head(3), verbose=0))
 
 random.seed(123)
-model = Sequential([Dense(30, activation="relu"), Dense(1)])
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
 
 display(model.predict(X_val.head(3), verbose=0))
 ```
@@ -448,8 +448,8 @@ By setting the seed, we can control for the randomness.
 random.seed(123)
 
 model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="leaky_relu")
 ])
 
 model.compile("adam", "mse")
@@ -563,8 +563,8 @@ y_val.min(), y_val.max()
 random.seed(123)
 
 model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1)
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="leaky_relu")
 ])
 
 model.compile("adam", "mse")
@@ -679,7 +679,7 @@ def plot_activation(activation, ax, name, hideX=False):
 fig, axs = plt.subplots(2, 2)
 plot_activation(acts.tanh, axs[0, 0], "tanh", hideX=True)
 plot_activation(acts.sigmoid, axs[0, 1], "sigmoid", hideX=True)
-plot_activation(acts.relu, axs[1, 0], "ReLU")
+plot_activation(acts.softplus, axs[1, 0], "softplus")
 plot_activation(acts.exponential, axs[1, 1], "exponential")
 
 axs[0, 0].set(ylabel="Output")
@@ -687,16 +687,16 @@ axs[1, 0].set(xlabel="Input", ylabel="Output")
 axs[1, 1].set(xlabel="Input");
 ```
 ::: {.content-visible unless-format="revealjs"}
-We should be mindful when selecting the activation function. Both `tanh` and `sigmoid` functions restrict the output values to the range of [0,1]. This is not sensible for house price modelling. `relu` does not have that problem. Also, `relu` ensures the output is positive which is realistic for house prices.
+We should be mindful when selecting the activation function. Both `tanh` and `sigmoid` functions restrict the output values to the range of [0,1]. This is not sensible for house price modelling. `softplus` does not have that problem. Also, `softplus` ensures the output is positive which is realistic for house prices.
 :::
-## Enforce positive outputs (ReLU)
+## Enforce positive outputs (softplus)
 
 ```{python}
 random.seed(123)
 
 model = Sequential([
-    Dense(30, activation="relu"),
-    Dense(1, activation="relu")
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="softplus")
 ])
 
 model.compile("adam", "mse")
@@ -755,7 +755,7 @@ Plots illustrate how all the outputs were stuck at zero. Irrespective of how man
 random.seed(123)
 
 model = Sequential([
-    Dense(30, activation="relu"),
+    Dense(30, activation="leaky_relu"),
     Dense(1, activation="exponential")
 ])
 
@@ -818,7 +818,7 @@ We can see how the original values for the input varied between 0 and 10, and ho
 random.seed(123)
 
 model = Sequential([
-    Dense(30, activation="relu"),
+    Dense(30, activation="leaky_relu"),
     Dense(1, activation="exponential")
 ])
 
@@ -955,7 +955,7 @@ from keras.callbacks import EarlyStopping                                       
 
 random.seed(123)                                                                #<2>
 model = Sequential([                                                            #<3>
-    Dense(30, activation="relu"),                                               #<3>
+    Dense(30, activation="leaky_relu"),                                               #<3>
     Dense(1, activation="exponential")                                          #<3>
 ])                                                                              #<3>
 model.compile("adam", "mse")                                                    #<4>
@@ -1077,7 +1077,7 @@ from keras.callbacks import ModelCheckpoint                                 #<1>
 
 random.seed(123)
 model = Sequential(
-    [Dense(30, activation="relu"), Dense(1, activation="exponential")]
+    [Dense(30, activation="leaky_relu"), Dense(1, activation="exponential")]
 )
 model.compile("adam", "mse")
 mc = ModelCheckpoint(                                                       #<2>
