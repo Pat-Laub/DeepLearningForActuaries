@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.554">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="">
+
+<title>AI for Actuaries - Lab: Backpropagation</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Labs/distributional-forecasting-lab.html" rel="next">
+<link href="../Lecture-6-Uncertainty-Quantification/uncertainty-quantification.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Lecture-6-Uncertainty-Quantification/uncertainty-quantification.html">Module 6</a></li><li class="breadcrumb-item"><a href="../Labs/backpropagation-lab.html">Lab: Backpropagation</a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">AI for Actuaries</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Module 1</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/course-overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/artificial-intelligence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Artificial Intelligence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/python.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Intro Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-for-data-science-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Python for Data Science</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/chess-ai.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Chess AI</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">Module 2</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-2-Deep-Learning-Keras/deep-learning-keras.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Deep Learning with Keras</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-2-Deep-Learning-Keras/project.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Project Details</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-3-Tabular-Data/categorical-variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Categorical Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-3-Tabular-Data/classification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classification</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/matplotlib-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Matplotlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/forward-pass-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Forward Pass</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/victorian-crash-severity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Victorian Car Crash Severity</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Module 3</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-4-Computer-Vision/computer-vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/latex-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: LaTeX</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/optimisation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/hurricane-damage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Aerial Photos of Hurricane Damage</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text">Module 4</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-5-Natural-Language-Processing/natural-language-processing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/police-reports.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Police Reports of US Car Crashes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text">Module 5</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-7-Recurrent-Neural-Networks-And-Time-Series/rnns-and-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Recurrent Neural Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/sydney-airport-temperature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Sydney Temperature Forecasting</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text">Module 6</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-6-Uncertainty-Quantification/uncertainty-quantification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Distributional Forecasting</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/backpropagation-lab.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Lab: Backpropagation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/distributional-forecasting-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Distributional Forecasting</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true">
+ <span class="menu-text">Module 7</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-9-Advanced-Topics/interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interpretability</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true">
+ <span class="menu-text">Module 8</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-8-Generative-Networks/generative-networks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-8-Generative-Networks/gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Adversarial Networks</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true">
+ <span class="menu-text">Module 9</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-9-Advanced-Topics/next-steps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Next Steps</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#linear-regression-via-batch-gradient-descent" id="toc-linear-regression-via-batch-gradient-descent" class="nav-link active" data-scroll-target="#linear-regression-via-batch-gradient-descent">Linear Regression via Batch Gradient Descent</a>
+  <ul class="collapse">
+  <li><a href="#finding-the-gradients" id="toc-finding-the-gradients" class="nav-link" data-scroll-target="#finding-the-gradients">Finding the Gradients</a></li>
+  <li><a href="#exercise" id="toc-exercise" class="nav-link" data-scroll-target="#exercise">Exercise</a></li>
+  <li><a href="#neural-network" id="toc-neural-network" class="nav-link" data-scroll-target="#neural-network">Neural Network</a></li>
+  <li><a href="#gradients-for-the-output-layer" id="toc-gradients-for-the-output-layer" class="nav-link" data-scroll-target="#gradients-for-the-output-layer">Gradients For the Output Layer</a></li>
+  <li><a href="#gradients-for-the-hidden-layers" id="toc-gradients-for-the-hidden-layers" class="nav-link" data-scroll-target="#gradients-for-the-hidden-layers">Gradients For the Hidden Layers</a></li>
+  <li><a href="#example-1" id="toc-example-1" class="nav-link" data-scroll-target="#example-1">Example 1</a></li>
+  </ul></li>
+  <li><a href="#implementing-backpropagation-in-python" id="toc-implementing-backpropagation-in-python" class="nav-link" data-scroll-target="#implementing-backpropagation-in-python">Implementing Backpropagation in Python</a>
+  <ul class="collapse">
+  <li><a href="#from-scratch" id="toc-from-scratch" class="nav-link" data-scroll-target="#from-scratch">From Scratch</a></li>
+  <li><a href="#from-keras" id="toc-from-keras" class="nav-link" data-scroll-target="#from-keras">From Keras</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="backpropagation-lab.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Lecture-6-Uncertainty-Quantification/uncertainty-quantification.html">Module 6</a></li><li class="breadcrumb-item"><a href="../Labs/backpropagation-lab.html">Lab: Backpropagation</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Lab: Backpropagation</h1>
+<p class="subtitle lead">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Backpropagation performs a backward pass to adjust the neural network’s parameters. It’s an algorithm that uses gradient descent to update the neural network weights.</p>
+<section id="linear-regression-via-batch-gradient-descent" class="level2">
+<h2 class="anchored" data-anchor-id="linear-regression-via-batch-gradient-descent">Linear Regression via Batch Gradient Descent</h2>
+<p>Let <span class="math inline">\boldsymbol{\theta}^{(t)}=(w^{(t)}, b^{(t)})</span> be the parameter estimates of the <span class="math inline">t</span>th iteration. Let <span class="math inline">\mathcal{D}= \{(x_i, y_i)\}_{i=1}^{N}</span> represents the training batch. Let mean squared error (MSE) be the loss/cost function <span class="math inline">\mathcal{L}</span>.</p>
+<section id="finding-the-gradients" class="level3">
+<h3 class="anchored" data-anchor-id="finding-the-gradients">Finding the Gradients</h3>
+<ul>
+<li><strong>Step 1:</strong> Write down <span class="math inline">\mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})</span> and <span class="math inline">\hat{y}(x_i; \boldsymbol{\theta}^{(t)})</span> <span class="math display">\begin{align*}
+  \mathcal{L}(\mathcal{D},\boldsymbol{\theta}^{(t)}) &amp;=\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big)^2 \\
+  \hat{y}(x_i; \boldsymbol{\theta}^{(t)}) &amp;=  w^{(t)}x_i + b^{(t)}
+\end{align*}</span></li>
+<li><strong>Step 2:</strong> Derive <span class="math inline">\frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})}</span> and <span class="math inline">\frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial \boldsymbol{\theta}^{(t)}}</span> <span class="math display">\begin{align*}
+          \frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})} &amp; = 2 \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big) \\
+          \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial w^{(t)}} &amp; = x_i
+          \\
+          \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial b^{(t)}} &amp; = 1
+      \end{align*}</span></li>
+<li><strong>Step 3:</strong> Derive <span class="math inline">\frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial \boldsymbol{\theta}^{(t)}}</span> <span id="eq-w_derivative"><span class="math display">
+          \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial w^{(t)}}
+          = \frac{1}{N}\sum_{i=1}^{N}\frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})} \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial w^{(t)}}
+          = \frac{2}{N} \sum_{i=1}^{N} \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big) \cdot x_i
+       \tag{1}</span></span> <span id="eq-b_derivative"><span class="math display">
+          \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial b^{(t)}}
+          = \frac{1}{N}\sum_{i=1}^{N}\frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})}
+              \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial b^{(t)}}
+          = \frac{2}{N} \sum_{i=1}^{N} \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big) \cdot 1
+       \tag{2}</span></span></li>
+</ul>
+<p>Then, we initialise <span class="math inline">\boldsymbol{\theta}^{(0)} = (w^{(0)}, b^{(0)})</span> and then apply gradient descent for <span class="math inline">t=1, 2, ...</span> <span class="math display">\begin{align}
+            w^{(t+1)} &amp;= w^{(t)} - \eta \cdot \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial w}\bigg|_{w^{(t)}}  \\
+            b^{(t+1)} &amp;= b^{(t)} - \eta \cdot \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial b}\bigg|_{b^{(t)}}
+\end{align}</span> using the derivatives derived from <a href="#eq-w_derivative" class="quarto-xref">Equation&nbsp;1</a> and <a href="#eq-b_derivative" class="quarto-xref">Equation&nbsp;2</a>. <span class="math inline">\eta</span> is a chosen learning rate.</p>
+</section>
+<section id="exercise" class="level3">
+<h3 class="anchored" data-anchor-id="exercise">Exercise</h3>
+<ol type="1">
+<li>Use backpropagation algorithm to find <span class="math inline">\theta^{(3)}</span> with <span class="math inline">\theta^{(0)}= (w^{(0)} = 1, b^{(0)} = 0)</span>. The dataset <span class="math inline">\mathcal{D}</span> is as follows:</li>
+</ol>
+<p>That is, the true model would be <span class="math inline">y_i = 3 x_i + 1</span>, i.e., <span class="math inline">w = 3, b = 1</span>. Implement batch gradient descent.</p>
+</section>
+<section id="neural-network" class="level3">
+<h3 class="anchored" data-anchor-id="neural-network">Neural Network</h3>
+<p>For a neural network with <span class="math inline">H</span> hidden layers: - <span class="math inline">L_0</span> is the input layer (the zeroth hidden layer). <span class="math inline">L_k</span> represents the <span class="math inline">k</span>th hidden layer for <span class="math inline">k\in \{1, 2, ..., H\}</span>. <span class="math inline">L_{H+1}</span> is the output layer (the <span class="math inline">H+1</span>th hidden layer). - <span class="math inline">\phi^{(k)}</span> represents the activation function for the <span class="math inline">k</span>th hidden layer, with <span class="math inline">k\in \{1, 2, ..., H\}</span>. <span class="math inline">\phi^{(H+1)}</span> represents the activation function for the output layer. - <span class="math inline">\boldsymbol{w}^{(k)}_j</span> represents the weights connecting the activated neurons <span class="math inline">\boldsymbol{a}^{(k-1)}</span> from the <span class="math inline">k-1</span>th hidden layer to the <span class="math inline">j</span>th neuron in the <span class="math inline">k</span>th hidden layer, where <span class="math inline">k\in \{1, ..., H+1\}</span> and <span class="math inline">j\in \{1, ..., q_{k}\}</span>, i.e., <span class="math inline">q_{k}</span> denotes the number of neurons in the <span class="math inline">k</span>th hidden layer. <span class="math inline">\boldsymbol{a}^{(0)} = \boldsymbol{z}^{(0)} =\boldsymbol{x}</span> by definition. - <span class="math inline">b^{(k)}_j</span> represents the bias for the <span class="math inline">j</span>th neuron in the <span class="math inline">k</span>th hidden layer.</p>
+</section>
+<section id="gradients-for-the-output-layer" class="level3">
+<h3 class="anchored" data-anchor-id="gradients-for-the-output-layer">Gradients For the Output Layer</h3>
+<p>The gradient for <span class="math inline">\boldsymbol{w}_1^{(H+1)}</span>, i.e., the weights connecting the neurons in the <span class="math inline">H</span>th (last) hidden layer to the first neuron of the output layer, is given by: <span id="eq-output_gradient"><span class="math display">
+    \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial \boldsymbol{w}^{(H+1)}_1}
+     = \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial \hat{y}_1} \frac{\partial \hat{y}_1}{\partial z^{(H+1)}_1 } \frac{\partial z^{(H+1)}_1}{\partial \boldsymbol{w}^{(H+1)}_1}
+\tag{3}</span></span> where</p>
+<ul>
+<li><span class="math inline">\hat{y}_1=a^{(H+1)}_1= \phi (z^{(H+1)}_1)</span></li>
+<li><span class="math inline">z^{(H+1)}_1 = \langle \boldsymbol{a}^{(H)},  \boldsymbol{w}_1^{(H+1)}  \rangle + b^{(H+1)}_1</span>.</li>
+<li><span class="math inline">\langle \cdot, \cdot \rangle</span> represents the vector product.</li>
+</ul>
+</section>
+<section id="gradients-for-the-hidden-layers" class="level3">
+<h3 class="anchored" data-anchor-id="gradients-for-the-hidden-layers">Gradients For the Hidden Layers</h3>
+<p>The gradient for <span class="math inline">\boldsymbol{w}_1^{(k)}</span>, i.e., the weights connecting the activated neurons <span class="math inline">\boldsymbol{a}^{(k-1)}</span> to the first neuron of the <span class="math inline">k</span>th hidden layer <span class="math inline">a^{(k)}_1</span>, is given by: <span id="eq-inner_gradient"><span class="math display">
+\begin{aligned}
+     \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial \boldsymbol{w}^{(k)}_1}
+     &amp;=
+    \underbrace{\textcolor{blue}{\frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial a^{(k)}_{1}}}
+    \frac{\partial a^{(k)}_{1}}{\partial z^{(k)}_1 }}_{\delta_{1}^{(k)}}   \frac{\partial z^{(k)}_1}{\partial  \boldsymbol{w}^{(k)}_1} \nonumber \\
+    &amp;= \underbrace{\textcolor{blue}{\sum_{l\in \{1,...,q_{k+1}\}}   \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{ \partial z^{(k+1)}_l}
+    \frac{\partial z^{(k+1)}_l }{\partial a_{1}^{(k)}}}}_{\textcolor{blue}{\text{Total Derivative}}}  \frac{\partial a^{(k)}_{1}}{\partial z_1^{(k)}}    \frac{\partial z^{(k)}_1}{\partial  \boldsymbol{w}^{(k)}_1}  \nonumber \\
+    &amp;
+      = \underbrace{\textcolor{blue}{\sum_{l\in \{1,...,q_{k+1}\}}   \delta_l^{(k+1)}
+    w_{1,l}^{(k+1)}}
+     \frac{\partial a^{(k)}_{1}}{\partial z_1^{(k)}}}_{\delta^{(k)}_1}   \boldsymbol{a}^{(k-1)}
+\end{aligned}
+\tag{4}</span></span></p>
+<p>Based on <a href="#eq-inner_gradient" class="quarto-xref">Equation&nbsp;4</a>, the derivative of the loss function with respect to the pre-activated value of the <span class="math inline">i</span>th neuron in the <span class="math inline">k</span>th hidden layer is given by <span class="math display">
+    \delta^{(k)}_i
+    = \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial a^{(k)}_{i}} \frac{\partial a^{(k)}_{i}}{\partial z^{(k)}_i}
+    = \sum_{l\in \{1,\ldots,q_{k+1}\}} \delta_l^{(k+1)} w_{i,l}^{(k+1)} \frac{\partial a^{(k)}_{i}}{\partial z^{(k)}_i}
+</span></p>
+</section>
+<section id="example-1" class="level3">
+<h3 class="anchored" data-anchor-id="example-1">Example 1</h3>
+<ul>
+<li>From input layer <span class="math inline">L_0</span> to the first hidden layer <span class="math inline">L_1</span>: <span class="math display">\begin{align*}
+          a^{(1)}_1 &amp;= \phi^{(1)}\big(w^{(1)}_{1, 1}x_1 + w^{(1)}_{2, 1}x_2 + w^{(1)}_{3, 1} x_3 + b^{(1)}_1\big) = \phi^{(1)} (\langle \boldsymbol{w}^{(1)}_{1}, \boldsymbol{x} \rangle  + b^{(1)}_1 )\\
+          a^{(1)}_2 &amp;= \phi^{(1)}\big(w^{(1)}_{1, 2}x_1 + w^{(1)}_{2, 2}x_2 + w^{(1)}_{3, 2} x_3 + b^{(1)}_2\big)
+          = \phi^{(1)} (\langle \boldsymbol{w}^{(1)}_{2}, \boldsymbol{x} \rangle  + b^{(1)}_2)
+      \end{align*}</span></li>
+<li>From the first hidden layer <span class="math inline">L_1</span> to the output layer layer <span class="math inline">L_2</span>: <span class="math display">\begin{align*}
+          \hat{y} &amp;= \phi^{(2)}\big(w^{(2)}_{1, 1} a^{(1)}_1 + w^{(2)}_{2, 1} a^{(1)}_2  + b^{(2)}_1\big) =  \phi^{(2)}( \langle \boldsymbol{w}^{(2)}_{1}, \boldsymbol{a}^{(1)} \rangle  + b^{(2)}_1)
+      \end{align*}</span></li>
+<li><span class="math inline">\phi^{(1)}(z)= S(z)</span> (sigmoid function) and <span class="math inline">\phi^{(2)}(z) = \exp(z)</span> (exponential function).</li>
+</ul>
+<p>Let <span class="math inline">\boldsymbol{\theta}^{(t)}=(\boldsymbol{w}^{(t)}, \boldsymbol{b}^{(t)})= \Big(\boldsymbol{w}^{(t, 1)}_1, \boldsymbol{w}^{(t, 1)}_2, \boldsymbol{w}^{(t, 2)}_1, b^{(t,1)}_1, b^{(t,1)}_2, b^{(t,2)}_1\Big)</span> be the parameter estimates of the <span class="math inline">t</span>th iteration. For illustration, we assume the bias terms <span class="math inline">\big(b^{(t,1)}_1, b^{(t,1)}_2, b^{(t,2)}_1\big)</span> are all zeros.</p>
+<ul>
+<li>For <span class="math inline">\boldsymbol{w}_1^{(2)}</span>, apply equation <a href="#eq-output_gradient" class="quarto-xref">Equation&nbsp;3</a></li>
+<li>For <span class="math inline">\boldsymbol{w}^{(1)}_1</span>, apply equation <a href="#eq-inner_gradient" class="quarto-xref">Equation&nbsp;4</a></li>
+<li>For <span class="math inline">\boldsymbol{w}^{(1)}_2</span>, apply equation <a href="#eq-inner_gradient" class="quarto-xref">Equation&nbsp;4</a></li>
+</ul>
+</section>
+</section>
+<section id="implementing-backpropagation-in-python" class="level2">
+<h2 class="anchored" data-anchor-id="implementing-backpropagation-in-python">Implementing Backpropagation in Python</h2>
+<p>See <code>Week_4_Lab_Notebook.ipynb</code> for more details. The required packages/functions are as follows:</p>
+<div id="015658b2" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>os.environ[<span class="st">"CUDA_VISIBLE_DEVICES"</span>] <span class="op">=</span> <span class="st">""</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Model</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Input</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.initializers <span class="im">import</span> Constant</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>True weights:</p>
+<div id="6fc9cbe2" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>w1_1 <span class="op">=</span> np.array([[<span class="fl">0.25</span>], [<span class="fl">0.5</span>], [<span class="fl">0.75</span>]])</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>w1_2 <span class="op">=</span> np.array([[<span class="fl">0.75</span>], [<span class="fl">0.5</span>], [<span class="fl">0.25</span>]])</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>w2_1 <span class="op">=</span> np.array([[<span class="fl">2.0</span>], [<span class="fl">3.0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Some synthetic data to work with:</p>
+<div id="e849a6d3" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seed for reproducibility</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">0</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate 10000 observations of 3 numerical features</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>X_data <span class="op">=</span> pd.DataFrame(np.random.randn(<span class="dv">10000</span>, <span class="dv">3</span>),</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                      columns<span class="op">=</span>[<span class="st">'x1'</span>, <span class="st">'x2'</span>, <span class="st">'x3'</span>])</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array(X_data)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># sigmoid activation function</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sigmoid(z):</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span>(<span class="dv">1</span><span class="op">/</span>(<span class="dv">1</span><span class="op">+</span>np.exp(<span class="op">-</span>z)))</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Hidden Layer 1</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>z1_1 <span class="op">=</span> X <span class="op">@</span> w1_1 <span class="co">#the first neuron before activation</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>z1_2 <span class="op">=</span> X <span class="op">@</span> w1_2 <span class="co">#the second neuron before activation</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>a1_1 <span class="op">=</span> sigmoid(z1_1) <span class="co">#the first neuron after activation</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>a1_2 <span class="op">=</span> sigmoid(z1_2) <span class="co">#the second neuron after activation</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co">#Output Layer</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>z2_1 <span class="op">=</span> np.concatenate((a1_1, a1_2), axis <span class="op">=</span> <span class="dv">1</span>) <span class="op">@</span> w2_1 <span class="co">#pre-activation of the ouput</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>a2_1 <span class="op">=</span> np.exp(z2_1) <span class="co">#output</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co">#The actual values</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> a2_1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="from-scratch" class="level3">
+<h3 class="anchored" data-anchor-id="from-scratch">From Scratch</h3>
+<div id="2300330e" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialised weights</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>w1_1_hat <span class="op">=</span> np.array([[<span class="fl">0.2</span>], [<span class="fl">0.6</span>], [<span class="fl">1.0</span>]])</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>w1_2_hat <span class="op">=</span> np.array([[<span class="fl">0.4</span>], [<span class="fl">0.8</span>], [<span class="fl">1.2</span>]])</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>w2_1_hat <span class="op">=</span> np.array([[<span class="fl">1.0</span>], [<span class="fl">2.0</span>]])</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>losses <span class="op">=</span> []</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>num_iterations <span class="op">=</span> <span class="dv">5000</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(num_iterations):</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">## Compute Forward Passes</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Hidden Layer 1</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  z1_1_hat <span class="op">=</span> X <span class="op">@</span> w1_1_hat  <span class="co"># the first neuron before activation</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  z1_2_hat <span class="op">=</span> X <span class="op">@</span> w1_2_hat  <span class="co"># the second neuron before activation</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  a1_1_hat <span class="op">=</span> sigmoid(z1_1_hat) <span class="co"># the first neuron after activation</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  a1_2_hat <span class="op">=</span> sigmoid(z1_2_hat) <span class="co"># the second neuron after activation</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  a1_hat <span class="op">=</span> np.concatenate((a1_1_hat, a1_2_hat), axis <span class="op">=</span> <span class="dv">1</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Output Layer</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  z2_1_hat <span class="op">=</span> a1_hat <span class="op">@</span> w2_1_hat <span class="co"># the output before activation</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  y_hat <span class="op">=</span> np.exp(z2_1_hat).reshape(<span class="bu">len</span>(y), <span class="dv">1</span>) <span class="co"># the ouput</span></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Track the Losses</span></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  loss <span class="op">=</span> (y_hat <span class="op">-</span> y)<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  losses.append(np.mean(loss))</span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Compute Deltas</span></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  delta2_1 <span class="op">=</span> <span class="dv">2</span> <span class="op">*</span> (y_hat <span class="op">-</span> y) <span class="op">*</span> np.exp(z2_1_hat)</span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  delta1_1 <span class="op">=</span> w2_1_hat[<span class="dv">0</span>] <span class="op">*</span> delta2_1 <span class="op">*</span> sigmoid(z1_1_hat) <span class="op">*</span> (<span class="dv">1</span><span class="op">-</span>sigmoid(z1_1_hat))</span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  delta1_2 <span class="op">=</span> w2_1_hat[<span class="dv">1</span>] <span class="op">*</span> delta2_1 <span class="op">*</span> sigmoid(z1_2_hat) <span class="op">*</span> (<span class="dv">1</span><span class="op">-</span>sigmoid(z1_2_hat))</span>
+<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Compute Gradients</span></span>
+<span id="cb4-31"><a href="#cb4-31" aria-hidden="true" tabindex="-1"></a>  d2_1_hat <span class="op">=</span> delta2_1 <span class="op">*</span> a1_hat</span>
+<span id="cb4-32"><a href="#cb4-32" aria-hidden="true" tabindex="-1"></a>  d1_1_hat <span class="op">=</span> delta1_1 <span class="op">*</span> X</span>
+<span id="cb4-33"><a href="#cb4-33" aria-hidden="true" tabindex="-1"></a>  d1_2_hat <span class="op">=</span> delta1_2 <span class="op">*</span> X</span>
+<span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Learning Rate</span></span>
+<span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  eta <span class="op">=</span> <span class="fl">0.0005</span></span>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Apply Batch Gradient Descent</span></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>  w2_1_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d2_1_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">2</span>, <span class="dv">1</span>)</span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  w1_1_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d1_1_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">3</span>, <span class="dv">1</span>)</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  w1_2_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d1_2_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">3</span>, <span class="dv">1</span>)</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w1_1_hat)</span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w1_2_hat)</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w2_1_hat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[0.24985576]
+ [0.5000211 ]
+ [0.75018656]]
+[[0.74987578]
+ [0.49998626]
+ [0.25009692]]
+[[1.99874327]
+ [3.00125615]]</code></pre>
+</div>
+</div>
+</section>
+<section id="from-keras" class="level3">
+<h3 class="anchored" data-anchor-id="from-keras">From Keras</h3>
+<div id="4eb8f9d4" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># An initialiser for the weights in the neural network </span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>init1 <span class="op">=</span> Constant([[<span class="fl">0.2</span>, <span class="fl">0.4</span>], [<span class="fl">0.6</span>, <span class="fl">0.8</span>], [<span class="fl">1.0</span>, <span class="fl">1.2</span>]])</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>init2 <span class="op">=</span> Constant([[<span class="fl">1.0</span>, <span class="fl">2.0</span>]])</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Build a neural network </span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># `use_bias` (whether to include bias terms for the neurons or not) is True by default</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># `kernel_initializer` adjusts the initialisations of the weights </span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Input(shape<span class="op">=</span>X.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"Inputs"</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>a1 <span class="op">=</span> Dense(<span class="dv">2</span>, <span class="st">"sigmoid"</span>, use_bias<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>          kernel_initializer<span class="op">=</span>init1)(x)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>y_hat <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, use_bias<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>            kernel_initializer<span class="op">=</span>init2)(a1)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(x, y_hat)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Choosing the optimiser and the loss function</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"mse"</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Model Training</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="co"># We don't implement early stopping to make the results comparable to the previous section</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(X, y, epochs<span class="op">=</span><span class="dv">5000</span>, verbose<span class="op">=</span><span class="dv">0</span>, batch_size <span class="op">=</span> <span class="bu">len</span>(y))</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Print out the weights</span></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model.get_weights())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[array([[0.30257475, 0.80548096],
+       [0.49333408, 0.50670725],
+       [0.6842522 , 0.20761964]], dtype=float32), array([[2.5133715, 2.5152776],
+       [2.486748 , 2.4848895]], dtype=float32)]</code></pre>
+</div>
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../Lecture-6-Uncertainty-Quantification/uncertainty-quantification.html" class="pagination-link" aria-label="Distributional Forecasting">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Distributional Forecasting</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Labs/distributional-forecasting-lab.html" class="pagination-link" aria-label="Lab: Distributional Forecasting">
+        <span class="nav-page-text">Lab: Distributional Forecasting</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
