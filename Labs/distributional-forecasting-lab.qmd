@@ -1,0 +1,228 @@
+---
+title: "Lab: Distributional Forecasting"
+author: ""
+format:
+  html: default
+  pdf: default
+execute:
+    warning: false
+---
+
+
+## CANN
+
+1. Find the coefficients $\boldsymbol{\beta}_{\text{GLM}}$ of the GLM with a link function $g(\cdot)$.
+2. Find the weights $\boldsymbol{w}_{\text{CANN}}$ of a neural network $\mathcal{M}_{\text{CANN}}:\mathbb{R}^{d_{\boldsymbol{x}}}\to\mathbb{R}$.
+3. Given a new instance $\boldsymbol{x}$, we have $$\mathbb{E}[Y|\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).$$
+
+## MDN
+
+![A typical MDN structure.](MDN.png)
+
+## Exercises
+
+### CANN
+
+1.  Train a CANN model that predicts the mean as follows:
+    $$\mathbb{E}[Y|\boldsymbol{x}] = g^{-1}\Big( \textcolor{orange}{0.9} \cdot\langle\boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle + \textcolor{orange}{0.1} \cdot \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).$$
+    where $g^{-1}(\cdot)=\exp(\cdot)$.
+    Hint: Check slides 20, 23, 24, and 25, and change the following line of code on slide 24.
+
+    ``` python
+    def CANN_negative_log_likelihood(y_true, y_pred):
+        ...
+        mu = tf.math.exp(CANN_logmu + GLM_logmu)
+    ```
+2.  Recompute the dispersion parameter using the adjusted model. 
+    Hint: use the code from slide 25 and change the following line of code
+
+    ```python
+    mus = np.exp(np.sum(CANN.predict(X_train), axis = 1))
+    ```
+
+### MDN
+
+1.  Increase the number of mixture components to 5. You can use the code from slide 33. 
+2.  Change the distributional assumption from gamma to inverse gamma for the mixture density network model.
+    Hint: adjust the following code using this \href{https://www.tensorflow.org/probability/api_docs/python/tfp/distributions/InverseGamma}{link}.
+
+    ```python
+    mixture_distribution = tfd.MixtureSameFamily(
+        mixture_distribution=tfd.Categorical(probs=pis),
+        components_distribution=tfd.Gamma(alphas, betas))
+    ```
+3.  Report the average negative log-likelihood loss (test data) using the new MDN.
+    Hint: slides 36 and 39.
+
+### Extension
+
+1.  Compute the CRPS for the models trained in Exercise \hyperref[cann]{1.3.1} and Exercise \hyperref[cann]{1.3.2}.
+2.  Build a Mixture Density Network (MDN), where the first component is a gamma distribution, the second component is a log-normal distribution, and the third component is an inverse gamma distribution.
+
+<!-- ## Epistemic Uncertainty -->
+
+### Monte Carlo Dropout
+
+![Dropout](dropout.png)
+
+For Monte Carlo (MC) dropout, we intentionally leave the dropout on when making predictions.
+
+<!--
+### Bayesian Neural Network
+
+![A typical BNN structure.](BNN_raw.png)
+-->
+
+### Deep Ensembles
+
+- Train $D$ neural networks with different random weights initialisations independently in parallel. The trained weights are $\boldsymbol{w}^{(1)}, \ldots, \boldsymbol{w}^{(D)}$.
+- Ensemble the outputs when making predictions, i.e., taking the average of the outputs from each individual neural network. 
+
+<!--
+## Uncertainty Quantification
+
+Given a new instance $\boldsymbol{x}$, the total predictive variance is given by 
+\begin{align}
+    \mathbb{V}[Y|\boldsymbol{x}] 
+    &=  \mathbb{E}[\mathbb{V}[Y|\boldsymbol{x}, \boldsymbol{W}]] + \mathbb{V}[\mathbb{E}[Y|\boldsymbol{x}, \boldsymbol{W}]] \nonumber \\
+    & = \int_{\boldsymbol{w}} \mathbb{V}[Y|\boldsymbol{x}, \boldsymbol{w}] \cdot f_{\boldsymbol{w}|\boldsymbol{\theta}}(\boldsymbol{w}) \ \mathrm{d}\boldsymbol{w} \nonumber
+    \\ & \quad \quad +
+    \int_{\boldsymbol{w}} \Big(\mathbb{E}[Y|\boldsymbol{x}, \boldsymbol{w}] -\mathbb{E}[\mathbb{E}[Y|\boldsymbol{x}, \boldsymbol{w}]] \Big)^2\cdot f_{\boldsymbol{w}|\boldsymbol{\theta}}(\boldsymbol{w}) \ \mathrm{d}\boldsymbol{w} \nonumber
+    \\ \label{ale}
+    &\approx \underbrace{\frac{1}{M}\sum_{m=1}^{M}\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]}_{\text{Aleatoric}}
+\\ \label{epi} &\quad \quad
++\underbrace{\frac{1}{M}\sum_{m=1}^{M}\bigg(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]-\frac{1}{M}\sum_{m=1}^{M}\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]\bigg)^2}_{\text{Epistemic}},
+\end{align}
+Equations  \eqref{ale} and \eqref{epi} can help us to quantify aleatoric and epistemic uncertainty, respectively. 
+-->
+
+### Exercises
+
+#### Monte Carlo Dropout
+
+1.  Construct a neural network `MCDropout_LN` that outputs the parameters of a gamma distribution with the following structure and specification:
+
+    - Use
+
+      ```python
+      random.seed(1); tf.random.set_seed(1)
+      ```
+    - `Adam` optimiser with the default learning rate 
+    - validation split of 0.2 while training
+    - two hidden layers with 64 neurons in each layer, and 
+    - a constant dropout rate of 0.2.
+
+    Hint: the following code can be helpful
+
+    ```python
+    # Output the paramters of the gamma distribution
+    outputs = Dense(2, activation = 'softplus')(x)
+
+    # Construct the Gamma distribution on the last layer
+    distributions = tfp.layers.DistributionLambda(
+          lambda t: tfd.Gamma(concentration=t[..., 0:1],
+                              rate=t[..., 1:2]))(outputs)
+
+    # Model 
+    MCDropout_LN = Model(inputs, distributions)
+
+    # Loss Function
+    def gamma_loss(y_true, y_pred):
+        return -y_pred.log_prob(y_true)
+
+    # Then use the loss function when compiling the model
+    MCDropout_LN.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+                    loss=gamma_loss)
+    ```
+2.  Apply MC dropout 2000 times and store the parameter estimates for the first instance in the test dataset using the model `MCDropout_LN`. 
+    Hint: slide 61, and replace
+
+    ```python
+    predicted_distributions = gamma_bnn(X_test[9:10].values)
+    ```
+
+    with
+
+    ```python
+    predicted_distributions = MCDropout_LN(X_test[:1].values, training = True)
+    ```
+
+3.  Calculate the aleatoric and epistemic uncertainty for the instance using equations \eqref{ale} and \eqref{epi}.
+    Hint: slide 64.
+
+<!--
+### Bayesian Neural Network
+
+1.  Change the scale parameter of the prior distribution of the weights to 2.
+    Hint: slide 53.
+2.  Change the distributional assumption from gamma to log-normal for the Bayesian neural network model demonstrated in the lecture.
+    Hint: slides 59 and 60, and you need to change the following code on slide 59.  
+    ```python
+    outputs = Dense(2, activation = 'softplus')(x)
+    ```
+    Note that you need two outputs: one for the mean parameter and one for the scale parameter.
+    Consider the choice of the activation function.
+    You might need to concatenate the output:
+    ```python
+    outputs = Concatenate(axis=1)([mus, sigmas + 1e-5])
+    ```
+    Hint: adjust the following code to change the distributional assumption.
+    ```python
+    distributions = tfp.layers.DistributionLambda( lambda t: 
+                         tfd.Gamma(concentration=t[..., 0:1],
+                                  rate=t[..., 1:2]))(outputs)
+    ```
+3.  Name the trained model `BNN_LN`. Train for 800 epochs with patience of 30.
+    Hint: slide 60.
+4.  Conduct posterior sampling 2000 times for the first instance in the test dataset using `BNN_LN`.
+    Record the location and scale parameters. Use
+    ```python
+    random.seed(1); tf.random.set_seed(1)
+    ```
+5.  Plot the density functions using the first 50 pairs of location and scale parameters sampled. 
+    Hint:
+    ```python
+    import matplotlib.pyplot as plt
+
+    # Define the range of the x-axis (density)
+    x = np.linspace(0, 1500, 1000)
+
+    # Create a new figure with a specific size
+    fig = plt.figure(figsize=(20, 15))
+
+    # Change the plot background color to gray
+    ax = fig.add_subplot(111)
+    ax.set_facecolor('lightgray')
+
+    Colours = ['blue', 'cyan', 'magenta',
+              'black', 'purple',  'navy']
+
+    # Plot each density
+    ... # Run a for loop
+    ... # Run a for loop
+    ... # Run a for loop
+
+    # Add the observed value
+    plt.xlabel('$y$', fontsize = 27)
+    plt.ylabel('$f(y|x)$', fontsize = 27)
+    plt.ylim((0, 0.005))
+    plt.title('Density Plot', fontsize = 30)
+    plt.axvline(y_test[0], ls="--", color='black',
+                alpha=0.8, label = 'Observation')
+    plt.legend(prop={'size': 20})
+    plt.grid(True, color='white')
+    plt.show()
+    ```
+6.  Calculate the aleatoric and epistemic uncertainty for the instance using equations \eqref{ale} and \eqref{epi}.  
+    Hint: slide 64.
+-->
+
+### Deep Ensembles
+
+1.  Reuse the code demonstrated in the lecture and calculate the aleatoric and epistemic uncertainty for the first instance in the test dataset using equations \eqref{ale} and \eqref{epi}. 
+    Hint: slides 66, 67, and 68.
+
+### Extension
+
+1.  Prove the result on slide 55.
+2.  Replace the variational distribution with a mixture of Gaussian for the BNN introduced in Exercise \hyperref[bnn]{2.5.2}.

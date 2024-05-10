@@ -1,0 +1,274 @@
+---
+title: "Lab: Backpropagation"
+author: ""
+format:
+  html: default
+  pdf: default
+execute:
+    warning: false
+---
+
+Backpropagation performs a backward pass to adjust the neural network's parameters.
+It's an algorithm that uses gradient descent to update the neural network weights.
+
+## Linear Regression via Batch Gradient Descent
+
+Let $\boldsymbol{\theta}^{(t)}=(w^{(t)}, b^{(t)})$ be the parameter estimates of the $t$th iteration.
+Let $\mathcal{D}= \{(x_i, y_i)\}_{i=1}^{N}$ represents the training batch. Let mean squared error (MSE) be the loss/cost function $\mathcal{L}$. 
+
+### Finding the Gradients
+
+- **Step 1:** Write down $\mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})$ and $\hat{y}(x_i; \boldsymbol{\theta}^{(t)})$
+\begin{align*}
+    \mathcal{L}(\mathcal{D},\boldsymbol{\theta}^{(t)}) &=\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big)^2 \\
+    \hat{y}(x_i; \boldsymbol{\theta}^{(t)}) &=  w^{(t)}x_i + b^{(t)}
+\end{align*}
+- **Step 2:** Derive $\frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})}$ and $\frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial \boldsymbol{\theta}^{(t)}}$
+        \begin{align*}
+            \frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})} & = 2 \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big) \\
+            \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial w^{(t)}} & = x_i
+            \\
+            \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial b^{(t)}} & = 1
+        \end{align*}
+- **Step 3:** Derive $\frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial \boldsymbol{\theta}^{(t)}}$
+        $$
+            \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial w^{(t)}}
+            = \frac{1}{N}\sum_{i=1}^{N}\frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})} \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial w^{(t)}}
+            = \frac{2}{N} \sum_{i=1}^{N} \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big) \cdot x_i
+        $$ {#eq-w_derivative}
+        $$
+            \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial b^{(t)}}
+            = \frac{1}{N}\sum_{i=1}^{N}\frac{\partial \mathcal{L}(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}), y_i)}{\partial \hat{y}(x_i; \boldsymbol{\theta}^{(t)})} 
+                \frac{\partial\hat{y}(x_i; \boldsymbol{\theta}^{(t)})}{\partial b^{(t)}} 
+            = \frac{2}{N} \sum_{i=1}^{N} \big(\hat{y}(x_i; \boldsymbol{\theta}^{(t)}) - y_i \big) \cdot 1
+        $$ {#eq-b_derivative}
+
+Then, we initialise $\boldsymbol{\theta}^{(0)} = (w^{(0)}, b^{(0)})$ and then apply gradient descent for $t=1, 2, ...$
+\begin{align}
+            w^{(t+1)} &= w^{(t)} - \eta \cdot \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial w}\bigg|_{w^{(t)}}  \\
+            b^{(t+1)} &= b^{(t)} - \eta \cdot \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta}^{(t)})}{\partial b}\bigg|_{b^{(t)}} 
+\end{align}
+using the derivatives derived from @eq-w_derivative and @eq-b_derivative. $\eta$ is a chosen learning rate.
+
+### Exercise
+
+1. Use backpropagation algorithm to find $\theta^{(3)}$ with  $\theta^{(0)}= (w^{(0)} = 1, b^{(0)} = 0)$. The dataset $\mathcal{D}$ is as follows:
+        \begin{table}[H]
+        \begin{center}
+        \begin{tabular}{|c|c|c|}
+        \hline
+        $i$ & \textbf{$x_i$} & \textbf{$y_i$}\\
+        \hline
+        1 & 2 & 7\\
+        \hline
+        2 & 3 &  10\\
+        \hline
+        3 & 5 &  16\\
+         \hline
+        \end{tabular}
+        \caption{Training Dataset for \hyperref[LR]{1.1}.}
+        \label{tab:my_label}
+        \end{center}
+        \end{table}
+
+That is, the true model would be $y_i = 3 x_i + 1$, i.e., $w = 3, b = 1$.
+Implement batch gradient descent.
+
+### Neural Network
+
+For a neural network with $H$ hidden layers:
+- $L_0$ is the input layer (the zeroth hidden layer). $L_k$ represents the $k$th hidden layer for $k\in \{1, 2, ..., H\}$. $L_{H+1}$ is the output layer (the $H+1$th hidden layer).
+- $\phi^{(k)}$ represents the activation function for the $k$th hidden layer, with $k\in \{1, 2, ..., H\}$. $\phi^{(H+1)}$ represents the activation function for the output layer.
+- $\boldsymbol{w}^{(k)}_j$ represents the weights connecting the activated neurons $\boldsymbol{a}^{(k-1)}$ from the $k-1$th hidden layer to the $j$th neuron in the $k$th hidden layer, where $k\in \{1, ..., H+1\}$ and $j\in \{1, ..., q_{k}\}$, i.e., $q_{k}$ denotes the number of neurons in the $k$th hidden layer. $\boldsymbol{a}^{(0)} = \boldsymbol{z}^{(0)} =\boldsymbol{x}$ by definition.
+- $b^{(k)}_j$ represents the bias for the $j$th neuron in the $k$th hidden layer.
+
+### Gradients For the Output Layer
+
+The gradient for $\boldsymbol{w}_1^{(H+1)}$, i.e., the weights connecting the neurons in the $H$th (last) hidden layer to the first neuron of the output layer, is given by: 
+$$
+    \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial \boldsymbol{w}^{(H+1)}_1}
+     = \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial \hat{y}_1} \frac{\partial \hat{y}_1}{\partial z^{(H+1)}_1 } \frac{\partial z^{(H+1)}_1}{\partial \boldsymbol{w}^{(H+1)}_1} 
+$$ {#eq-output_gradient}
+where 
+
+- $\hat{y}_1=a^{(H+1)}_1= \phi (z^{(H+1)}_1)$
+- $z^{(H+1)}_1 = \langle \boldsymbol{a}^{(H)},  \boldsymbol{w}_1^{(H+1)}  \rangle + b^{(H+1)}_1$.
+- $\langle \cdot, \cdot \rangle$ represents the vector product.
+
+### Gradients For the Hidden Layers
+
+The gradient for $\boldsymbol{w}_1^{(k)}$, i.e., the weights connecting the activated neurons $\boldsymbol{a}^{(k-1)}$ to the first neuron of the $k$th hidden layer $a^{(k)}_1$, is given by:
+$$
+\begin{aligned}
+     \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial \boldsymbol{w}^{(k)}_1}
+     &=
+    \underbrace{\textcolor{blue}{\frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial a^{(k)}_{1}}}
+    \frac{\partial a^{(k)}_{1}}{\partial z^{(k)}_1 }}_{\delta_{1}^{(k)}}   \frac{\partial z^{(k)}_1}{\partial  \boldsymbol{w}^{(k)}_1} \nonumber \\
+    &= \underbrace{\textcolor{blue}{\sum_{l\in \{1,...,q_{k+1}\}}   \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{ \partial z^{(k+1)}_l}
+    \frac{\partial z^{(k+1)}_l }{\partial a_{1}^{(k)}}}}_{\textcolor{blue}{\text{Total Derivative}}}  \frac{\partial a^{(k)}_{1}}{\partial z_1^{(k)}}    \frac{\partial z^{(k)}_1}{\partial  \boldsymbol{w}^{(k)}_1}  \nonumber \\
+    &
+      = \underbrace{\textcolor{blue}{\sum_{l\in \{1,...,q_{k+1}\}}   \delta_l^{(k+1)}
+    w_{1,l}^{(k+1)}}
+     \frac{\partial a^{(k)}_{1}}{\partial z_1^{(k)}}}_{\delta^{(k)}_1}   \boldsymbol{a}^{(k-1)}
+\end{aligned}
+$$ {#eq-inner_gradient}
+
+Based on @eq-inner_gradient, the derivative of the loss function with respect to the pre-activated value of the $i$th neuron in the $k$th hidden layer is given by 
+$$
+    \delta^{(k)}_i
+    = \frac{\partial \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})}{\partial a^{(k)}_{i}} \frac{\partial a^{(k)}_{i}}{\partial z^{(k)}_i}
+    = \sum_{l\in \{1,\ldots,q_{k+1}\}} \delta_l^{(k+1)} w_{i,l}^{(k+1)} \frac{\partial a^{(k)}_{i}}{\partial z^{(k)}_i}
+$$
+
+### Example 1
+
+- From input layer $L_0$ to the first hidden layer $L_1$:
+        \begin{align*}
+            a^{(1)}_1 &= \phi^{(1)}\big(w^{(1)}_{1, 1}x_1 + w^{(1)}_{2, 1}x_2 + w^{(1)}_{3, 1} x_3 + b^{(1)}_1\big) = \phi^{(1)} (\langle \boldsymbol{w}^{(1)}_{1}, \boldsymbol{x} \rangle  + b^{(1)}_1 )\\
+            a^{(1)}_2 &= \phi^{(1)}\big(w^{(1)}_{1, 2}x_1 + w^{(1)}_{2, 2}x_2 + w^{(1)}_{3, 2} x_3 + b^{(1)}_2\big)
+            = \phi^{(1)} (\langle \boldsymbol{w}^{(1)}_{2}, \boldsymbol{x} \rangle  + b^{(1)}_2) 
+        \end{align*}
+- From the first hidden layer $L_1$ to the output layer layer $L_2$:
+        \begin{align*}
+            \hat{y} &= \phi^{(2)}\big(w^{(2)}_{1, 1} a^{(1)}_1 + w^{(2)}_{2, 1} a^{(1)}_2  + b^{(2)}_1\big) =  \phi^{(2)}( \langle \boldsymbol{w}^{(2)}_{1}, \boldsymbol{a}^{(1)} \rangle  + b^{(2)}_1)
+        \end{align*}
+- $\phi^{(1)}(z)= S(z)$ (sigmoid function) and $\phi^{(2)}(z) = \exp(z)$ (exponential function).
+
+Let $\boldsymbol{\theta}^{(t)}=(\boldsymbol{w}^{(t)}, \boldsymbol{b}^{(t)})= \Big(\boldsymbol{w}^{(t, 1)}_1, \boldsymbol{w}^{(t, 1)}_2, \boldsymbol{w}^{(t, 2)}_1, b^{(t,1)}_1, b^{(t,1)}_2, b^{(t,2)}_1\Big)$ be the parameter estimates of the $t$th iteration.
+For illustration, we assume the bias terms $\big(b^{(t,1)}_1, b^{(t,1)}_2, b^{(t,2)}_1\big)$ are all zeros.
+
+- For $\boldsymbol{w}_1^{(2)}$, apply equation @eq-output_gradient
+- For $\boldsymbol{w}^{(1)}_1$, apply equation @eq-inner_gradient
+- For $\boldsymbol{w}^{(1)}_2$, apply equation @eq-inner_gradient
+
+## Implementing Backpropagation in Python
+
+See `Week_4_Lab_Notebook.ipynb` for more details. The required packages/functions are as follows:
+
+```{python}
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+import random
+import numpy as np
+import pandas as pd
+
+from keras.models import Sequential
+from keras.models import Model
+from keras.layers import Input
+from keras.layers import Dense
+from keras.initializers import Constant
+```
+
+True weights:
+
+```{python}
+w1_1 = np.array([[0.25], [0.5], [0.75]])
+w1_2 = np.array([[0.75], [0.5], [0.25]])
+w2_1 = np.array([[2.0], [3.0]])
+```
+
+Some synthetic data to work with:
+```{python}
+# Set seed for reproducibility
+np.random.seed(0)
+
+# Generate 10000 observations of 3 numerical features
+X_data = pd.DataFrame(np.random.randn(10000, 3),
+                      columns=['x1', 'x2', 'x3'])
+X = np.array(X_data)
+
+# sigmoid activation function
+def sigmoid(z):
+  return(1/(1+np.exp(-z)))
+
+# Hidden Layer 1
+z1_1 = X @ w1_1 #the first neuron before activation
+z1_2 = X @ w1_2 #the second neuron before activation
+a1_1 = sigmoid(z1_1) #the first neuron after activation
+a1_2 = sigmoid(z1_2) #the second neuron after activation
+
+#Output Layer
+z2_1 = np.concatenate((a1_1, a1_2), axis = 1) @ w2_1 #pre-activation of the ouput
+a2_1 = np.exp(z2_1) #output
+
+#The actual values
+y = a2_1
+```
+
+### From Scratch
+
+```{python}
+# Initialised weights
+w1_1_hat = np.array([[0.2], [0.6], [1.0]])
+w1_2_hat = np.array([[0.4], [0.8], [1.2]])
+w2_1_hat = np.array([[1.0], [2.0]])
+
+losses = []
+num_iterations = 5000
+for _ in range(num_iterations):
+  ## Compute Forward Passes
+  # Hidden Layer 1
+  z1_1_hat = X @ w1_1_hat  # the first neuron before activation
+  z1_2_hat = X @ w1_2_hat  # the second neuron before activation
+  a1_1_hat = sigmoid(z1_1_hat) # the first neuron after activation
+  a1_2_hat = sigmoid(z1_2_hat) # the second neuron after activation
+  a1_hat = np.concatenate((a1_1_hat, a1_2_hat), axis = 1)
+
+  # Output Layer
+  z2_1_hat = a1_hat @ w2_1_hat # the output before activation
+  y_hat = np.exp(z2_1_hat).reshape(len(y), 1) # the ouput
+
+  # Track the Losses
+  loss = (y_hat - y)**2
+  losses.append(np.mean(loss))
+
+  # Compute Deltas
+  delta2_1 = 2 * (y_hat - y) * np.exp(z2_1_hat)
+  delta1_1 = w2_1_hat[0] * delta2_1 * sigmoid(z1_1_hat) * (1-sigmoid(z1_1_hat))
+  delta1_2 = w2_1_hat[1] * delta2_1 * sigmoid(z1_2_hat) * (1-sigmoid(z1_2_hat))
+
+  # Compute Gradients
+  d2_1_hat = delta2_1 * a1_hat
+  d1_1_hat = delta1_1 * X
+  d1_2_hat = delta1_2 * X
+
+  # Learning Rate
+  eta = 0.0005
+  # Apply Batch Gradient Descent
+  w2_1_hat -= eta * np.mean(d2_1_hat, axis = 0).reshape(2, 1)
+  w1_1_hat -= eta * np.mean(d1_1_hat, axis = 0).reshape(3, 1)
+  w1_2_hat -= eta * np.mean(d1_2_hat, axis = 0).reshape(3, 1)
+
+print(w1_1_hat)
+print(w1_2_hat)
+print(w2_1_hat)
+```
+
+### From Keras
+
+```{python}
+# An initialiser for the weights in the neural network 
+init1 = Constant([[0.2, 0.4], [0.6, 0.8], [1.0, 1.2]])
+init2 = Constant([[1.0, 2.0]])
+
+# Build a neural network 
+# `use_bias` (whether to include bias terms for the neurons or not) is True by default
+# `kernel_initializer` adjusts the initialisations of the weights 
+x = Input(shape=X.shape[1:], name="Inputs")
+a1 = Dense(2, "sigmoid", use_bias=False,
+          kernel_initializer=init1)(x)
+y_hat = Dense(1, "exponential", use_bias=False,
+            kernel_initializer=init2)(a1)
+model = Model(x, y_hat)
+
+# Choosing the optimiser and the loss function
+model.compile(optimizer="adam", loss="mse")
+
+# Model Training
+# We don't implement early stopping to make the results comparable to the previous section
+hist = model.fit(X, y, epochs=5000, verbose=0, batch_size = len(y))
+
+# Print out the weights
+print(model.get_weights())
+```

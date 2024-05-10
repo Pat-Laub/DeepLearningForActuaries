@@ -1,0 +1,267 @@
+---
+title: "Lab: Python for Data Science"
+author: ""
+format:
+  html: default
+  pdf: default
+---
+
+## Data Science Libraries
+
+A couple of fundamental data science packages in Python are NumPy and Pandas.
+NumPy is a package for handling matrices and vector math, while Pandas handles dataframes and data wrangling.
+
+Libraries are imported using the `import` keyword:
+
+```{python}
+import numpy
+```
+
+You can set an alias to the libraries you are importing. Usually this is done to simplify the name of a long library.
+
+```{python}
+import numpy as np
+import pandas as pd
+```
+
+You can also import specific functions from a library by using the `from` keyword:
+
+```{python}
+from sklearn.preprocessing import StandardScaler
+```
+
+In this lab, we will be working with two libraries used for data processing, NumPy and Pandas.
+
+```{python}
+ 
+```
+
+### A Note on Installing Libraries
+
+If you have successfully installed Anaconda onto your system, you should already have NumPy and Pandas installed as well. However, if for some reason you do not have a particular library installed, or you would like to update a particular library, you can use the command line to install new packages.
+
+You can either open up Command Prompt/Terminal and type:
+```
+pip install numpy
+```
+
+The `pip` method will also work on Anaconda Prompt.
+This will install the libraries onto your machine.
+When installing libraries, it is highly recommended that you create a Conda **environment**, as this allows you to install and manage separate sets of libraries for each Python project you are working on.
+
+For a tutorial on how to set up your own environments, see https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/environments.html
+
+## NumPy
+
+NumPy is a package used for scientific computing in Python, with the ability to perform advanced mathematical operations, linear algebra, and vectorisation. Core to the NumPy package is the NumPy array. 
+
+### NumPy 1D arrays
+
+Unlike lists in base Python, NumPy arrays can only work with numerical data. NumPy arrays are also faster and consumes less memory than Python lists (source: numpy.org/doc/stable/user/absolute_beginners.html). 
+
+```{python}
+l1 = [1,1,1]
+l2 = [2,2,2]
+
+a1 = np.array(l1)
+a2 = np.array(l2)
+
+#What do you notice?
+print(l1 + l2)
+print(a1 + a2)
+```
+
+As you can see in the above code snippet, NumPy arrays are designed for linear algebra operations. 
+
+Other operations you can do include adding and multiplying arrays by a constant, calculating determinants of matrices, and even calculating eigenvalues and eigenvectors:
+
+```{python}
+a1 + 3 #adds 3 to each element of the array, returns an error if done to a list
+a1 * 3 #multiplies each element by 3
+```
+
+```{python}
+m1 = np.array([[2,4],[1,3]]) #creating a 2D array, i.e. a matrix
+print(m1)
+
+print(np.linalg.det(m1)) #Determinant
+print(np.linalg.eig(m1)) #Eigenvalues and eigenvectors
+```
+
+You can create arrays using ranges or linearly spaced sequences:
+
+```{python}
+array_range = np.arange(5)
+array_lin = np.linspace(start = 0, stop = 1, num = 6)
+
+print(array_range)
+print(array_lin)
+```
+
+### NumPy 2D arrays
+
+As mentioned beforehand, you can create a matrix by feeding a list of lists into `np.array()`:
+
+```{python}
+m1 = np.array([[2,4],[1,3]])
+```
+
+You can also create matrices of zeroes and identity matrices:
+
+```{python}
+m_zero = np.zeros([3,3]) #3 x 3 matrix
+print(m_zero)
+
+m_ones = np.ones([3,3])
+print(m_ones)
+
+m_id = np.identity(3)
+print(m_id)
+```
+
+## Pandas
+
+Pandas is a Python library used for working with tabular data. It contains tools for data manipulation, time series, and data visualisation. Pandas can be considered a Python equivalent to `dplyr`, and core to Pandas is the `DataFrame` object, which is analogous to R's `data.frame` type.
+
+```{python}
+import pandas as pd
+```
+
+### DataFrames
+
+For this lab we will be working with the Titanic machine learning dataset - a legendary dataset in the data science community.
+It is available at https://www.kaggle.com/competitions/titanic/data, and we will specifically be using `train.csv`.
+
+To use the dataset in Google Colab, we need to upload and then import it.
+To see which datasets are available in Google Colab, click the folder icon on the sidebar.
+Here, you can see the datasets you have uploaded, as well as any sample datasets that are already built into Google Colab.
+To upload files, click the upload icon that appears and select the file that you want to upload.
+
+![Google Colab Files](google_colab_files.png)
+
+We will import the dataset using Pandas' `read_csv()` function.
+
+```{python}
+titanic = pd.read_csv("train.csv")
+```
+
+This creates a `DataFrame` object, which is a 2-dimensional, tabular data structure.
+
+There are a number of methods available in Pandas to inspect your data, including `.head()` and `.info()`.
+
+```{python}
+titanic.head() #much like the head() function in R, this method prints the first 5 rows of the dataset.
+```
+
+```{python}
+titanic.tail(10) # Prints last 10 rows
+```
+
+```{python}
+titanic.info() # Gives a list of columns, their counts and their types, akin to the str() function in R.
+```
+
+Selecting columns of a Pandas DataFrame is done using square brackets notation:
+
+```{python}
+titanic["Age"] # Selecting "Age" column from dataset
+```
+
+```{python}
+titanic[["Sex","Age"]] # Selecting multiple columns
+```
+
+There are several ways of selecting rows in a DataFrame, including selecting by row number using the square bracket notation or the `.iloc` method, or selecting by row name using the `.loc` method.
+
+```{python}
+titanic[4:9] # Selecting rows by the index (can be different to row number)
+```
+
+```{python}
+titanic.iloc[4:9] # Selecting rows by their row numbers
+```
+
+```{python}
+titanic.set_index("Name", inplace=True) #sets the "Name" column as the index
+# By setting inplace = True, we modify the existing DataFrame rather than creating a new one.
+# In other words, we do not need to assign it back to the titanic variable.
+```
+
+```{python}
+# Selecting rows using .loc
+titanic.loc[["Allen, Mr. William Henry", "Moran, Mr. James"]]
+```
+
+When selecting both rows and columns, using `.loc` or `.iloc` is necessary:
+
+```{python}
+titanic.iloc[4:9, [0, 3]] # Selecting rows 4 to 8, and columns 0 and 3
+```
+
+```{python}
+titanic.loc[["McCarthy, Mr. Timothy J", "Johnson, Mrs. Oscar W (Elisabeth Vilhelmina Berg)"], "Age"]
+```
+
+You can use the bracket notation to filter the dataset:
+
+```{python}
+titanic[titanic["Age"] >= 18]
+```
+
+This has reduced the dataset from 891 rows to 601.
+
+If we wanted to combine multiple conditions together, we can use conditional operators. However, Python's usual conditional operators (`and`, `or`, `not`) will not work here, and instead we will need to use symbols (`&`, `|`, `!`).
+
+```{python}
+# Selecting passengers whose ages are 18 and above and are in passenger class 3.
+titanic[(titanic["Age"] >= 18) & (titanic["Pclass"] == 3)] #Note that we need to wrap each conditional statement in parentheses.
+```
+
+That line of code is quite longwinded, so if you wanted to filter your DataFrame in a more concise way, you can use the `.query()` method:
+
+```{python}
+titanic.query("Age >= 18 & Pclass == 3")
+```
+
+In Pandas you can aggregate datasets using the `.groupby()` method:
+
+```{python}
+titanic.groupby("Pclass").sum()["Survived"]
+```
+
+Notice in the above line of code, we combined two methods. In Pandas, you can chain multiple methods together, much like dplyr's pipline operator (`%>%`) in R.
+
+```{python}
+# Select the names of passengers in class 3 who are 65 years of age or older.
+titanic.reset_index().query("Pclass == 3 & Age >= 65")["Name"]
+```
+
+### Exercises
+
+1. Filter the dataset to people where `Embarked` is Q.
+2. Filter the dataset to people 18 years or older, and `Fare` is less than 10
+3. Filter the dataset to people with an above-median age.
+4. What is the highest value of `Fare` for female passengers in class 2?
+
+### Series
+
+Let's select the `Ticket` column:
+
+```{python}
+titanic["Ticket"]
+```
+
+When selecting a single column of the DataFrame, Pandas returns what is known as a **Series**. This is a data structure used to represent one-dimensional data, much like a list or NumPy array. They are more flexible than NumPy arrays because they can hold non-numeric data types. However, they are not as flexible as lists because they can only hold one datatype at a time. If you try to create a Series with values of different data types, Pandas will convert all the elements of the Series into strings.
+
+```{python}
+# You can create series from lists, tuples, and NumPy arrays
+l = ["The", "quick", "brown", "fox"]
+t = (3,1,4,1,5,9)
+a = np.array(t)
+mix = ["this", 3, "will", True, "convert"]
+
+print(pd.Series(l))
+print(pd.Series(t))
+print(pd.Series(a))
+print(pd.Series(mix)) #converted into strings
+```

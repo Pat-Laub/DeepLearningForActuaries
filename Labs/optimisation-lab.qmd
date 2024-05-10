@@ -1,0 +1,235 @@
+---
+title: "Lab: Optimisation"
+author: ""
+format:
+  html: default
+  pdf: default
+---
+
+As you have learned, a neural network consists of a set of weights and biases, and the network learns by adjusting these values so that we minimise the network's loss. Mathematically, we aim to find the optimum weights and biases $(\boldsymbol{w}^{*}, \boldsymbol{b}^{*})$:
+\begin{align}
+  (\boldsymbol{w}^{*}, \boldsymbol{b}^{*}) = \underset{\boldsymbol{w}, \boldsymbol{b}}{\text{arg min}}\  \mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))  \nonumber
+\end{align}
+where $\mathcal{D}$ denotes the training data set and $\mathcal{L}(\cdot, \cdot)$ is the user-defined loss function.
+
+**Gradient descent** is the method through which we update the weights and biases. We introduce two types of gradient descent: **stochastic** and **batch**. 
+
+- **Stochastic** gradient descent updates the weights and biases once for each observation in the data set.
+- **Batch** gradient descent updates the values repeatedly by averaging the gradients across all the observations. 
+
+## Example: Batch Gradient Descent for Linear Regression
+
+Notation:
+
+- $\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))$ denotes the loss function.
+- $\hat{y}(\boldsymbol{x}_i)$ denotes the predicted value for the $i$th observation $\boldsymbol{x}_i \in \mathbb{R}^{d_{\boldsymbol{x}}}$, where $d_{\boldsymbol{x}}$ represents the dimension of the input.
+- $N$ denotes the batch size.
+
+The true model:
+\begin{align}
+    \boldsymbol{w}_{\text{True}} = \begin{pmatrix} 1.5 \\ 1.5 \end{pmatrix}, \boldsymbol{b}_{\text{True}} = \begin{pmatrix} 0.1 \\ 0.1 \\ 0.1 \end{pmatrix}. \\ \nonumber
+\end{align}
+
+Obtain target values $\boldsymbol{y}$:
+
+```{python}
+import numpy as np
+X = np.array([[1, 2], [3, 1], [1, 1]])
+true_w = np.array([[1.5], [1.5]])
+true_b = np.array([[0.1], [0.1], [0.1]])
+y = X @ true_w + true_b
+print(X); print(y)
+```
+
+A batch with $N=3$ and $d_{\boldsymbol{x}}=2$:
+\begin{align}
+    \boldsymbol{X} = \begin{pmatrix}
+        1 & 2\\
+        3 & 1 \\
+        1 & 1
+        \end{pmatrix} , 
+        \boldsymbol{y} = \begin{pmatrix}
+        4.6 \\
+        6.1 \\
+        3.1
+        \end{pmatrix}.
+            \\ \nonumber
+\end{align}
+
+**Step 1:** Write down $\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))$ and $\hat{\boldsymbol{y}}$*
+\begin{align}
+    \mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b})) =\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)^2 = \frac{1}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y})^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}),  
+\end{align}
+where
+\begin{align}
+    \hat{y}(\boldsymbol{x}_i) &=  \boldsymbol{x}_i\boldsymbol{w} + \boldsymbol{b}, \\
+    \hat{\boldsymbol{y}} &= \boldsymbol{X} \boldsymbol{w} + \boldsymbol{b} = \begin{pmatrix}
+        \hat{y}(\boldsymbol{x}_1) \\
+        \hat{y}(\boldsymbol{x}_2) \\
+        \hat{y}(\boldsymbol{x}_3)
+        \end{pmatrix}. 
+    \\ \nonumber
+\end{align}
+
+**Step 2:** Derive $\frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}$, $\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}}$, and $\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}}$
+\begin{align}
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} &= \frac{2}{N} \sum_{i=1}^{N}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big) = \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}), \\
+    \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} &=  \boldsymbol{X}, \\
+    \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}} &=  \boldsymbol{I}_{3\times 1} = \begin{pmatrix}
+         1  \\
+         1  \\
+        1
+        \end{pmatrix}  . \\ \nonumber
+\end{align}
+
+**Step 3:** Derive $\frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}$ and $\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}}$
+
+\begin{align}
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &= \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} = \frac{2}{N} \sum_{i=1}^{N} \boldsymbol{x}_i^{\top}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big) = \frac{2}{N} \boldsymbol{X}^{\top} (\hat{\boldsymbol{y}} - \boldsymbol{y}),  \\
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}} &= \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}} =\frac{2}{N} \sum_{i=1}^{N}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)  = \frac{2}{N} \boldsymbol{I}^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}).    \\ \nonumber
+\end{align}
+
+**Step 4:** Initialise the weights and biases. Evaluate the gradients.
+
+\begin{align}
+    \boldsymbol{w} = \begin{pmatrix} 1\\ 1 \end{pmatrix}, \boldsymbol{b} = \begin{pmatrix} 0 \\ 0 \\ 0 \end{pmatrix} \\ \nonumber
+\end{align}
+Subsequently,
+\begin{align}
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &= \frac{2}{3} 
+     \underbrace{\begin{pmatrix}
+         1 & 3 & 1  \\
+        2 & 1 & 1  \\
+        \end{pmatrix}}_{\boldsymbol{X}}  \Bigg[
+        \underbrace{\begin{pmatrix}
+        3 \\
+        4 \\
+        2
+        \end{pmatrix}}_{\hat{\boldsymbol{y}}}
+        -
+        \underbrace{ \begin{pmatrix}
+        4.6 \\
+        6.1 \\
+        3.1
+        \end{pmatrix}}_{\boldsymbol{y}}
+        \Bigg] = 
+        \begin{pmatrix}
+        -6.000 \\
+        -4.267 
+        \end{pmatrix},
+        \\
+        \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}} &= \frac{2}{3}
+            \underbrace{\begin{pmatrix}
+           1  & 1 & 1
+        \end{pmatrix}}_{\boldsymbol{I}}  \Bigg[
+        \underbrace{\begin{pmatrix}
+        3 \\
+        4 \\
+        2
+        \end{pmatrix}}_{\hat{\boldsymbol{y}}}
+        -
+        \underbrace{\begin{pmatrix}
+        4.6 \\
+        6.1 \\
+        3.1
+        \end{pmatrix}}_{\boldsymbol{y}}
+        \Bigg] = -3.200.\\ \nonumber
+\end{align}
+
+```{python}
+#number of rows == number of observations in the batch
+N = X.shape[0] 
+w = np.array([[1], [1]])
+b = np.array([[0] * N]).reshape(N, 1)
+
+#Gradients
+y_hat = X @ w + b
+dw = 2/N * X.T @ (y_hat - y)
+db = 2/N * np.sum(y_hat - y)
+print(dw); print(db)
+```
+
+**Step 5:** Pick a learning rate $\eta$ and update the weights and biases.
+
+\begin{align}
+    \eta &= 0.1,\\
+    \boldsymbol{w} &=  \boldsymbol{w} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}
+    =
+    \begin{pmatrix}
+        1.600 \\
+        1.427 
+        \end{pmatrix}, \\
+    \boldsymbol{b} &=  \boldsymbol{b} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}}
+    =\begin{pmatrix}
+        0.320 \\
+        0.320 \\
+        0.320
+        \end{pmatrix}
+\end{align}
+
+```{python}
+#specify a learning rate to update
+eta = 0.1
+w = w - eta * dw
+b = b - eta * db
+print(w); print(b)
+```
+
+**Next Step:** Update until convergence.
+
+```{python}
+#loss function
+def mse(y_pred, y_true):
+  return(np.mean((y_pred-y_true)**2))
+
+def lr_gradient_descent(eta = 0.1, w = None, b = None,
+                        max_iter = 100, tol = 1e-08):
+  """
+  Gradient descent optimization for linear regression.
+
+  Parameters:
+  eta: float - learning rate (default=0.1)
+  w: numpy array of shape (d, 1) - initial weights (default=ones)
+  b: numpy array of shape (N, 1) - initial bias (default=zeros)
+  max_iter: int - maximum number of iterations (default=100)
+  tol: float - tolerance for stopping criteria (default=1e-08)
+
+  Returns:
+  w, b - optimized weights and bias
+  """
+  N, d = X.shape
+
+  if w is None:
+      w = np.ones((d, 1))
+  if b is None:
+      b = np.zeros((N, 1))
+
+  prev_error = np.inf
+  for _ in range(max_iter):
+    y_hat = X @ w + b
+    error = mse(y_hat, y)
+    if np.abs(error - prev_error) < tol:
+      return(w, b)
+      break
+    prev_error = error
+    
+    dw = 2/N * X.T @ (y_hat - y)
+    db = 2/N * (y_hat - y)
+    w -= eta * dw
+    b -= eta * db
+  return(w, b)
+
+#Default initialisation
+w_updated, b_updated = lr_gradient_descent(max_iter = 1000)
+print(w_updated)
+print(b_updated)
+```
+
+**Different Learning Rates and Initialisations**
+
+See more details in `Week_2_Tutorial_Notebook`.
+
+## Exercises
+
+1. Apply stochastic gradient descent for the example given in Section \hyperref[Example BGD]{4.3}.
+2. Apply batch gradient descent for logistic regression. Follow the steps and information in Section \hyperref[Example BGD]{4.3}.
