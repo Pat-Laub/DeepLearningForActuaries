@@ -1,30 +1,20 @@
 # California House Price Prediction {visibility="uncounted"}
 
-## Import the data {.smaller}
 
-```{python}
-from sklearn.datasets import fetch_california_housing                           #<1>
+## Data science always starts with the data!
 
-features, target = fetch_california_housing(
-    as_frame=True, return_X_y=True)                                             #<2>
-features                                                                        
-```
+::: columns
+::: column
 
+> The target variable is the median house value for California districts, expressed in $100,000's.
+> This dataset was derived from the 1990 U.S. census, using one row per census block group.
+> A block group is the smallest geographical unit for which the U.S. Census Bureau publishes sample data (a block group typically has a population of 600 to 3,000 people).
 
-1. Imports California house prices from `sklearn.datasets` library
-2. Assigns features and target from the dataset to two variables 'features' and 'target' and returns two separate data frames. The command `return_X_y=True` ensures that there will be two separate data frames, one for the features and the other for the target
-
-## What is the target?
-
-```{python}
-target
-```
-
-## The dataset 
-
-> The target variable is the median house value for California districts, expressed in hundreds of thousands of dollars ($100,000).
->
->This dataset was derived from the 1990 U.S. census, using one row per census block group. A block group is the smallest geographical unit for which the U.S. Census Bureau publishes sample data (a block group typically has a population of 600 to 3,000 people).
+:::
+::: column
+![Dall-E's rendition of the this dataset.](dalle-california-housing.jpeg)
+:::
+:::
 
 ::: footer
 Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
@@ -44,6 +34,27 @@ Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/re
 ::: footer
 Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
 :::
+
+
+## Import the data {.smaller}
+
+```{python}
+from sklearn.datasets import fetch_california_housing                           #<1>
+
+features, target = fetch_california_housing(
+    as_frame=True, return_X_y=True)                                             #<2>
+features                                                                        
+```
+
+
+1. Imports California house prices from `sklearn.datasets` library
+2. Assigns features and target from the dataset to two variables 'features' and 'target' and returns two separate data frames. The command `return_X_y=True` ensures that there will be two separate data frames, one for the features and the other for the target
+
+## What is the target?
+
+```{python}
+target
+```
 
 ## An entire ML project
 
@@ -159,7 +170,7 @@ import seaborn
 np.random.seed(123)
 m = 50
 x = np.random.normal(loc=0.9, scale=0.03, size=m)
-seaborn.displot(x, kde=True, stat="density")
+seaborn.displot(x, kde=True, stat="density", height=2, aspect=5./2.)
 plt.scatter(x, np.zeros_like(x))
 plt.xlabel("Accuracy of each model on test set")
 plt.axvline(0.9, ls="--", c="k")
@@ -191,7 +202,7 @@ Python's `matplotlib` package $\approx$ R's basic `plot`s.
 ```{python}
 import matplotlib.pyplot as plt
 
-plt.scatter(features["Longitude"], features["Latitude"])
+plt.scatter(features["Longitude"], features["Latitude"], c=target)
 ```
 
 ## Location #2
@@ -201,7 +212,7 @@ Python's `seaborn` package $\approx$ R's `ggplot2`.
 ```{python}
 import seaborn as sns
 
-sns.scatterplot(x="Longitude", y="Latitude", data=features);
+sns.scatterplot(x="Longitude", y="Latitude", c=target, data=features);
 ```
 
 ## Features
@@ -226,7 +237,7 @@ features.shape
 
 ## Linear Regression
 
-$$ \hat{y} = w_0 + \sum_{i=1}^N w_i x_i .$$
+$$ \hat{y}_i = w_0 + \sum_{j=1}^p w_j x_{ij} .$$
 
 ```{python}
 from sklearn.linear_model import LinearRegression                           #<1>
@@ -251,7 +262,7 @@ print(lr.coef_)
 X_train.head(3)
 ```
 ::: {.content-visible unless-format="revealjs"}
-`X_train.head(3)` returns the first three rows of the dataset <i>X_train</i>.   
+`X_train.head(3)` returns the first three rows of the dataset `X_train`.   
 :::
 
 ```{python}
@@ -259,17 +270,17 @@ y_pred = lr.predict(X_train.head(3))
 y_pred
 ```
 ::: {.content-visible unless-format="revealjs"}
-`lr.predict(X_train.head(3))` returns the predictions for the first three rows of the dataset <i>X_train</i>.
+`lr.predict(X_train.head(3))` returns the predictions for the first three rows of the dataset `X_train`.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-We can manually calculate predictions using the linear regression model to verify the output of the `lr.predict()` function. In the following code, we first define $w_0$ as the intercept of the `lr` function (initial value for the prediction calculation), and then keep on adding the $w_i \times x_i$ terms
+We can manually calculate predictions using the linear regression model to verify the output of the `lr.predict()` function. In the following code, we first define $w_0$ as the intercept of the `lr` function (initial value for the prediction calculation), and then keep on adding the $w_j \times x_j$ terms
 :::
 
 ```{python}
-prediction = lr.intercept_                              #<1>
-for w_i, x_i in zip(lr.coef_, X_train.iloc[0]):         #<2>
-    prediction += w_i * x_i                             #<3>
+prediction = lr.intercept_                               #<1>
+for w_j, x_0j in zip(lr.coef_, X_train.iloc[0]):         #<2>
+    prediction += w_j * x_0j                             #<3>
 prediction                                              
 ```
 
@@ -360,6 +371,12 @@ mse_lr_val = mse(y_val, lr.predict(X_val))
 mse_train = {"Linear Regression": mse_lr_train}
 mse_val = {"Linear Regression": mse_lr_val}
 ```
+
+::: {.callout-tip}
+Thank about the units of the mean squared error.
+Is there a variation which is more interpretable?
+:::
+
 ::: {.content-visible unless-format="revealjs"}
 Storing results in data structures like dictionaries is a good practice that can help in managing and handling data efficiently. 
 :::
@@ -569,8 +586,7 @@ model = Sequential([
 
 model.compile("adam", "mse")
 
-%time hist = model.fit(X_train, y_train, \
-    epochs=50, verbose=False)
+%time hist = model.fit(X_train, y_train, epochs=50, verbose=False)
 ```
 ::: {.content-visible unless-format="revealjs"}
 We will train the same neural network architecture with more epochs (`epochs=50`) to see if the results improve.
@@ -615,8 +631,6 @@ plt.ylabel("True values")
 add_diagonal_line()
 ```
 
-<div style="margin-top: 1em;">
-
 ```{python}
 mse_train["Long run ANN"] = mse(
     y_train, model.predict(X_train, verbose=0)
@@ -624,12 +638,10 @@ mse_train["Long run ANN"] = mse(
 mse_val["Long run ANN"] = mse(y_val, model.predict(X_val, verbose=0))
 ```
 
-</div>
-
 :::
 ::: column
 
-<div style="position: relative; top: -3em;">
+<div style="position: relative; top: -2em;">
 
 ```{python}
 #| echo: false
@@ -865,8 +877,6 @@ plt.ylabel("True values")
 add_diagonal_line()
 ```
 
-<div style="margin-top: 1em;">
-
 ```{python}
 mse_train["Exp ANN"] = mse(
     y_train, model.predict(X_train_sc, verbose=0)
@@ -874,12 +884,10 @@ mse_train["Exp ANN"] = mse(
 mse_val["Exp ANN"] = mse(y_val, model.predict(X_val_sc, verbose=0))
 ```
 
-</div>
-
 :::
 ::: column
 
-<div style="position: relative; top: -3em;">
+<div style="position: relative; top: -2em;">
 
 ```{python}
 #| echo: false
