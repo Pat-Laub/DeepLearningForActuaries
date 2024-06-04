@@ -30,6 +30,7 @@ Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/re
 - `AveOccup` average number of household members
 - `Latitude` block group latitude
 - `Longitude` block group longitude
+- `MedHouseVal` median house value (**target**)
 
 ::: footer
 Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
@@ -52,9 +53,22 @@ features
 
 ## What is the target?
 
+::: columns
+::: column
 ```{python}
 target
 ```
+
+Why predict this? Let's pretend we are these guys.
+:::
+::: column
+![](nytimes-silicon-valley-new-city.png)
+:::
+:::
+
+::: footer
+Source: Dougherty and Griffith (2023), [The Silicon Valley Elite Who Want to Build a City From Scratch](https://www.nytimes.com/2023/08/25/business/land-purchases-solano-county.html), New York Times.
+:::
 
 ## An entire ML project
 
@@ -187,7 +201,7 @@ Take the best, you'd think it has $\approx 98\%$ accuracy!
 Using the same dataset for both validating and testing purposes can result in a data leakage. The information from supposedly 'unseen' data is now used by the model during its tuning. This results in a situation where the model is now 'learning' from the test data, and it could lead to overly optimistic results in the model evaluation stage.
 :::
 
-# EDA & Baseline Model {background-image="unsw-yellow-shape.png" data-visibility="uncounted"}
+# EDA & Baseline Model {data-visibility="uncounted"}
 
 ## The training set {.smaller}
 
@@ -202,17 +216,27 @@ Python's `matplotlib` package $\approx$ R's basic `plot`s.
 ```{python}
 import matplotlib.pyplot as plt
 
-plt.scatter(features["Longitude"], features["Latitude"], c=target)
+plt.scatter(features["Longitude"], features["Latitude"])
 ```
 
-## Location #2
+::: {.callout-note .fragment}
+There's no _analysis_ is this EDA.
+:::
 
-Python's `seaborn` package $\approx$ R's `ggplot2`.  
+## Location EDA
 
 ```{python}
-import seaborn as sns
+plt.scatter(features["Longitude"], features["Latitude"], c=target, cmap="coolwarm")
+plt.colorbar()
+```
 
-sns.scatterplot(x="Longitude", y="Latitude", c=target, data=features);
+"We observe that the median house prices are higher closer to the coastline."
+
+## Pandas can make plots directly
+
+```{python}
+both = pd.concat([features, target], axis=1)
+both.plot(kind="scatter", x="Longitude", y="Latitude", c="MedHouseVal", cmap="coolwarm")
 ```
 
 ## Features
@@ -760,6 +784,7 @@ set_rectangular_figures()
 ::: {.content-visible unless-format="revealjs"}
 Plots illustrate how all the outputs were stuck at zero. Irrespective of how many epochs we run, the output would always be zero.
 :::
+
 ## Enforce positive outputs ($\mathrm{e}^{\,x}$)
 
 ```{python}
@@ -780,6 +805,39 @@ print(losses)
 ```
 ::: {.content-visible unless-format="revealjs"}
 Training the model again with an exponential activation function will give `nan` values. This is because the results then can explode easily.
+:::
+
+## Same as transforming the target
+
+![The polynomial regression used by researchers who first studied this dataset.](california-housing-linear-model.png)
+
+::: {.callout-note}
+Fitting $\ln(\text{Median Value})$ is mathematically identical to the `exponential` activation function in the final layer (but metrics are in different units).
+:::
+
+::: footer
+Source: Pace and Barry (1997), [Sparse Spatial Autoregressions](http://www.sciencedirect.com/science/article/pii/S0167-7152(96)00140-X), Statistics & Probability Letters.
+:::
+
+## Good to know others results
+
+![That basic model gets $R^2$ of 0.61, but their fancy model gets 0.86.](california-housing-linear-model-results.png)
+
+::: footer
+Source: Pace and Barry (1997), [Sparse Spatial Autoregressions](http://www.sciencedirect.com/science/article/pii/S0167-7152(96)00140-X), Statistics & Probability Letters.
+:::
+
+## GPT can double-check these results
+
+::: columns
+::: column
+![Asking GPT to check it.](gpt-validating-cali-housing-regression.png)
+
+I'd previously given it the CSV of the data.
+:::
+::: column
+![The code it wrote & ran.](gpt-cali-housing-code.png)
+:::
 :::
 
 # Preprocessing {visibility="uncounted"}
