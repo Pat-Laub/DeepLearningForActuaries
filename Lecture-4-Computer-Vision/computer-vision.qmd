@@ -7,10 +7,9 @@ title: Computer Vision
 #| warning: false
 import os
 # os.environ["KERAS_BACKEND"] = "torch"
-os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
-import torch
-torch.set_num_threads(1)
+# import torch
+# torch.set_num_threads(1)
 
 import matplotlib
 
@@ -58,7 +57,9 @@ keras.utils.set_random_seed(1)
 ```{python}
 #| code-fold: true
 #| code-summary: Show the package imports
+import json
 import random
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -459,8 +460,6 @@ The above picture shows how we take in an image with 6 channels, select a 3x3 bl
 Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
 :::
 
-
-
 ## Striding
 
 ::: {.content-visible unless-format="revealjs"}
@@ -493,8 +492,6 @@ When a filter scans the input step by step, it processes the same input elements
 Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
 :::
 
-
-
 ## Specifying a convolutional layer
 
 Need to choose:
@@ -505,7 +502,6 @@ Need to choose:
 - padding & striding (optional).
 
 All the filter weights are learned during training.
-
 
 # Convolutional Neural Networks {visibility="uncounted"}
 
@@ -604,7 +600,7 @@ Source: Hinton, [Reddit AMA](https://www.reddit.com/r/MachineLearning/comments/2
 Source: Distill article, [Feature Visualization](https://distill.pub/2017/feature-visualization/).
 :::
 
-# Demo: Character Recognition {visibility="uncounted"}
+# Chinese Character Recognition Dataset {visibility="uncounted"}
 
 ## MNIST Dataset
 
@@ -614,127 +610,163 @@ Source: Distill article, [Feature Visualization](https://distill.pub/2017/featur
 Source: Wikipedia, [MNIST database](https://en.wikipedia.org/wiki/MNIST_database).
 :::
 
-## Mandarin Characters Dataset
+## CASIA Chinese handwriting database
 
-57 poorly written Mandarin characters ($57 \times 7 = 399$).
+Dataset source: [Institute of Automation of Chinese Academy of Sciences (CASIA)](https://nlpr.ia.ac.cn/databases/handwriting/Home.html)
 
-![Dataset of notes when learning/practising basic characters.](mandarin-practice-notebook3.png)
+![A 13 GB dataset of 3,999,571 handwritten characters.](Offlin1.jpg)
 
-## Downloading the dataset
-
-The data is zipped (6.9 MB) and stored on my GitHub homepage.
-
-```{python}
-# Download the dataset if it hasn't already been downloaded.
-from pathlib import Path
-if not Path("mandarin").exists():
-  print("Downloading dataset...")
-  !wget https://laub.au/data/mandarin.zip
-  !unzip mandarin.zip
-else:
-  print("Already downloaded.")
-```
-
-::: {.callout-tip}
-Remember, the Jupyter notebook associated with your final report should either download your dataset when it is run, or you should supply the data separately.
+::: footer
+Source: Liu et al. (2011), [CASIA online and offline Chinese handwriting databases](https://nlpr.ia.ac.cn/databases/handwriting/Home.html), 2011 International Conference on Document Analysis and Recognition.
 :::
 
-## Directory structure 
+## Inspect a subset of characters
 
 ::: columns
 ::: column
+
+Pulling out 55 characters to experiment with.
+
+人从众大夫天口太因鱼犬吠哭火炎啖木林森本竹羊美羔山出女囡鸟日东月朋明肉肤工白虎门闪问闲水牛马吗妈玉王国主川舟虫
+
+:::
+::: column
+
 Inspect directory structure
 ```{python}
 #| output: false
 !pip install directory_tree
 ```
 ```{python}
+#| eval: false
 from directory_tree import display_tree
-display_tree("mandarin")
+display_tree("CASIA-Dataset")
 ```
-:::
-::: column
 ```{python}
-tree = display_tree("mandarin", string_rep=True).split("\n")
+#| echo: false
+from directory_tree import display_tree
+tree = display_tree("CASIA-Dataset", string_rep=True).split("\n")
 print("\n".join(tree[:12]))
 print("...")
 print("\n".join(tree[-4:]))
 ```
+
 :::
 :::
 
-## Splitting into train/val/test sets
+## Count number of images for each character
 
 ```{python}
-#| output: false
-!pip install split-folders
+def count_images_in_folders(root_folder):
+    counts = {}
+    for folder in root_folder.iterdir():
+        counts[folder.name] = len(list(folder.glob("*.png")))
+    return counts
+
+train_counts = count_images_in_folders(Path("CASIA-Dataset/Train"))
+test_counts = count_images_in_folders(Path("CASIA-Dataset/Test"))
+
+print(train_counts)
+print(test_counts)
 ```
+
+## Number of images for each character
 
 ```{python}
-import splitfolders
-splitfolders.ratio("mandarin", output="mandarin-split",
-    seed=1337, ratio=(5/7, 1/7, 1/7))
-
-display_tree("mandarin-split", max_depth=1)
+plt.hist(train_counts.values(), bins=30, label="Train")
+plt.hist(test_counts.values(), bins=30, label="Test")
+plt.legend();
 ```
 
-## Directory structure II
+It differs, but basically ~600 training and ~140 test images per character.
+A couple of characters have a lot less of both though.
+
+## Checking the dimensions
+
+```{python}
+def get_image_dimensions(root_folder):
+    dimensions = []
+    for folder in root_folder.iterdir():
+        for image in folder.glob("*.png"):
+            img = imread(image)
+            dimensions.append(img.shape)
+    return dimensions
+
+train_dimensions = get_image_dimensions(Path("CASIA-Dataset/Train"))
+test_dimensions = get_image_dimensions(Path("CASIA-Dataset/Test"))
+
+train_heights = [d[0] for d in train_dimensions]
+train_widths = [d[1] for d in train_dimensions]
+test_heights = [d[0] for d in test_dimensions]
+test_widths = [d[1] for d in test_dimensions]
+```
+
+## Checking the dimensions II
+
+```{python}
+plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights")
+plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths")
+plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights")
+plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths")
+plt.legend();
+```
+
+The images are taller than they are wide.
+We have more training images than test images.
+
+## Checking the dimensions III
+
+```{python}
+plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights", density=True)
+plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths", density=True)
+plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights", density=True)
+plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths", density=True)
+plt.legend();
+```
+
+## Checking the dimensions IV
 
 ::: columns
 ::: column
-
 ```{python}
-display_tree("mandarin-split")
-```
+plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights", density=True)
+plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights", density=True)
+plt.legend();
 
+```
 :::
 ::: column
-
 ```{python}
-#| echo: false
-print("\n".join(display_tree("mandarin-split/train", string_rep=True).split("\n")[:7]))
-print("...")
-print("\n".join(display_tree("mandarin-split/val", string_rep=True).split("\n")[:5]))
-print("...")
-print("\n".join(display_tree("mandarin-split/test", string_rep=True).split("\n")[:5]))
-print("...")
+plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths", density=True)
+plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths", density=True)
+plt.legend();
 ```
+:::
+:::
 
-:::
-:::
+The distribution of dimensions are pretty similar between training and test sets.
 
 ## Keras image dataset loading
 
-::: {.content-visible unless-format="revealjs"}
-
-
 ```{python}
 #| warning: false
-from keras.utils import\
-  image_dataset_from_directory                      #<1>
+from keras.utils import image_dataset_from_directory #<1>
 
-data_dir = "mandarin-split"                         #<2>
+data_dir = "CASIA-Dataset"                          #<2>
 batch_size = 32                                     #<3>
 img_height = 80                                     #<4>
-img_width = 80                                      #<5>
+img_width = 60                                      #<5>
 img_size = (img_height, img_width)                  #<6>
 
 train_ds = image_dataset_from_directory(            #<7>
-    data_dir + "/train",
+    data_dir + "/Train",
     image_size=img_size,
     batch_size=batch_size,
     shuffle=False,
     color_mode='grayscale')
 
-val_ds = image_dataset_from_directory(              #<8>
-    data_dir + "/val",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
-
-test_ds = image_dataset_from_directory(             #<9>
-    data_dir + "/test",
+test_ds = image_dataset_from_directory(             #<8>
+    data_dir + "/Test",
     image_size=img_size,
     batch_size=batch_size,
     shuffle=False,
@@ -746,140 +778,205 @@ test_ds = image_dataset_from_directory(             #<9>
 4. Specifies the height of the image 
 5. Specifies the width of the image
 6. Specifies the image size
-7. Creates a data object to store the train set. Note that `color_mode='grayscale'` command tells the computer to bring in the images in greyscale instead of the RGB scale.
-8. Creates a data object to store the validation set
-9. Creates a data object to store the test set
+7. Creates a data object to store the train (and validation) set. Note that `color_mode='grayscale'` command tells the computer to bring in the images in greyscale instead of the RGB scale.
+8. Creates a data object to store the test set.
 
-:::
-
-::: {.content-hidden unless-format="revealjs"}
-
-::: columns
-::: column
+## Convert to numpy arrays
 
 ```{python}
-#| warning: false
-from keras.utils import\
-  image_dataset_from_directory
-
-data_dir = "mandarin-split"
-batch_size = 32
-img_height = 80
-img_width = 80
-img_size = (img_height, img_width)
-```
-
-:::
-::: column
-```{python}
-#| output: false
-train_ds = image_dataset_from_directory(
-    data_dir + "/train",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
-```
-:::
-:::
-
-::: columns
-::: column
-```{python}
-#| output: false
-val_ds = image_dataset_from_directory(
-    data_dir + "/val",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
-```
-:::
-::: column
-```{python}
-#| output: false
-test_ds = image_dataset_from_directory(
-    data_dir + "/test",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
-```
-:::
-:::
-
-:::
-
-## Inspecting the datasets 
-
-```{python}
-print(train_ds.class_names)
+class_names = train_ds.class_names
+print(class_names)
 ```
 
 ```{python}
 # NB: Need shuffle=False earlier for these X & y to line up.
-X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
-y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
-
-X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
-y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
+X_main = np.concatenate(list(train_ds.map(lambda x, y: x)))
+y_main = np.concatenate(list(train_ds.map(lambda x, y: y)))
 
 X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
 y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 
-X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
+X_main.shape, y_main.shape, X_test.shape, y_test.shape
 ```
 
-## Plotting some characters (setup)
+## Some setup
 
 ```{python}
-def plot_mandarin_characters(ds, plot_char_label = 0):
-    num_plotted = 0
-    for images, labels in ds:
-       for i in range(images.shape[0]):
-           label = labels[i]
-           if label == plot_char_label:
-               plt.subplot(1, 5, num_plotted + 1)
-               plt.imshow(images[i].numpy().astype("uint8"), cmap="gray")
-               plt.title(ds.class_names[label])
-               plt.axis("off")
-               num_plotted += 1
-    plt.show()
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.2,
+    random_state=123)
+print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape)
+```
+
+```{python}
+import matplotlib.font_manager as fm
+CHINESE_FONT = fm.FontProperties(fname="STHeitiTC-Medium-01.ttf")
+
+def plot_mandarin_characters(X, y, class_names, n=5, title_font=CHINESE_FONT):
+    # Plot the first n images in X
+    plt.figure(figsize=(10, 4))
+    for i in range(n):
+        plt.subplot(1, n, i + 1)
+        plt.imshow(X[i], cmap="gray")
+        plt.title(class_names[y[i]], fontproperties=title_font)
+        plt.axis("off")
+```
+
+```{python}
+class_names[:5]
+```
+
+```{python}
+X_dong = X_train[y_train == 0]; y_dong = y_train[y_train == 0]
+X_ren = X_train[y_train == 2]; y_ren = y_train[y_train == 2]
 ```
 
 ## Plotting some training characters {.smaller}
+
 ```{python}
-#| echo: false
-plot_mandarin_characters(train_ds, 0)
-plot_mandarin_characters(train_ds, 1)
+#| code-fold: true
+plot_mandarin_characters(X_dong, y_dong, class_names)
 ```
 
-## Plotting some val/test characters
+```{python}
+#| code-fold: true
+plot_mandarin_characters(X_ren, y_ren, class_names)
+```
+
+## Without the colourmap..
 
 ::: columns
-::: column
+::: {.column width="5%"}
+:::
+::: {.column width="45%"}
 ```{python}
-bai_val = X_val[y_val == 0][0]
-plt.imshow(bai_val, cmap="gray");
+dong = X_test[y_test == 0][0]
+plt.imshow(dong, cmap="gray");
 ```
 :::
-::: column
+::: {.column width="45%"}
 ```{python}
-bai_test = X_test[y_test == 0][0]
-plt.imshow(bai_test);
+dong = X_test[y_test == 0][1]
+plt.imshow(dong);
 ```
 :::
+::: {.column width="5%"}
+:::
 :::
 
-# Demo: Character Recognition II {visibility="uncounted"}
+# Fitting a (multinomial) logistic regression
 
-## Make the CNN
+
+## Make a logistic regression
+
+![Basically pretend it's not an image](flattening-image-to-vector.png)
 
 ```{python}
-from keras.layers \
-  import Rescaling, Conv2D, MaxPooling2D, Flatten                       #<1>
+from keras.layers import Rescaling, Flatten     #<1>
 
-num_classes = np.unique(y_train).shape[0]                               #<2>
+num_classes = np.unique(y_train).shape[0]       #<2>
+random.seed(123)
+model = Sequential([
+  Input((img_height, img_width, 1)), Flatten(), Rescaling(1./255),
+  Dense(num_classes, activation="softmax")
+])
+```
+1. Imports preprocessing layers from `keras.layers` useful for image data
+2. Specifies the number of unique categories in the train set
+
+::: {.callout-tip}
+The `Rescaling` layer will rescale the intensities to [0, 1].
+:::
+
+## Inspecting the model
+
+```{python}
+model.summary()                            
+```
+
+## Plot the model
+
+```{python}
+plot_model(model, show_shapes=True)
+```
+
+```{python}
+#| echo: false
+Path("model.png").unlink(missing_ok=True)
+```
+
+## Fitting the model
+
+```{python}
+#| code-line-numbers: "1-7,14-15|"
+loss = keras.losses.SparseCategoricalCrossentropy()
+topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)
+model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])
+
+epochs = 100
+es = EarlyStopping(patience=15, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if Path("logistic.keras").exists():
+    model = keras.models.load_model("logistic.keras")
+    with open("logistic_history.json", "r") as json_file:
+        history = json.load(json_file)
+else:
+    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+      epochs=epochs, callbacks=[es], verbose=0)
+    model.save("logistic.keras")
+    history = hist.history
+    with open("logistic_history.json", "w") as json_file:
+        json.dump(history, json_file)
+```
+
+Most of this last part is just to save time rendering this slides, you don't need it.
+
+## Plot the loss/accuracy curves
+
+```{python}
+#| code-fold: true
+def plot_history(history):
+    epochs = range(len(history["loss"]))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, history["accuracy"], label="Train")
+    plt.plot(epochs, history["val_accuracy"], label="Val")
+    plt.legend(loc="lower right")
+    plt.title("Accuracy")
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, history["loss"], label="Train")
+    plt.plot(epochs, history["val_loss"], label="Val")
+    plt.legend(loc="upper right")
+    plt.title("Loss")
+    plt.show()
+```
+
+```{python}
+plot_history(history)
+```
+
+## Look at the metrics
+
+```{python}
+print(model.evaluate(X_train, y_train, verbose=0))
+print(model.evaluate(X_val, y_val, verbose=0))
+```
+
+```{python}
+loss_value, accuracy, top5_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Validation Loss: {loss_value:.4f}")
+print(f"Validation Accuracy: {accuracy:.4f}")
+print(f"Validation Top 5 Accuracy: {top5_accuracy:.4f}")
+```
+
+# Fitting a CNN {visibility="uncounted"}
+
+## Make a CNN
+
+```{python}
+from keras.layers import Conv2D, MaxPooling2D                       #<1>
+
 random.seed(123)
 
 model = Sequential([
@@ -890,22 +987,17 @@ model = Sequential([
   Conv2D(32, 3, padding="same", activation="relu", name="conv2"),
   MaxPooling2D(name="pool2"),
   Conv2D(64, 3, padding="same", activation="relu", name="conv3"),
-  MaxPooling2D(name="pool3"),
-  Flatten(), Dense(128, activation="relu"), Dense(num_classes)          #<6>
+  MaxPooling2D(name="pool3", pool_size=(4, 4)),
+  Flatten(), Dense(64, activation="relu"), Dense(num_classes)          #<6>
 ])
 ```
 
 1. Imports CNN specific preprocessing layers from `keras.layers`
-2. Specifies the number of unique categories in the train set
 3. Rescales the numeric representations of data which ranges from [0,255] in to [0, 1] range
 4. Applies the convolution layer. Here `padding="same"` ensures that the dimensions of the input and output matrices remain same
 5. Applies `MaxPooling`, which reduces the spatial dimensions by carrying forward the maximum value over an input window
 6. Applies the `Flatten` layer to convert the 2D array (from pooling) in to a single column vector, and passes through couple of `Dense` layers to train the neural network for the specific classification problem.
-Note that the output layer has number of neurons equal to `numClasses`, which corresponds to the number of unique classes in the output.
-
-::: {.callout-tip}
-The `Rescaling` layer will rescale the intensities to [0, 1].
-:::
+Note that the output layer has number of neurons equal to `num_classes`, which corresponds to the number of unique classes in the output.
 
 ::: footer
 Architecture inspired by [https://www.tensorflow.org/tutorials/images/classification](https://www.tensorflow.org/tutorials/images/classification).
@@ -939,8 +1031,17 @@ epochs = 100
 es = EarlyStopping(patience=15, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
-hist = model.fit(train_ds.shuffle(1000), validation_data=val_ds,
-  epochs=epochs, callbacks=[es], verbose=0)
+if Path("cnn.keras").exists():
+    model = keras.models.load_model("cnn.keras")
+    with open("cnn_history.json", "r") as json_file:
+        history = json.load(json_file)
+else:
+    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+      epochs=epochs, callbacks=[es], verbose=0)
+    model.save("cnn.keras")
+    history = hist.history
+    with open("cnn_history.json", "w") as json_file:
+        json.dump(history, json_file)
 ```
 
 1. Defines the loss function with an added command `from_logits=True`. Doing this instead of defining a `softmax` function at the output `Dense` layer of the neural network is expected to be more numerically stable
@@ -951,45 +1052,31 @@ hist = model.fit(train_ds.shuffle(1000), validation_data=val_ds,
 Instead of using softmax activation, just added `from_logits=True` to the loss function; this is more numerically stable.
 :::
 
-## Plot the loss/accuracy curves (setup)
-
-```{python}
-def plot_history(hist):
-    epochs = range(len(hist.history["loss"]))
-
-    plt.subplot(1, 2, 1)
-    plt.plot(epochs, hist.history["accuracy"], label="Train")
-    plt.plot(epochs, hist.history["val_accuracy"], label="Val")
-    plt.legend(loc="lower right")
-    plt.title("Accuracy")
-
-    plt.subplot(1, 2, 2)
-    plt.plot(epochs, hist.history["loss"], label="Train")
-    plt.plot(epochs, hist.history["val_loss"], label="Val")
-    plt.legend(loc="upper right")
-    plt.title("Loss")
-    plt.show()
-```
-
 ## Plot the loss/accuracy curves
 
 ```{python}
-plot_history(hist)
+plot_history(history)
 ```
 
 ## Look at the metrics
 
 ```{python}
-print(model.evaluate(train_ds, verbose=0))
-print(model.evaluate(val_ds, verbose=0))
-print(model.evaluate(test_ds, verbose=0))
+print(model.evaluate(X_train, y_train, verbose=0))
+print(model.evaluate(X_val, y_val, verbose=0))
 ```
 
-## Predict on the test set
+```{python}
+loss_value, accuracy, top5_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Validation Loss: {loss_value:.4f}")
+print(f"Validation Accuracy: {accuracy:.4f}")
+print(f"Validation Top 5 Accuracy: {top5_accuracy:.4f}")
+```
+
+## Make a prediction
 
 ```{python}
 #| error: true
-model.predict(X_test[17], verbose=0);
+model.predict(X_test[0], verbose=0);
 ```
 
 <!--
@@ -1001,80 +1088,63 @@ print(warn)
 -->
 
 ```{python}
-X_test[17].shape, X_test[17][np.newaxis, :].shape, X_test[[17]].shape
+X_val[0].shape, X_val[0][np.newaxis, :].shape, X_val[[0]].shape
 ```
 
 ```{python}
-model.predict(X_test[[17]], verbose=0)
+model.predict(X_val[[0]], verbose=0)
 ```
 
 ## Predict on the test set II
 
 ```{python}
-model.predict(X_test[[17]], verbose=0).argmax()
+model.predict(X_test[[0]], verbose=0).argmax()
 ```
 
 ```{python}
-test_ds.class_names[model.predict(X_test[[17]], verbose=0).argmax()]
+class_names[model.predict(X_test[[0]], verbose=0).argmax()]
 ```
 
 ```{python}
-plt.imshow(X_test[17], cmap="gray");
+plt.imshow(X_test[0], cmap="gray");
 ```
 
 # Error Analysis
 
-## Error analysis (setup)
+## Take a look at the failure cases
 
 ```{python}
-def plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, class_names):
-  plt.figure(figsize=(4, 10))
-
-  num_errors = np.sum(y_pred != y_test)
-  err_num = 0
-  for i in range(X_test.shape[0]):
-      if y_pred[i] != y_test[i]:
-          ax = plt.subplot(num_errors, 2, 2*err_num + 1)
-          plt.imshow(X_test[i].astype("uint8"), cmap="gray")
-          plt.title(f"Guessed '{class_names[y_pred[i]]}' True '{class_names[y_test[i]]}'")
-          plt.axis("off")
-          
-          actual_pred_char_ind = np.argmax(y_test == y_pred[i])
-          ax = plt.subplot(num_errors, 2, 2*err_num + 2)
-          plt.imshow(X_val[actual_pred_char_ind].astype("uint8"), cmap="gray")
-          plt.title(f"A real '{class_names[y_pred[i]]}'")
-          plt.axis("off")
-          err_num += 1     
+#| code-fold: true
+def plot_failed_predictions(X, y, class_names, max_errors = 20,
+            num_rows = 4, num_cols = 5, title_font=CHINESE_FONT):
+    plt.figure(figsize=(num_cols * 2, num_rows * 2))
+    errors = 0
+    y_pred = model.predict(X, verbose=0)
+    y_pred_classes = y_pred.argmax(axis=1)
+    y_pred_probs = keras.ops.softmax(y_pred).numpy().max(axis=1)
+    for i in range(len(y_pred)):
+        if errors >= max_errors:
+            break
+        if y_pred_classes[i] != y[i]:
+            plt.subplot(num_rows, num_cols, errors + 1)
+            plt.imshow(X[i], cmap="gray")
+            true_class = class_names[y[i]]
+            pred_class = class_names[y_pred_classes[i]]
+            conf = y_pred_probs[i]
+            msg = f"{true_class} not {pred_class} ({conf*100:.0f}%)"
+            plt.title(msg, fontproperties=title_font)
+            plt.axis("off")
+            errors += 1
 ```
 
-## Error analysis I
-
-![Extract from first assessment of test errors.](error-analysis-found-data-problem.png)
-
-## Error analysis II
-
-![Extract from second assessment of test errors.](error-analysis-found-another-data-problem.png)
-
-## Error analysis III
-
 ```{python}
-y_pred = model.predict(X_val, verbose=0).argmax(axis=1)
-plot_error_analysis(X_train, y_train, X_val, y_val, y_pred, val_ds.class_names)
-```
-
-## Error analysis IV
-
-```{python}
-y_pred = model.predict(X_test, verbose=0).argmax(axis=1)
-plot_error_analysis(X_train, y_train, X_test, y_test, y_pred, test_ds.class_names)
+plot_failed_predictions(X_test, y_test, class_names)
 ```
 
 ## Confidence of predictions
 
 ```{python}
-y_pred = keras.ops.convert_to_numpy(
-  keras.activations.softmax(model(X_test))
-)
+y_pred = keras.ops.convert_to_numpy(keras.activations.softmax(model(X_test)))
 y_pred_class = np.argmax(y_pred, axis=1)
 y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]
 
@@ -1095,10 +1165,70 @@ plt.hist(confidence_when_wrong);
 :::
 :::
 
+## Another test set
+
+55 poorly written Mandarin characters ($55 \times 7 = 385$).
+
+![Dataset of notes when learning/practising basic characters.](mandarin-practice-notebook3.png)
+
+## Evaluate on the new test set
+
+```{python}
+pat_ds = image_dataset_from_directory(
+    "mandarin",
+    image_size=img_size,
+    batch_size=batch_size,
+    shuffle=False,
+    color_mode='grayscale')
+
+X_pat = np.concatenate(list(pat_ds.map(lambda x, y: x)))
+y_pat = np.concatenate(list(pat_ds.map(lambda x, y: y)))
+
+assert pat_ds.class_names == class_names
+X_pat.shape, y_pat.shape
+```
+
+```{python}
+pat_metrics = model.evaluate(X_pat, y_pat, verbose=0)
+pat_metrics
+```
+
+```{python}
+correct = model.predict(X_pat, verbose=0).argmax(axis=1) == y_pat
+np.sum(~correct)
+```
+
+## Errors
+
+```{python}
+plot_failed_predictions(X_pat, y_pat, class_names)
+```
+
+## Which is worst...
+
+```{python}
+class_accuracies = []
+for i in range(num_classes):
+    class_indices = y_pat == i
+    y_pred = model.predict(X_pat[class_indices], verbose=0).argmax(axis=1)
+    class_correct = y_pred == y_pat[class_indices]
+    class_accuracies.append(np.mean(class_correct))
+
+class_accuracies = pd.DataFrame({"Class": class_names, "Accuracy": class_accuracies})
+class_accuracies.sort_values("Accuracy")
+```
+
+## Least (AI-) legible characters
+
+```{python}
+fails = class_accuracies[class_accuracies["Accuracy"] < 0.5]
+fails.sort_values("Accuracy").plot(kind="bar", x="Class")
+plt.xticks(fontproperties=CHINESE_FONT, rotation=0);
+```
+
 # Hyperparameter tuning {visibility="uncounted"}
 
 ## Trial & error
-
 
 ::: columns
 ::: column
@@ -1268,10 +1398,7 @@ tuner.results_summary(1)
 :::
 :::
 
-
-
-
-# Leveraging Solutions From Benchmark Problems {visibility="uncounted"}
+# Benchmark Problems {visibility="uncounted"}
 
 ## Demo: Object classification
 
