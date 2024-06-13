@@ -10,6 +10,7 @@ quarto render index.qmd --no-execute-daemon
 (exit) && quarto render Lecture-3-Tabular-Data/classification.qmd --no-execute-daemon
 (exit) && quarto render Lecture-4-Computer-Vision/computer-vision.qmd --no-execute-daemon
 (exit) && quarto render Lecture-5-Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
+(exit) && quarto render Lecture-6-Distributional-Regression/optimisation.qmd --no-execute-daemon
 (exit) && quarto render Lecture-6-Distributional-Regression/distributional-regression.qmd --no-execute-daemon
 (exit) && quarto render Lecture-7-Recurrent-Neural-Networks-And-Time-Series/rnns-and-time-series.qmd --no-execute-daemon
 (exit) && quarto render Lecture-8-Generative-Networks/generative-networks.qmd --no-execute-daemon
