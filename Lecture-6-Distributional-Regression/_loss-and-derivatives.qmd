@@ -1,0 +1,206 @@
+# Loss and derivatives {data-visibility="uncounted"}
+
+## Example: linear regression
+
+$$
+\hat{y}(x) = w x + b
+$$
+
+For some observation $\{ x_i, y_i \}$, the (MSE) loss is
+
+$$ 
+\text{Loss}_i = (\hat{y}(x_i) - y_i)^2
+$$
+
+For a batch of the first $n$ observations the loss is
+
+$$ 
+\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n (\hat{y}(x_i) - y_i)^2
+$$
+
+## Derivatives
+
+Since $\hat{y}(x) = w x + b$,
+
+$$
+\frac{\partial \hat{y}(x)}{\partial w} = x \text{ and }
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+As $\text{Loss}_i = (\hat{y}(x_i) - y_i)^2$, we know
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i) .
+$$
+
+## Chain rule
+
+$$
+\frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) } = 2 (\hat{y}(x_i) - y_i), \,\,
+\frac{\partial \hat{y}(x)}{\partial w} = x , \, \text{ and } \,
+\frac{\partial \hat{y}(x)}{\partial b} = 1 .
+$$
+
+Putting this together, we have
+
+$$
+\frac{\partial \text{Loss}_i}{\partial w}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial w}
+= 2 (\hat{y}(x_i) - y_i) \, x_i 
+$$
+
+and
+$$
+\frac{\partial \text{Loss}_i}{\partial b}
+= \frac{\partial \text{Loss}_i}{\partial \hat{y}(x_i) }
+  \times \frac{\partial \hat{y}(x_i)}{\partial b}
+= 2 (\hat{y}(x_i) - y_i) .
+$$
+
+## Stochastic gradient descent (SGD)
+
+Start with $\boldsymbol{\theta}_0 = (w, b)^\top = (0, 0)^\top$.
+
+Randomly pick $i=5$, say $x_i = 5$ and $y_i = 5$.
+
+::: fragment
+$$
+\hat{y}(x_i) = 0 \times 5 + 0 = 0 \Rightarrow \text{Loss}_i = (0 - 5)^2 = 25.
+$$
+:::
+::: fragment
+The partial derivatives are
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_i}{\partial w} 
+&= 2 (\hat{y}(x_i) - y_i) \, x_i = 2 \cdot (0 - 5) \cdot 5 = -50, \text{ and} \\
+\frac{\partial \text{Loss}_i}{\partial b}
+&= 2 (0 - 5) = - 10.
+\end{aligned}
+$$
+The gradient is $\nabla \text{Loss}_i = (-50, -10)^\top$.
+:::
+
+## SGD, first iteration
+
+Start with $\boldsymbol{\theta}_0 = (w, b)^\top = (0, 0)^\top$.
+
+Randomly pick $i=5$, say $x_i = 5$ and $y_i = 5$.
+
+The gradient is $\nabla \text{Loss}_i = (-50, -10)^\top$.
+
+Use learning rate $\eta = 0.01$ to update 
+$$
+\begin{aligned}
+\boldsymbol{\theta}_1
+&= \boldsymbol{\theta}_0 - \eta \nabla \text{Loss}_i \\
+&= \begin{pmatrix} 0 \\ 0 \end{pmatrix} - 0.01 \begin{pmatrix} -50 \\ -10 \end{pmatrix} \\
+&= \begin{pmatrix} 0 \\ 0 \end{pmatrix} + \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix} = \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix}.
+\end{aligned}
+$$
+
+## SGD, second iteration
+
+Start with $\boldsymbol{\theta}_1 = (w, b)^\top = (0.5, 0.1)^\top$.
+
+Randomly pick $i=9$, say $x_i = 9$ and $y_i = 17$.
+
+The gradient is $\nabla \text{Loss}_i = (-223.2, -24.8)^\top$.
+
+Use learning rate $\eta = 0.01$ to update 
+$$
+\begin{aligned}
+\boldsymbol{\theta}_2
+&= \boldsymbol{\theta}_1 - \eta \nabla \text{Loss}_i \\
+&= \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix} - 0.01 \begin{pmatrix} -223.2 \\ -24.8 \end{pmatrix} \\
+&= \begin{pmatrix} 0.5 \\ 0.1 \end{pmatrix} + \begin{pmatrix} 2.232 \\ 0.248 \end{pmatrix} = \begin{pmatrix} 2.732 \\ 0.348 \end{pmatrix}.
+\end{aligned}
+$$
+
+## Batch gradient descent (BGD) {.smaller}
+
+For the first $n$ observations 
+$\text{Loss}_{1:n} = \frac{1}{n} \sum_{i=1}^n \text{Loss}_i$
+so
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial w}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial w}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial w} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) \, x_i .
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\frac{\partial \text{Loss}_{1:n}}{\partial b}
+&= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\partial b}
+= \frac{1}{n} \sum_{i=1}^n \frac{\partial \text{Loss}_{i}}{\hat{y}(x_i)} \frac{\partial \hat{y}(x_i)}{\partial b} \\
+&= \frac{1}{n} \sum_{i=1}^n 2 (\hat{y}(x_i) - y_i) .
+\end{aligned}
+$$
+
+## BGD, first iteration ($\boldsymbol{\theta}_0 = \boldsymbol{0}$) {.smaller}
+
+```{python}
+#| echo: false
+numpy.random.seed(111) 
+n = 3 
+x = numpy.arange(1, n+1)
+y = 2*x - 1 + 0.01 * numpy.random.randn(n)
+
+theta_0 = numpy.array([0, 0])
+yhat = theta_0[0] * x + theta_0[1]
+
+loss = (yhat - y) ** 2
+
+dLossdw = 2 * (yhat - y) * x
+dLossdb = 2 * (yhat - y)
+
+df = pandas.DataFrame({"x": x, "y": y, "y_hat": yhat, "loss": loss, "dL/dw": dLossdw, "dL/db": dLossdb})
+```
+
+```{python}
+#| echo: false
+df.round(2)
+```
+
+So $\nabla \text{Loss}_{1:3}$ is
+```{python}
+nabla = np.array([df["dL/dw"].mean(), df["dL/db"].mean()])
+nabla 
+```
+so with $\eta = 0.1$ then $\boldsymbol{\theta}_1$ becomes
+```{python}
+theta_1 = theta_0 - 0.1 * nabla
+theta_1
+```
+
+## BGD, second iteration {.smaller}
+
+```{python}
+#| echo: false
+yhat = theta_1[0] * x + theta_1[1]
+loss = (yhat - y) ** 2
+dLossdw = 2 * (yhat - y) * x
+dLossdb = 2 * (yhat - y)
+
+df = pandas.DataFrame({"x": x, "y": y, "y_hat": yhat, "loss": loss, "dL/dw": dLossdw, "dL/db": dLossdb})
+```
+
+```{python}
+#| echo: false
+df.round(2)
+```
+
+So $\nabla \text{Loss}_{1:3}$ is
+```{python}
+nabla = np.array([df["dL/dw"].mean(), df["dL/db"].mean()])
+nabla 
+```
+so with $\eta = 0.1$ then $\boldsymbol{\theta}_2$ becomes
+```{python}
+theta_2 = theta_1 - 0.1 * nabla
+theta_2
+```
