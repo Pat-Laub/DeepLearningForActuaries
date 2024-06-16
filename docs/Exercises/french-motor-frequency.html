@@ -1,0 +1,2655 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.554">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="">
+
+<title>AI for Actuaries - Exercise: French Motor Claim Frequency</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Lecture-4-Computer-Vision/computer-vision.html" rel="next">
+<link href="../Exercises/victorian-crash-severity.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Lecture-2-Deep-Learning-Keras/project.html">Module 2</a></li><li class="breadcrumb-item"><a href="../Exercises/french-motor-frequency.html">Exercise: French Motor Claim Frequency</a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">AI for Actuaries</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Module 1</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/course-overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/artificial-intelligence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Artificial Intelligence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-1-Artificial-Intelligence/python.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Intro Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-for-data-science-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Python for Data Science</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/chess-ai.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Chess AI</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">Module 2</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-2-Deep-Learning-Keras/project.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Project Details</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-2-Deep-Learning-Keras/deep-learning-keras.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Deep Learning with Keras</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-3-Tabular-Data/categorical-variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Categorical Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-3-Tabular-Data/classification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classification</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/forward-pass-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Forward Pass</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/matplotlib-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Matplotlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/victorian-crash-severity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Victorian Car Crash Severity</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/french-motor-frequency.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Exercise: French Motor Claim Frequency</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Module 3</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-4-Computer-Vision/computer-vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/optimisation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/latex-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Markdown</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/hurricane-damage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Aerial Photos of Hurricane Damage</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text">Module 4</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-5-Natural-Language-Processing/natural-language-processing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/police-reports.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Police Reports of US Car Crashes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text">Module 5</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-7-Recurrent-Neural-Networks-And-Time-Series/rnns-and-time-series.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Recurrent Neural Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/sydney-airport-temperature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Sydney Temperature Forecasting</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text">Module 6</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-6-Distributional-Regression/optimisation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-6-Distributional-Regression/distributional-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Distributional Regression</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/backpropagation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Backpropagation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/distributional-regression-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Distributional Regression</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true">
+ <span class="menu-text">Module 7</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-9-Advanced-Topics/interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interpretability</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true">
+ <span class="menu-text">Module 8</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-8-Generative-Networks/generative-networks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-8-Generative-Networks/gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Adversarial Networks</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true">
+ <span class="menu-text">Module 9</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Lecture-9-Advanced-Topics/next-steps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Next Steps</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#french-motor-dataset" id="toc-french-motor-dataset" class="nav-link active" data-scroll-target="#french-motor-dataset">French motor dataset</a>
+  <ul class="collapse">
+  <li><a href="#data-dictionary" id="toc-data-dictionary" class="nav-link" data-scroll-target="#data-dictionary">Data dictionary</a></li>
+  <li><a href="#region-column" id="toc-region-column" class="nav-link" data-scroll-target="#region-column">Region column</a></li>
+  </ul></li>
+  <li><a href="#poisson-regression" id="toc-poisson-regression" class="nav-link" data-scroll-target="#poisson-regression">Poisson regression</a>
+  <ul class="collapse">
+  <li><a href="#the-model" id="toc-the-model" class="nav-link" data-scroll-target="#the-model">The model</a></li>
+  <li><a href="#help-about-the-poisson-loss" id="toc-help-about-the-poisson-loss" class="nav-link" data-scroll-target="#help-about-the-poisson-loss">Help about the “poisson” loss</a></li>
+  <li><a href="#poisson-probabilities" id="toc-poisson-probabilities" class="nav-link" data-scroll-target="#poisson-probabilities">Poisson probabilities</a></li>
+  <li><a href="#log-likelihood" id="toc-log-likelihood" class="nav-link" data-scroll-target="#log-likelihood">Log-likelihood</a></li>
+  <li><a href="#maximising-the-likelihood" id="toc-maximising-the-likelihood" class="nav-link" data-scroll-target="#maximising-the-likelihood">Maximising the likelihood</a></li>
+  <li><a href="#keras-poisson-loss-again" id="toc-keras-poisson-loss-again" class="nav-link" data-scroll-target="#keras-poisson-loss-again">Keras’ “poisson” loss again</a></li>
+  <li><a href="#poisson-deviance" id="toc-poisson-deviance" class="nav-link" data-scroll-target="#poisson-deviance">Poisson deviance</a></li>
+  <li><a href="#poisson-deviance-as-a-loss-function" id="toc-poisson-deviance-as-a-loss-function" class="nav-link" data-scroll-target="#poisson-deviance-as-a-loss-function">Poisson deviance as a loss function</a></li>
+  </ul></li>
+  <li><a href="#glm" id="toc-glm" class="nav-link" data-scroll-target="#glm">GLM</a>
+  <ul class="collapse">
+  <li><a href="#split-the-data" id="toc-split-the-data" class="nav-link" data-scroll-target="#split-the-data">Split the data</a></li>
+  <li><a href="#preprocess-the-inputs-for-a-glm" id="toc-preprocess-the-inputs-for-a-glm" class="nav-link" data-scroll-target="#preprocess-the-inputs-for-a-glm">Preprocess the inputs for a GLM</a></li>
+  <li><a href="#fit-a-glm" id="toc-fit-a-glm" class="nav-link" data-scroll-target="#fit-a-glm">Fit a GLM</a></li>
+  <li><a href="#extract-the-poisson-deviance-from-the-glm" id="toc-extract-the-poisson-deviance-from-the-glm" class="nav-link" data-scroll-target="#extract-the-poisson-deviance-from-the-glm">Extract the Poisson deviance from the GLM</a></li>
+  </ul></li>
+  <li><a href="#neural-network" id="toc-neural-network" class="nav-link" data-scroll-target="#neural-network">Neural network</a>
+  <ul class="collapse">
+  <li><a href="#look-at-the-counts-of-the-region-and-vehbrand-columns" id="toc-look-at-the-counts-of-the-region-and-vehbrand-columns" class="nav-link" data-scroll-target="#look-at-the-counts-of-the-region-and-vehbrand-columns">Look at the counts of the <code>Region</code> and <code>VehBrand</code> columns</a></li>
+  <li><a href="#prepare-the-data-for-a-neural-network" id="toc-prepare-the-data-for-a-neural-network" class="nav-link" data-scroll-target="#prepare-the-data-for-a-neural-network">Prepare the data for a neural network</a></li>
+  <li><a href="#fit-a-neural-network" id="toc-fit-a-neural-network" class="nav-link" data-scroll-target="#fit-a-neural-network">Fit a neural network</a></li>
+  <li><a href="#evaluate" id="toc-evaluate" class="nav-link" data-scroll-target="#evaluate">Evaluate</a></li>
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="french-motor-frequency.ipynb" download="french-motor-frequency.ipynb"><i class="bi bi-journal-code"></i>Jupyter</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Lecture-2-Deep-Learning-Keras/project.html">Module 2</a></li><li class="breadcrumb-item"><a href="../Exercises/french-motor-frequency.html">Exercise: French Motor Claim Frequency</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Exercise: French Motor Claim Frequency</h1>
+<p class="subtitle lead">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Your task is to predict the frequency distribution of car insurance claims in France.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="dalle-french-motor.webp" class="img-fluid figure-img"></p>
+<figcaption>DALL-E’s rendition of this French motor claim frequency prediction task.</figcaption>
+</figure>
+</div>
+<section id="french-motor-dataset" class="level2">
+<h2 class="anchored" data-anchor-id="french-motor-dataset">French motor dataset</h2>
+<div id="757c787e" class="cell" data-execution_count="1">
+<details class="code-fold">
+<summary>Show the package imports</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> keras</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_openml</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, OrdinalEncoder, StandardScaler</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>2024-06-16 21:21:48.829822: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2024-06-16 21:21:48.926559: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 AVX_VNNI FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-06-16 21:21:50.481855: W tensorflow/compiler/tf2tensorrt/utils/py_utils.cc:38] TF-TRT Warning: Could not find TensorRT</code></pre>
+</div>
+</div>
+<p>Download the dataset if we don’t have it already.</p>
+<div id="e7fbb93f" class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="annotated-cell-2"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-2-1" class="code-annotation-target"><a href="#annotated-cell-2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">"french-motor.csv"</span>).exists():</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-2-2" class="code-annotation-target"><a href="#annotated-cell-2-2" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> fetch_openml(data_id<span class="op">=</span><span class="dv">41214</span>, as_frame<span class="op">=</span><span class="va">True</span>).frame</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-2-3" class="code-annotation-target"><a href="#annotated-cell-2-3" aria-hidden="true" tabindex="-1"></a>    freq.to_csv(<span class="st">"french-motor.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="annotated-cell-2-4"><a href="#annotated-cell-2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-2-5" class="code-annotation-target"><a href="#annotated-cell-2-5" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> pd.read_csv(<span class="st">"french-motor.csv"</span>)</span>
+<span id="annotated-cell-2-6"><a href="#annotated-cell-2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-2-7"><a href="#annotated-cell-2-7" aria-hidden="true" tabindex="-1"></a>freq</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-2" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="1" data-code-annotation="1">Checks if the dataset does not already exist within the Jupyter Notebook directory.</span>
+</dd>
+<dt data-target-cell="annotated-cell-2" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="2" data-code-annotation="2">Fetches the dataset from OpenML</span>
+</dd>
+<dt data-target-cell="annotated-cell-2" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="3" data-code-annotation="3">Converts the dataset into <code>csv</code> format</span>
+</dd>
+<dt data-target-cell="annotated-cell-2" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="5" data-code-annotation="4">If it already exists, then read in the dataset from the file.</span>
+</dd>
+</dl>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="2">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">IDpol</th>
+<th data-quarto-table-cell-role="th">ClaimNb</th>
+<th data-quarto-table-cell-role="th">Exposure</th>
+<th data-quarto-table-cell-role="th">Area</th>
+<th data-quarto-table-cell-role="th">VehPower</th>
+<th data-quarto-table-cell-role="th">VehAge</th>
+<th data-quarto-table-cell-role="th">DrivAge</th>
+<th data-quarto-table-cell-role="th">BonusMalus</th>
+<th data-quarto-table-cell-role="th">VehBrand</th>
+<th data-quarto-table-cell-role="th">VehGas</th>
+<th data-quarto-table-cell-role="th">Density</th>
+<th data-quarto-table-cell-role="th">Region</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>1.0</td>
+<td>1</td>
+<td>0.10000</td>
+<td>D</td>
+<td>5</td>
+<td>0</td>
+<td>55</td>
+<td>50</td>
+<td>B12</td>
+<td>'Regular'</td>
+<td>1217</td>
+<td>R82</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>3.0</td>
+<td>1</td>
+<td>0.77000</td>
+<td>D</td>
+<td>5</td>
+<td>0</td>
+<td>55</td>
+<td>50</td>
+<td>B12</td>
+<td>'Regular'</td>
+<td>1217</td>
+<td>R82</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">2</td>
+<td>5.0</td>
+<td>1</td>
+<td>0.75000</td>
+<td>B</td>
+<td>6</td>
+<td>2</td>
+<td>52</td>
+<td>50</td>
+<td>B12</td>
+<td>'Diesel'</td>
+<td>54</td>
+<td>R22</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">3</td>
+<td>10.0</td>
+<td>1</td>
+<td>0.09000</td>
+<td>B</td>
+<td>7</td>
+<td>0</td>
+<td>46</td>
+<td>50</td>
+<td>B12</td>
+<td>'Diesel'</td>
+<td>76</td>
+<td>R72</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">4</td>
+<td>11.0</td>
+<td>1</td>
+<td>0.84000</td>
+<td>B</td>
+<td>7</td>
+<td>0</td>
+<td>46</td>
+<td>50</td>
+<td>B12</td>
+<td>'Diesel'</td>
+<td>76</td>
+<td>R72</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">678008</td>
+<td>6114326.0</td>
+<td>0</td>
+<td>0.00274</td>
+<td>E</td>
+<td>4</td>
+<td>0</td>
+<td>54</td>
+<td>50</td>
+<td>B12</td>
+<td>'Regular'</td>
+<td>3317</td>
+<td>R93</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">678009</td>
+<td>6114327.0</td>
+<td>0</td>
+<td>0.00274</td>
+<td>E</td>
+<td>4</td>
+<td>0</td>
+<td>41</td>
+<td>95</td>
+<td>B12</td>
+<td>'Regular'</td>
+<td>9850</td>
+<td>R11</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">678010</td>
+<td>6114328.0</td>
+<td>0</td>
+<td>0.00274</td>
+<td>D</td>
+<td>6</td>
+<td>2</td>
+<td>45</td>
+<td>50</td>
+<td>B12</td>
+<td>'Diesel'</td>
+<td>1323</td>
+<td>R82</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">678011</td>
+<td>6114329.0</td>
+<td>0</td>
+<td>0.00274</td>
+<td>B</td>
+<td>4</td>
+<td>0</td>
+<td>60</td>
+<td>50</td>
+<td>B12</td>
+<td>'Regular'</td>
+<td>95</td>
+<td>R26</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">678012</td>
+<td>6114330.0</td>
+<td>0</td>
+<td>0.00274</td>
+<td>B</td>
+<td>7</td>
+<td>6</td>
+<td>29</td>
+<td>54</td>
+<td>B12</td>
+<td>'Diesel'</td>
+<td>65</td>
+<td>R72</td>
+</tr>
+</tbody>
+</table>
+
+<p>678013 rows × 12 columns</p>
+</div>
+</div>
+</div>
+</div>
+<section id="data-dictionary" class="level3">
+<h3 class="anchored" data-anchor-id="data-dictionary">Data dictionary</h3>
+<ul>
+<li><code>IDpol</code>: policy number (unique identifier)</li>
+<li><code>Area</code>: area code (categorical, ordinal)</li>
+<li><code>BonusMalus</code>: bonus-malus level between 50 and 230 (with reference level 100)</li>
+<li><code>Density</code>: density of inhabitants per km<sup>2</sup> in the city of the living place of the driver</li>
+<li><code>DrivAge</code>: age of the (most common) driver in years</li>
+<li><code>Exposure</code>: total exposure in yearly units</li>
+<li><code>Region</code>: regions in France (prior to 2016)</li>
+<li><code>VehAge</code>: age of the car in years</li>
+<li><code>VehBrand</code>: car brand (categorical, nominal)</li>
+<li><code>VehGas</code>: diesel or regular fuel car (binary)</li>
+<li><code>VehPower</code>: power of the car (categorical, ordinal)</li>
+<li><code>ClaimNb</code>: number of claims on the given policy (<strong>target variable</strong>)</li>
+</ul>
+<div class="footer">
+<p>Source: Nell et al.&nbsp;(2020), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764">Case Study: French Motor Third-Party Liability Claims</a>, SSRN.</p>
+</div>
+</section>
+<section id="region-column" class="level3">
+<h3 class="anchored" data-anchor-id="region-column">Region column</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="french-regions.png" class="img-fluid figure-img"></p>
+<figcaption>French Administrative Regions</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Nell et al.&nbsp;(2020), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764">Case Study: French Motor Third-Party Liability Claims</a>, SSRN.</p>
+</div>
+</section>
+</section>
+<section id="poisson-regression" class="level2">
+<h2 class="anchored" data-anchor-id="poisson-regression">Poisson regression</h2>
+<section id="the-model" class="level3">
+<h3 class="anchored" data-anchor-id="the-model">The model</h3>
+<p>Have <span class="math inline">\{ (\boldsymbol{x}_i, y_i) \}_{i=1, \dots, n}</span> for <span class="math inline">\boldsymbol{x}_i \in \mathbb{R}^{47}</span> and <span class="math inline">y_i \in \mathbb{N}_0</span>.</p>
+<p>Assume the distribution <span class="math display">
+Y_i \sim \mathsf{Poisson}(\lambda(\boldsymbol{x}_i))
+</span></p>
+<p>We have <span class="math inline">\mathbb{E} Y_i = \lambda(\boldsymbol{x}_i)</span>. The NN takes <span class="math inline">\boldsymbol{x}_i</span> &amp; predicts <span class="math inline">\mathbb{E} Y_i</span>.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>For insurance, <em>this is a bit weird</em>. The exposures are different for each policy.</p>
+<p><span class="math inline">\lambda(\boldsymbol{x}_i)</span> is the expected number of claims for the duration of policy <span class="math inline">i</span>’s contract.</p>
+<p>Normally, <span class="math inline">\text{Exposure}_i \not\in \boldsymbol{x}_i</span>, and <span class="math inline">\lambda(\boldsymbol{x}_i)</span> is the expected rate <em>per year</em>, then <span class="math display">
+Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\boldsymbol{x}_i)).
+</span></p>
+</div>
+</div>
+</section>
+<section id="help-about-the-poisson-loss" class="level3">
+<h3 class="anchored" data-anchor-id="help-about-the-poisson-loss">Help about the “poisson” loss</h3>
+<div id="82165fb1" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">help</span>(keras.losses.poisson)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Help on function poisson in module keras.src.losses.losses:
+
+poisson(y_true, y_pred)
+    Computes the Poisson loss between y_true and y_pred.
+    
+    Formula:
+    
+    ```python
+    loss = y_pred - y_true * log(y_pred)
+    ```
+    
+    Args:
+        y_true: Ground truth values. shape = `[batch_size, d0, .. dN]`.
+        y_pred: The predicted values. shape = `[batch_size, d0, .. dN]`.
+    
+    Returns:
+        Poisson loss values with shape = `[batch_size, d0, .. dN-1]`.
+    
+    Example:
+    
+    &gt;&gt;&gt; y_true = np.random.randint(0, 2, size=(2, 3))
+    &gt;&gt;&gt; y_pred = np.random.random(size=(2, 3))
+    &gt;&gt;&gt; loss = keras.losses.poisson(y_true, y_pred)
+    &gt;&gt;&gt; assert loss.shape == (2,)
+    &gt;&gt;&gt; y_pred = y_pred + 1e-7
+    &gt;&gt;&gt; assert np.allclose(
+    ...     loss, np.mean(y_pred - y_true * np.log(y_pred), axis=-1),
+    ...     atol=1e-5)
+</code></pre>
+</div>
+</div>
+</section>
+<section id="poisson-probabilities" class="level3">
+<h3 class="anchored" data-anchor-id="poisson-probabilities">Poisson probabilities</h3>
+<p>Since the probability mass function (p.m.f.) of the <span class="math inline">N \sim \mathsf{Poisson}(\lambda)</span> distribution is <span class="math inline">\mathbb{P}(N = k) = \frac{\lambda^k \mathrm{e}^{-\lambda}}{k!}</span> then the p.m.f. of <span class="math inline">Y_i \sim \mathsf{Poisson}(\lambda(\boldsymbol{x}_i))</span> is</p>
+<p><span class="math display">
+\mathbb{P}(Y_i = y_i) = \frac{ \lambda(\boldsymbol{x}_i)^{y_i} \, \mathrm{e}^{-\lambda(\boldsymbol{x}_i)} }{y_i!}
+</span></p>
+<p>The likelihood of a sample is then <span class="math display">
+\mathbb{P}(Y_1 = y_1, \dots, Y_n = y_n) = \prod_{i=1}^n \mathbb{P}(Y_i = y_i).
+</span></p>
+</section>
+<section id="log-likelihood" class="level3">
+<h3 class="anchored" data-anchor-id="log-likelihood">Log-likelihood</h3>
+<p>Therefore, the likelihood of <span class="math inline">\{ (\boldsymbol{x}_i, y_i) \}_{i=1, \dots, n}</span> is</p>
+<p><span class="math display">
+L = \prod_{i=1}^n \frac{ \lambda(\boldsymbol{x}_i)^{y_i} \, \mathrm{e}^{-\lambda(\boldsymbol{x}_i)} }{y_i!}
+</span></p>
+<p>so the log-likelihood is</p>
+<p><span class="math display">
+\begin{aligned}
+\ell
+&amp;= \sum_{i=1}^n \log \bigl( \frac{ \lambda(\boldsymbol{x}_i)^{y_i} \, \mathrm{e}^{-\lambda(\boldsymbol{x}_i)} }{y_i!} \bigr) \\
+&amp;= \sum_{i=1}^n y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) - \lambda(\boldsymbol{x}_i) - \log(y_i!) .
+\end{aligned}
+</span></p>
+</section>
+<section id="maximising-the-likelihood" class="level3">
+<h3 class="anchored" data-anchor-id="maximising-the-likelihood">Maximising the likelihood</h3>
+<p>Want to find the best NN <span class="math inline">\lambda^*</span> such that: <span class="math display">
+\begin{aligned}
+\lambda^*
+&amp;= \arg\max_{\lambda} \sum_{i=1}^n y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) - \lambda(\boldsymbol{x}_i) - \log(y_i!) \\
+&amp;= \arg\max_{\lambda} \sum_{i=1}^n y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) - \lambda(\boldsymbol{x}_i) \\
+&amp;= \arg\min_{\lambda} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log \bigl( \lambda(\boldsymbol{x}_i)\bigr) \\
+&amp;= \arg\min_{\lambda} \frac{1}{n} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log \bigl( \lambda(\boldsymbol{x}_i)\bigr) .
+\end{aligned}
+</span></p>
+</section>
+<section id="keras-poisson-loss-again" class="level3">
+<h3 class="anchored" data-anchor-id="keras-poisson-loss-again">Keras’ “poisson” loss again</h3>
+<div id="b8bae786" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">help</span>(poisson)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="0aea2c59" class="cell" data-execution_count="5">
+<div class="cell-output cell-output-stdout">
+<pre><code>Help on function poisson in module keras.losses:
+
+poisson(y_true, y_pred)
+    Computes the Poisson loss between y_true and y_pred.
+    
+    The Poisson loss is the mean of the elements of the `Tensor`
+    `y_pred - y_true * log(y_pred)`.
+  
+...
+</code></pre>
+</div>
+</div>
+<p>In other words, <span class="math display">
+\text{PoissonLoss} = \frac{1}{n} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) .
+</span></p>
+</section>
+<section id="poisson-deviance" class="level3">
+<h3 class="anchored" data-anchor-id="poisson-deviance">Poisson deviance</h3>
+<p><span class="math display">
+D = 2 \sum_{i=1}^n y_i \log\bigl( \frac{y_i}{\lambda(\boldsymbol{x}_i)} \bigr) - \bigl( y_i - \lambda(\boldsymbol{x}_i) \bigr) .
+</span></p>
+<div id="635cde21" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> mean_poisson_deviance</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>y_true <span class="op">=</span> [<span class="dv">0</span>, <span class="dv">2</span>, <span class="dv">1</span>]</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> [<span class="fl">0.1</span>, <span class="fl">0.9</span>, <span class="fl">0.8</span>]</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>mean_poisson_deviance(y_true, y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<pre><code>0.4134392958331687</code></pre>
+</div>
+</div>
+<div id="11fa35ab" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>deviance <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> y_i, yhat_i <span class="kw">in</span> <span class="bu">zip</span>(y_true, y_pred):</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  firstTerm <span class="op">=</span> y_i <span class="op">*</span> np.log(y_i <span class="op">/</span> yhat_i) <span class="cf">if</span> y_i <span class="op">&gt;</span> <span class="dv">0</span> <span class="cf">else</span> <span class="dv">0</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  deviance <span class="op">+=</span> <span class="dv">2</span> <span class="op">*</span> (firstTerm <span class="op">-</span> (y_i <span class="op">-</span> yhat_i))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>meanDeviance <span class="op">=</span> deviance <span class="op">/</span> <span class="bu">len</span>(y_true)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>deviance, meanDeviance</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>(1.240317887499506, 0.4134392958331687)</code></pre>
+</div>
+</div>
+</section>
+<section id="poisson-deviance-as-a-loss-function" class="level3">
+<h3 class="anchored" data-anchor-id="poisson-deviance-as-a-loss-function">Poisson deviance as a loss function</h3>
+<p>Want to find the best NN <span class="math inline">\lambda^*</span> such that: <span class="math display">
+\begin{aligned}
+\lambda^*
+&amp;= \arg\min_{\lambda} \, 2 \sum_{i=1}^n y_i \log\bigl( \frac{y_i}{\lambda(\boldsymbol{x}_i)} \bigr) - \bigl( y_i - \lambda(\boldsymbol{x}_i) \bigr) \\
+&amp;= \arg\min_{\lambda} \sum_{i=1}^n y_i \log( y_i ) - y_i \log\bigl( \lambda(\boldsymbol{x}_i)  \bigr) - y_i + \lambda(\boldsymbol{x}_i) \\
+&amp;= \arg\min_{\lambda} \sum_{i=1}^n - y_i \log\bigl( \lambda(\boldsymbol{x}_i) \bigr) + \lambda(\boldsymbol{x}_i) \\
+&amp;= \arg\min_{\lambda} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log\bigl( \lambda(\boldsymbol{x}_i) \bigr) .
+\end{aligned}
+</span></p>
+</section>
+</section>
+<section id="glm" class="level2">
+<h2 class="anchored" data-anchor-id="glm">GLM</h2>
+<section id="split-the-data" class="level3">
+<h3 class="anchored" data-anchor-id="split-the-data">Split the data</h3>
+<div id="01e55c85" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> freq.drop(columns<span class="op">=</span>[<span class="st">"ClaimNb"</span>, <span class="st">"IDpol"</span>])</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> freq[<span class="st">"ClaimNb"</span>]</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>X_main, X_test, y_main, y_test <span class="op">=</span> train_test_split(X, y, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>X_train, X_val, y_train, y_val <span class="op">=</span> train_test_split(X_main, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">42</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><strong>TODO</strong>: Modify this to do a stratified split. That is, the distribution of <code>ClaimNb</code> should be (about) the same in the training, validation, and test sets.</p>
+</section>
+<section id="preprocess-the-inputs-for-a-glm" class="level3">
+<h3 class="anchored" data-anchor-id="preprocess-the-inputs-for-a-glm">Preprocess the inputs for a GLM</h3>
+<div id="818d329e" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="annotated-cell-8"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-8-1"><a href="#annotated-cell-8-1" aria-hidden="true" tabindex="-1"></a>ct_glm <span class="op">=</span> make_column_transformer(</span>
+<span id="annotated-cell-8-2"><a href="#annotated-cell-8-2" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-8" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-8-3" class="code-annotation-target"><a href="#annotated-cell-8-3" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>),</span>
+<span id="annotated-cell-8-4"><a href="#annotated-cell-8-4" aria-hidden="true" tabindex="-1"></a>      [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
+<span id="annotated-cell-8-5"><a href="#annotated-cell-8-5" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span><span class="st">"passthrough"</span>,</span>
+<span id="annotated-cell-8-6"><a href="#annotated-cell-8-6" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="annotated-cell-8-7"><a href="#annotated-cell-8-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-8" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-8-8" class="code-annotation-target"><a href="#annotated-cell-8-8" aria-hidden="true" tabindex="-1"></a>X_train_glm <span class="op">=</span> sm.add_constant(ct_glm.fit_transform(X_train))</span>
+<span id="annotated-cell-8-9"><a href="#annotated-cell-8-9" aria-hidden="true" tabindex="-1"></a>X_val_glm <span class="op">=</span> sm.add_constant(ct_glm.transform(X_val))</span>
+<span id="annotated-cell-8-10"><a href="#annotated-cell-8-10" aria-hidden="true" tabindex="-1"></a>X_test_glm <span class="op">=</span> sm.add_constant(ct_glm.transform(X_test))</span>
+<span id="annotated-cell-8-11"><a href="#annotated-cell-8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-8-12"><a href="#annotated-cell-8-12" aria-hidden="true" tabindex="-1"></a>X_train_glm</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-8" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-8" data-code-lines="3" data-code-annotation="1">The <code>drop="first"</code> parameter is used to avoid multicollinearity in the model.</span>
+</dd>
+<dt data-target-cell="annotated-cell-8" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-8" data-code-lines="8" data-code-annotation="2">The <code>sm.add_constant</code> function adds a column of ones to the input matrix.</span>
+</dd>
+</dl>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">const</th>
+<th data-quarto-table-cell-role="th">Area</th>
+<th data-quarto-table-cell-role="th">VehGas_'Regular'</th>
+<th data-quarto-table-cell-role="th">VehBrand_B10</th>
+<th data-quarto-table-cell-role="th">VehBrand_B11</th>
+<th data-quarto-table-cell-role="th">VehBrand_B12</th>
+<th data-quarto-table-cell-role="th">VehBrand_B13</th>
+<th data-quarto-table-cell-role="th">VehBrand_B14</th>
+<th data-quarto-table-cell-role="th">VehBrand_B2</th>
+<th data-quarto-table-cell-role="th">VehBrand_B3</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">Region_R83</th>
+<th data-quarto-table-cell-role="th">Region_R91</th>
+<th data-quarto-table-cell-role="th">Region_R93</th>
+<th data-quarto-table-cell-role="th">Region_R94</th>
+<th data-quarto-table-cell-role="th">Exposure</th>
+<th data-quarto-table-cell-role="th">VehPower</th>
+<th data-quarto-table-cell-role="th">VehAge</th>
+<th data-quarto-table-cell-role="th">DrivAge</th>
+<th data-quarto-table-cell-role="th">BonusMalus</th>
+<th data-quarto-table-cell-role="th">Density</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">642604</td>
+<td>1.0</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.74</td>
+<td>11</td>
+<td>1</td>
+<td>50</td>
+<td>50</td>
+<td>824</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">394020</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.00</td>
+<td>6</td>
+<td>10</td>
+<td>51</td>
+<td>55</td>
+<td>42</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">104966</td>
+<td>1.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.00</td>
+<td>4</td>
+<td>20</td>
+<td>81</td>
+<td>50</td>
+<td>747</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">438856</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.25</td>
+<td>7</td>
+<td>3</td>
+<td>44</td>
+<td>50</td>
+<td>23</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">87109</td>
+<td>1.0</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.12</td>
+<td>7</td>
+<td>1</td>
+<td>52</td>
+<td>50</td>
+<td>721</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">99179</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.31</td>
+<td>7</td>
+<td>6</td>
+<td>49</td>
+<td>50</td>
+<td>119</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">523093</td>
+<td>1.0</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.04</td>
+<td>7</td>
+<td>0</td>
+<td>43</td>
+<td>51</td>
+<td>4762</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">143052</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.00</td>
+<td>6</td>
+<td>6</td>
+<td>36</td>
+<td>50</td>
+<td>133</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">606805</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.48</td>
+<td>5</td>
+<td>0</td>
+<td>73</td>
+<td>50</td>
+<td>79</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">228897</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>1.00</td>
+<td>4</td>
+<td>5</td>
+<td>76</td>
+<td>50</td>
+<td>34</td>
+</tr>
+</tbody>
+</table>
+
+<p>406807 rows × 40 columns</p>
+</div>
+</div>
+</div>
+</div>
+<p>Alternatively, you can try to reproduce this using the <code>patsy</code> library and an R-style formula.</p>
+</section>
+<section id="fit-a-glm" class="level3">
+<h3 class="anchored" data-anchor-id="fit-a-glm">Fit a GLM</h3>
+<p>Using the <code>statsmodels</code> package, we can fit a Poisson regression model.</p>
+<div id="829c0ead" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>glm <span class="op">=</span> sm.GLM(y_train, X_train_glm, family<span class="op">=</span>sm.families.Poisson())</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>glm_results <span class="op">=</span> glm.fit()</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>glm_results.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<div>
+<table class="simpletable table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>Generalized Linear Model Regression Results</caption>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Dep. Variable:</td>
+<td>ClaimNb</td>
+<td data-quarto-table-cell-role="th">No. Observations:</td>
+<td>406807</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Model:</td>
+<td>GLM</td>
+<td data-quarto-table-cell-role="th">Df Residuals:</td>
+<td>406767</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Model Family:</td>
+<td>Poisson</td>
+<td data-quarto-table-cell-role="th">Df Model:</td>
+<td>39</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Link Function:</td>
+<td>Log</td>
+<td data-quarto-table-cell-role="th">Scale:</td>
+<td>1.0000</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Method:</td>
+<td>IRLS</td>
+<td data-quarto-table-cell-role="th">Log-Likelihood:</td>
+<td>-83303.</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Date:</td>
+<td>Sun, 16 Jun 2024</td>
+<td data-quarto-table-cell-role="th">Deviance:</td>
+<td>1.2522e+05</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Time:</td>
+<td>21:22:07</td>
+<td data-quarto-table-cell-role="th">Pearson chi2:</td>
+<td>4.56e+05</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">No. Iterations:</td>
+<td>7</td>
+<td data-quarto-table-cell-role="th">Pseudo R-squ. (CS):</td>
+<td>0.01256</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Covariance Type:</td>
+<td>nonrobust</td>
+<td data-quarto-table-cell-role="th"></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<table class="simpletable table table-sm table-striped small" data-quarto-postprocess="true">
+<tbody>
+<tr class="odd">
+<td></td>
+<td data-quarto-table-cell-role="th">coef</td>
+<td data-quarto-table-cell-role="th">std err</td>
+<td data-quarto-table-cell-role="th">z</td>
+<td data-quarto-table-cell-role="th">P&gt;|z|</td>
+<td data-quarto-table-cell-role="th">[0.025</td>
+<td data-quarto-table-cell-role="th">0.975]</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">const</td>
+<td>-5.2621</td>
+<td>0.061</td>
+<td>-86.094</td>
+<td>0.000</td>
+<td>-5.382</td>
+<td>-5.142</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Area</td>
+<td>0.0529</td>
+<td>0.007</td>
+<td>7.852</td>
+<td>0.000</td>
+<td>0.040</td>
+<td>0.066</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehGas_'Regular'</td>
+<td>0.0779</td>
+<td>0.014</td>
+<td>5.497</td>
+<td>0.000</td>
+<td>0.050</td>
+<td>0.106</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">VehBrand_B10</td>
+<td>-0.0629</td>
+<td>0.049</td>
+<td>-1.296</td>
+<td>0.195</td>
+<td>-0.158</td>
+<td>0.032</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehBrand_B11</td>
+<td>-0.0238</td>
+<td>0.053</td>
+<td>-0.450</td>
+<td>0.653</td>
+<td>-0.128</td>
+<td>0.080</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">VehBrand_B12</td>
+<td>0.0577</td>
+<td>0.023</td>
+<td>2.528</td>
+<td>0.011</td>
+<td>0.013</td>
+<td>0.103</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehBrand_B13</td>
+<td>0.0137</td>
+<td>0.053</td>
+<td>0.257</td>
+<td>0.797</td>
+<td>-0.091</td>
+<td>0.118</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">VehBrand_B14</td>
+<td>-0.2025</td>
+<td>0.104</td>
+<td>-1.943</td>
+<td>0.052</td>
+<td>-0.407</td>
+<td>0.002</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehBrand_B2</td>
+<td>-0.0017</td>
+<td>0.020</td>
+<td>-0.085</td>
+<td>0.932</td>
+<td>-0.040</td>
+<td>0.037</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">VehBrand_B3</td>
+<td>-0.0357</td>
+<td>0.029</td>
+<td>-1.250</td>
+<td>0.211</td>
+<td>-0.092</td>
+<td>0.020</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehBrand_B4</td>
+<td>-0.0373</td>
+<td>0.039</td>
+<td>-0.968</td>
+<td>0.333</td>
+<td>-0.113</td>
+<td>0.038</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">VehBrand_B5</td>
+<td>0.0837</td>
+<td>0.032</td>
+<td>2.620</td>
+<td>0.009</td>
+<td>0.021</td>
+<td>0.146</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehBrand_B6</td>
+<td>-0.0441</td>
+<td>0.036</td>
+<td>-1.208</td>
+<td>0.227</td>
+<td>-0.116</td>
+<td>0.027</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R21</td>
+<td>0.0675</td>
+<td>0.108</td>
+<td>0.628</td>
+<td>0.530</td>
+<td>-0.143</td>
+<td>0.278</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R22</td>
+<td>0.0905</td>
+<td>0.066</td>
+<td>1.363</td>
+<td>0.173</td>
+<td>-0.040</td>
+<td>0.221</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R23</td>
+<td>-0.1839</td>
+<td>0.078</td>
+<td>-2.368</td>
+<td>0.018</td>
+<td>-0.336</td>
+<td>-0.032</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R24</td>
+<td>0.1573</td>
+<td>0.032</td>
+<td>4.975</td>
+<td>0.000</td>
+<td>0.095</td>
+<td>0.219</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R25</td>
+<td>0.0126</td>
+<td>0.060</td>
+<td>0.210</td>
+<td>0.833</td>
+<td>-0.105</td>
+<td>0.130</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R26</td>
+<td>-0.0466</td>
+<td>0.064</td>
+<td>-0.725</td>
+<td>0.469</td>
+<td>-0.173</td>
+<td>0.079</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R31</td>
+<td>-0.0591</td>
+<td>0.044</td>
+<td>-1.332</td>
+<td>0.183</td>
+<td>-0.146</td>
+<td>0.028</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R41</td>
+<td>-0.2423</td>
+<td>0.061</td>
+<td>-3.997</td>
+<td>0.000</td>
+<td>-0.361</td>
+<td>-0.123</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R42</td>
+<td>0.0151</td>
+<td>0.118</td>
+<td>0.128</td>
+<td>0.898</td>
+<td>-0.216</td>
+<td>0.247</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R43</td>
+<td>-0.0340</td>
+<td>0.171</td>
+<td>-0.199</td>
+<td>0.842</td>
+<td>-0.369</td>
+<td>0.301</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R52</td>
+<td>0.0445</td>
+<td>0.039</td>
+<td>1.136</td>
+<td>0.256</td>
+<td>-0.032</td>
+<td>0.121</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R53</td>
+<td>0.1868</td>
+<td>0.037</td>
+<td>5.031</td>
+<td>0.000</td>
+<td>0.114</td>
+<td>0.260</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R54</td>
+<td>0.0046</td>
+<td>0.050</td>
+<td>0.091</td>
+<td>0.927</td>
+<td>-0.094</td>
+<td>0.103</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R72</td>
+<td>-0.1490</td>
+<td>0.044</td>
+<td>-3.364</td>
+<td>0.001</td>
+<td>-0.236</td>
+<td>-0.062</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R73</td>
+<td>-0.1302</td>
+<td>0.055</td>
+<td>-2.358</td>
+<td>0.018</td>
+<td>-0.238</td>
+<td>-0.022</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R74</td>
+<td>0.2443</td>
+<td>0.084</td>
+<td>2.901</td>
+<td>0.004</td>
+<td>0.079</td>
+<td>0.409</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R82</td>
+<td>0.1525</td>
+<td>0.031</td>
+<td>4.972</td>
+<td>0.000</td>
+<td>0.092</td>
+<td>0.213</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R83</td>
+<td>-0.2533</td>
+<td>0.096</td>
+<td>-2.627</td>
+<td>0.009</td>
+<td>-0.442</td>
+<td>-0.064</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R91</td>
+<td>-0.0782</td>
+<td>0.042</td>
+<td>-1.849</td>
+<td>0.064</td>
+<td>-0.161</td>
+<td>0.005</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Region_R93</td>
+<td>0.0007</td>
+<td>0.032</td>
+<td>0.022</td>
+<td>0.983</td>
+<td>-0.063</td>
+<td>0.064</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Region_R94</td>
+<td>0.1519</td>
+<td>0.085</td>
+<td>1.790</td>
+<td>0.074</td>
+<td>-0.014</td>
+<td>0.318</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">Exposure</td>
+<td>1.0462</td>
+<td>0.021</td>
+<td>49.448</td>
+<td>0.000</td>
+<td>1.005</td>
+<td>1.088</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">VehPower</td>
+<td>0.0097</td>
+<td>0.004</td>
+<td>2.733</td>
+<td>0.006</td>
+<td>0.003</td>
+<td>0.017</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">VehAge</td>
+<td>-0.0350</td>
+<td>0.001</td>
+<td>-23.398</td>
+<td>0.000</td>
+<td>-0.038</td>
+<td>-0.032</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">DrivAge</td>
+<td>0.0091</td>
+<td>0.001</td>
+<td>17.680</td>
+<td>0.000</td>
+<td>0.008</td>
+<td>0.010</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">BonusMalus</td>
+<td>0.0202</td>
+<td>0.000</td>
+<td>49.319</td>
+<td>0.000</td>
+<td>0.019</td>
+<td>0.021</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">Density</td>
+<td>-8.998e-07</td>
+<td>2.22e-06</td>
+<td>-0.406</td>
+<td>0.685</td>
+<td>-5.25e-06</td>
+<td>3.45e-06</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<section id="extract-the-poisson-deviance-from-the-glm" class="level3">
+<h3 class="anchored" data-anchor-id="extract-the-poisson-deviance-from-the-glm">Extract the Poisson deviance from the GLM</h3>
+<div id="4bd59e2b" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>glm_results.deviance</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+<pre><code>125222.6772692274</code></pre>
+</div>
+</div>
+<p>Mean Poisson deviance:</p>
+<div id="d376e12d" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>glm_results.deviance <span class="op">/</span> <span class="bu">len</span>(y_train)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<pre><code>0.30781839365897684</code></pre>
+</div>
+</div>
+<p>Using the <code>mean_poisson_deviance</code> function:</p>
+<div id="f20a92b7" class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>mean_poisson_deviance(y_train, glm_results.predict(X_train_glm))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
+<pre><code>0.30781839365897684</code></pre>
+</div>
+</div>
+<p>Validation set mean Poisson deviance:</p>
+<div id="58db5bab" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>mean_poisson_deviance(y_val, glm_results.predict(X_val_glm))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="13">
+<pre><code>0.3091974082275962</code></pre>
+</div>
+</div>
+<p><strong>TODO</strong>: Add in lasso or ridge regularization to the GLM using the validation set.</p>
+</section>
+</section>
+<section id="neural-network" class="level2">
+<h2 class="anchored" data-anchor-id="neural-network">Neural network</h2>
+<section id="look-at-the-counts-of-the-region-and-vehbrand-columns" class="level3">
+<h3 class="anchored" data-anchor-id="look-at-the-counts-of-the-region-and-vehbrand-columns">Look at the counts of the <code>Region</code> and <code>VehBrand</code> columns</h3>
+<div id="f60f2799" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>freq[<span class="st">"Region"</span>].value_counts().plot(kind<span class="op">=</span><span class="st">"bar"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="french-motor-frequency_files/figure-html/cell-16-output-1.png" width="600" height="443" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div id="69d57a55" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>freq[<span class="st">"VehBrand"</span>].value_counts().plot(kind<span class="op">=</span><span class="st">"bar"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="french-motor-frequency_files/figure-html/cell-17-output-1.png" width="600" height="443" class="figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>TODO</strong>: Consider combining the least frequent categories into a single category. That would reduce the cardinality of the categorical columns, and hence the number of input features.</p>
+</section>
+<section id="prepare-the-data-for-a-neural-network" class="level3">
+<h3 class="anchored" data-anchor-id="prepare-the-data-for-a-neural-network">Prepare the data for a neural network</h3>
+<div id="636dfc1e" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="annotated-cell-16"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-16-1"><a href="#annotated-cell-16-1" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="annotated-cell-16-2"><a href="#annotated-cell-16-2" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-16-3" class="code-annotation-target"><a href="#annotated-cell-16-3" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"if_binary"</span>),</span>
+<span id="annotated-cell-16-4"><a href="#annotated-cell-16-4" aria-hidden="true" tabindex="-1"></a>      [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
+<span id="annotated-cell-16-5"><a href="#annotated-cell-16-5" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="annotated-cell-16-6"><a href="#annotated-cell-16-6" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="annotated-cell-16-7"><a href="#annotated-cell-16-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="annotated-cell-16-8"><a href="#annotated-cell-16-8" aria-hidden="true" tabindex="-1"></a>X_train_ct <span class="op">=</span> ct.fit_transform(X_train)</span>
+<span id="annotated-cell-16-9"><a href="#annotated-cell-16-9" aria-hidden="true" tabindex="-1"></a>X_val_ct <span class="op">=</span> ct.transform(X_val)</span>
+<span id="annotated-cell-16-10"><a href="#annotated-cell-16-10" aria-hidden="true" tabindex="-1"></a>X_test_ct <span class="op">=</span> ct.transform(X_test)</span>
+<span id="annotated-cell-16-11"><a href="#annotated-cell-16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-16-12"><a href="#annotated-cell-16-12" aria-hidden="true" tabindex="-1"></a>X_train_ct</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-16" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-16" data-code-lines="3" data-code-annotation="1">The <code>drop="if_binary"</code> parameter will only drop the first column if the column is binary (i.e.&nbsp;for the <code>VehGas</code> column).</span>
+</dd>
+</dl>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="16">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">Area</th>
+<th data-quarto-table-cell-role="th">VehGas_'Regular'</th>
+<th data-quarto-table-cell-role="th">VehBrand_B1</th>
+<th data-quarto-table-cell-role="th">VehBrand_B10</th>
+<th data-quarto-table-cell-role="th">VehBrand_B11</th>
+<th data-quarto-table-cell-role="th">VehBrand_B12</th>
+<th data-quarto-table-cell-role="th">VehBrand_B13</th>
+<th data-quarto-table-cell-role="th">VehBrand_B14</th>
+<th data-quarto-table-cell-role="th">VehBrand_B2</th>
+<th data-quarto-table-cell-role="th">VehBrand_B3</th>
+<th data-quarto-table-cell-role="th">...</th>
+<th data-quarto-table-cell-role="th">Region_R83</th>
+<th data-quarto-table-cell-role="th">Region_R91</th>
+<th data-quarto-table-cell-role="th">Region_R93</th>
+<th data-quarto-table-cell-role="th">Region_R94</th>
+<th data-quarto-table-cell-role="th">Exposure</th>
+<th data-quarto-table-cell-role="th">VehPower</th>
+<th data-quarto-table-cell-role="th">VehAge</th>
+<th data-quarto-table-cell-role="th">DrivAge</th>
+<th data-quarto-table-cell-role="th">BonusMalus</th>
+<th data-quarto-table-cell-role="th">Density</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">642604</td>
+<td>3.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.579995</td>
+<td>2.216304</td>
+<td>-1.068169</td>
+<td>0.319694</td>
+<td>-0.623906</td>
+<td>-0.244407</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">394020</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.293590</td>
+<td>-0.221879</td>
+<td>0.522740</td>
+<td>0.390412</td>
+<td>-0.304423</td>
+<td>-0.441611</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">104966</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.293590</td>
+<td>-1.197153</td>
+<td>2.290416</td>
+<td>2.511980</td>
+<td>-0.623906</td>
+<td>-0.263825</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">438856</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>-0.764858</td>
+<td>0.265757</td>
+<td>-0.714634</td>
+<td>-0.104620</td>
+<td>-0.623906</td>
+<td>-0.446403</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">87109</td>
+<td>3.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>-1.121655</td>
+<td>0.265757</td>
+<td>-1.068169</td>
+<td>0.461131</td>
+<td>-0.623906</td>
+<td>-0.270382</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">99179</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>-0.600182</td>
+<td>0.265757</td>
+<td>-0.184331</td>
+<td>0.248975</td>
+<td>-0.623906</td>
+<td>-0.422194</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">523093</td>
+<td>4.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>-1.341223</td>
+<td>0.265757</td>
+<td>-1.244937</td>
+<td>-0.175339</td>
+<td>-0.560009</td>
+<td>0.748673</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">143052</td>
+<td>2.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.293590</td>
+<td>-0.221879</td>
+<td>-0.184331</td>
+<td>-0.670371</td>
+<td>-0.623906</td>
+<td>-0.418663</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">606805</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>-0.133600</td>
+<td>-0.709516</td>
+<td>-1.244937</td>
+<td>1.946228</td>
+<td>-0.623906</td>
+<td>-0.432281</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">228897</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>...</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>1.293590</td>
+<td>-1.197153</td>
+<td>-0.361099</td>
+<td>2.158385</td>
+<td>-0.623906</td>
+<td>-0.443629</td>
+</tr>
+</tbody>
+</table>
+
+<p>406807 rows × 41 columns</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="fit-a-neural-network" class="level3">
+<h3 class="anchored" data-anchor-id="fit-a-neural-network">Fit a neural network</h3>
+<div id="e4bf0b2e" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'leaky_relu'</span>, input_shape<span class="op">=</span>(X_train_ct.shape[<span class="dv">1</span>],)),</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    Dense(<span class="dv">32</span>, activation<span class="op">=</span><span class="st">'leaky_relu'</span>),</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">'adam'</span>, loss<span class="op">=</span><span class="st">'poisson'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="07d71206" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">5</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>history <span class="op">=</span> model.fit(X_train_ct, y_train, validation_data<span class="op">=</span>(X_val_ct, y_val), epochs<span class="op">=</span><span class="dv">100</span>, callbacks<span class="op">=</span>[es], verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="evaluate" class="level3">
+<h3 class="anchored" data-anchor-id="evaluate">Evaluate</h3>
+<div id="c86f0eff" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_train_ct, y_train, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="19">
+<pre><code>0.19548359513282776</code></pre>
+</div>
+</div>
+<div id="31338b30" class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>y_train_pred <span class="op">=</span> model.predict(X_train_ct, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>mean_poisson_deviance(y_train, y_train_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>0.29390156671706474</code></pre>
+</div>
+</div>
+<div id="69b070eb" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>y_val_pred <span class="op">=</span> model.predict(X_val_ct, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>mean_poisson_deviance(y_val, y_val_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="21">
+<pre><code>0.29773750116493547</code></pre>
+</div>
+</div>
+<p><strong>TODO</strong>: Change exposure to be an offset in the Poisson regression model, both in the GLM and the neural network.</p>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../Exercises/victorian-crash-severity.html" class="pagination-link" aria-label="Exercise: Victorian Car Crash Severity">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Exercise: Victorian Car Crash Severity</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Lecture-4-Computer-Vision/computer-vision.html" class="pagination-link" aria-label="Computer Vision">
+        <span class="nav-page-text">Computer Vision</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
