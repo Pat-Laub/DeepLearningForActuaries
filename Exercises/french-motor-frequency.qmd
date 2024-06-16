@@ -1,0 +1,363 @@
+---
+title: "Exercise: French Motor Claim Frequency"
+author: ""
+format:
+  html: default
+  ipynb: default
+---
+
+Your task is to predict the frequency distribution of car insurance claims in France.
+
+![DALL-E's rendition of this French motor claim frequency prediction task.](dalle-french-motor.webp)
+
+# French motor dataset
+
+```{python}
+#| code-fold: true
+#| code-summary: Show the package imports
+import random
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+import keras
+from keras.callbacks import EarlyStopping
+from keras.models import Sequential
+from keras.layers import Dense
+
+from sklearn.compose import make_column_transformer
+from sklearn.datasets import fetch_openml
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
+from sklearn import set_config
+
+import statsmodels.api as sm
+
+set_config(transform_output="pandas")
+```
+
+Download the dataset if we don't have it already.
+
+```{python}
+if not Path("french-motor.csv").exists():                     #<1>
+    freq = fetch_openml(data_id=41214, as_frame=True).frame   #<2>
+    freq.to_csv("french-motor.csv", index=False)              #<3>
+else:
+    freq = pd.read_csv("french-motor.csv")                    #<4>
+
+freq
+```
+1. Checks if the dataset does not already exist within the Jupyter Notebook directory. 
+2. Fetches the dataset from OpenML 
+3. Converts the dataset into `csv` format
+4. If it already exists, then read in the dataset from the file.
+
+## Data dictionary
+
+- `IDpol`: policy number (unique identifier)
+- `Area`: area code (categorical, ordinal)
+- `BonusMalus`: bonus-malus level between 50 and 230 (with reference level 100)
+- `Density`: density of inhabitants per km^2^ in the city of the living place of the driver
+- `DrivAge`: age of the (most common) driver in years
+- `Exposure`: total exposure in yearly units
+- `Region`: regions in France (prior to 2016)
+- `VehAge`: age of the car in years
+- `VehBrand`: car brand (categorical, nominal)
+- `VehGas`: diesel or regular fuel car (binary)
+- `VehPower`: power of the car (categorical, ordinal)
+- `ClaimNb`: number of claims on the given policy (**target variable**)
+
+::: footer
+Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
+:::
+
+## Region column
+
+![French Administrative Regions](french-regions.png)
+
+::: footer
+Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
+:::
+
+# Poisson regression
+
+## The model
+
+Have $\{ (\boldsymbol{x}_i, y_i) \}_{i=1, \dots, n}$ for $\boldsymbol{x}_i \in \mathbb{R}^{47}$ and $y_i \in \mathbb{N}_0$.
+
+Assume the distribution
+$$
+Y_i \sim \mathsf{Poisson}(\lambda(\boldsymbol{x}_i))
+$$
+
+We have $\mathbb{E} Y_i = \lambda(\boldsymbol{x}_i)$. 
+The NN takes $\boldsymbol{x}_i$ & predicts $\mathbb{E} Y_i$.
+
+::: {.callout-note}
+For insurance, _this is a bit weird_.
+The exposures are different for each policy.
+
+$\lambda(\boldsymbol{x}_i)$ is the expected number of claims for the duration of policy $i$'s contract.
+
+Normally, $\text{Exposure}_i \not\in \boldsymbol{x}_i$, and $\lambda(\boldsymbol{x}_i)$ is the expected rate _per year_, then
+$$
+Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\boldsymbol{x}_i)).
+$$
+:::
+
+
+## Help about the "poisson" loss
+
+```{python}
+help(keras.losses.poisson)
+```
+
+## Poisson probabilities
+
+Since the probability mass function (p.m.f.) of the $N \sim \mathsf{Poisson}(\lambda)$ distribution is
+$\mathbb{P}(N = k) = \frac{\lambda^k \mathrm{e}^{-\lambda}}{k!}$
+then the p.m.f. of $Y_i \sim \mathsf{Poisson}(\lambda(\boldsymbol{x}_i))$ is
+
+$$
+\mathbb{P}(Y_i = y_i) = \frac{ \lambda(\boldsymbol{x}_i)^{y_i} \, \mathrm{e}^{-\lambda(\boldsymbol{x}_i)} }{y_i!}
+$$
+
+The likelihood of a sample is then
+$$
+\mathbb{P}(Y_1 = y_1, \dots, Y_n = y_n) = \prod_{i=1}^n \mathbb{P}(Y_i = y_i).
+$$
+
+## Log-likelihood
+
+Therefore, the likelihood of $\{ (\boldsymbol{x}_i, y_i) \}_{i=1, \dots, n}$ is
+
+$$
+L = \prod_{i=1}^n \frac{ \lambda(\boldsymbol{x}_i)^{y_i} \, \mathrm{e}^{-\lambda(\boldsymbol{x}_i)} }{y_i!}
+$$
+
+so the log-likelihood is
+
+$$
+\begin{aligned}
+\ell
+&= \sum_{i=1}^n \log \bigl( \frac{ \lambda(\boldsymbol{x}_i)^{y_i} \, \mathrm{e}^{-\lambda(\boldsymbol{x}_i)} }{y_i!} \bigr) \\
+&= \sum_{i=1}^n y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) - \lambda(\boldsymbol{x}_i) - \log(y_i!) .
+\end{aligned}
+$$
+
+## Maximising the likelihood
+
+Want to find the best NN $\lambda^*$ such that:
+$$
+\begin{aligned}
+\lambda^* 
+&= \arg\max_{\lambda} \sum_{i=1}^n y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) - \lambda(\boldsymbol{x}_i) - \log(y_i!) \\
+&= \arg\max_{\lambda} \sum_{i=1}^n y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) - \lambda(\boldsymbol{x}_i) \\
+&= \arg\min_{\lambda} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log \bigl( \lambda(\boldsymbol{x}_i)\bigr) \\
+&= \arg\min_{\lambda} \frac{1}{n} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log \bigl( \lambda(\boldsymbol{x}_i)\bigr) .
+\end{aligned}
+$$
+
+## Keras' "poisson" loss again
+
+```{python}
+#| eval: false
+help(poisson)
+```
+
+```{python}
+#| echo: false
+print("""Help on function poisson in module keras.losses:
+
+poisson(y_true, y_pred)
+    Computes the Poisson loss between y_true and y_pred.
+    
+    The Poisson loss is the mean of the elements of the `Tensor`
+    `y_pred - y_true * log(y_pred)`.
+  
+...
+""")
+```
+
+In other words,
+$$
+\text{PoissonLoss} = \frac{1}{n} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log \bigl( \lambda(\boldsymbol{x}_i) \bigr) .
+$$
+
+## Poisson deviance
+
+$$
+D = 2 \sum_{i=1}^n y_i \log\bigl( \frac{y_i}{\lambda(\boldsymbol{x}_i)} \bigr) - \bigl( y_i - \lambda(\boldsymbol{x}_i) \bigr) .
+$$
+
+```{python}
+from sklearn.metrics import mean_poisson_deviance
+y_true = [0, 2, 1]
+y_pred = [0.1, 0.9, 0.8]
+mean_poisson_deviance(y_true, y_pred)
+```
+
+```{python}
+deviance = 0
+for y_i, yhat_i in zip(y_true, y_pred):
+  firstTerm = y_i * np.log(y_i / yhat_i) if y_i > 0 else 0
+  deviance += 2 * (firstTerm - (y_i - yhat_i))
+meanDeviance = deviance / len(y_true)
+deviance, meanDeviance
+```
+
+## Poisson deviance as a loss function
+
+Want to find the best NN $\lambda^*$ such that:
+$$
+\begin{aligned}
+\lambda^* 
+&= \arg\min_{\lambda} \, 2 \sum_{i=1}^n y_i \log\bigl( \frac{y_i}{\lambda(\boldsymbol{x}_i)} \bigr) - \bigl( y_i - \lambda(\boldsymbol{x}_i) \bigr) \\
+&= \arg\min_{\lambda} \sum_{i=1}^n y_i \log( y_i ) - y_i \log\bigl( \lambda(\boldsymbol{x}_i)  \bigr) - y_i + \lambda(\boldsymbol{x}_i) \\
+&= \arg\min_{\lambda} \sum_{i=1}^n - y_i \log\bigl( \lambda(\boldsymbol{x}_i) \bigr) + \lambda(\boldsymbol{x}_i) \\
+&= \arg\min_{\lambda} \sum_{i=1}^n \lambda(\boldsymbol{x}_i) - y_i \log\bigl( \lambda(\boldsymbol{x}_i) \bigr) .
+\end{aligned}
+$$
+
+# GLM
+
+## Split the data
+
+```{python}
+X = freq.drop(columns=["ClaimNb", "IDpol"])
+y = freq["ClaimNb"]
+
+X_main, X_test, y_main, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.25, random_state=42)
+```
+
+**TODO**: Modify this to do a stratified split.
+That is, the distribution of `ClaimNb` should be (about) the same in the training, validation, and test sets.
+
+## Preprocess the inputs for a GLM
+
+```{python}
+ct_glm = make_column_transformer(
+  (OrdinalEncoder(), ["Area"]),
+  (OneHotEncoder(sparse_output=False, drop="first"),  #<1>
+      ["VehGas", "VehBrand", "Region"]),
+  remainder="passthrough",
+  verbose_feature_names_out=False
+)
+X_train_glm = sm.add_constant(ct_glm.fit_transform(X_train)) #<2>
+X_val_glm = sm.add_constant(ct_glm.transform(X_val))
+X_test_glm = sm.add_constant(ct_glm.transform(X_test))
+
+X_train_glm
+```
+1. The `drop="first"` parameter is used to avoid multicollinearity in the model.
+2. The `sm.add_constant` function adds a column of ones to the input matrix.
+
+Alternatively, you can try to reproduce this using the `patsy` library and an R-style formula.
+
+## Fit a GLM
+
+Using the `statsmodels` package, we can fit a Poisson regression model.
+
+```{python}
+glm = sm.GLM(y_train, X_train_glm, family=sm.families.Poisson())
+glm_results = glm.fit()
+glm_results.summary()
+```
+
+## Extract the Poisson deviance from the GLM
+
+```{python}
+glm_results.deviance
+```
+
+Mean Poisson deviance:
+```{python}
+glm_results.deviance / len(y_train)
+```
+
+Using the `mean_poisson_deviance` function:
+
+```{python}
+mean_poisson_deviance(y_train, glm_results.predict(X_train_glm))
+```
+
+Validation set mean Poisson deviance:
+
+```{python}
+mean_poisson_deviance(y_val, glm_results.predict(X_val_glm))
+```
+
+**TODO**: Add in lasso or ridge regularization to the GLM using the validation set.
+
+# Neural network
+
+## Look at the counts of the `Region` and `VehBrand` columns
+
+```{python}
+freq["Region"].value_counts().plot(kind="bar")
+```
+
+```{python}
+freq["VehBrand"].value_counts().plot(kind="bar")
+```
+
+**TODO**: Consider combining the least frequent categories into a single category.
+That would reduce the cardinality of the categorical columns, and hence the number of input features.
+
+## Prepare the data for a neural network
+
+```{python}
+ct = make_column_transformer(
+  (OrdinalEncoder(), ["Area"]),
+  (OneHotEncoder(sparse_output=False, drop="if_binary"),   #<1>
+      ["VehGas", "VehBrand", "Region"]),
+  remainder=StandardScaler(),
+  verbose_feature_names_out=False
+)
+X_train_ct = ct.fit_transform(X_train)
+X_val_ct = ct.transform(X_val)
+X_test_ct = ct.transform(X_test)
+
+X_train_ct
+```
+1. The `drop="if_binary"` parameter will only drop the first column if the column is binary (i.e. for the `VehGas` column).
+
+## Fit a neural network
+
+```{python}
+#| warning: false
+model = Sequential([
+    Dense(64, activation='leaky_relu', input_shape=(X_train_ct.shape[1],)),
+    Dense(32, activation='leaky_relu'),
+    Dense(1, activation='exponential')
+])
+
+model.compile(optimizer='adam', loss='poisson')
+```
+
+```{python}
+es = EarlyStopping(patience=5, restore_best_weights=True)
+history = model.fit(X_train_ct, y_train, validation_data=(X_val_ct, y_val), epochs=100, callbacks=[es], verbose=0)
+```
+
+## Evaluate
+
+```{python}
+model.evaluate(X_train_ct, y_train, verbose=0)
+```
+
+```{python}
+y_train_pred = model.predict(X_train_ct, verbose=0)
+mean_poisson_deviance(y_train, y_train_pred)
+```
+
+```{python}
+y_val_pred = model.predict(X_val_ct, verbose=0)
+mean_poisson_deviance(y_val, y_val_pred)
+```
+
+**TODO**: Change exposure to be an offset in the Poisson regression model, both in the GLM and the neural network.

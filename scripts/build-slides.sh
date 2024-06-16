@@ -27,6 +27,7 @@ quarto render index.qmd --no-execute-daemon
 (exit) && quarto render Labs/distributional-regression-lab.qmd --no-execute-daemon
 (exit) && quarto render Exercises/chess-ai.qmd --no-execute-daemon
 (exit) && quarto render Exercises/victorian-crash-severity.qmd --no-execute-daemon
+(exit) && quarto render Exercises/french-motor-frequency.qmd --no-execute-daemon
 (exit) && quarto render Exercises/hurricane-damage.qmd --no-execute-daemon
 (exit) && quarto render Exercises/police-reports.qmd --no-execute-daemon
 (exit) && quarto render Exercises/sydney-airport-temperature.qmd --no-execute-daemon
