@@ -1,0 +1,1211 @@
+
+# CoreLogic Hedonic Home Value Index {visibility="uncounted"}
+
+## Australian House Price Indices
+
+```{python}
+#|echo: false
+house_prices = pd.read_csv("sa3-capitals-house-price-index.csv", index_col=0)
+house_prices.index = pd.to_datetime(house_prices.index)
+house_prices.index.name = "Date"
+house_prices = house_prices[house_prices.index > pd.to_datetime("1990")]
+house_prices.columns = [
+    "Brisbane",
+    "East_Bris",
+    "North_Bris",
+    "West_Bris",
+    "Melbourne",
+    "North_Syd",
+    "Sydney",
+]
+house_prices.plot(legend=False);
+```
+
+## Percentage changes {.smaller}
+
+```{python}
+changes = house_prices.pct_change().dropna()
+changes.round(2)
+```
+
+```{python}
+#| echo: false
+pandas.options.display.max_rows = 7
+``` 
+
+## Percentage changes 
+
+
+```{python}
+#| eval: false
+changes.plot();
+```
+```{python}
+#| echo: false
+changes.plot(lw=1)
+matplotlib.pyplot.legend(
+    bbox_to_anchor=(0.5, 1.0), loc="lower center", frameon=False, ncol=3
+);
+```
+
+## The size of the changes
+
+::: columns
+::: column
+```{python}
+changes.mean()
+```
+
+```{python}
+changes *= 100
+```
+
+```{python}
+changes.mean()
+```
+:::
+::: column
+```{python}
+#| echo: false
+# set_square_figures() 
+```
+```{python}
+changes.plot(legend=False);
+```
+:::
+:::
+
+# Splitting time series data {visibility="uncounted"}
+
+## Split _without_ shuffling
+
+```{python}
+num_train = int(0.6 * len(changes))
+num_val = int(0.2 * len(changes))
+num_test = len(changes) - num_train - num_val
+print(f"# Train: {num_train}, # Val: {num_val}, # Test: {num_test}")
+```
+```{python}
+#| echo: false
+changes.iloc[:num_train, 0].plot(c=colors[0], lw=1, alpha=0.5)
+changes.iloc[num_train : (num_train + num_val), 0].plot(
+    c=colors[1], ax=plt.gca(), lw=1, alpha=0.5
+)
+changes.iloc[(num_train + num_val) :, 0].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5)
+changes.iloc[:num_train, 1:].plot(c=colors[0], ax=plt.gca(), lw=1, alpha=0.5)
+changes.iloc[num_train : (num_train + num_val), 1:].plot(
+    c=colors[1], ax=plt.gca(), lw=1, alpha=0.5
+)
+changes.iloc[(num_train + num_val) :, 1:].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5)
+plt.legend(["Train", "Val", "Test"], frameon=False, ncol=3);
+```
+
+```{python}
+#| echo: false
+set_rectangular_figures() 
+```
+
+## Subsequences of a time series
+
+Keras has a built-in method for converting a time series into subsequences/chunks.
+
+```{python}
+#| warning: false
+from keras.utils import timeseries_dataset_from_array
+
+integers = range(10)
+dummy_dataset = timeseries_dataset_from_array(
+    data=integers[:-3],
+    targets=integers[3:],
+    sequence_length=3,
+    batch_size=2,
+)
+
+for inputs, targets in dummy_dataset:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+
+::: footer
+Source: Code snippet in Chapter 10 of Chollet.
+:::
+
+
+ 
+## On time series splits
+
+If you have a lot of time series data, then use:
+
+```{python}
+from keras.utils import timeseries_dataset_from_array
+
+data = range(20)
+seq = 3
+ts = data[:-seq]
+target = data[seq:]
+num_train = int(0.5 * len(ts))
+num_val = int(0.25 * len(ts))
+num_test = len(ts) - num_train - num_val
+print(f"# Train: {num_train}, # Val: {num_val}, # Test: {num_test}")
+```
+
+::: columns
+::: {.column width="33%"}
+
+```{python}
+train_ds = timeseries_dataset_from_array(ts, target, seq, end_index=num_train)
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+val_ds = timeseries_dataset_from_array(
+    ts, target, seq, start_index=num_train, end_index=num_train + num_val
+)
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+test_ds = timeseries_dataset_from_array(ts, target, seq, start_index=num_train + num_val)
+```
+
+:::
+:::
+
+::: columns
+::: {.column width="33%"}
+
+```{python}
+#| echo: false
+print("Training dataset")
+for inputs, targets in train_ds:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+#| echo: false
+print("Validation dataset")
+for inputs, targets in val_ds:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+#| echo: false
+print("Test dataset")
+for inputs, targets in test_ds:
+    for i in range(inputs.shape[0]):
+        print([int(x) for x in inputs[i]], int(targets[i]))
+```
+
+:::
+:::
+
+::: footer
+Adapted from: François Chollet (2021), _Deep Learning with Python_, Second Edition, Listing 10.7.
+:::
+
+## On time series splits II
+
+If you _don't_ have a lot of time series data, consider:
+
+```{python}
+X = []
+y = []
+for i in range(len(data) - seq):
+    X.append(data[i : i + seq])
+    y.append(data[i + seq])
+X = np.array(X)
+y = np.array(y);
+```
+
+::: columns
+::: {.column width="33%"}
+
+```{python}
+num_train = int(0.5 * X.shape[0])
+X_train = X[:num_train]
+y_train = y[:num_train]
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+num_val = int(np.ceil(0.25 * X.shape[0]))
+X_val = X[num_train : num_train + num_val]
+y_val = y[num_train : num_train + num_val]
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+num_test = X.shape[0] - num_train - num_val
+X_test = X[num_train + num_val :]
+y_test = y[num_train + num_val :]
+```
+
+:::
+:::
+
+::: columns
+::: {.column width="33%"}
+
+```{python}
+#| echo: false
+print("Training dataset")
+for i in range(X_train.shape[0]):
+    print([int(x) for x in X_train[i]], int(y_train[i]))
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+#| echo: false
+print("Validation dataset")
+for i in range(X_val.shape[0]):
+    print([int(x) for x in X_val[i]], int(y_val[i]))
+```
+
+:::
+::: {.column width="33%"}
+
+```{python}
+#| echo: false
+print("Test dataset")
+for i in range(X_test.shape[0]):
+    print([int(x) for x in X_test[i]], int(y_test[i]))
+```
+
+:::
+:::
+
+# Predicting Sydney House Prices {visibility="uncounted"}
+
+## Creating dataset objects
+
+::: columns
+::: column
+```{python}
+# Num. of input time series.
+num_ts = changes.shape[1]
+
+# How many prev. months to use.
+seq_length = 6
+
+# Predict the next month ahead.
+ahead = 1
+
+# The index of the first target.
+delay = seq_length + ahead - 1
+```
+:::
+::: column
+```{python}
+# Which suburb to predict.
+target_suburb = changes["Sydney"]
+
+train_ds = timeseries_dataset_from_array(
+    changes[:-delay],
+    targets=target_suburb[delay:],
+    sequence_length=seq_length,
+    end_index=num_train,
+)
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+val_ds = timeseries_dataset_from_array(
+    changes[:-delay],
+    targets=target_suburb[delay:],
+    sequence_length=seq_length,
+    start_index=num_train,
+    end_index=num_train + num_val,
+)
+```
+:::
+::: column
+```{python}
+test_ds = timeseries_dataset_from_array(
+    changes[:-delay],
+    targets=target_suburb[delay:],
+    sequence_length=seq_length,
+    start_index=num_train + num_val,
+)
+```
+:::
+:::
+
+## Converting `Dataset` to numpy
+
+The `Dataset` object can be handed to Keras directly, but if we really need a numpy array, we can run:
+```{python}
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
+```
+
+The shape of our training set is now:
+
+```{python}
+X_train.shape
+```
+
+```{python}
+y_train.shape
+```
+
+Converting the rest to numpy arrays:
+
+```{python}
+X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
+y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
+X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
+y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
+```
+
+## A dense network
+
+```{python}
+from keras.layers import Input, Flatten
+random.seed(1)
+model_dense = Sequential([
+    Input((seq_length, num_ts)),
+    Flatten(),
+    Dense(50, activation="leaky_relu"),
+    Dense(20, activation="leaky_relu"),
+    Dense(1, activation="linear")
+])
+model_dense.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_dense.count_params()} parameters.")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+%time hist = model_dense.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0);
+```
+
+## Plot the model
+```{python}
+from keras.utils import plot_model
+
+plot_model(model_dense, show_shapes=True)
+```
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_dense.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+```{python}
+#| echo: false
+y_pred = model_dense.predict(X_val, verbose=0)
+# plt.scatter(y_val, y_pred)
+# add_diagonal_line()
+# plt.show()
+
+plt.plot(y_val, label="Sydney")
+plt.plot(y_pred, label="Dense")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+## A `SimpleRNN` layer
+
+```{python}
+random.seed(1)
+
+model_simple = Sequential([
+    Input((seq_length, num_ts)),
+    SimpleRNN(50),
+    Dense(1, activation="linear")
+])
+model_simple.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_simple.count_params()} parameters.")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+%time hist = model_simple.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0);
+```
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_simple.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plot the model
+```{python}
+plot_model(model_simple, show_shapes=True)
+```
+
+## Plotting the predictions {.smaller}
+
+```{python}
+#| echo: false
+y_pred = model_simple.predict(X_val, verbose=0)
+# plt.scatter(y_val, y_pred)
+# add_diagonal_line()
+# plt.show()
+
+plt.plot(y_val, label="Sydney")
+plt.plot(y_pred, label="SimpleRNN")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+## A `LSTM` layer
+
+```{python}
+from keras.layers import LSTM
+
+random.seed(1)
+
+model_lstm = Sequential([
+    Input((seq_length, num_ts)),
+    LSTM(50),
+    Dense(1, activation="linear")
+])
+
+model_lstm.compile(loss="mse", optimizer="adam")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+
+%time hist = model_lstm.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0);
+```
+
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_lstm.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+```{python}
+#| echo: false
+y_pred = model_lstm.predict(X_val, verbose=0)
+# plt.scatter(y_val, y_pred)
+# add_diagonal_line()
+# plt.show()
+
+plt.plot(y_val, label="Sydney")
+plt.plot(y_pred, label="LSTM")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+## A `GRU` layer
+
+```{python}
+from keras.layers import GRU
+
+random.seed(1)
+
+model_gru = Sequential([
+    Input((seq_length, num_ts)),
+    GRU(50),
+    Dense(1, activation="linear")
+])
+
+model_gru.compile(loss="mse", optimizer="adam")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+
+%time hist = model_gru.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0)
+```
+
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_gru.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+```{python}
+#| echo: false
+y_pred = model_gru.predict(X_val, verbose=0)
+# plt.scatter(y_val, y_pred)
+# add_diagonal_line()
+# plt.show()
+
+plt.plot(y_val, label="Sydney")
+plt.plot(y_pred, label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+## Two `GRU` layers
+
+```{python}
+random.seed(1)
+
+model_two_grus = Sequential([
+    Input((seq_length, num_ts)),
+    GRU(50, return_sequences=True),
+    GRU(50),
+    Dense(1, activation="linear")
+])
+
+model_two_grus.compile(loss="mse", optimizer="adam")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+
+%time hist = model_two_grus.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0)
+```
+
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_two_grus.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+```{python}
+#| echo: false
+y_pred = model_two_grus.predict(X_val, verbose=0)
+# plt.scatter(y_val, y_pred)
+# plt.show()
+
+plt.plot(y_val, label="Sydney")
+plt.plot(y_pred, label="2 GRUs")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+## Compare the models
+
+```{python}
+#| echo: false
+models = [model_dense, model_simple, model_lstm, model_gru, model_two_grus]
+model_names = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
+mse_val = {
+    name: model.evaluate(X_val, y_val, verbose=0)
+    for name, model in zip(model_names, models)
+}
+val_results = pd.DataFrame({"Model": mse_val.keys(), "MSE": mse_val.values()})
+val_results.sort_values("MSE", ascending=False)
+```
+
+The network with two GRU layers is the best. 
+
+```{python}
+model_two_grus.evaluate(test_ds, verbose=0)
+```
+
+## Test set
+
+```{python}
+#| echo: false
+y_pred = model_two_grus.predict(test_ds, verbose=0)
+# plt.scatter(y_test, y_pred)
+# add_diagonal_line()
+# plt.show()
+
+plt.plot(y_test, label="Sydney")
+plt.plot(y_pred, label="2 GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+# Predicting Multiple Time Series {visibility="uncounted"}
+
+## Creating dataset objects
+
+::: columns
+::: column
+Change the `targets` argument to include all the suburbs.
+:::
+::: column
+```{python}
+train_ds = timeseries_dataset_from_array(
+    changes[:-delay],
+    targets=changes[delay:],
+    sequence_length=seq_length,
+    end_index=num_train,
+)
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+val_ds = timeseries_dataset_from_array(
+    changes[:-delay],
+    targets=changes[delay:],
+    sequence_length=seq_length,
+    start_index=num_train,
+    end_index=num_train + num_val,
+)
+```
+:::
+::: column
+```{python}
+test_ds = timeseries_dataset_from_array(
+    changes[:-delay],
+    targets=changes[delay:],
+    sequence_length=seq_length,
+    start_index=num_train + num_val,
+)
+```
+:::
+:::
+
+## Converting `Dataset` to numpy
+
+The shape of our training set is now:
+
+```{python}
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
+X_train.shape
+```
+
+```{python}
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
+y_train.shape
+```
+
+Converting the rest to numpy arrays:
+
+```{python}
+X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
+y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
+X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
+y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
+```
+
+## A dense network
+
+```{python}
+random.seed(1)
+model_dense = Sequential([
+    Input((seq_length, num_ts)),
+    Flatten(),
+    Dense(50, activation="leaky_relu"),
+    Dense(20, activation="leaky_relu"),
+    Dense(num_ts, activation="linear")
+])
+model_dense.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_dense.count_params()} parameters.")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+%time hist = model_dense.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0);
+```
+
+## Plot the model
+```{python}
+plot_model(model_dense, show_shapes=True)
+```
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_dense.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+::: columns
+::: column
+```{python}
+#| echo: false
+Y_pred = model_dense.predict(X_val, verbose=0)
+plt.scatter(y_val, Y_pred)
+add_diagonal_line()
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.show()
+
+plt.plot(y_val[:, 4], label="Melbourne")
+plt.plot(Y_pred[:, 4], label="Dense")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+plt.plot(y_val[:, 0], label="Brisbane")
+plt.plot(Y_pred[:, 0], label="Dense")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False)
+plt.show()
+
+plt.plot(y_val[:, 6], label="Sydney")
+plt.plot(Y_pred[:, 6], label="Dense")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+:::
+:::
+
+
+
+## A `SimpleRNN` layer
+
+```{python}
+random.seed(1)
+
+model_simple = Sequential([
+    Input((seq_length, num_ts)),
+    SimpleRNN(50),
+    Dense(num_ts, activation="linear")
+])
+model_simple.compile(loss="mse", optimizer="adam")
+print(f"This model has {model_simple.count_params()} parameters.")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+%time hist = model_simple.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0);
+```
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_simple.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plot the model
+```{python}
+plot_model(model_simple, show_shapes=True)
+```
+
+
+## Plotting the predictions {.smaller}
+
+::: columns
+::: column
+```{python}
+#| echo: false
+Y_pred = model_simple.predict(X_val, verbose=0)
+plt.scatter(y_val, Y_pred)
+add_diagonal_line()
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.show()
+
+plt.plot(y_val[:, 4], label="Melbourne")
+plt.plot(Y_pred[:, 4], label="SimpleRNN")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+plt.plot(y_val[:, 0], label="Brisbane")
+plt.plot(Y_pred[:, 0], label="SimpleRNN")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False)
+plt.show()
+
+plt.plot(y_val[:, 6], label="Sydney")
+plt.plot(Y_pred[:, 6], label="SimpleRNN")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+:::
+:::
+
+
+## A `LSTM` layer
+
+```{python}
+random.seed(1)
+
+model_lstm = Sequential([
+    Input((seq_length, num_ts)),
+    LSTM(50),
+    Dense(num_ts, activation="linear")
+])
+
+model_lstm.compile(loss="mse", optimizer="adam")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+
+%time hist = model_lstm.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0);
+```
+
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_lstm.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+::: columns
+::: column
+```{python}
+#| echo: false
+Y_pred = model_lstm.predict(X_val, verbose=0)
+plt.scatter(y_val, Y_pred)
+add_diagonal_line()
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.show()
+
+plt.plot(y_val[:, 4], label="Melbourne")
+plt.plot(Y_pred[:, 4], label="LSTM")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+plt.plot(y_val[:, 0], label="Brisbane")
+plt.plot(Y_pred[:, 0], label="LSTM")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False)
+plt.show()
+
+plt.plot(y_val[:, 6], label="Sydney")
+plt.plot(Y_pred[:, 6], label="LSTM")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+:::
+:::
+
+## A `GRU` layer
+
+```{python}
+random.seed(1)
+
+model_gru = Sequential([
+    Input((seq_length, num_ts)),
+    GRU(50),
+    Dense(num_ts, activation="linear")
+])
+
+model_gru.compile(loss="mse", optimizer="adam")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+
+%time hist = model_gru.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0)
+```
+
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_gru.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+::: columns
+::: column
+```{python}
+#| echo: false
+Y_pred = model_gru.predict(X_val, verbose=0)
+plt.scatter(y_val, Y_pred)
+add_diagonal_line()
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.show()
+
+plt.plot(y_val[:, 4], label="Melbourne")
+plt.plot(Y_pred[:, 4], label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+plt.plot(y_val[:, 0], label="Brisbane")
+plt.plot(Y_pred[:, 0], label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False)
+plt.show()
+
+plt.plot(y_val[:, 6], label="Sydney")
+plt.plot(Y_pred[:, 6], label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+:::
+:::
+
+## Two `GRU` layers
+
+```{python}
+random.seed(1)
+
+model_two_grus = Sequential([
+    Input((seq_length, num_ts)),
+    GRU(50, return_sequences=True),
+    GRU(50),
+    Dense(num_ts, activation="linear")
+])
+
+model_two_grus.compile(loss="mse", optimizer="adam")
+
+es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
+
+%time hist = model_two_grus.fit(X_train, y_train, epochs=1_000, \
+  validation_data=(X_val, y_val), callbacks=[es], verbose=0)
+```
+
+
+## Assess the fits
+
+```{python}
+#| echo: false
+plt.plot(hist.history["loss"], label="Train")
+plt.plot(hist.history["val_loss"], label="Val")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.legend(frameon=False);
+```
+
+```{python}
+model_two_grus.evaluate(X_val, y_val, verbose=0)
+```
+
+## Plotting the predictions {.smaller}
+
+::: columns
+::: column
+```{python}
+#| echo: false
+Y_pred = model_two_grus.predict(X_val, verbose=0)
+plt.scatter(y_val, Y_pred)
+add_diagonal_line()
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.show()
+
+plt.plot(y_val[:, 4], label="Melbourne")
+plt.plot(Y_pred[:, 4], label="2 GRUs")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+plt.plot(y_val[:, 0], label="Brisbane")
+plt.plot(Y_pred[:, 0], label="2 GRUs")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False)
+plt.show()
+
+plt.plot(y_val[:, 6], label="Sydney")
+plt.plot(Y_pred[:, 6], label="2 GRUs")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+:::
+:::
+
+## Compare the models
+
+```{python}
+#| echo: false
+models = [model_dense, model_simple, model_lstm, model_gru, model_two_grus]
+model_names = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
+mse_val = {
+    name: model.evaluate(X_val, y_val, verbose=0)
+    for name, model in zip(model_names, models)
+}
+val_results = pd.DataFrame({"Model": mse_val.keys(), "MSE": mse_val.values()})
+val_results.sort_values("MSE", ascending=False)
+```
+
+The network with an LSTM layer is the best. 
+
+```{python}
+model_lstm.evaluate(test_ds, verbose=0)
+```
+
+## Test set
+
+::: columns
+::: column
+```{python}
+#| echo: false
+Y_pred = model_lstm.predict(test_ds, verbose=0)
+plt.scatter(y_test, Y_pred)
+add_diagonal_line()
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.show()
+
+plt.plot(y_test[:, 4], label="Melbourne")
+plt.plot(Y_pred[:, 4], label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+
+:::
+::: column
+```{python}
+#| echo: false
+plt.plot(y_test[:, 0], label="Brisbane")
+plt.plot(Y_pred[:, 0], label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False)
+plt.show()
+
+plt.plot(y_test[:, 6], label="Sydney")
+plt.plot(Y_pred[:, 6], label="GRU")
+plt.xlabel("Time")
+plt.ylabel("Change in HPI (%)")
+plt.legend(frameon=False);
+```
+:::
+:::
+
+## Package Versions {.appendix data-visibility="uncounted"}
+
+```{python}
+from watermark import watermark
+
+print(
+    watermark(
+        python=True,
+        packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tf_keras",
+    )
+)
+```
