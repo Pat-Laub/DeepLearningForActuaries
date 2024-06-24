@@ -876,7 +876,7 @@ from keras.layers import Input
 random.seed(12)
 
 model = Sequential([
-  Dense(30, "relu"),
+  Dense(30, "leaky_relu"),
   Dense(1, "exponential")
 ])
 
@@ -896,7 +896,7 @@ hist.history["val_loss"][-1]
 random.seed(12)
 
 inputs = Input(shape=(2,))
-x = Dense(30, "relu")(inputs)
+x = Dense(30, "leaky_relu")(inputs)
 out = Dense(1, "exponential")(x)
 model = Model(inputs, out)
 
@@ -913,7 +913,7 @@ hist.history["val_loss"][-1]
 :::
 :::
 
-Cf. [one-length tuples](https://pat-laub.github.io/DeepLearningMaterials/2023/Lecture-1-Artificial-Intelligence/python.html#/one-length-tuples).
+See [one-length tuples](https://pat-laub.github.io/DeepLearningMaterials/2023/Lecture-1-Artificial-Intelligence/python.html#/one-length-tuples).
 
 ::: {.content-visible unless-format="revealjs"}
 The above code shows how to construct the same neural network using sequential models and Keras functional API. There are some differences in the construction. In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer. `model = Model(inputs, out)` function specifies the input and output of the model. This manner of specifying the inputs and outputs of the model allow the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
@@ -933,8 +933,8 @@ from keras.layers \
     import Concatenate
 
 inp = Input(shape=X_train.shape[1:])
-hidden1 = Dense(30, "relu")(inp)
-hidden2 = Dense(30, "relu")(hidden1)
+hidden1 = Dense(30, "leaky_relu")(inp)
+hidden2 = Dense(30, "leaky_relu")(hidden1)
 concat = Concatenate()(
   [inp, hidden2])
 output = Dense(1)(concat)
@@ -955,8 +955,8 @@ For complex networks, it is often useful to give meaningul names to the layers.
 
 ```{python}
 input_ = Input(shape=X_train.shape[1:], name="input")
-hidden1 = Dense(30, activation="relu", name="hidden1")(input_)
-hidden2 = Dense(30, activation="relu", name="hidden2")(hidden1)
+hidden1 = Dense(30, activation="leaky_relu", name="hidden1")(input_)
+hidden2 = Dense(30, activation="leaky_relu", name="hidden2")(hidden1)
 concat = Concatenate(name="combined")([input_, hidden2])
 output = Dense(1, name="output")(concat)
 model = Model(inputs=[input_], outputs=[output])
@@ -1038,7 +1038,7 @@ other_inputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
 ```
 Create embeddings and join them with the other inputs. 
 ```{python}
-from keras.layers import Reshape                                     #<1>
+from keras.layers import Reshape                                                #<1>
 
 random.seed(1337)
 veh_brand_ee = Embedding(input_dim=num_brands, output_dim=2,                    #<2>
