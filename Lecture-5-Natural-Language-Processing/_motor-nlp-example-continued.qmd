@@ -61,7 +61,7 @@ tfidf_model.summary()
 ## Fit & evaluate
 
 ```{python}
-es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
+es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("tfidf-model.keras").exists():
@@ -108,13 +108,12 @@ X_train_txt[0]
 ## Feed LSTM a sequence of one-hots
 
 ```{python}
+from keras.layers import CategoryEncoding, Bidirectional, LSTM
 random.seed(42)
-inputs = keras.Input(shape=(max_length,), dtype="int64")
-onehot = keras.ops.one_hot(inputs, max_tokens)
-x = layers.Bidirectional(layers.LSTM(24))(onehot)
-x = layers.Dropout(0.5)(x) 
-outputs = layers.Dense(1, activation="sigmoid")(x)    
-one_hot_model = keras.Model(inputs, outputs)
+one_hot_model = Sequential([Input(shape=(max_length,), dtype="int64"),
+    CategoryEncoding(num_tokens=max_tokens, output_mode="one_hot"),
+    Bidirectional(LSTM(24)),
+    Dense(1, activation="sigmoid")])
 one_hot_model.compile(optimizer="adam",
     loss="binary_crossentropy", metrics=["accuracy"])
 one_hot_model.summary()
@@ -123,7 +122,7 @@ one_hot_model.summary()
 ## Fit & evaluate
 
 ```{python}
-es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
+es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("one-hot-model.keras").exists():
@@ -144,13 +143,11 @@ one_hot_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
 ## Custom embeddings
 
 ```{python}
-inputs = keras.Input(shape=(max_length,), dtype="int64")
-embedded = layers.Embedding(input_dim=max_tokens, output_dim=32,
-        mask_zero=True)(inputs)
-x = layers.Bidirectional(layers.LSTM(24))(embedded)
-x = layers.Dropout(0.5)(x)
-outputs = layers.Dense(1, activation="sigmoid")(x)
-embed_lstm = keras.Model(inputs, outputs)
+from keras.layers import Embedding
+embed_lstm = Sequential([Input(shape=(max_length,), dtype="int64"),
+    Embedding(input_dim=max_tokens, output_dim=32, mask_zero=True),
+    Bidirectional(LSTM(24)),
+    Dense(1, activation="sigmoid")])
 embed_lstm.compile("adam", "binary_crossentropy", metrics=["accuracy"])
 embed_lstm.summary()
 ```
@@ -158,7 +155,8 @@ embed_lstm.summary()
 ## Fit & evaluate
 
 ```{python}
-es = keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True,
+#| warning: false
+es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("embed-lstm.keras").exists():
