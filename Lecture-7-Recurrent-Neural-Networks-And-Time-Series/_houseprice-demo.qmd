@@ -21,6 +21,10 @@ house_prices.columns = [
 house_prices.plot(legend=False);
 ```
 
+::: {.callout-note}
+I apologise in advance for not being able to share this dataset with anyone (it is not mine to share).
+:::
+
 ## Percentage changes {.smaller}
 
 ```{python}
@@ -75,7 +79,6 @@ changes.plot(legend=False);
 :::
 :::
 
-# Splitting time series data {visibility="uncounted"}
 
 ## Split _without_ shuffling
 
@@ -87,16 +90,16 @@ print(f"# Train: {num_train}, # Val: {num_val}, # Test: {num_test}")
 ```
 ```{python}
 #| echo: false
-changes.iloc[:num_train, 0].plot(c=colors[0], lw=1, alpha=0.5)
+changes.iloc[:num_train, 0].plot(c="tab:blue", lw=1, alpha=0.5)
 changes.iloc[num_train : (num_train + num_val), 0].plot(
-    c=colors[1], ax=plt.gca(), lw=1, alpha=0.5
+    c="tab:orange", ax=plt.gca(), lw=1, alpha=0.5
 )
-changes.iloc[(num_train + num_val) :, 0].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5)
-changes.iloc[:num_train, 1:].plot(c=colors[0], ax=plt.gca(), lw=1, alpha=0.5)
+changes.iloc[(num_train + num_val) :, 0].plot(c="tab:green", ax=plt.gca(), lw=1, alpha=0.5)
+changes.iloc[:num_train, 1:].plot(c="tab:blue", ax=plt.gca(), lw=1, alpha=0.5)
 changes.iloc[num_train : (num_train + num_val), 1:].plot(
-    c=colors[1], ax=plt.gca(), lw=1, alpha=0.5
+    c="tab:orange", ax=plt.gca(), lw=1, alpha=0.5
 )
-changes.iloc[(num_train + num_val) :, 1:].plot(c=colors[2], ax=plt.gca(), lw=1, alpha=0.5)
+changes.iloc[(num_train + num_val) :, 1:].plot(c="tab:green", ax=plt.gca(), lw=1, alpha=0.5)
 plt.legend(["Train", "Val", "Test"], frameon=False, ncol=3);
 ```
 
@@ -131,12 +134,12 @@ Source: Code snippet in Chapter 10 of Chollet.
 :::
 
 
- 
+<!-- 
 ## On time series splits
 
 If you have a lot of time series data, then use:
 
-```{python}
+```python
 from keras.utils import timeseries_dataset_from_array
 
 data = range(20)
@@ -152,14 +155,14 @@ print(f"# Train: {num_train}, # Val: {num_val}, # Test: {num_test}")
 ::: columns
 ::: {.column width="33%"}
 
-```{python}
+```python
 train_ds = timeseries_dataset_from_array(ts, target, seq, end_index=num_train)
 ```
 
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 val_ds = timeseries_dataset_from_array(
     ts, target, seq, start_index=num_train, end_index=num_train + num_val
 )
@@ -168,7 +171,7 @@ val_ds = timeseries_dataset_from_array(
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 test_ds = timeseries_dataset_from_array(ts, target, seq, start_index=num_train + num_val)
 ```
 
@@ -178,7 +181,7 @@ test_ds = timeseries_dataset_from_array(ts, target, seq, start_index=num_train +
 ::: columns
 ::: {.column width="33%"}
 
-```{python}
+```python
 #| echo: false
 print("Training dataset")
 for inputs, targets in train_ds:
@@ -189,7 +192,7 @@ for inputs, targets in train_ds:
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 #| echo: false
 print("Validation dataset")
 for inputs, targets in val_ds:
@@ -200,7 +203,7 @@ for inputs, targets in val_ds:
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 #| echo: false
 print("Test dataset")
 for inputs, targets in test_ds:
@@ -219,7 +222,7 @@ Adapted from: François Chollet (2021), _Deep Learning with Python_, Second Edit
 
 If you _don't_ have a lot of time series data, consider:
 
-```{python}
+```python
 X = []
 y = []
 for i in range(len(data) - seq):
@@ -232,7 +235,7 @@ y = np.array(y);
 ::: columns
 ::: {.column width="33%"}
 
-```{python}
+```python
 num_train = int(0.5 * X.shape[0])
 X_train = X[:num_train]
 y_train = y[:num_train]
@@ -241,7 +244,7 @@ y_train = y[:num_train]
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 num_val = int(np.ceil(0.25 * X.shape[0]))
 X_val = X[num_train : num_train + num_val]
 y_val = y[num_train : num_train + num_val]
@@ -250,7 +253,7 @@ y_val = y[num_train : num_train + num_val]
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 num_test = X.shape[0] - num_train - num_val
 X_test = X[num_train + num_val :]
 y_test = y[num_train + num_val :]
@@ -262,7 +265,7 @@ y_test = y[num_train + num_val :]
 ::: columns
 ::: {.column width="33%"}
 
-```{python}
+```python
 #| echo: false
 print("Training dataset")
 for i in range(X_train.shape[0]):
@@ -272,7 +275,7 @@ for i in range(X_train.shape[0]):
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 #| echo: false
 print("Validation dataset")
 for i in range(X_val.shape[0]):
@@ -282,7 +285,7 @@ for i in range(X_val.shape[0]):
 :::
 ::: {.column width="33%"}
 
-```{python}
+```python
 #| echo: false
 print("Test dataset")
 for i in range(X_test.shape[0]):
@@ -291,6 +294,7 @@ for i in range(X_test.shape[0]):
 
 :::
 :::
+-->
 
 # Predicting Sydney House Prices {visibility="uncounted"}
 
@@ -408,27 +412,12 @@ plot_model(model_dense, show_shapes=True)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_dense.evaluate(X_val, y_val, verbose=0)
 ```
 
-## Plotting the predictions {.smaller}
-
 ```{python}
-#| echo: false
+#| code-fold: true
 y_pred = model_dense.predict(X_val, verbose=0)
-# plt.scatter(y_val, y_pred)
-# add_diagonal_line()
-# plt.show()
-
 plt.plot(y_val, label="Sydney")
 plt.plot(y_pred, label="Dense")
 plt.xlabel("Time")
@@ -454,34 +443,21 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
   validation_data=(X_val, y_val), callbacks=[es], verbose=0);
 ```
 
-## Assess the fits
-
-```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
-model_simple.evaluate(X_val, y_val, verbose=0)
-```
 
 ## Plot the model
 ```{python}
 plot_model(model_simple, show_shapes=True)
 ```
 
-## Plotting the predictions {.smaller}
+## Assess the fits
 
 ```{python}
-#| echo: false
+model_simple.evaluate(X_val, y_val, verbose=0)
+```
+
+```{python}
+#| code-fold: true
 y_pred = model_simple.predict(X_val, verbose=0)
-# plt.scatter(y_val, y_pred)
-# add_diagonal_line()
-# plt.show()
 
 plt.plot(y_val, label="Sydney")
 plt.plot(y_pred, label="SimpleRNN")
@@ -515,27 +491,12 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_lstm.evaluate(X_val, y_val, verbose=0)
 ```
 
-## Plotting the predictions {.smaller}
-
 ```{python}
-#| echo: false
+#| code-fold: true
 y_pred = model_lstm.predict(X_val, verbose=0)
-# plt.scatter(y_val, y_pred)
-# add_diagonal_line()
-# plt.show()
-
 plt.plot(y_val, label="Sydney")
 plt.plot(y_pred, label="LSTM")
 plt.xlabel("Time")
@@ -568,27 +529,12 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_gru.evaluate(X_val, y_val, verbose=0)
 ```
 
-## Plotting the predictions {.smaller}
-
 ```{python}
-#| echo: false
+#| code-fold: true
 y_pred = model_gru.predict(X_val, verbose=0)
-# plt.scatter(y_val, y_pred)
-# add_diagonal_line()
-# plt.show()
-
 plt.plot(y_val, label="Sydney")
 plt.plot(y_pred, label="GRU")
 plt.xlabel("Time")
@@ -620,26 +566,12 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_two_grus.evaluate(X_val, y_val, verbose=0)
 ```
 
-## Plotting the predictions {.smaller}
-
 ```{python}
-#| echo: false
+#| code-fold: true
 y_pred = model_two_grus.predict(X_val, verbose=0)
-# plt.scatter(y_val, y_pred)
-# plt.show()
-
 plt.plot(y_val, label="Sydney")
 plt.plot(y_pred, label="2 GRUs")
 plt.xlabel("Time")
@@ -670,12 +602,8 @@ model_two_grus.evaluate(test_ds, verbose=0)
 ## Test set
 
 ```{python}
-#| echo: false
+#| code-fold: true
 y_pred = model_two_grus.predict(test_ds, verbose=0)
-# plt.scatter(y_test, y_pred)
-# add_diagonal_line()
-# plt.show()
-
 plt.plot(y_test, label="Sydney")
 plt.plot(y_pred, label="2 GRU")
 plt.xlabel("Time")
@@ -777,24 +705,13 @@ plot_model(model_dense, show_shapes=True)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_dense.evaluate(X_val, y_val, verbose=0)
 ```
-
-## Plotting the predictions {.smaller}
 
 ::: columns
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 Y_pred = model_dense.predict(X_val, verbose=0)
 plt.scatter(y_val, Y_pred)
 add_diagonal_line()
@@ -812,7 +729,7 @@ plt.legend(frameon=False);
 :::
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 plt.plot(y_val[:, 0], label="Brisbane")
 plt.plot(Y_pred[:, 0], label="Dense")
 plt.xlabel("Time")
@@ -828,8 +745,6 @@ plt.legend(frameon=False);
 ```
 :::
 :::
-
-
 
 ## A `SimpleRNN` layer
 
@@ -849,33 +764,21 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
   validation_data=(X_val, y_val), callbacks=[es], verbose=0);
 ```
 
-## Assess the fits
-
-```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
-model_simple.evaluate(X_val, y_val, verbose=0)
-```
-
 ## Plot the model
 ```{python}
 plot_model(model_simple, show_shapes=True)
 ```
 
+## Assess the fits
 
-## Plotting the predictions {.smaller}
+```{python}
+model_simple.evaluate(X_val, y_val, verbose=0)
+```
 
 ::: columns
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 Y_pred = model_simple.predict(X_val, verbose=0)
 plt.scatter(y_val, Y_pred)
 add_diagonal_line()
@@ -893,7 +796,7 @@ plt.legend(frameon=False);
 :::
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 plt.plot(y_val[:, 0], label="Brisbane")
 plt.plot(Y_pred[:, 0], label="SimpleRNN")
 plt.xlabel("Time")
@@ -934,24 +837,13 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_lstm.evaluate(X_val, y_val, verbose=0)
 ```
-
-## Plotting the predictions {.smaller}
 
 ::: columns
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 Y_pred = model_lstm.predict(X_val, verbose=0)
 plt.scatter(y_val, Y_pred)
 add_diagonal_line()
@@ -969,7 +861,7 @@ plt.legend(frameon=False);
 :::
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 plt.plot(y_val[:, 0], label="Brisbane")
 plt.plot(Y_pred[:, 0], label="LSTM")
 plt.xlabel("Time")
@@ -1009,24 +901,13 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
 ## Assess the fits
 
 ```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
-
-```{python}
 model_gru.evaluate(X_val, y_val, verbose=0)
 ```
-
-## Plotting the predictions {.smaller}
 
 ::: columns
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 Y_pred = model_gru.predict(X_val, verbose=0)
 plt.scatter(y_val, Y_pred)
 add_diagonal_line()
@@ -1044,7 +925,7 @@ plt.legend(frameon=False);
 :::
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 plt.plot(y_val[:, 0], label="Brisbane")
 plt.plot(Y_pred[:, 0], label="GRU")
 plt.xlabel("Time")
@@ -1081,28 +962,16 @@ es = EarlyStopping(patience=50, restore_best_weights=True, verbose=1)
   validation_data=(X_val, y_val), callbacks=[es], verbose=0)
 ```
 
-
 ## Assess the fits
-
-```{python}
-#| echo: false
-plt.plot(hist.history["loss"], label="Train")
-plt.plot(hist.history["val_loss"], label="Val")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend(frameon=False);
-```
 
 ```{python}
 model_two_grus.evaluate(X_val, y_val, verbose=0)
 ```
 
-## Plotting the predictions {.smaller}
-
 ::: columns
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 Y_pred = model_two_grus.predict(X_val, verbose=0)
 plt.scatter(y_val, Y_pred)
 add_diagonal_line()
@@ -1120,7 +989,7 @@ plt.legend(frameon=False);
 :::
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 plt.plot(y_val[:, 0], label="Brisbane")
 plt.plot(Y_pred[:, 0], label="2 GRUs")
 plt.xlabel("Time")
@@ -1140,7 +1009,7 @@ plt.legend(frameon=False);
 ## Compare the models
 
 ```{python}
-#| echo: false
+#| code-fold: true
 models = [model_dense, model_simple, model_lstm, model_gru, model_two_grus]
 model_names = ["Dense", "SimpleRNN", "LSTM", "GRU", "2 GRUs"]
 mse_val = {
@@ -1162,7 +1031,7 @@ model_lstm.evaluate(test_ds, verbose=0)
 ::: columns
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 Y_pred = model_lstm.predict(test_ds, verbose=0)
 plt.scatter(y_test, Y_pred)
 add_diagonal_line()
@@ -1180,7 +1049,7 @@ plt.legend(frameon=False);
 :::
 ::: column
 ```{python}
-#| echo: false
+#| code-fold: true
 plt.plot(y_test[:, 0], label="Brisbane")
 plt.plot(Y_pred[:, 0], label="GRU")
 plt.xlabel("Time")
@@ -1196,16 +1065,3 @@ plt.legend(frameon=False);
 ```
 :::
 :::
-
-## Package Versions {.appendix data-visibility="uncounted"}
-
-```{python}
-from watermark import watermark
-
-print(
-    watermark(
-        python=True,
-        packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tf_keras",
-    )
-)
-```
