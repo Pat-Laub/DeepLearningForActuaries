@@ -91,6 +91,99 @@ set_config(transform_output="pandas")
 
 :::
 
+# TLDR 
+
+## Classification models in Keras
+
+::: {.content-visible unless-format="revealjs"}
+If the target is categorical variable with only two options, this is a binary classification problem.
+The neural network's output layer should have **one neuron** with a **sigmoid activation** function.
+The loss function should be **binary cross-entropy**. In Keras, this is called `loss="binary_crossentropy"`.
+
+If the target has more than two options, this is a multi-class classification problem.
+The neural network's output layer should have **as many neurons as there are classes** with a **softmax activation** function.
+The loss function should be **categorical cross-entropy**. In Keras, this is done with `loss="sparse_categorical_crossentropy"`.
+:::
+
+If the number of classes is $c$, then:
+
+| Target | Output Layer | Loss Function |
+|--------|--------------|---------------|
+| Binary <br> $(c=2)$ | 1 neuron with `sigmoid` activation | Binary Cross-Entropy |
+| Multi-class <br> $(c > 2)$ | $c$ neurons with `softmax` activation | Categorical Cross-Entropy |
+
+
+## Optionally output logits
+
+::: {.content-visible unless-format="revealjs"}
+If you find that the training is unstable, you can try to use a **linear activation** in the final layer and the have the loss functions implement the activation function.
+:::
+
+If the number of classes is $c$, then:
+
+| Target | Output Layer | Loss Function |
+|--------|--------------|---------------|
+| Binary <br> $(c=2)$ | 1 neuron with `linear` activation | Binary Cross-Entropy (`from_logits=True`) |
+| Multi-class <br> $(c > 2)$ | $c$ neurons with `linear` activation | Categorical Cross-Entropy (`from_logits=True`) |
+
+## Code examples {.smaller}
+
+::: columns
+::: column
+**Binary**
+
+```python
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(1, activation="sigmoid")
+])
+model.compile(loss="binary_crossentropy")
+```
+:::
+::: column
+**Multi-class**
+
+```python
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(n_classes, activation="softmax")
+])
+model.compile(loss="sparse_categorical_crossentropy")
+```
+:::
+:::
+
+::: columns
+::: column
+**Binary (logits)**
+
+```python
+from keras.losses import BinaryCrossentropy
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(1, activation="linear")
+])
+loss = BinaryCrossentropy(from_logits=True)
+model.compile(loss=loss)
+```
+:::
+::: column
+**Multi-class (logits)**
+
+```python
+from keras.losses import SparseCategoricalCrossentropy
+
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(n_classes, activation="linear")
+])
+loss = SparseCategoricalCrossentropy(from_logits=True)
+model.compile(loss=loss)
+```
+:::
+:::
+
+
 {{< include _keras-iris-classification-demo.qmd >}}
 
 {{< include _stroke-prediction.qmd >}}
