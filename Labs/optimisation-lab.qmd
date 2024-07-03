@@ -16,91 +16,117 @@ where $\mathcal{D}$ denotes the training data set and $\mathcal{L}(\cdot, \cdot)
 
 - **Stochastic** gradient descent updates the weights and biases once for each observation in the data set.
 - **Batch** gradient descent updates the values repeatedly by averaging the gradients across all the observations. 
+- **Mini-Batch** gradient descent updates the values repeatedly by averaging the gradients across a group of the observations (the 'mini-batch', or just 'batch'). 
 
-# Example: Batch Gradient Descent for Linear Regression
+# Example: Mini-Batch Gradient Descent for Linear Regression
 
 Notation:
 
-- $\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))$ denotes the loss function.
-- $\hat{y}(\boldsymbol{x}_i)$ denotes the predicted value for the $i$th observation $\boldsymbol{x}_i \in \mathbb{R}^{d_{\boldsymbol{x}}}$, where $d_{\boldsymbol{x}}$ represents the dimension of the input.
+- $\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, {b}))$ denotes the loss function.
+- $\hat{y}(\boldsymbol{x}_i)$ denotes the predicted value for the $i$th observation $\boldsymbol{x}_i \in \mathbb{R}^{1 \times p}$, where $p$ represents the dimension of the input.
+- $\boldsymbol{w} \in \mathbb{R}^{p \times 1}$ denotes the weights.
 - $N$ denotes the batch size.
 
-The true model:
-\begin{align}
-    \boldsymbol{w}_{\text{True}} = \begin{pmatrix} 1.5 \\ 1.5 \end{pmatrix}, \boldsymbol{b}_{\text{True}} = \begin{pmatrix} 0.1 \\ 0.1 \\ 0.1 \end{pmatrix}. \\ \nonumber
-\end{align}
+The model is
 
-Obtain target values $\boldsymbol{y}$:
+$$
+    \hat{y}_i = \hat{y}(\boldsymbol{x}_i) = \boldsymbol{x}_i \boldsymbol{w} + b, \quad i = 1, \ldots, n.
+$$
+
+Let's set $p=2$ and consider the true weights and bias as
+
+$$
+    \boldsymbol{w}_{\text{True}} = \begin{pmatrix} 1.5 \\ 1.5 \end{pmatrix}, b_{\,\text{True}} = 0.1.
+$$
+
+Let's just make some toy dataset (batch) to train on:
 
 ```{python}
 import numpy as np
-X = np.array([[1, 2], [3, 1], [1, 1]])
-true_w = np.array([[1.5], [1.5]])
-true_b = np.array([[0.1], [0.1], [0.1]])
-y = X @ true_w + true_b
+
+# Make up (arbitrarily) 12 observations with two features.
+X = np.array([[1, 2],
+              [3, 1],
+              [1, 1],
+              [0, 1],
+              [2, 2],
+              [-2, 3],
+              [1, 2],
+              [-1, -0.5],
+              [0.5, 1.2],
+              [2, 1],
+              [-2, 3],
+              [-1, 1]
+              ])
+
+w_true = np.array([[1.5], [1.5]])
+b_true = 0.1
+
+y = X @ w_true + b_true
 print(X); print(y)
 ```
 
-A batch with $N=3$ and $d_{\boldsymbol{x}}=2$:
-\begin{align}
-    \boldsymbol{X} = \begin{pmatrix}
-        1 & 2\\
+If the batch size is $N=3$, the first batch of observations is
+
+$$
+    \boldsymbol{X}_{1:3} = \begin{pmatrix}
+        1 & 2 \\
         3 & 1 \\
-        1 & 1
+        1 & 1\\
         \end{pmatrix} , 
-        \boldsymbol{y} = \begin{pmatrix}
+        \boldsymbol{y}_{1:3} = 
+        \begin{pmatrix}
         4.6 \\
         6.1 \\
-        3.1
+        3.1 \\
         \end{pmatrix}.
-            \\ \nonumber
-\end{align}
+$$
+For simplicity, we will denote $\boldsymbol{X}_{1:3}$ as $\boldsymbol{X}$ and $\boldsymbol{y}_{1:3}$ as $\boldsymbol{y}$.
 
-**Step 1:** Write down $\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))$ and $\hat{\boldsymbol{y}}$*
+**Step 1:** Write down $\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, {b}))$ and $\hat{\boldsymbol{y}}$
 \begin{align}
-    \mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b})) =\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)^2 = \frac{1}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y})^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}),  
+    \mathcal{L}(\mathcal{D}, (\boldsymbol{w}, {b})) =\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)^2 = \frac{1}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y})^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}),  
 \end{align}
 where
 \begin{align}
-    \hat{y}(\boldsymbol{x}_i) &=  \boldsymbol{x}_i\boldsymbol{w} + \boldsymbol{b}, \\
-    \hat{\boldsymbol{y}} &= \boldsymbol{X} \boldsymbol{w} + \boldsymbol{b} = \begin{pmatrix}
+    \hat{y}(\boldsymbol{x}_i) &=  \boldsymbol{x}_i\boldsymbol{w} + b, \\
+    \hat{\boldsymbol{y}} &= \boldsymbol{X} \boldsymbol{w} + {b}\boldsymbol{1} = \begin{pmatrix}
         \hat{y}(\boldsymbol{x}_1) \\
         \hat{y}(\boldsymbol{x}_2) \\
         \hat{y}(\boldsymbol{x}_3)
         \end{pmatrix}. 
     \\ \nonumber
 \end{align}
+with $\boldsymbol{1}$ is a length 3 column vector of ones.
 
-**Step 2:** Derive $\frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}$, $\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}}$, and $\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}}$
+**Step 2:** Derive $\frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}$, $\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}}$, and $\frac{\partial \boldsymbol{\hat{y}}}{\partial {b}}$
 \begin{align}
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} &= \frac{2}{N} \sum_{i=1}^{N}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big) = \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}), \\
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} &= \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}), \\
     \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} &=  \boldsymbol{X}, \\
-    \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}} &=  \boldsymbol{I}_{3\times 1} = \begin{pmatrix}
-         1  \\
-         1  \\
-        1
-        \end{pmatrix}  . \\ \nonumber
+    \frac{\partial \boldsymbol{\hat{y}}}{\partial {b}} &= \boldsymbol{1} . \\ \nonumber
 \end{align}
 
-**Step 3:** Derive $\frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}$ and $\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}}$
+**Step 3:** Derive $\frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}$ and $\frac{\partial \mathcal{L}}{\partial {b}}$
 
 \begin{align}
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &= \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} = \frac{2}{N} \sum_{i=1}^{N} \boldsymbol{x}_i^{\top}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big) = \frac{2}{N} \boldsymbol{X}^{\top} (\hat{\boldsymbol{y}} - \boldsymbol{y}),  \\
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}} &= \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}} =\frac{2}{N} \sum_{i=1}^{N}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)  = \frac{2}{N} \boldsymbol{I}^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}).    \\ \nonumber
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &= \left( \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} \right)^\top  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} = 
+    \left( \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}) \right)^\top \boldsymbol{X}
+    = \frac{2}{N} \boldsymbol{X}^{\top} (\hat{\boldsymbol{y}} - \boldsymbol{y}),  \\
+    \frac{\partial \mathcal{L}}{\partial {b}} &= \left( \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} \right)^\top  \frac{\partial \boldsymbol{\hat{y}}}{\partial {b}} = \left( \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}) \right)^\top \boldsymbol{1}  = \frac{2}{N} \boldsymbol{1}^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}).    \\ \nonumber
 \end{align}
 
 **Step 4:** Initialise the weights and biases. Evaluate the gradients.
 
 \begin{align}
-    \boldsymbol{w} = \begin{pmatrix} 1\\ 1 \end{pmatrix}, \boldsymbol{b} = \begin{pmatrix} 0 \\ 0 \\ 0 \end{pmatrix} \\ \nonumber
+    \boldsymbol{w}^{(0)} = \begin{pmatrix} 1\\ 1 \end{pmatrix}, {b}^{(0)} = 0. \nonumber
 \end{align}
 Subsequently,
 \begin{align}
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &= \frac{2}{3} 
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}\bigg|_{\boldsymbol{w}^{(0)}} &= \frac{2}{3} 
      \underbrace{\begin{pmatrix}
          1 & 3 & 1  \\
         2 & 1 & 1  \\
-        \end{pmatrix}}_{\boldsymbol{X}}  \Bigg[
+        \end{pmatrix}}_{\boldsymbol{X}^\top}  \Bigg[
         \underbrace{\begin{pmatrix}
         3 \\
         4 \\
@@ -118,10 +144,10 @@ Subsequently,
         -4.267 
         \end{pmatrix},
         \\
-        \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}} &= \frac{2}{3}
+        \frac{\partial \mathcal{L}}{\partial {b}}\bigg|_{{b}^{(0)}} &= \frac{2}{3}
             \underbrace{\begin{pmatrix}
            1  & 1 & 1
-        \end{pmatrix}}_{\boldsymbol{I}}  \Bigg[
+        \end{pmatrix}}_{\boldsymbol{1}^{\top}}  \Bigg[
         \underbrace{\begin{pmatrix}
         3 \\
         4 \\
@@ -138,14 +164,16 @@ Subsequently,
 
 ```{python}
 #number of rows == number of observations in the batch
-N = X.shape[0] 
+X_batch = X[:3]
+y_batch = y[:3]
+N = X_batch.shape[0]
 w = np.array([[1], [1]])
-b = np.array([[0] * N]).reshape(N, 1)
+b = 0
 
 #Gradients
-y_hat = X @ w + b
-dw = 2/N * X.T @ (y_hat - y)
-db = 2/N * np.sum(y_hat - y)
+y_hat = X_batch @ w + b
+dw = 2/N * X_batch.T @ (y_hat - y_batch)
+db = 2/N * np.sum(y_hat - y_batch)
 print(dw); print(db)
 ```
 
@@ -153,18 +181,14 @@ print(dw); print(db)
 
 \begin{align}
     \eta &= 0.1,\\
-    \boldsymbol{w} &=  \boldsymbol{w} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}
+    \boldsymbol{w}^{(1)} &=  \boldsymbol{w}^{(0)} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}\bigg|_{\boldsymbol{w}^{(0)}} 
     =
     \begin{pmatrix}
         1.600 \\
         1.427 
         \end{pmatrix}, \\
-    \boldsymbol{b} &=  \boldsymbol{b} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}}
-    =\begin{pmatrix}
-        0.320 \\
-        0.320 \\
-        0.320
-        \end{pmatrix}
+    {b}^{(1)} &=  {b}^{(0)} - \eta \frac{\partial \mathcal{L}}{\partial {b}}\bigg|_{{b}^{(0)}} 
+    = 0.320
 \end{align}
 
 ```{python}
@@ -182,54 +206,71 @@ print(w); print(b)
 def mse(y_pred, y_true):
   return(np.mean((y_pred-y_true)**2))
 
-def lr_gradient_descent(eta = 0.1, w = None, b = None,
-                        max_iter = 100, tol = 1e-08):
-  """
-  Gradient descent optimization for linear regression.
+def lr_gradient_descent(X, y, batch_size=32, eta=0.1, w=None, b=None, max_iter=100, tol=1e-08):
+    """
+    Gradient descent optimization for linear regression with random batch updates.
 
-  Parameters:
-  eta: float - learning rate (default=0.1)
-  w: numpy array of shape (d, 1) - initial weights (default=ones)
-  b: numpy array of shape (N, 1) - initial bias (default=zeros)
-  max_iter: int - maximum number of iterations (default=100)
-  tol: float - tolerance for stopping criteria (default=1e-08)
+    Parameters:
+    eta: float - learning rate (default=0.1)
+    w: numpy array of shape (p, 1) - initial weights (default=ones)
+    b: float - initial bias (default=zero)
+    max_iter: int - maximum number of iterations (default=100)
+    tol: float - tolerance for stopping criteria (default=1e-08)
 
-  Returns:
-  w, b - optimized weights and bias
-  """
-  N, d = X.shape
+    Returns:
+    w, b - optimized weights and bias
+    """
+    N, p = X.shape
 
-  if w is None:
-      w = np.ones((d, 1))
-  if b is None:
-      b = np.zeros((N, 1))
+    if w is None:
+        w = np.ones((p, 1))
+    if b is None:
+        b = 0
 
-  prev_error = np.inf
-  for _ in range(max_iter):
-    y_hat = X @ w + b
-    error = mse(y_hat, y)
-    if np.abs(error - prev_error) < tol:
-      return(w, b)
-      break
-    prev_error = error
-    
-    dw = 2/N * X.T @ (y_hat - y)
-    db = 2/N * (y_hat - y)
-    w -= eta * dw
-    b -= eta * db
-  return(w, b)
+    prev_error = np.inf
+    batch_size = min(N, batch_size)
+    num_batches = N//batch_size 
+
+    for iteration in range(max_iter):
+        indices = np.arange(N)
+        np.random.shuffle(indices)
+        X_shuffled = X[indices]
+        y_shuffled = y[indices]
+        
+
+        for batch in range(num_batches):
+            start = batch * batch_size
+            end = start + batch_size
+            X_batch = X_shuffled[start:end]
+            y_batch = y_shuffled[start:end]
+
+            y_hat = X_batch @ w + b
+            error = mse(y_hat.squeeze(), y_batch.squeeze())
+
+            if np.abs(error - prev_error) < tol:
+                return w, b
+
+            prev_error = error
+
+            dw = 2 / batch_size * X_batch.T @ (y_hat - y_batch)
+            db = 2 / batch_size * np.sum(y_hat - y_batch)
+
+            w -= eta * dw
+            b -= eta * db
+
+    return w, b
 
 #Default initialisation
-w_updated, b_updated = lr_gradient_descent(max_iter = 1000)
+w_updated, b_updated = lr_gradient_descent(X, y, batch_size = 3, max_iter = 1000)
 print(w_updated)
 print(b_updated)
 ```
 
 **Different Learning Rates and Initialisations**
 
-See more details in `Week_2_Tutorial_Notebook`.
+See more details in [maths-of-neural-networks.ipynb](maths-of-neural-networks.ipynb).
 
 # Exercises
 
-1. Apply stochastic gradient descent for the example given in Section \hyperref[Example BGD]{4.3}.
-2. Apply batch gradient descent for logistic regression. Follow the steps and information in Section \hyperref[Example BGD]{4.3}.
+1. Apply stochastic gradient descent for the example given above.
+2. Apply batch gradient descent for logistic regression. Follow the steps and information above.
