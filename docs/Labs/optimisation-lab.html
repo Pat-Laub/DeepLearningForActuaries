@@ -479,7 +479,7 @@ window.Quarto = {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#example-batch-gradient-descent-for-linear-regression" id="toc-example-batch-gradient-descent-for-linear-regression" class="nav-link active" data-scroll-target="#example-batch-gradient-descent-for-linear-regression">Example: Batch Gradient Descent for Linear Regression</a></li>
+  <li><a href="#example-mini-batch-gradient-descent-for-linear-regression" id="toc-example-mini-batch-gradient-descent-for-linear-regression" class="nav-link active" data-scroll-target="#example-mini-batch-gradient-descent-for-linear-regression">Example: Mini-Batch Gradient Descent for Linear Regression</a></li>
   <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises">Exercises</a></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="optimisation-lab.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
@@ -514,82 +514,122 @@ window.Quarto = {
 <ul>
 <li><strong>Stochastic</strong> gradient descent updates the weights and biases once for each observation in the data set.</li>
 <li><strong>Batch</strong> gradient descent updates the values repeatedly by averaging the gradients across all the observations.</li>
+<li><strong>Mini-Batch</strong> gradient descent updates the values repeatedly by averaging the gradients across a group of the observations (the ‘mini-batch’, or just ‘batch’).</li>
 </ul>
-<section id="example-batch-gradient-descent-for-linear-regression" class="level2">
-<h2 class="anchored" data-anchor-id="example-batch-gradient-descent-for-linear-regression">Example: Batch Gradient Descent for Linear Regression</h2>
+<section id="example-mini-batch-gradient-descent-for-linear-regression" class="level2">
+<h2 class="anchored" data-anchor-id="example-mini-batch-gradient-descent-for-linear-regression">Example: Mini-Batch Gradient Descent for Linear Regression</h2>
 <p>Notation:</p>
 <ul>
-<li><span class="math inline">\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))</span> denotes the loss function.</li>
-<li><span class="math inline">\hat{y}(\boldsymbol{x}_i)</span> denotes the predicted value for the <span class="math inline">i</span>th observation <span class="math inline">\boldsymbol{x}_i \in \mathbb{R}^{d_{\boldsymbol{x}}}</span>, where <span class="math inline">d_{\boldsymbol{x}}</span> represents the dimension of the input.</li>
+<li><span class="math inline">\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, {b}))</span> denotes the loss function.</li>
+<li><span class="math inline">\hat{y}(\boldsymbol{x}_i)</span> denotes the predicted value for the <span class="math inline">i</span>th observation <span class="math inline">\boldsymbol{x}_i \in \mathbb{R}^{1 \times p}</span>, where <span class="math inline">p</span> represents the dimension of the input.</li>
+<li><span class="math inline">\boldsymbol{w} \in \mathbb{R}^{p \times 1}</span> denotes the weights.</li>
 <li><span class="math inline">N</span> denotes the batch size.</li>
 </ul>
-<p>The true model: <span class="math display">\begin{align}
-    \boldsymbol{w}_{\text{True}} = \begin{pmatrix} 1.5 \\ 1.5 \end{pmatrix}, \boldsymbol{b}_{\text{True}} = \begin{pmatrix} 0.1 \\ 0.1 \\ 0.1 \end{pmatrix}. \\ \nonumber
-\end{align}</span></p>
-<p>Obtain target values <span class="math inline">\boldsymbol{y}</span>:</p>
-<div id="e2d9e37e" class="cell" data-execution_count="1">
+<p>The model is</p>
+<p><span class="math display">
+    \hat{y}_i = \hat{y}(\boldsymbol{x}_i) = \boldsymbol{x}_i \boldsymbol{w} + b, \quad i = 1, \ldots, n.
+</span></p>
+<p>Let’s set <span class="math inline">p=2</span> and consider the true weights and bias as</p>
+<p><span class="math display">
+    \boldsymbol{w}_{\text{True}} = \begin{pmatrix} 1.5 \\ 1.5 \end{pmatrix}, b_{\,\text{True}} = 0.1.
+</span></p>
+<p>Let’s just make some toy dataset (batch) to train on:</p>
+<div id="7fc6ca4f" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array([[<span class="dv">1</span>, <span class="dv">2</span>], [<span class="dv">3</span>, <span class="dv">1</span>], [<span class="dv">1</span>, <span class="dv">1</span>]])</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>true_w <span class="op">=</span> np.array([[<span class="fl">1.5</span>], [<span class="fl">1.5</span>]])</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>true_b <span class="op">=</span> np.array([[<span class="fl">0.1</span>], [<span class="fl">0.1</span>], [<span class="fl">0.1</span>]])</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> X <span class="op">@</span> true_w <span class="op">+</span> true_b</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X)<span class="op">;</span> <span class="bu">print</span>(y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Make up (arbitrarily) 12 observations with two features.</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array([[<span class="dv">1</span>, <span class="dv">2</span>],</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>              [<span class="dv">3</span>, <span class="dv">1</span>],</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>              [<span class="dv">1</span>, <span class="dv">1</span>],</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>              [<span class="dv">0</span>, <span class="dv">1</span>],</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>              [<span class="dv">2</span>, <span class="dv">2</span>],</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>              [<span class="op">-</span><span class="dv">2</span>, <span class="dv">3</span>],</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>              [<span class="dv">1</span>, <span class="dv">2</span>],</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>              [<span class="op">-</span><span class="dv">1</span>, <span class="op">-</span><span class="fl">0.5</span>],</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>              [<span class="fl">0.5</span>, <span class="fl">1.2</span>],</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>              [<span class="dv">2</span>, <span class="dv">1</span>],</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>              [<span class="op">-</span><span class="dv">2</span>, <span class="dv">3</span>],</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>              [<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>]</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>              ])</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>w_true <span class="op">=</span> np.array([[<span class="fl">1.5</span>], [<span class="fl">1.5</span>]])</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>b_true <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> X <span class="op">@</span> w_true <span class="op">+</span> b_true</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X)<span class="op">;</span> <span class="bu">print</span>(y)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[[1 2]
- [3 1]
- [1 1]]
-[[4.6]
- [6.1]
- [3.1]]</code></pre>
+<pre><code>[[ 1.   2. ]
+ [ 3.   1. ]
+ [ 1.   1. ]
+ [ 0.   1. ]
+ [ 2.   2. ]
+ [-2.   3. ]
+ [ 1.   2. ]
+ [-1.  -0.5]
+ [ 0.5  1.2]
+ [ 2.   1. ]
+ [-2.   3. ]
+ [-1.   1. ]]
+[[ 4.6 ]
+ [ 6.1 ]
+ [ 3.1 ]
+ [ 1.6 ]
+ [ 6.1 ]
+ [ 1.6 ]
+ [ 4.6 ]
+ [-2.15]
+ [ 2.65]
+ [ 4.6 ]
+ [ 1.6 ]
+ [ 0.1 ]]</code></pre>
 </div>
 </div>
-<p>A batch with <span class="math inline">N=3</span> and <span class="math inline">d_{\boldsymbol{x}}=2</span>: <span class="math display">\begin{align}
-    \boldsymbol{X} = \begin{pmatrix}
-        1 &amp; 2\\
+<p>If the batch size is <span class="math inline">N=3</span>, the first batch of observations is</p>
+<p><span class="math display">
+    \boldsymbol{X}_{1:3} = \begin{pmatrix}
+        1 &amp; 2 \\
         3 &amp; 1 \\
-        1 &amp; 1
+        1 &amp; 1\\
         \end{pmatrix} ,
-        \boldsymbol{y} = \begin{pmatrix}
+        \boldsymbol{y}_{1:3} =
+        \begin{pmatrix}
         4.6 \\
         6.1 \\
-        3.1
+        3.1 \\
         \end{pmatrix}.
-            \\ \nonumber
-\end{align}</span></p>
-<p><strong>Step 1:</strong> Write down <span class="math inline">\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b}))</span> and <span class="math inline">\hat{\boldsymbol{y}}</span>* <span class="math display">\begin{align}
-    \mathcal{L}(\mathcal{D}, (\boldsymbol{w}, \boldsymbol{b})) =\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)^2 = \frac{1}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y})^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}),  
+</span> For simplicity, we will denote <span class="math inline">\boldsymbol{X}_{1:3}</span> as <span class="math inline">\boldsymbol{X}</span> and <span class="math inline">\boldsymbol{y}_{1:3}</span> as <span class="math inline">\boldsymbol{y}</span>.</p>
+<p><strong>Step 1:</strong> Write down <span class="math inline">\mathcal{L}(\mathcal{D}, (\boldsymbol{w}, {b}))</span> and <span class="math inline">\hat{\boldsymbol{y}}</span> <span class="math display">\begin{align}
+    \mathcal{L}(\mathcal{D}, (\boldsymbol{w}, {b})) =\frac{1}{N} \sum_{i=1}^{N} \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)^2 = \frac{1}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y})^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}),  
 \end{align}</span> where <span class="math display">\begin{align}
-    \hat{y}(\boldsymbol{x}_i) &amp;=  \boldsymbol{x}_i\boldsymbol{w} + \boldsymbol{b}, \\
-    \hat{\boldsymbol{y}} &amp;= \boldsymbol{X} \boldsymbol{w} + \boldsymbol{b} = \begin{pmatrix}
+    \hat{y}(\boldsymbol{x}_i) &amp;=  \boldsymbol{x}_i\boldsymbol{w} + b, \\
+    \hat{\boldsymbol{y}} &amp;= \boldsymbol{X} \boldsymbol{w} + {b}\boldsymbol{1} = \begin{pmatrix}
         \hat{y}(\boldsymbol{x}_1) \\
         \hat{y}(\boldsymbol{x}_2) \\
         \hat{y}(\boldsymbol{x}_3)
         \end{pmatrix}.
     \\ \nonumber
-\end{align}</span></p>
-<p><strong>Step 2:</strong> Derive <span class="math inline">\frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}</span>, <span class="math inline">\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}}</span>, and <span class="math inline">\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}}</span> <span class="math display">\begin{align}
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} &amp;= \frac{2}{N} \sum_{i=1}^{N}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big) = \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}), \\
+\end{align}</span> with <span class="math inline">\boldsymbol{1}</span> is a length 3 column vector of ones.</p>
+<p><strong>Step 2:</strong> Derive <span class="math inline">\frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}</span>, <span class="math inline">\frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}}</span>, and <span class="math inline">\frac{\partial \boldsymbol{\hat{y}}}{\partial {b}}</span> <span class="math display">\begin{align}
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} &amp;= \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}), \\
     \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} &amp;=  \boldsymbol{X}, \\
-    \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}} &amp;=  \boldsymbol{I}_{3\times 1} = \begin{pmatrix}
-         1  \\
-         1  \\
-        1
-        \end{pmatrix}  . \\ \nonumber
+    \frac{\partial \boldsymbol{\hat{y}}}{\partial {b}} &amp;= \boldsymbol{1} . \\ \nonumber
 \end{align}</span></p>
-<p><strong>Step 3:</strong> Derive <span class="math inline">\frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}</span> and <span class="math inline">\frac{\partial \mathcal{L}}{\partial \boldsymbol{b}}</span></p>
+<p><strong>Step 3:</strong> Derive <span class="math inline">\frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}</span> and <span class="math inline">\frac{\partial \mathcal{L}}{\partial {b}}</span></p>
 <p><span class="math display">\begin{align}
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &amp;= \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} = \frac{2}{N} \sum_{i=1}^{N} \boldsymbol{x}_i^{\top}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big) = \frac{2}{N} \boldsymbol{X}^{\top} (\hat{\boldsymbol{y}} - \boldsymbol{y}),  \\
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}} &amp;= \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}}  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{b}} =\frac{2}{N} \sum_{i=1}^{N}  \big(\hat{y}(\boldsymbol{x}_i) - y_i \big)  = \frac{2}{N} \boldsymbol{I}^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}).    \\ \nonumber
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &amp;= \left( \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} \right)^\top  \frac{\partial \boldsymbol{\hat{y}}}{\partial \boldsymbol{w}} =
+    \left( \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}) \right)^\top \boldsymbol{X}
+    = \frac{2}{N} \boldsymbol{X}^{\top} (\hat{\boldsymbol{y}} - \boldsymbol{y}),  \\
+    \frac{\partial \mathcal{L}}{\partial {b}} &amp;= \left( \frac{\partial \mathcal{L}}{\partial \boldsymbol{\hat{y}}} \right)^\top  \frac{\partial \boldsymbol{\hat{y}}}{\partial {b}} = \left( \frac{2}{N} (\hat{\boldsymbol{y}} - \boldsymbol{y}) \right)^\top \boldsymbol{1}  = \frac{2}{N} \boldsymbol{1}^{\top}(\hat{\boldsymbol{y}} - \boldsymbol{y}).    \\ \nonumber
 \end{align}</span></p>
 <p><strong>Step 4:</strong> Initialise the weights and biases. Evaluate the gradients.</p>
 <p><span class="math display">\begin{align}
-    \boldsymbol{w} = \begin{pmatrix} 1\\ 1 \end{pmatrix}, \boldsymbol{b} = \begin{pmatrix} 0 \\ 0 \\ 0 \end{pmatrix} \\ \nonumber
+    \boldsymbol{w}^{(0)} = \begin{pmatrix} 1\\ 1 \end{pmatrix}, {b}^{(0)} = 0. \nonumber
 \end{align}</span> Subsequently, <span class="math display">\begin{align}
-    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}} &amp;= \frac{2}{3}
+    \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}\bigg|_{\boldsymbol{w}^{(0)}} &amp;= \frac{2}{3}
      \underbrace{\begin{pmatrix}
          1 &amp; 3 &amp; 1  \\
         2 &amp; 1 &amp; 1  \\
-        \end{pmatrix}}_{\boldsymbol{X}}  \Bigg[
+        \end{pmatrix}}_{\boldsymbol{X}^\top}  \Bigg[
         \underbrace{\begin{pmatrix}
         3 \\
         4 \\
@@ -607,10 +647,10 @@ window.Quarto = {
         -4.267
         \end{pmatrix},
         \\
-        \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}} &amp;= \frac{2}{3}
+        \frac{\partial \mathcal{L}}{\partial {b}}\bigg|_{{b}^{(0)}} &amp;= \frac{2}{3}
             \underbrace{\begin{pmatrix}
            1  &amp; 1 &amp; 1
-        \end{pmatrix}}_{\boldsymbol{I}}  \Bigg[
+        \end{pmatrix}}_{\boldsymbol{1}^{\top}}  \Bigg[
         \underbrace{\begin{pmatrix}
         3 \\
         4 \\
@@ -624,17 +664,19 @@ window.Quarto = {
         \end{pmatrix}}_{\boldsymbol{y}}
         \Bigg] = -3.200.\\ \nonumber
 \end{align}</span></p>
-<div id="ec298e47" class="cell" data-execution_count="2">
+<div id="94dd2ba0" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#number of rows == number of observations in the batch</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> X.shape[<span class="dv">0</span>] </span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> np.array([[<span class="dv">1</span>], [<span class="dv">1</span>]])</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> np.array([[<span class="dv">0</span>] <span class="op">*</span> N]).reshape(N, <span class="dv">1</span>)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#Gradients</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>y_hat <span class="op">=</span> X <span class="op">@</span> w <span class="op">+</span> b</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>dw <span class="op">=</span> <span class="dv">2</span><span class="op">/</span>N <span class="op">*</span> X.T <span class="op">@</span> (y_hat <span class="op">-</span> y)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> <span class="dv">2</span><span class="op">/</span>N <span class="op">*</span> np.sum(y_hat <span class="op">-</span> y)</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(dw)<span class="op">;</span> <span class="bu">print</span>(db)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>X_batch <span class="op">=</span> X[:<span class="dv">3</span>]</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>y_batch <span class="op">=</span> y[:<span class="dv">3</span>]</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>N <span class="op">=</span> X_batch.shape[<span class="dv">0</span>]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> np.array([[<span class="dv">1</span>], [<span class="dv">1</span>]])</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>b <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#Gradients</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>y_hat <span class="op">=</span> X_batch <span class="op">@</span> w <span class="op">+</span> b</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>dw <span class="op">=</span> <span class="dv">2</span><span class="op">/</span>N <span class="op">*</span> X_batch.T <span class="op">@</span> (y_hat <span class="op">-</span> y_batch)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>db <span class="op">=</span> <span class="dv">2</span><span class="op">/</span>N <span class="op">*</span> np.sum(y_hat <span class="op">-</span> y_batch)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(dw)<span class="op">;</span> <span class="bu">print</span>(db)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[-6.        ]
  [-4.26666667]]
@@ -644,20 +686,16 @@ window.Quarto = {
 <p><strong>Step 5:</strong> Pick a learning rate <span class="math inline">\eta</span> and update the weights and biases.</p>
 <p><span class="math display">\begin{align}
     \eta &amp;= 0.1,\\
-    \boldsymbol{w} &amp;=  \boldsymbol{w} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}
+    \boldsymbol{w}^{(1)} &amp;=  \boldsymbol{w}^{(0)} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{w}}\bigg|_{\boldsymbol{w}^{(0)}}
     =
     \begin{pmatrix}
         1.600 \\
         1.427
         \end{pmatrix}, \\
-    \boldsymbol{b} &amp;=  \boldsymbol{b} - \eta \frac{\partial \mathcal{L}}{\partial \boldsymbol{b}}
-    =\begin{pmatrix}
-        0.320 \\
-        0.320 \\
-        0.320
-        \end{pmatrix}
+    {b}^{(1)} &amp;=  {b}^{(0)} - \eta \frac{\partial \mathcal{L}}{\partial {b}}\bigg|_{{b}^{(0)}}
+    = 0.320
 \end{align}</span></p>
-<div id="00713c64" class="cell" data-execution_count="3">
+<div id="87c3ec4d" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#specify a learning rate to update</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>eta <span class="op">=</span> <span class="fl">0.1</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>w <span class="op">=</span> w <span class="op">-</span> eta <span class="op">*</span> dw</span>
@@ -666,74 +704,87 @@ window.Quarto = {
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1.6       ]
  [1.42666667]]
-[[0.32]
- [0.32]
- [0.32]]</code></pre>
+0.31999999999999995</code></pre>
 </div>
 </div>
 <p><strong>Next Step:</strong> Update until convergence.</p>
-<div id="3c7ae0db" class="cell" data-execution_count="4">
+<div id="3f972409" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#loss function</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> mse(y_pred, y_true):</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span>(np.mean((y_pred<span class="op">-</span>y_true)<span class="op">**</span><span class="dv">2</span>))</span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> lr_gradient_descent(eta <span class="op">=</span> <span class="fl">0.1</span>, w <span class="op">=</span> <span class="va">None</span>, b <span class="op">=</span> <span class="va">None</span>,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>                        max_iter <span class="op">=</span> <span class="dv">100</span>, tol <span class="op">=</span> <span class="fl">1e-08</span>):</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">"""</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">  Gradient descent optimization for linear regression.</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">  Parameters:</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">  eta: float - learning rate (default=0.1)</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co">  w: numpy array of shape (d, 1) - initial weights (default=ones)</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co">  b: numpy array of shape (N, 1) - initial bias (default=zeros)</span></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co">  max_iter: int - maximum number of iterations (default=100)</span></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">  tol: float - tolerance for stopping criteria (default=1e-08)</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co">  Returns:</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co">  w, b - optimized weights and bias</span></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a><span class="co">  """</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  N, d <span class="op">=</span> X.shape</span>
-<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> w <span class="kw">is</span> <span class="va">None</span>:</span>
-<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>      w <span class="op">=</span> np.ones((d, <span class="dv">1</span>))</span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> b <span class="kw">is</span> <span class="va">None</span>:</span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>      b <span class="op">=</span> np.zeros((N, <span class="dv">1</span>))</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>  prev_error <span class="op">=</span> np.inf</span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(max_iter):</span>
-<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    y_hat <span class="op">=</span> X <span class="op">@</span> w <span class="op">+</span> b</span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    error <span class="op">=</span> mse(y_hat, y)</span>
-<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> np.abs(error <span class="op">-</span> prev_error) <span class="op">&lt;</span> tol:</span>
-<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>      <span class="cf">return</span>(w, b)</span>
-<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>      <span class="cf">break</span></span>
-<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>    prev_error <span class="op">=</span> error</span>
-<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>    </span>
-<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a>    dw <span class="op">=</span> <span class="dv">2</span><span class="op">/</span>N <span class="op">*</span> X.T <span class="op">@</span> (y_hat <span class="op">-</span> y)</span>
-<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>    db <span class="op">=</span> <span class="dv">2</span><span class="op">/</span>N <span class="op">*</span> (y_hat <span class="op">-</span> y)</span>
-<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>    w <span class="op">-=</span> eta <span class="op">*</span> dw</span>
-<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>    b <span class="op">-=</span> eta <span class="op">*</span> db</span>
-<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span>(w, b)</span>
-<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a><span class="co">#Default initialisation</span></span>
-<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>w_updated, b_updated <span class="op">=</span> lr_gradient_descent(max_iter <span class="op">=</span> <span class="dv">1000</span>)</span>
-<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w_updated)</span>
-<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(b_updated)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> lr_gradient_descent(X, y, batch_size<span class="op">=</span><span class="dv">32</span>, eta<span class="op">=</span><span class="fl">0.1</span>, w<span class="op">=</span><span class="va">None</span>, b<span class="op">=</span><span class="va">None</span>, max_iter<span class="op">=</span><span class="dv">100</span>, tol<span class="op">=</span><span class="fl">1e-08</span>):</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">    Gradient descent optimization for linear regression with random batch updates.</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">    Parameters:</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">    eta: float - learning rate (default=0.1)</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">    w: numpy array of shape (p, 1) - initial weights (default=ones)</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co">    b: float - initial bias (default=zero)</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co">    max_iter: int - maximum number of iterations (default=100)</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co">    tol: float - tolerance for stopping criteria (default=1e-08)</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co">    Returns:</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a><span class="co">    w, b - optimized weights and bias</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co">    """</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    N, p <span class="op">=</span> X.shape</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> w <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>        w <span class="op">=</span> np.ones((p, <span class="dv">1</span>))</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> b <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>        b <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    prev_error <span class="op">=</span> np.inf</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>    batch_size <span class="op">=</span> min(N, batch_size)</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    num_batches <span class="op">=</span> N<span class="op">//</span>batch_size </span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> iteration <span class="kw">in</span> <span class="bu">range</span>(max_iter):</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>        indices <span class="op">=</span> np.arange(N)</span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>        np.random.shuffle(indices)</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>        X_shuffled <span class="op">=</span> X[indices]</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>        y_shuffled <span class="op">=</span> y[indices]</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a>        </span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> batch <span class="kw">in</span> <span class="bu">range</span>(num_batches):</span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>            start <span class="op">=</span> batch <span class="op">*</span> batch_size</span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>            end <span class="op">=</span> start <span class="op">+</span> batch_size</span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>            X_batch <span class="op">=</span> X_shuffled[start:end]</span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>            y_batch <span class="op">=</span> y_shuffled[start:end]</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a>            y_hat <span class="op">=</span> X_batch <span class="op">@</span> w <span class="op">+</span> b</span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>            error <span class="op">=</span> mse(y_hat.squeeze(), y_batch.squeeze())</span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> np.abs(error <span class="op">-</span> prev_error) <span class="op">&lt;</span> tol:</span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a>                <span class="cf">return</span> w, b</span>
+<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a>            prev_error <span class="op">=</span> error</span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>            dw <span class="op">=</span> <span class="dv">2</span> <span class="op">/</span> batch_size <span class="op">*</span> X_batch.T <span class="op">@</span> (y_hat <span class="op">-</span> y_batch)</span>
+<span id="cb7-52"><a href="#cb7-52" aria-hidden="true" tabindex="-1"></a>            db <span class="op">=</span> <span class="dv">2</span> <span class="op">/</span> batch_size <span class="op">*</span> np.sum(y_hat <span class="op">-</span> y_batch)</span>
+<span id="cb7-53"><a href="#cb7-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-54"><a href="#cb7-54" aria-hidden="true" tabindex="-1"></a>            w <span class="op">-=</span> eta <span class="op">*</span> dw</span>
+<span id="cb7-55"><a href="#cb7-55" aria-hidden="true" tabindex="-1"></a>            b <span class="op">-=</span> eta <span class="op">*</span> db</span>
+<span id="cb7-56"><a href="#cb7-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-57"><a href="#cb7-57" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> w, b</span>
+<span id="cb7-58"><a href="#cb7-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-59"><a href="#cb7-59" aria-hidden="true" tabindex="-1"></a><span class="co">#Default initialisation</span></span>
+<span id="cb7-60"><a href="#cb7-60" aria-hidden="true" tabindex="-1"></a>w_updated, b_updated <span class="op">=</span> lr_gradient_descent(X, y, batch_size <span class="op">=</span> <span class="dv">3</span>, max_iter <span class="op">=</span> <span class="dv">1000</span>)</span>
+<span id="cb7-61"><a href="#cb7-61" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w_updated)</span>
+<span id="cb7-62"><a href="#cb7-62" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(b_updated)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[[1.51250004]
- [1.47499994]]
-[[0.13766113]
- [0.08758062]
- [0.11209706]]</code></pre>
+<pre><code>[[1.49989111]
+ [1.49969212]]
+0.1005828360741486</code></pre>
 </div>
 </div>
 <p><strong>Different Learning Rates and Initialisations</strong></p>
-<p>See more details in <code>Week_2_Tutorial_Notebook</code>.</p>
+<p>See more details in <a href="maths-of-neural-networks.ipynb">maths-of-neural-networks.ipynb</a>.</p>
 </section>
 <section id="exercises" class="level2">
 <h2 class="anchored" data-anchor-id="exercises">Exercises</h2>
 <ol type="1">
-<li>Apply stochastic gradient descent for the example given in Section .</li>
-<li>Apply batch gradient descent for logistic regression. Follow the steps and information in Section .</li>
+<li>Apply stochastic gradient descent for the example given above.</li>
+<li>Apply batch gradient descent for logistic regression. Follow the steps and information above.</li>
 </ol>
 
 
