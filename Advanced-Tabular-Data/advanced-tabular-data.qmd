@@ -192,6 +192,7 @@ model = Sequential([
 ```
 
 ```{python}
+#| warning: false
 x = [-1.0, 0.0, 1.0]
 print(relu(x))
 print(exponential(x))
@@ -867,6 +868,187 @@ np.min(hist.history["val_loss"])
 plot_model(model, show_layer_names=True)
 ```
 
+# Dropout
+
+## Dropout
+
+::: {.content-visible unless-format="revealjs"}
+Dropout is one of the most popular methods for reducing the risk of overfitting. Dropout is the act of randomly selecting a proportion of neurons and deactivating them during each training iteration. It is a regularization technique that aims to reduce overfitting and improve the generalization ability of the model. 
+:::
+
+![An example of neurons dropped during training.](dropout.png)
+
+::: footer
+Sources: Marcus Lautier (2022).
+:::
+
+## Dropout quote #1
+
+> It's surprising at first that this destructive technique works at all.
+Would a company perform better if its employees were told to toss a coin every morning to decide whether or not to go to work?
+Well, who knows; perhaps it would!
+The company would be forced to adapt its organization; it could not rely on any single person to work the coffee machine or perform any other critical tasks, so this expertise would have to be spread across several people.
+Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
+:::
+
+## Dropout quote #2
+
+> The company would become much more resilient.
+If one person quit, it wouldn't make much of a difference.
+It's unclear whether this idea would actually work for companies, but it certainly does for neural networks.
+Neurons trained with dropout cannot co-adapt with their neighboring neurons; they have to be as useful as possible on their own.
+They also cannot rely excessively on just a few input neurons; they must pay attention to each of their input neurons.
+They end up being less sensitive to slight changes in the inputs.
+In the end, you get a more robust network that generalizes better.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
+:::
+
+## Code: Dropout 
+
+Dropout is just another layer in Keras.
+
+::: {.content-visible unless-format="revealjs"}
+The following code shows how we can apply a dropout to each hidden layer in the neural network. The dropout rate for each layer is 0.2. There is also an option called `seed` in the `Dropout` function, which can be used to ensure reproducibility. 
+:::
+
+```{python} 
+from keras.layers import Dropout
+
+random.seed(2); 
+
+model = Sequential([
+    Dense(30, activation="leaky_relu", name="hidden1"),
+    Dropout(0.2),
+    Dense(30, activation="leaky_relu", name="hidden2"),
+    Dropout(0.2),
+    Dense(1, activation="exponential", name="output")
+])
+
+model.compile("adam", "mse")
+model.fit(X_train_ct, y_train, epochs=4, verbose=0);
+```
+
+## Code: Dropout after training
+
+Making predictions is the same as any other model:
+
+::: {.content-visible unless-format="revealjs"}
+Dropout has no impact on model predictions because `Dropout` function is carried out only during the training stage. Once the model finishes its training (once the weights and biases are computed), all neurons together contribute to the predictions(no dropping out during the prediction stage). Therefore, predictions from the model will not change across different runs.
+:::
+
+::: columns
+::: column
+```{python}
+model.predict(X_train_ct.head(3),
+                  verbose=0)
+```
+:::
+::: column
+```{python}
+model.predict(X_train_ct.head(3),
+                  verbose=0)
+```
+:::
+:::
+
+We can make the model think it is still training:
+
+::: {.content-visible unless-format="revealjs"}
+By setting the `training=True`, we can let drop out happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_.
+:::
+
+::: columns
+::: column
+```{python}
+model(X_train_ct.head(3).to_numpy(),
+    training=True).numpy()
+```
+:::
+::: column
+```{python}
+model(X_train_ct.head(3).to_numpy(),
+    training=True).numpy()
+```
+:::
+:::
+
+## Dropout Limitation
+
+- Increased Training Time: Since dropout introduces noise into the training process, it can make the training process slower.
+- Sensitivity to Dropout Rates: the performance of dropout is highly dependent on the chosen dropout rate. 
+
+
+## Deep Ensembles 
+
+It's simple to implement and requires very little hyperparameter tuning.
+
+We summarise the deep ensemble approach for uncertainty quantification as follows:
+
+1. Train $D$ neural networks with different random weights initialisations independently in parallel. The trained weights are $\boldsymbol{w}^{(1)}, ..., \boldsymbol{w}^{(D)}$.
+
+::: {.callout-note}
+Unfinished section... Please imagine some wildly interesting content here.
+:::
+
+<!--
+## Code: Deep Ensembles I
+
+```python
+K = 1 # number of mixtures
+
+def MDN_DE(num_ensembles):
+  models = []
+  for k in range(num_ensembles):
+    # Ensure reproducibility
+    random.seed(k); tf.random.set_seed(k)
+    inputs = Input(shape=X_train.shape[1:])
+
+    # Two hidden layers 
+    x = Dense(64, activation='relu')(inputs)
+    x = Dense(64, activation='relu')(x)
+
+    pis = Dense(1, activation='softmax')(x) # mixing weights
+    alphas = Dense(1, activation='softplus')(x) # shape parameters
+    betas = Dense(1, activation='softplus')(x) # scale parameters
+
+    # Concatenate by columns: `y_pred` will now have 6 columns
+    gamma_mdn_new = Model(inputs, Concatenate(axis=1)([pis, alphas, betas]))
+    gamma_mdn_new.compile(optimizer="adam",
+                          loss=gamma_mixture_NLL)
+    gamma_mdn_new.fit(X_train, y_train,
+        epochs=100, callbacks=[EarlyStopping(patience=10)],  
+        verbose=0, batch_size=64, validation_split=0.2)
+    models.append(gamma_mdn_new)
+
+  return(models)
+```
+
+## Code: Deep Ensembles II
+
+2. For a new instance $\boldsymbol{x}$, obtain $$\Big\{\big(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big],\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big]\big)\Big\}_{d=1}^{D},$$
+
+```python
+D = 10 # number of MDNs
+MDN_models = MDN_DE(D)
+
+# Store all predictions in a list
+weights = [0]*D; alphas = [0]*D; betas = [0]*D
+
+# Store the parameters
+for i in range(D):
+  weights[i], alphas[i], betas[i] = MDN_models[i].predict(X_test[9:10], verbose=0)[0]
+
+# Predict the means and variances
+means = np.array(alphas)/np.array(betas)
+variances = np.array(alphas)/np.array(betas)**2
+```
+-->
+
 ## Package Versions {.appendix data-visibility="uncounted"}
 
 ```{python}
@@ -878,6 +1060,7 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 
 ::: columns
 :::: column
+- dropout
 - entity embeddings
 - Input layer
 - Keras functional API
