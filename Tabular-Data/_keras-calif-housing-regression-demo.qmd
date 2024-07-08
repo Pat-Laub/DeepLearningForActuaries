@@ -1,0 +1,1172 @@
+# California House Price Prediction {visibility="uncounted"}
+
+
+## Data science always starts with the data!
+
+::: columns
+::: column
+
+> The target variable is the median house value for California districts, expressed in $100,000's.
+> This dataset was derived from the 1990 U.S. census, using one row per census block group.
+> A block group is the smallest geographical unit for which the U.S. Census Bureau publishes sample data (a block group typically has a population of 600 to 3,000 people).
+
+:::
+::: column
+![Dall-E's rendition of the this dataset.](dalle-california-housing.jpeg)
+:::
+:::
+
+::: footer
+Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
+:::
+
+## Columns
+
+- `MedInc` median income in block group
+- `HouseAge` median house age in block group
+- `AveRooms` average number of rooms per household
+- `AveBedrms` average # of bedrooms per household
+- `Population` block group population
+- `AveOccup` average number of household members
+- `Latitude` block group latitude
+- `Longitude` block group longitude
+- `MedHouseVal` median house value (**target**)
+
+::: footer
+Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
+:::
+
+
+## Import the data {.smaller}
+
+```{python}
+from sklearn.datasets import fetch_california_housing                           #<1>
+
+features, target = fetch_california_housing(
+    as_frame=True, return_X_y=True)                                             #<2>
+features                                                                        
+```
+
+
+1. Imports California house prices from `sklearn.datasets` library
+2. Assigns features and target from the dataset to two variables 'features' and 'target' and returns two separate data frames. The command `return_X_y=True` ensures that there will be two separate data frames, one for the features and the other for the target
+
+## What is the target?
+
+::: columns
+::: column
+```{python}
+target
+```
+
+Why predict this? Let's pretend we are these guys.
+:::
+::: column
+![](nytimes-silicon-valley-new-city.png)
+:::
+:::
+
+::: footer
+Source: Dougherty and Griffith (2023), [The Silicon Valley Elite Who Want to Build a City From Scratch](https://www.nytimes.com/2023/08/25/business/land-purchases-solano-county.html), New York Times.
+:::
+
+## An entire ML project
+
+![ML life cycle](ml-lifecycle.png)
+
+::: {.content-visible unless-format="revealjs"}
+The course focuses more on the modelling part of the life cycle.
+:::
+
+::: footer
+Source: Actuaries Institute, [Do Data Better](https://dodatabetter.com.au/wp-content/uploads/2023/02/Advantage-Graph_1.mp4).
+:::
+
+## Questions to answer in ML project
+
+You fit a few models to the training set, then ask:
+
+1. __(Selection)__ Which of these models is the best?
+2. __(Future Performance)__ How good should we expect the final model to be on unseen data?
+
+## Set aside a fraction for a test set
+
+```{python}
+from sklearn.model_selection import train_test_split                        #<1>
+
+X_train, X_test, y_train, y_test = train_test_split(
+    features, target, random_state=42
+)                                                                           #<2>
+```
+
+1. Imports `train_test_split` class from `sklearn.model_selection` library
+2. Splits the dataset into train and the test sets
+
+::: {.content-visible unless-format="revealjs"}
+First, we split the data into the train set and the test set using a random selection.  By defining the random state, using the `random_state=42` command, we can ensure that the split is reproducible. We set aside the test data, assuming it represents new, unseen data. Then, we fit many models on the train data and select the one with the lowest train error. Thereafter we assess the performance of that model using the unseen test data.
+:::
+
+::: columns
+::: {.column width="70%"}
+
+![Illustration of a typical training/test split.](heaton-train-test-split.png)
+
+::: {.smaller}
+Note: Compare `X_`/`y_` names, capitals & lowercase.
+:::
+
+:::
+::: {.column width="30%"}
+![Our use of sklearn.](scikit-learn-what-is-my-purpose.png)
+:::
+:::
+
+::: footer
+Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/e4bdc124b0c45b592d9bdbed0d2ef6c63c0245d6/t81_558_class_02_1_python_pandas.ipynb), Part 2.1: Introduction to Pandas, and [this random site](https://journeys.dartmouth.edu/folklorearchive/2020/06/03/purpose-of-scikit-learn-is-to-split-the-data/).
+:::
+
+## Basic ML workflow
+
+![Splitting the data.](wiki-ML_dataset_training_validation_test_sets.png)
+
+1. For each model, fit it to the _training set_.
+2. Compute the error for each model on the _validation set_.
+3. Select the model with the lowest validation error.
+4. Compute the error of the final model on the _test set_.
+
+::: footer
+Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ML_dataset_training_validation_test_sets.png#filelinks).
+:::
+
+## Split three ways
+
+```{python}
+# Thanks https://datascience.stackexchange.com/a/15136
+X_main, X_test, y_main, y_test = train_test_split(
+    features, target, test_size=0.2, random_state=1
+)                                                                   #<1>
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = train_test_split(
+    X_main, y_main, test_size=0.25, random_state=1
+)                                                                   #<2>
+
+X_train.shape, X_val.shape, X_test.shape                            #<3>
+```
+
+1. Splits the entire dataset into two parts. Sets aside $20\%$ of the data as the test set.
+2. Splits the first $80\%$ of the data (`X_main` and `y_main`)  further into train and validation sets. Sets aside $25\%$ as the validation set
+
+::: {.content-visible unless-format="revealjs"}
+This results in $60:20:20$ three way split. While this is not a strict rule, it is widely used. 
+:::
+
+## Why not use test set for both?
+
+_Thought experiment_: have $m$ classifiers: $f_1(\mathbf{x})$, $\dots$, $f_m(\mathbf{x})$.
+
+They are just as good as each other in the long run
+$$
+\mathbb{P}(\, f_i(\mathbf{X}) = Y \,)\ =\ 90\% , \quad \text{for } i=1,\dots,m .
+$$
+
+::: columns
+::: {.column width="40%"}
+Evaluate each model on the test set, some will be better than others.
+
+:::
+::: {.column width="60%"}
+```{python}
+#| echo: false
+# set_square_figures()
+import seaborn
+
+np.random.seed(123)
+m = 50
+x = np.random.normal(loc=0.9, scale=0.03, size=m)
+seaborn.displot(x, kde=True, stat="density", height=2, aspect=5.0 / 2.0)
+plt.scatter(x, np.zeros_like(x))
+plt.xlabel("Accuracy of each model on test set")
+plt.axvline(0.9, ls="--", c="k")
+plt.axvline(np.max(x), ls="--", c="r")
+plt.tight_layout()
+# set_rectangular_figures()
+```
+:::
+:::
+
+Take the best, you'd think it has $\approx 98\%$ accuracy!
+
+::: {.content-visible unless-format="revealjs"}
+Using the same dataset for both validating and testing purposes can result in a data leakage. The information from supposedly 'unseen' data is now used by the model during its tuning. This results in a situation where the model is now 'learning' from the test data, and it could lead to overly optimistic results in the model evaluation stage.
+:::
+
+# EDA & Baseline Model {data-visibility="uncounted"}
+
+## The training set {.smaller}
+
+```{python}
+X_train
+```
+
+## Location
+
+Python's `matplotlib` package $\approx$ R's basic `plot`s.
+
+```{python}
+import matplotlib.pyplot as plt
+
+plt.scatter(features["Longitude"], features["Latitude"])
+```
+
+::: {.callout-note .fragment}
+There's no _analysis_ in this EDA.
+:::
+
+## Location EDA
+
+```{python}
+plt.scatter(features["Longitude"], features["Latitude"], c=target, cmap="coolwarm")
+plt.colorbar()
+```
+
+::: {.fragment}
+"We observe that the median house prices are higher closer to the coastline."
+:::
+
+## Pandas can make plots directly
+
+```{python}
+both = pd.concat([features, target], axis=1)
+both.plot(kind="scatter", x="Longitude", y="Latitude", c="MedHouseVal", cmap="coolwarm")
+```
+
+## Features
+
+```{python}
+print(list(features.columns))
+```
+
+How many?
+
+```{python}
+num_features = len(features.columns)
+num_features
+```
+
+Or
+
+```{python}
+num_features = features.shape[1]
+features.shape
+```
+
+## Linear Regression
+
+$$ \hat{y}_i = w_0 + \sum_{j=1}^p w_j x_{ij} .$$
+
+```{python}
+from sklearn.linear_model import LinearRegression                           #<1>
+
+lr = LinearRegression()                                                     #<2>
+lr.fit(X_train, y_train);                                                   #<3>
+```
+
+1. Imports the `LinearRegression` class from the `sklearn.linear_model` module
+2. Defines the object `lr` which represents the linear regression function
+3. Fits a linear regression model using train data. `lr.fit` computes the coefficients of the regression model
+
+
+The $w_0$ is in `lr.intercept_` and the others are in
+```{python}
+print(lr.coef_)
+```
+
+## Make some predictions
+
+```{python}
+X_train.head(3)
+```
+::: {.content-visible unless-format="revealjs"}
+`X_train.head(3)` returns the first three rows of the dataset `X_train`.   
+:::
+
+```{python}
+y_pred = lr.predict(X_train.head(3))
+y_pred
+```
+::: {.content-visible unless-format="revealjs"}
+`lr.predict(X_train.head(3))` returns the predictions for the first three rows of the dataset `X_train`.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+We can manually calculate predictions using the linear regression model to verify the output of the `lr.predict()` function. In the following code, we first define $w_0$ as the intercept of the `lr` function (initial value for the prediction calculation), and then keep on adding the $w_j \times x_j$ terms
+:::
+
+```{python}
+prediction = lr.intercept_                               #<1>
+for w_j, x_0j in zip(lr.coef_, X_train.iloc[0]):         #<2>
+    prediction += w_j * x_0j                             #<3>
+prediction                                              
+```
+
+1. Specifies the value of the intercept from the fitted regression as `prediction`
+2. Iterates over the first observation from the train data (`X_train`) and the corresponding weight coefficients from the fitted linear regression
+3. Updates the prediction value
+
+
+## Plot the predictions
+
+```{python}
+#| include: false
+set_square_figures()
+```
+
+::: columns
+::: column
+```{python}
+#| echo: false
+y_pred = lr.predict(X_train)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+```
+:::
+::: column
+```{python}
+#| echo: false
+y_pred = lr.predict(X_val)
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Validation set")
+add_diagonal_line()
+```
+:::
+:::
+
+```{python}
+#| include: false
+set_rectangular_figures()
+```
+::: {.content-visible unless-format="revealjs"}
+We can see how both plots have a dispersion to either sides of the fitted line.
+:::
+
+## Calculate mean squared error
+
+```{python}
+import pandas as pd
+
+y_pred = lr.predict(X_train)
+df = pd.DataFrame({"Predictions": y_pred, "True values": y_train})
+df["Squared Error"] = (df["Predictions"] - df["True values"]) ** 2
+df.head(4)
+```
+
+```{python}
+df["Squared Error"].mean()
+```
+
+## Using `mean_squared_error`
+
+```{python}
+df["Squared Error"].mean()
+```
+::: {.content-visible unless-format="revealjs"}
+We can compute the mean squared error to evaluate, on average, the accuracy of the predictions. To do this, we first create a data frame using pandas `DataFrame` function. It will have two columns, one with the predicted values and the other with the actual values. Next, we add another column to the same data frame using `df["Squared Error"]` that computes and stores the squared error for each row. Using the function `df["Squared Error"].mean()`, we extract the column 'Squared Error' from the data frame 'df' and calculate the 'mean'.
+:::
+
+```{python}
+from sklearn.metrics import mean_squared_error as mse
+
+mse(y_train, y_pred)
+```
+::: {.content-visible unless-format="revealjs"}
+We can also use the function `mean_squared_error` from `sklearn.metrics` library to calculate the same. 
+:::
+
+Store the results in a dictionary:
+
+```{python}
+mse_lr_train = mse(y_train, lr.predict(X_train))
+mse_lr_val = mse(y_val, lr.predict(X_val))
+
+mse_train = {"Linear Regression": mse_lr_train}
+mse_val = {"Linear Regression": mse_lr_val}
+```
+
+::: {.callout-tip}
+Think about the units of the mean squared error.
+Is there a variation which is more interpretable?
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Storing results in data structures like dictionaries is a good practice that can help in managing and handling data efficiently. 
+:::
+
+# Our First Neural Network {visibility="uncounted"}
+
+## What are Keras and TensorFlow?
+
+Keras is common way of specifying, training, and using neural networks.
+It gives a simple interface to _various backend_ libraries, including Tensorflow. 
+
+![Keras as a independent interface, and Keras as part of Tensorflow.](Geron-mls2_1010.png)
+
+:::footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-10.
+:::
+
+## Create a Keras ANN model
+
+Decide on the architecture: a simple fully-connected network with one hidden layer with 30 neurons.
+
+Create the model:
+
+```{python}
+from keras.models import Sequential                              #<1>
+from keras.layers import Dense, Input                            #<2>
+
+model = Sequential(
+    [Input((num_features,)),
+     Dense(30, activation="leaky_relu"),
+     Dense(1, activation="leaky_relu")]
+)                                                                #<3>
+```
+
+1. Imports `Sequential` from `keras.models`
+2. Imports `Dense` from `keras.layers`
+3. Defines the model architecture using `Sequential()` function
+
+::: {.content-visible unless-format="revealjs"}
+This neural network architecture includes one hidden layer with 30 neurons and an output layer with 1 neuron. While there is an activation function specified (`leaky_relu`) for the hidden layer, there is no activation function specified for the output layer. In situations where there is no specification, the output layer assumes a `linear` activation.
+:::
+
+## Inspect the model
+
+```{python}
+model.summary()
+```
+
+## The model is initialised randomly
+
+```{python}
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
+model.predict(X_val.head(3), verbose=0)
+```
+
+```{python}
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
+model.predict(X_val.head(3), verbose=0)
+```
+::: {.content-visible unless-format="revealjs"}
+We can see how rerunning the same code with the same input data results in significantly different predictions. This is due to the random initialization. 
+:::
+## Controlling the randomness
+
+```{python}
+#| code-line-numbers: "|1-3,9"
+import random
+
+random.seed(123)
+
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
+
+display(model.predict(X_val.head(3), verbose=0))
+
+random.seed(123)
+model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
+
+display(model.predict(X_val.head(3), verbose=0))
+```
+::: {.content-visible unless-format="revealjs"}
+By setting the seed, we can control for the randomness.
+:::
+
+## Fit the model
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="leaky_relu")
+])
+
+model.compile("adam", "mse")
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
+hist.history["loss"]
+```
+::: {.content-visible unless-format="revealjs"}
+The above code explains how we would fit a basic neural network. First, we define the seed for reproducibility. Next, we define the architecture of the model. Thereafter, we compile the model. Compiling involves giving instructions on how we want the model to be trained. At the least, we must define the optimizer and loss function. The optimizer explains how the model should learn (how the model should update the weights), and the loss function states the objective that the model needs to optimize. In the above code, we use `adam` as the optimizer and `mse` (mean squared error) as the loss function. After compilation, we fit the model. The `fit()` function takes in the training data, and runs the entire dataset through 5 epochs before training completes. What this means is that the model is run through the entire dataset 5 times. Suppose we start the training process with the random initialization, run the model through the entire data, calculate the `mse` (after 1 epoch), and update the weights using the `adam` optimizer. Then we run the model through the entire dataset once again with the updated weights, to calculate the `mse` at the end of the second epoch. Likewise, we would run the model 5 times before the training completes. `hist.history()` function returns the calculate `mse` at each step.
+:::
+
+<br>
+
+::: {.content-visible unless-format="revealjs"}
+`%time` command computes and prints the amount of time spend on training.
+By setting `verbose=False` we can avoid printing of intermediate results during training. Setting `verbose=True` is useful when we want to observe how the neural network is training.  
+:::
+
+## Make predictions
+
+```{python}
+y_pred = model.predict(X_train[:3], verbose=0)
+y_pred
+```
+
+::: {.callout-note}
+
+The `.predict` gives us a 'matrix' not a 'vector'.
+Calling `.flatten()` will convert it to a 'vector'.
+
+```{python}
+print(f"Original shape: {y_pred.shape}")
+y_pred = y_pred.flatten()
+print(f"Flattened shape: {y_pred.shape}")
+y_pred
+```
+
+:::
+
+## Plot the predictions
+
+```{python}
+#| include: false
+set_square_figures()
+```
+
+::: columns
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_train, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+```
+:::
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_val, verbose=0)
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Validation set")
+add_diagonal_line()
+```
+:::
+:::
+
+```{python}
+#| include: false
+set_rectangular_figures()
+```
+::: {.content-visible unless-format="revealjs"}
+One problem with the predictions is that lots of predictions include negative values, which is unrealistic for house prices. We might have to rethink the activation function in the output layer.
+:::
+
+## Assess the model
+
+```{python}
+y_pred = model.predict(X_val, verbose=0)
+mse(y_val, y_pred)
+```
+
+```{python}
+mse_train["Basic ANN"] = mse(
+    y_train, model.predict(X_train, verbose=0)
+)
+mse_val["Basic ANN"] = mse(y_val, model.predict(X_val, verbose=0))
+```
+
+Some predictions are negative:
+
+```{python}
+y_pred = model.predict(X_val, verbose=0)
+y_pred.min(), y_pred.max()
+```
+
+```{python}
+y_val.min(), y_val.max()
+```
+
+# Force positive predictions {visibility="uncounted"}
+
+## Try running for longer
+
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="leaky_relu")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit(X_train, y_train, epochs=50, verbose=False)
+```
+::: {.content-visible unless-format="revealjs"}
+We will train the same neural network architecture with more epochs (`epochs=50`) to see if the results improve.
+:::
+## Loss curve
+
+```{python}
+plt.plot(range(1, 51), hist.history["loss"])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+::: {.content-visible unless-format="revealjs"}
+The loss curve experiences a sudden drop even before finishing 5 epochs and remains consistently low. This indicates that increasing the number of epochs from 5 to 50 does not significantly increase the accuracy.
+:::
+
+## Loss curve {data-visibility="uncounted"}
+
+```{python}
+plt.plot(range(2, 51), hist.history["loss"][1:])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+::: {.content-visible unless-format="revealjs"}
+The above code filters out the MSE value from the first epoch. It plots the vector of MSE values starting from the 2nd epoch. By doing so, we can observe the fluctuations in the MSE values across different epochs more clearly. Results show that the model does not benefit from increasing the epochs.
+:::
+
+## Predictions
+
+```{python}
+y_pred = model.predict(X_val, verbose=0)
+print(f"Min prediction: {y_pred.min():.2f}")
+print(f"Max prediction: {y_pred.max():.2f}")
+```
+
+::: columns
+::: column
+```{python}
+#| eval: false
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+```{python}
+mse_train["Long run ANN"] = mse(
+    y_train, model.predict(X_train, verbose=0)
+)
+mse_val["Long run ANN"] = mse(y_val, model.predict(X_val, verbose=0))
+```
+
+:::
+::: column
+
+<div style="position: relative; top: -2em;">
+
+```{python}
+#| echo: false
+square_fig().scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+</div>
+
+:::
+:::
+
+## Try different activation functions
+
+```{python}
+#| echo: false
+import keras.activations as acts
+import numpy as np
+
+
+def plot_activation(activation, ax, name, hideX=False):
+    x = np.linspace(-5, 5, 100)
+    y = activation(x)
+
+    ax.plot(x, y)
+    if y.numpy().min() < 0:
+        ax.axhline(0, ls="--", c="black", lw=0.5)
+
+    # Annotate the top-left corner of the subplot with the name
+    # of the activation function
+    ax.annotate(
+        name,
+        xy=(0.2, 1),
+        xycoords="axes fraction",
+        xytext=(-5, -5),
+        textcoords="offset points",
+        ha="left",
+        va="top",
+    )
+
+    if hideX:
+        ax.xaxis.set_visible(False)
+
+
+fig, axs = plt.subplots(2, 2)
+plot_activation(acts.tanh, axs[0, 0], "tanh", hideX=True)
+plot_activation(acts.sigmoid, axs[0, 1], "sigmoid", hideX=True)
+plot_activation(acts.softplus, axs[1, 0], "softplus")
+plot_activation(acts.exponential, axs[1, 1], "exponential")
+
+axs[0, 0].set(ylabel="Output")
+axs[1, 0].set(xlabel="Input", ylabel="Output")
+axs[1, 1].set(xlabel="Input");
+```
+::: {.content-visible unless-format="revealjs"}
+We should be mindful when selecting the activation function. Both `tanh` and `sigmoid` functions restrict the output values to the range of [0,1]. This is not sensible for house price modelling. `softplus` does not have that problem. Also, `softplus` ensures the output is positive which is realistic for house prices.
+:::
+## Enforce positive outputs (softplus)
+
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="softplus")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit(X_train, y_train, epochs=50, \
+    verbose=False)
+
+import numpy as np
+losses = np.round(hist.history["loss"], 2)
+print(losses[:5], "...", losses[-5:])
+```
+
+## Plot the predictions
+
+```{python}
+#| include: false
+set_square_figures()
+```
+
+::: columns
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_train, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set");
+```
+:::
+::: column
+
+```{python}
+#| echo: false
+y_pred = model.predict(X_val, verbose=0)
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Validation set");
+```
+:::
+:::
+
+```{python}
+#| include: false
+set_rectangular_figures()
+```
+::: {.content-visible unless-format="revealjs"}
+Plots illustrate how all the outputs were stuck at zero. Irrespective of how many epochs we run, the output would always be zero.
+:::
+
+## Enforce positive outputs ($\mathrm{e}^{\,x}$)
+
+```{python}
+#| code-line-numbers: "|5"
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="exponential")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
+
+losses = hist.history["loss"]
+print(losses)
+```
+::: {.content-visible unless-format="revealjs"}
+Training the model again with an exponential activation function will give `nan` values. This is because the results then can explode easily.
+:::
+
+## Same as transforming the target
+
+![The polynomial regression used by researchers who first studied this dataset.](california-housing-linear-model.png)
+
+::: {.callout-note}
+Fitting $\ln(\text{Median Value})$ is mathematically identical to the `exponential` activation function in the final layer (but metrics are in different units).
+:::
+
+::: footer
+Source: Pace and Barry (1997), [Sparse Spatial Autoregressions](http://www.sciencedirect.com/science/article/pii/S0167-7152(96)00140-X), Statistics & Probability Letters.
+:::
+
+## Good to know others results
+
+![That basic model gets $R^2$ of 0.61, but their fancy model gets 0.86.](california-housing-linear-model-results.png)
+
+::: footer
+Source: Pace and Barry (1997), [Sparse Spatial Autoregressions](http://www.sciencedirect.com/science/article/pii/S0167-7152(96)00140-X), Statistics & Probability Letters.
+:::
+
+## GPT can double-check these results
+
+::: columns
+::: column
+![Asking GPT to check it.](gpt-validating-cali-housing-regression.png)
+
+I'd previously given it the CSV of the data.
+:::
+::: column
+![The code it wrote & ran.](gpt-cali-housing-code.png)
+:::
+:::
+
+# Preprocessing {visibility="uncounted"}
+
+## Re-scaling the inputs
+
+```{python}
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+scaler = StandardScaler()
+scaler.fit(X_train)
+
+X_train_sc = scaler.transform(X_train)
+X_val_sc = scaler.transform(X_val)
+X_test_sc = scaler.transform(X_test)
+```
+::: {.content-visible unless-format="revealjs"}
+Note: We apply both the `fit` and `transform` operations on the train data. However, we only apply `transform` on the validation and test data.
+:::
+
+::: columns
+::: column
+```{python}
+#| output-location: default
+#| eval: false
+plt.hist(X_train.iloc[:, 0])
+plt.hist(X_train_sc[:, 0])
+plt.legend(["Original", "Scaled"]);
+```
+:::
+::: column
+```{python}
+#| echo: false
+plt.hist(X_train.iloc[:, 0])
+plt.hist(X_train_sc[:, 0])
+plt.legend(["Original", "Scaled"]);
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+We can see how the original values for the input varied between 0 and 10, and how the scaled input values are now between -2 and 2.5. Neural networks prefer if the inputs range between -1 and 1. 
+:::
+## Same model with scaled inputs
+
+```{python}
+#| code-line-numbers: "|11"
+random.seed(123)
+
+model = Sequential([
+    Dense(30, activation="leaky_relu"),
+    Dense(1, activation="exponential")
+])
+
+model.compile("adam", "mse")
+
+%time hist = model.fit( \
+    X_train_sc, \
+    y_train, \
+    epochs=50, \
+    verbose=False)
+```
+
+## Loss curve
+
+```{python}
+plt.plot(range(1, 51), hist.history["loss"])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+
+## Loss curve {data-visibility="uncounted"}
+
+```{python}
+plt.plot(range(2, 51), hist.history["loss"][1:])
+plt.xlabel("Epoch")
+plt.ylabel("MSE");
+```
+
+## Predictions
+
+```{python}
+y_pred = model.predict(X_val_sc, verbose=0)
+print(f"Min prediction: {y_pred.min():.2f}")
+print(f"Max prediction: {y_pred.max():.2f}")
+```
+
+::: columns
+::: column
+```{python}
+#| eval: false
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+```{python}
+mse_train["Exp ANN"] = mse(
+    y_train, model.predict(X_train_sc, verbose=0)
+)
+mse_val["Exp ANN"] = mse(y_val, model.predict(X_val_sc, verbose=0))
+```
+
+:::
+::: column
+
+<div style="position: relative; top: -2em;">
+
+```{python}
+#| echo: false
+square_fig().scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+add_diagonal_line()
+```
+
+</div>
+
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Now the predictions are always non-negative.
+:::
+
+## Comparing MSE (smaller is better)
+
+On training data:
+
+```{python}
+mse_train
+```
+
+On validation data (expect _worse_, i.e. bigger):
+
+```{python}
+mse_val
+```
+::: {.content-visible unless-format="revealjs"}
+Note: The error on the validation set is usually higher than the training set.
+:::
+## Comparing models (train) {data-visibility="uncounted"}
+
+```{python}
+train_results = pd.DataFrame(
+    {"Model": mse_train.keys(), "MSE": mse_train.values()}
+)
+train_results.sort_values("MSE", ascending=False)
+```
+
+## Comparing models (validation) {data-visibility="uncounted"}
+
+```{python}
+val_results = pd.DataFrame(
+    {"Model": mse_val.keys(), "MSE": mse_val.values()}
+)
+val_results.sort_values("MSE", ascending=False)
+```
+
+# Early Stopping {visibility="uncounted"}
+
+## Choosing when to stop training
+
+![Illustrative loss curves over time.](heaton-error-over-time.png)
+
+::: {.content-visible unless-format="revealjs"}
+Early stopping can be seen as a regularization technique to avoid overfitting. The plot shows that both training error and validation error decrease at the beginning of training process. However, after a while, validation error starts to increase while training error keeps on decreasing. This is an indication of overfitting. Overfitting leads to poor performance on the unseen data, which is seen here through the gradual increase of validation error. Early stopping can track the model's performance through the training process and stop the training at the right time.
+:::
+::: footer
+Source: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffheaton/t81_558_deep_learning/blob/master/t81_558_class_03_4_early_stop.ipynb), Part 3.4: Early Stopping.
+:::
+
+## Try early stopping
+
+Hinton calls it a "beautiful free lunch"
+
+```{python}
+#| code-line-numbers: "|1,10,13"
+from keras.callbacks import EarlyStopping                                       #<1>
+
+random.seed(123)                                                                #<2>
+model = Sequential([                                                            #<3>
+    Dense(30, activation="leaky_relu"),                                               #<3>
+    Dense(1, activation="exponential")                                          #<3>
+])                                                                              #<3>
+model.compile("adam", "mse")                                                    #<4>
+
+es = EarlyStopping(restore_best_weights=True, patience=15)                      #<5>
+
+%time hist = model.fit(X_train_sc, y_train, epochs=1_000, \
+    callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)           #<6>
+print(f"Keeping model at epoch #{len(hist.history['loss'])-10}.")               #<7>              
+```
+
+1. Imports `EarlyStopping` from `keras.callbacks`
+2. Sets the random seed
+3. Constructs the sequential model
+4. Configures the training process with optimiser and loss function
+5. Defines the early stopping object. Here, the `patience` parameter tells how many epochs the neural network has to wait without no improvement before the process stops. `patience=15` indicates that the neural network will wait for 15 epochs without any improvement before it stops training. `restore_best_weights=True` ensures that model's weights will be restored to the best model, i.e., the model we saw before 15 epochs
+6. Fits the model with early stopping object passed in
+7. Prints the outs 
+
+## Loss curve
+
+```{python}
+plt.plot(hist.history["loss"])
+plt.plot(hist.history["val_loss"])
+plt.legend(["Training", "Validation"]);
+```
+
+## Loss curve II
+
+```{python}
+plt.plot(hist.history["loss"])
+plt.plot(hist.history["val_loss"])
+plt.ylim([0, 8])
+plt.legend(["Training", "Validation"]);
+```
+
+## Predictions
+
+```{python}
+#| echo: false
+set_square_figures()
+```
+
+::: columns
+::: column
+```{python}
+#| echo: false
+y_pred = model.predict(X_train_sc, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+```
+:::
+::: column
+```{python}
+#| echo: false
+y_pred = model.predict(X_val_sc, verbose=0)
+plt.scatter(y_pred, y_val)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Validation set")
+add_diagonal_line()
+```
+:::
+:::
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+```
+
+```{python}
+#| echo: false
+# Store the results
+mse_train["Early stop ANN"] = model.evaluate(
+    X_train_sc, y_train, verbose=False
+)
+mse_val["Early stop ANN"] = model.evaluate(
+    X_val_sc, y_val, verbose=False
+)
+```
+
+## Comparing models (validation) {data-visibility="uncounted"}
+
+```{python}
+#| echo: false
+val_results = pd.DataFrame(
+    {"Model": mse_val.keys(), "MSE": mse_val.values()}
+)
+val_results.sort_values("MSE", ascending=False)
+```
+::: {.content-visible unless-format="revealjs"}
+MSE error on the validation set has improved from the ANN model without early stopping (0.354653) to the one with early stopping (0.326440).
+:::
+
+## The test set
+
+Evaluate _only the final/selected model_ on the test set.
+
+```{python}
+mse(y_test, model.predict(X_test_sc, verbose=0))
+```
+
+```{python}
+model.evaluate(X_test_sc, y_test, verbose=False)
+```
+::: {.content-visible unless-format="revealjs"}
+Evaluating the model on the unseen test set provides an unbiased view on how the model will perform.
+Since we configured the model to track 'mse' as the loss function, we can simply use `model.evaluate()` function on the test set and get the same answer.
+:::
+
+## Another useful callback
+
+```{python}
+from pathlib import Path
+from keras.callbacks import ModelCheckpoint                                 #<1>
+
+random.seed(123)
+model = Sequential(
+    [Dense(30, activation="leaky_relu"), Dense(1, activation="exponential")]
+)
+model.compile("adam", "mse")
+mc = ModelCheckpoint(                                                       #<2>
+    "best-model.keras", monitor="val_loss", save_best_only=True             #<2>
+)                                                                           #<2>
+es = EarlyStopping(restore_best_weights=True, patience=5)
+hist = model.fit(                                                           #<3>
+    X_train_sc,                                                             #<3>
+    y_train,                                                                #<3>
+    epochs=100,                                                             #<3>
+    validation_split=0.1,                                                   #<3>
+    callbacks=[mc, es],                                                     #<3>
+    verbose=False,                                                          #<3>
+)
+Path("best-model.keras").stat().st_size                                     #<4>
+```
+::: {.content-visible unless-format="revealjs"}
+`ModelCheckpoint` is also another useful `callback` function that can be used to save the model at some intervals during training. This is useful when training large datasets. If the training process gets interrupted at some point, last saved set of weights from model checkpoints can be used to resume the training process instead of starting from the beginning.
+:::
+
+```{python}
+#| echo: false
+Path("best-model.keras").unlink()
+```

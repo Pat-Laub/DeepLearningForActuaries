@@ -1,22 +1,23 @@
 #!/bin/bash
 
 quarto render index.qmd --no-execute-daemon
-(exit) && quarto render Lecture-1-Artificial-Intelligence/course-overview.qmd --no-execute-daemon
-(exit) && quarto render Lecture-1-Artificial-Intelligence/artificial-intelligence.qmd --no-execute-daemon
-(exit) && quarto render Lecture-1-Artificial-Intelligence/python.qmd --no-execute-daemon
-(exit) && quarto render Lecture-2-Deep-Learning-Keras/deep-learning-keras.qmd --no-execute-daemon
-(exit) && quarto render Lecture-2-Deep-Learning-Keras/project.qmd --no-execute-daemon
-(exit) && quarto render Lecture-3-Tabular-Data/categorical-variables.qmd --no-execute-daemon
-(exit) && quarto render Lecture-3-Tabular-Data/classification.qmd --no-execute-daemon
-(exit) && quarto render Lecture-4-Computer-Vision/computer-vision.qmd --no-execute-daemon
-(exit) && quarto render Lecture-5-Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
-(exit) && quarto render Lecture-6-Distributional-Regression/optimisation.qmd --no-execute-daemon
-(exit) && quarto render Lecture-6-Distributional-Regression/distributional-regression.qmd --no-execute-daemon
-(exit) && quarto render Lecture-7-Recurrent-Neural-Networks-And-Time-Series/rnns-and-time-series.qmd --no-execute-daemon
-(exit) && quarto render Lecture-8-Generative-Networks/generative-networks.qmd --no-execute-daemon
-(exit) && quarto render Lecture-8-Generative-Networks/gans.qmd --no-execute-daemon
-(exit) && quarto render Lecture-9-Advanced-Topics/interpretability.qmd --no-execute-daemon
-(exit) && quarto render Lecture-9-Advanced-Topics/next-steps.qmd --no-execute-daemon
+(exit) && quarto render Artificial-Intelligence/course-overview.qmd --no-execute-daemon
+(exit) && quarto render Artificial-Intelligence/artificial-intelligence.qmd --no-execute-daemon
+(exit) && quarto render Artificial-Intelligence/python.qmd --no-execute-daemon
+(exit) && quarto render Tabular-Data/deep-learning-keras.qmd --no-execute-daemon
+(exit) && quarto render Tabular-Data/project.qmd --no-execute-daemon
+(exit) && quarto render Tabular-Data/categorical-variables.qmd --no-execute-daemon
+(exit) && quarto render Tabular-Data/classification.qmd --no-execute-daemon
+(exit) && quarto render Computer-Vision/computer-vision.qmd --no-execute-daemon
+(exit) && quarto render Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
+(exit) && quarto render Advanced-Tabular-Data/advanced-tabular-data.qmd --no-execute-daemon
+(exit) && quarto render Advanced-Tabular-Data/optimisation.qmd --no-execute-daemon
+(exit) && quarto render Distributional-Regression/distributional-regression.qmd --no-execute-daemon
+(exit) && quarto render Time-Series-And-Recurrent-Neural-Networks/time-series-and-rnns.qmd --no-execute-daemon
+(exit) && quarto render Generative-Networks/generative-networks.qmd --no-execute-daemon
+(exit) && quarto render Generative-Networks/gans.qmd --no-execute-daemon
+(exit) && quarto render Advanced-Topics/interpretability.qmd --no-execute-daemon
+(exit) && quarto render Advanced-Topics/next-steps.qmd --no-execute-daemon
 (exit) && quarto render Labs/python-lab.qmd --no-execute-daemon
 (exit) && quarto render Labs/python-for-data-science-lab.qmd --no-execute-daemon
 (exit) && quarto render Labs/matplotlib-lab.qmd --no-execute-daemon

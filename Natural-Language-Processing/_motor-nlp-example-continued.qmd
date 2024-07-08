@@ -1,0 +1,178 @@
+
+# Car Crash NLP Part II {visibility="uncounted"}
+
+::: footer
+Dataset source: [Dr Jürg Schelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
+:::
+
+## Predict injury severity
+
+```{python}
+features = df["SUMMARY_EN"]
+target = LabelEncoder().fit_transform(df["INJSEVB"])
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## Using Keras `TextVectorization`
+
+```{python}
+max_tokens = 1_000
+vect = layers.TextVectorization(
+    max_tokens=max_tokens,
+    output_mode="tf_idf",
+    standardize="lower_and_strip_punctuation",
+)
+
+vect.adapt(X_train)
+vocab = vect.get_vocabulary()
+
+X_train_txt = vect(X_train)
+X_val_txt = vect(X_val)
+X_test_txt = vect(X_test)
+
+print(vocab[:50])
+```
+
+## The TF-IDF vectors
+
+```{python}
+pd.DataFrame(X_train_txt, columns=vocab, index=X_train.index)
+```
+
+## Feed TF-IDF into an ANN
+
+```{python}
+random.seed(42)
+tfidf_model = keras.models.Sequential([
+    layers.Input((X_train_txt.shape[1],)),
+    layers.Dense(250, "relu"),
+    layers.Dense(1, "sigmoid")
+])
+
+tfidf_model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
+tfidf_model.summary()
+```
+
+## Fit & evaluate
+
+```{python}
+es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if not Path("tfidf-model.keras").exists():
+    tfidf_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_txt, y_val), verbose=0)
+    tfidf_model.save("tfidf-model.keras")
+else:
+    tfidf_model = keras.models.load_model("tfidf-model.keras")
+```
+```{python}
+tfidf_model.evaluate(X_train_txt, y_train, verbose=0, batch_size=1_000)
+```
+```{python}
+tfidf_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
+```
+
+## Keep text as sequence of tokens
+
+```{python}
+max_length = 500
+max_tokens = 1_000
+vect = layers.TextVectorization(
+    max_tokens=max_tokens,
+    output_sequence_length=max_length,
+    standardize="lower_and_strip_punctuation",
+)
+
+vect.adapt(X_train)
+vocab = vect.get_vocabulary()
+
+X_train_txt = vect(X_train)
+X_val_txt = vect(X_val)
+X_test_txt = vect(X_test)
+
+print(vocab[:50])
+```
+
+## A sequence of integers
+
+```{python}
+X_train_txt[0]
+```
+
+## Feed LSTM a sequence of one-hots
+
+```{python}
+from keras.layers import CategoryEncoding, Bidirectional, LSTM
+random.seed(42)
+one_hot_model = Sequential([Input(shape=(max_length,), dtype="int64"),
+    CategoryEncoding(num_tokens=max_tokens, output_mode="one_hot"),
+    Bidirectional(LSTM(24)),
+    Dense(1, activation="sigmoid")])
+one_hot_model.compile(optimizer="adam",
+    loss="binary_crossentropy", metrics=["accuracy"])
+one_hot_model.summary()
+```
+
+## Fit & evaluate
+
+```{python}
+es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if not Path("one-hot-model.keras").exists():
+    one_hot_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_txt, y_val), verbose=0);
+    one_hot_model.save("one-hot-model.keras")
+else:
+    one_hot_model = keras.models.load_model("one-hot-model.keras")
+```
+
+```{python}
+one_hot_model.evaluate(X_train_txt, y_train, verbose=0, batch_size=1_000)
+```
+```{python}
+one_hot_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
+```
+
+## Custom embeddings
+
+```{python}
+from keras.layers import Embedding
+embed_lstm = Sequential([Input(shape=(max_length,), dtype="int64"),
+    Embedding(input_dim=max_tokens, output_dim=32, mask_zero=True),
+    Bidirectional(LSTM(24)),
+    Dense(1, activation="sigmoid")])
+embed_lstm.compile("adam", "binary_crossentropy", metrics=["accuracy"])
+embed_lstm.summary()
+```
+
+## Fit & evaluate
+
+```{python}
+#| warning: false
+es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if not Path("embed-lstm.keras").exists():
+    embed_lstm.fit(X_train_txt, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_txt, y_val), verbose=0);
+    embed_lstm.save("embed-lstm.keras")
+else:
+    embed_lstm = keras.models.load_model("embed-lstm.keras")
+```
+
+```{python}
+embed_lstm.evaluate(X_train_txt, y_train, verbose=0, batch_size=1_000)
+```
+```{python}
+embed_lstm.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
+```
+```{python}
+embed_lstm.evaluate(X_test_txt, y_test, verbose=0, batch_size=1_000)
+```

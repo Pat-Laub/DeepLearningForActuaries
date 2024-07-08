@@ -1,0 +1,283 @@
+# Stroke Prediction {visibility="uncounted"}
+
+## The data {.smaller}
+
+Dataset source: [Kaggle Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset).
+
+```{python}
+data = pd.read_csv("stroke.csv")
+data.head()
+```
+
+## Data description {.smaller}
+
+::: columns
+::: column
+1) `id`: unique identifier
+2) `gender`: "Male", "Female" or "Other"
+3) `age`: age of the patient
+4) `hypertension`: 0 or 1 if the patient has hypertension
+5) `heart_disease`: 0 or 1 if the patient has any heart disease
+6) `ever_married`: "No" or "Yes"
+7) `work_type`: "children", "Govt_jov", "Never_worked", "Private" or "Self-employed"
+:::
+::: column
+8) `Residence_type`: "Rural" or "Urban"
+9) `avg_glucose_level`: average glucose level in blood
+10) `bmi`: body mass index
+11) `smoking_status`: "formerly smoked", "never smoked", "smokes" or "Unknown"
+12) `stroke`: 0 or 1 if the patient had a stroke
+:::
+:::
+
+::: footer
+Source: Kaggle, [Stroke Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset).
+:::
+
+## Split the data
+
+First, look for missing values.
+```{python}
+number_missing = data.isna().sum()
+number_missing[number_missing > 0]
+```
+
+```{python}
+features = data.drop(["id", "stroke"], axis=1)
+target = data["stroke"]
+
+X_main, X_test, y_main, y_test = train_test_split(
+    features, target, test_size=0.2, random_state=7)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_main, y_main, test_size=0.25, random_state=12)
+
+X_train.shape, X_val.shape, X_test.shape
+```
+
+## What values do we see in the data?
+
+::: columns
+::: column
+```{python}
+X_train["gender"].value_counts()
+```
+
+```{python}
+X_train["ever_married"].value_counts()
+```
+
+```{python}
+X_train["Residence_type"].value_counts()
+```
+:::
+::: column
+```{python}
+X_train["work_type"].value_counts()
+```
+
+```{python}
+X_train["smoking_status"].value_counts()
+```
+:::
+:::
+
+## Preprocess columns individually
+
+1. Take categorical columns $\hookrightarrow$ one-hot vectors
+2. binary columns $\hookrightarrow$ do nothing
+3. continuous columns $\hookrightarrow$ impute NaNs & standardise.
+
+## Scikit-learn column transformer
+
+```{python}
+from sklearn.pipeline import make_pipeline                                              #<1>
+
+cat_vars =  ["gender", "ever_married", "Residence_type",                                #<2>
+    "work_type", "smoking_status"]                  
+
+ct = make_column_transformer(
+  (OneHotEncoder(sparse_output=False, handle_unknown="ignore"), cat_vars),              #<3>
+  ("passthrough", ["hypertension", "heart_disease"]),                                   #<4>
+  remainder=make_pipeline(SimpleImputer(), StandardScaler()),                           #<5>
+  verbose_feature_names_out=False
+)
+
+X_train_ct = ct.fit_transform(X_train)
+X_val_ct = ct.transform(X_val)
+X_test_ct = ct.transform(X_test)
+
+for name, X in zip(("train", "val", "test"), (X_train_ct, X_val_ct, X_test_ct)):        #<6>
+    num_na = X.isna().sum().sum()
+    print(f"The {name} set has shape {X.shape} & with {num_na} NAs.")
+```
+
+::: {.content-visible unless-format="revealjs"}
+1. Imports `make_pipeline` class from `sklearn.pipeline` library. `make_pipeline` is used to streamline the data pre processing. In the above example, `make_pipeline` is used to first treat for missing values and then scale numerical values
+2. Stores categorical variables in `cat_vars`
+3. Specifies the one-hot encoding for all categorical variables. We set the `sparse_output=False`, to return a dense array rather than a sparse matrix. `handle_unknown` specifies how the neural network should handle unseen categories. By setting `handle_unknown="ignore"`, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it will interrupt the model's operation after deployment
+4. Passes through `hypertension` and `heart_disease` without any pre processing
+5. Makes a pipeline that first applies `SimpleImputer()` to replace missing values with the mean and then applies `StandardScaler()` to scale the numerical values 
+6. Prints out the missing values to ensure the `SimpleImputer()` has worked
+:::
+## Handling unseen categories
+
+::: columns
+::: column
+```{python}
+X_train["gender"].value_counts()
+```
+:::
+::: column
+```{python}
+X_val["gender"].value_counts()
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below.
+:::
+::: columns
+::: column
+```{python}
+ind = np.argmax(X_val["gender"] == "Other")
+X_val.iloc[ind-1:ind+3][["gender"]]
+```
+:::
+::: column
+```{python}
+gender_cols = X_val_ct[["gender_Female", "gender_Male"]]
+gender_cols.iloc[ind-1:ind+3]
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+However, to give such instructions on handling unseen categories, we would first have to know what those possible categories could be. We should also have specific knowledge on what value to assign in case they come up during model performance. One easy way to tackle it would be to use `handle_unknown="ignore"` during encoding, as mentioned before.
+:::
+
+## Setup a binary classification model
+
+```{python}
+def create_model(seed=42):
+    random.seed(seed)
+    model = Sequential()
+    model.add(Input(X_train_ct.shape[1:]))
+    model.add(Dense(32, "leaky_relu"))
+    model.add(Dense(16, "leaky_relu"))
+    model.add(Dense(1, "sigmoid"))
+    return model
+```
+::: {.content-visible unless-format="revealjs"}
+Since this is a binary classification problem, we use the sigmoid activation function.
+:::
+
+```{python}
+model = create_model()
+model.summary()
+```
+::: {.content-visible unless-format="revealjs"}
+`model.summary()` returns the summary of the constructed neural network.
+:::
+
+## Add metrics, compile, and fit
+
+```{python}
+model = create_model()                                                  #<1>
+
+pr_auc = keras.metrics.AUC(curve="PR", name="pr_auc")                #<2>
+model.compile(optimizer="adam", loss="binary_crossentropy",              #<3>
+    metrics=[pr_auc, "accuracy", "auc"])                                
+
+es = EarlyStopping(patience=50, restore_best_weights=True,
+    monitor="val_pr_auc", verbose=1)
+model.fit(X_train_ct, y_train, callbacks=[es], epochs=1_000, verbose=0,
+  validation_data=(X_val_ct, y_val));
+```
+
+::: {.content-visible unless-format="revealjs"}
+1. Brings in the created model
+2. Creates an instance `pr_auc` to store the AUC (Area Under Curve) metric for the PR (Precision-Recall) curve
+3. Compiles the model with an appropriate loss function, optimizer and relevant metrics. Since the above problem is a binary classification, we would optimize the `binary_crossentropy`, chose to monitor both `accuracy` and `AUC` and `pr_auc`.  
+
+Tracking AUC and `pr_auc` on top of the accuracy is important, particularly in the cases where there is a class imbalance. Suppose a data has 95% `True` class and only 5% `False` class, then, even a random classifier that predicts `True` 95% of the time will have a high accuracy. To avoid such issues, it is advisable to monitor both accuracy and AUC.
+:::
+
+::: columns
+::: column
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+:::
+::: column
+:::
+:::
+
+## Overweight the minority class
+
+```{python}
+model = create_model()
+
+pr_auc = keras.metrics.AUC(curve="PR", name="pr_auc")
+model.compile(optimizer="adam", loss="binary_crossentropy",
+    metrics=[pr_auc, "accuracy", "auc"])
+
+es = EarlyStopping(patience=50, restore_best_weights=True,
+    monitor="val_pr_auc", verbose=1)
+model.fit(X_train_ct, y_train.to_numpy(), callbacks=[es], epochs=1_000, verbose=0,                    #<1>
+  validation_data=(X_val_ct, y_val), class_weight={0: 1, 1: 10});
+```
+
+::: {.content-visible unless-format="revealjs"}
+Another way to treat class imbalance would be to assign a higher weight to the minority class during model fitting.
+1. Fits the model by assigning a higher weight to the misclassification in the minor class. This above class weight assignment says that misclassifying an observation from class 1 will be penalized 10 times more than misclassifying an observation from class 0. The weights can be assigned in relation to the level of data imbalance.
+:::
+::: columns
+::: column
+```{python}
+model.evaluate(X_val_ct, y_val, verbose=0)
+```
+:::
+::: column
+::: fragment
+```{python}
+model.evaluate(X_test_ct, y_test, verbose=0)
+```
+:::
+:::
+:::
+
+## Classification Metrics {.smaller}
+
+```{python}
+from sklearn.metrics import confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay
+y_pred = model.predict(X_test_ct, verbose=0)
+```
+
+::: columns
+::: column
+```{python}
+RocCurveDisplay.from_predictions(y_test, y_pred, name="");
+```
+:::
+::: column
+```{python}
+PrecisionRecallDisplay.from_predictions(y_test, y_pred, name=""); plt.legend(loc="upper right");
+```
+:::
+:::
+
+::: columns
+::: column
+```{python}
+y_pred_stroke = y_pred > 0.5
+confusion_matrix(y_test, y_pred_stroke)
+```
+:::
+::: column
+```{python}
+y_pred_stroke = y_pred > 0.3
+confusion_matrix(y_test, y_pred_stroke)
+```
+:::
+:::
