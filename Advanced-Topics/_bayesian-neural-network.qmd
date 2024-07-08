@@ -1,0 +1,238 @@
+
+## Bayesian Neural Network
+
+::: {.content-visible unless-format="revealjs"}
+Bayesian Neural Networks facilitate a systematic way to quantify uncertainty about the model predictions. BNNs assume a distribution for each parameter (weights and biases) of the model. Since BNNs assume distributions for the parameters of the model, the model end up with distributions for the outputs as well. The distributions of the output help in quantifying the uncertainty related to model predictions.
+:::
+
+The weights $\boldsymbol{w}$ of a Bayesian neural network (BNN) have their posterior distribution: $$p(\boldsymbol{w}|\mathcal{D})\propto \mathcal{L}(\mathcal{D}|\boldsymbol{w})p(\boldsymbol{w})$$ according to the Bayes' theorem.
+
+- $\mathcal{L}(\mathcal{D}|\boldsymbol{w})$ represents the likelihood of data given the weights.
+- $p(\boldsymbol{w})$ represents the density of the prior distribution of the weights.
+
+## Tractability of Posterior Distribution
+
+Let $\boldsymbol{\theta}_0=(\boldsymbol{\mu}_{\boldsymbol{w}_0},\boldsymbol{\sigma}_{\boldsymbol{w}_0})$ be the parameters of the prior distribution of weights:
+$$
+    \boldsymbol{w}\sim \mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{w}_0},\boldsymbol{\sigma}_{\boldsymbol{w}_0}).
+$$
+The derivation of the true posterior
+$$
+    p(\boldsymbol{w}|\mathcal{D})
+    \propto \mathcal{L}(\mathcal{D}|\boldsymbol{w})p(\boldsymbol{w})
+$$
+is non-trivial due to the complexity of the model. We cannot compute the true posterior distribution efficiently.
+
+## Variational Approximation
+
+The variational approximation is a potential solution. Intuitively, we approximate the true posterior distribution with a variational distribution that is more tractable:
+$$
+    \underbrace{p(\boldsymbol{w}|\mathcal{D})}_{\text{True Posterior Distribution}}\approx \underbrace{q(\boldsymbol{w}|\boldsymbol{\theta})}_{\text{Variational Distribution}}
+    \sim\mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{w}},\boldsymbol{\sigma}_{\boldsymbol{w}}),
+$$
+i.e., a normal distribution with parameters $\boldsymbol{\theta}= (\boldsymbol{\mu}_{\boldsymbol{w}},\boldsymbol{\sigma}_{\boldsymbol{w}})$ is used to approximate the true posterior distribution of $\boldsymbol{w}|\mathcal{D}$.
+
+## Demonstration
+
+![[Figure]{style="color:darkblue;"}: The idea is to use the [blue]{style="color:blue;"} curve (variational distribution) to approximate the [purple]{style="color:purple;"} curve (true posterior).](./VA.png)
+
+## Code: Variational Layers
+
+```{python}
+import tensorflow_probability as tfp                                            #<1>
+tfd = tfp.distributions                                                         #<2>
+
+def prior(kernel_size, bias_size, dtype=None):                                  #<3>
+    n = kernel_size + bias_size
+    return lambda t: tfd.Independent(
+        tfd.Normal(loc=tf.zeros(n, dtype=dtype),
+                   scale=1),
+                   reinterpreted_batch_ndims=1)                                 #<4>
+
+def posterior(kernel_size, bias_size, dtype=None):                              #<5>
+    n = kernel_size + bias_size
+    return Sequential([
+      tfp.layers.VariableLayer(2 * n, dtype=dtype),
+      tfp.layers.DistributionLambda(lambda t: tfd.Independent(
+          tfd.Normal(loc=t[..., :n],
+                     scale=1e-5 + tf.nn.softplus(0.01 * t[..., n:])),
+          reinterpreted_batch_ndims=1)),                                        #<6>
+    ])                                                                          #<7>
+```
+1. Imports `tensorflow_probability` using the shortened name `tfp`
+2. Stores statistical distributions in the `tfp` class as `tfd`
+3. Specifies the prior which takes in the number of weights and biases (their sum would be the total number of parameters to estimate)
+4. Specifies the prior for each parameter (normal distribution with mean=0 and standard deviation=1) `reinterpreted_batch_ndims=1` specifies that the distributions of weights and biases should be considered as independent distributions. 
+5. Specifies the posterior distribution which taken in the number of weights and biases. 
+6. Builds a sequential model with (i) a `VariableLayer` which manages the parameters of the model(since there are _n_ parameters with their own Normal distribution, there 2*_n_ prior parameters) and (ii) a `DistributionLambda` layer which wraps the independent normal distributions as a Keras layer.
+
+## Architecture
+
+![[Figure]{style="color:darkblue;"}: We demonstrate the typical structure of a Bayesian neural network (BNN).](./BNN_raw.png)
+
+::: footer
+Source: Blundell et al. (2015), Weight Uncertainty in Neural Networks.
+:::
+
+## Loss Function
+
+The KL divergence between the true posterior and variational distribution is given by:
+$$
+    D_{\text{KL}}\left[q(\boldsymbol{w}|\boldsymbol{\theta}) || p(\boldsymbol{w}|\mathcal{D})\right] 
+    =\mathbb{E}_{\boldsymbol{w} \sim q(\boldsymbol{w}|\boldsymbol{\theta})}\left[\log\left(\frac{q(\boldsymbol{w}|\boldsymbol{\theta})}{p(\boldsymbol{w}|\mathcal{D})}\right) \right]
+$$
+After some algebra, we acknowledge the final representation:
+$$
+\begin{align*} 
+    D_{\text{KL}}\left[q(\boldsymbol{w}|\boldsymbol{\theta}) || p(\boldsymbol{w}|\mathcal{D})\right] 
+    &=\underbrace{D_{\text{KL}}\left[{q(\boldsymbol{w}|\boldsymbol{\theta})} || {p(\boldsymbol{w})}\right]}_{{\text{Complexity Loss}}}  \underbrace{-\mathbb{E}_{\boldsymbol{w} \sim q(\boldsymbol{w}|\boldsymbol{\theta})}\left[\log{p(\mathcal{D}|\boldsymbol{w})}\right]}_{{\text{Error Loss}}} \\
+    & \quad\quad\quad\quad\quad\quad+  \ \text{const}.
+\end{align*}
+$$
+
+::: {.content-visible unless-format="revealjs"}
+Error Loss here corresponds to the NLL. Average loss is obtained by calculating the error for each random sample and then averaging over it.
+:::
+
+## Evaluation of Loss
+
+In practice, we estimate loss function
+$$
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})
+    =\underbrace{D_{\text{KL}}\left[{q(\boldsymbol{w}|\boldsymbol{\theta})} || {p(\boldsymbol{w})}\right]}_{{\text{Complexity Loss}}}  \underbrace{-\mathbb{E}_{\boldsymbol{w} \sim q(\boldsymbol{w}|\boldsymbol{\theta})}\left[\log{p(\mathcal{D}|\boldsymbol{w})}\right]}_{{\text{Error Loss}}} 
+$$
+through Monte Carlo estimates
+$$
+   \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})\approx\frac{1}{M}\sum_{m=1}^{M}\underbrace{\log\Bigg({\frac{q\left(\boldsymbol{w}^{(m)}|\boldsymbol{\theta}^{(m)}\right) }{ p\left(\boldsymbol{w}^{(m)}\right)}}\Bigg)}_{\text{Complexity Loss}} 
+   \underbrace{-\log{p\left(\mathcal{D}|\boldsymbol{w}^{(m)}\right)}}_{\text{Error Loss}}
+$$
+where $\left\{\boldsymbol{w}^{(m)}\right\}_{m=1}^{M}$ are random samples of $\boldsymbol{w}|\boldsymbol{\theta}$.
+
+## "Bayesian-Gamma" Loss
+
+If the output consists of the shape and scale parameter of a gamma distribution, the loss function would be
+$$
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})\approx\frac{1}{M}\sum_{m=1}^{M}\underbrace{\log\Bigg({\frac{q\left(\boldsymbol{w}^{(m)}|\boldsymbol{\theta}^{(m)}\right) }{ p\left(\boldsymbol{w}^{(m)}\right)}}\Bigg)}_{\text{Complexity Loss}} 
+   \underbrace{-\sum_{i=1}^{N}\log \ f(y_i|\boldsymbol{x}_i,\boldsymbol{w}^{(m)})}_{\text{Error Loss}},
+$$
+where $f(y_i|\boldsymbol{x}_i,\boldsymbol{w}^{(m)})$ denotes the density value of $y_i$ given $\boldsymbol{x}_i$, under the $m$th Monte Carlo sample $\boldsymbol{w}^{(m)}$, i.e.,
+$$
+    f(y_i|\boldsymbol{x}_i,\boldsymbol{w}^{(m)})=\frac{\beta(\boldsymbol{x};\boldsymbol{w}^{(m)})^{\alpha(\boldsymbol{x};\boldsymbol{w}^{(m)})}}{\Gamma(\alpha(\boldsymbol{x}^{(m)};\boldsymbol{w}^{(m)}))}\mathrm{e}^{-\beta(\boldsymbol{x};\boldsymbol{w}^{(m)})y}y^{\alpha(\boldsymbol{x};\boldsymbol{w}^{(m)})-1}.
+$$
+
+## Architecture
+
+![[Figure]{style="color:darkblue;"}: The output of our Bayesian neural network now consists of the shape parameter $\alpha(\boldsymbol{x}; \boldsymbol{w})$ and the scale parameter $\beta(\boldsymbol{x}; \boldsymbol{w})$.](./Bayesian_Gamma.png)
+
+## Code: Architecture
+
+The `tfp.layers` allows us to extract the parameters from the output, which is a gamma distribution object.
+
+```{python}
+# Ensure reproducibility
+random.seed(1); tf.random.set_seed(1)                               #<1>
+
+inputs = Input(shape=X_train.shape[1:])                             #<2>
+
+# DenseVariational layer
+x = tfp.layers.DenseVariational(64, posterior, prior,
+                kl_weight=1/X_train.shape[0])(inputs)               #<3>
+outputs = Dense(2, activation = 'softplus')(x)
+
+# Construct the Gamma distribution on the last layer
+distributions = tfp.layers.DistributionLambda(
+      lambda t: tfd.Gamma(concentration=t[..., 0:1], 
+                          rate=t[..., 1:2]))(outputs)               #<4>
+# Define the model
+gamma_bnn = Model(inputs, distributions)                            #<5>
+```
+1. Sets the random seed for reproducibility
+2. Specifies the input layer with dimensions equal to the number of features
+3. Specifies the `DenseVariational` layer with 64 neurons, posteriors, prior and KL divergence weight. In the above example KL divergence term in the loss function is scaled by the inverse of the train set size. Scaling helps stabilize the training process
+4. Takes the outputs from the previous layers and specifies a gamma distribution with first component as the concentration parameter and second component as the rate parameter
+5. Specifies the model architecture
+
+## Code: Loss Function and Training
+
+```{python}
+def gamma_loss(y_true, y_pred):                                                             #<1>
+    return -y_pred.log_prob(y_true)
+
+# Then use the loss function when compiling the model
+gamma_bnn.compile(optimizer=tf_keras.optimizers.Adam(learning_rate=0.001),
+                loss=gamma_loss)                                                            #<2>
+
+hist = gamma_bnn.fit(X_train, y_train,
+    epochs=300,
+    callbacks=[EarlyStopping(patience=30)],
+    verbose=0,
+    batch_size=64,
+    validation_split=0.2)                                                                   #<3>
+```
+
+1. Defines the loss function which computes the negative log likelihood of observing the true data under the predicted probability distribution
+2. Compiles the model with the optimizer, loss function and a custom learning rate
+3. Fits the BNN model using train set with a validation split defined inside the function
+
+
+## Code: Output Sampling
+
+In practice, we can further increase the number of samples.
+``` {python}
+# Define the number of samples
+n_samples = 1000
+
+# Store all predictions in a list
+alphas = []; betas = []
+
+# Run the model `n_samples` times and store the predicted parameters
+for i in range(n_samples):
+  # Predict the distributions
+  predicted_distributions = gamma_bnn(X_test[9:10].values)
+  # Get the parameters
+  alphas.append(predicted_distributions.concentration.numpy())
+  betas.append(predicted_distributions.rate.numpy())
+```
+
+## Sampled Density Functions
+
+```{python}
+#| echo: false
+plt.figure(figsize=(8, 6))
+xs = np.linspace(0, 40, 100)
+for i in range(200):
+    plt.plot(xs,  gamma.pdf(xs, alphas[i], betas[i]).flatten(), alpha=0.05)
+plt.xlabel('Claim Amount')
+plt.ylabel('Density');
+```
+
+We plot some of the sampled posterior density functions. The variability of the sampled density functions is one critical consideration for epistemic uncertainty.
+
+## Uncertainty Quantification (UQ)
+
+
+We analyse the total variance formula:
+$$
+\begin{align*}
+    \mathbb{V}[Y]&=\mathbb{E}[\mathbb{V}[Y|\boldsymbol{x}]] + \mathbb{V}[\mathbb{E}[Y|\boldsymbol{x}]]\\
+    &\approx \underbrace{\frac{1}{M}\sum_{m=1}^{M}\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]}_{\text{Aleatoric}} \\
+    &\quad \quad +\underbrace{\frac{1}{M}\sum_{m=1}^{M}\bigg(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]-\frac{1}{M}\sum_{m=1}^{M}\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]\bigg)^2}_{\text{Epistemic}},
+\end{align*}
+$$
+where $M$ is the number of posterior samples generated.
+
+## Code: Applying UQ
+
+```{python}
+# Convert to numpy array for easier manipulation
+alphas = np.array(alphas); betas = np.array(betas)
+
+# Aleatoric uncertainty: Mean of the variances of the predicted Gamma distributions
+aleatoric_uncertainty = np.mean(alphas/betas**2)
+
+# Epistemic uncertainty: Variance of the means of the model's predictions
+epistemic_uncertainty = np.var(alphas/betas)
+
+print(f"Aleatoric uncertainty: {aleatoric_uncertainty}")
+print(f"Epistemic uncertainty: {epistemic_uncertainty}")
+```
