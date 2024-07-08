@@ -2,6 +2,894 @@
 title: Advanced Tabular Data
 ---
 
-::: {.callout-warning}
-This empty page will be updated shortly.
+```{python}
+#| echo: false
+#| warning: false
+import os
+
+# os.environ["KERAS_BACKEND"] = "torch"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+import torch
+
+torch.set_num_threads(1)
+
+import matplotlib
+
+import cycler
+
+colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
+matplotlib.pyplot.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+
+
+def set_square_figures():
+    matplotlib.pyplot.rcParams["figure.figsize"] = (2.0, 2.0)
+
+
+def set_rectangular_figures():
+    matplotlib.pyplot.rcParams["figure.figsize"] = (5.0, 2.0)
+
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams["figure.dpi"] = 350
+matplotlib.pyplot.rcParams["savefig.bbox"] = "tight"
+matplotlib.pyplot.rcParams["font.family"] = "serif"
+
+matplotlib.pyplot.rcParams["axes.spines.right"] = False
+matplotlib.pyplot.rcParams["axes.spines.top"] = False
+
+
+def square_fig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortest_side = min(xl[1], yl[1])
+    matplotlib.pyplot.plot(
+        [0, shortest_side], [0, shortest_side], color="black", linestyle="--"
+    )
+
+
+import pandas
+
+pandas.options.display.max_rows = 4
+
+import numpy
+
+numpy.set_printoptions(precision=2)
+numpy.random.seed(123)
+
+import keras
+
+keras.utils.set_random_seed(1)
+```
+
+::: {.content-visible unless-format="revealjs"}
+
+```{python}
+#| code-fold: true
+#| code-summary: Show the package imports
+import random
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import EarlyStopping
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, OrdinalEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LinearRegression
+from sklearn import set_config
+
+set_config(transform_output="pandas")
+```
+
 :::
+
+# Entity Embedding {visibility="uncounted"}
+
+## Continuing on the French motor dataset example
+
+Download the dataset if we don't have it already.
+
+```{python}
+#| output-location: slide
+from pathlib import Path                                      #<1>
+from sklearn.datasets import fetch_openml                     #<2>
+
+if not Path("french-motor.csv").exists():                     #<3>
+    freq = fetch_openml(data_id=41214, as_frame=True).frame   #<4>
+    freq.to_csv("french-motor.csv", index=False)              #<5>
+else:
+    freq = pd.read_csv("french-motor.csv")                    #<6>
+
+freq
+```
+
+::: footer
+Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
+:::
+
+
+## Data dictionary {.smaller}
+
+::: columns
+::: column
+- `IDpol`: policy number (unique identifier)
+- `ClaimNb`: number of claims on the given policy
+- `Exposure`: total exposure in yearly units
+- `Area`: area code (categorical, ordinal)
+- `VehPower`: power of the car (categorical, ordinal)
+- `VehAge`: age of the car in years
+- `DrivAge`: age of the (most common) driver in years
+:::
+::: column
+- `BonusMalus`: bonus-malus level between 50 and 230 (with reference level 100)
+- `VehBrand`: car brand (categorical, nominal)
+- `VehGas`: diesel or regular fuel car (binary)
+- `Density`: density of inhabitants per km^2^ in the city of the living place of the driver
+- `Region`: regions in France (prior to 2016)
+:::
+:::
+
+::: footer
+Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
+:::
+
+## The model
+
+Have $\{ (\mathbf{x}_i, y_i) \}_{i=1, \dots, n}$ for $\mathbf{x}_i \in \mathbb{R}^{47}$ and $y_i \in \mathbb{N}_0$.
+
+Assume the distribution
+$$
+Y_i \sim \mathsf{Poisson}(\lambda(\mathbf{x}_i))
+$$
+
+We have $\mathbb{E} Y_i = \lambda(\mathbf{x}_i)$. 
+The NN takes $\mathbf{x}_i$ & predicts $\mathbb{E} Y_i$.
+
+::: {.callout-note}
+For insurance, _this is a bit weird_.
+The exposures are different for each policy.
+
+$\lambda(\mathbf{x}_i)$ is the expected number of claims for the duration of policy $i$'s contract.
+
+Normally, $\text{Exposure}_i \not\in \mathbf{x}_i$, and $\lambda(\mathbf{x}_i)$ is the expected rate _per year_, then
+$$
+Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\mathbf{x}_i)).
+$$
+:::
+
+## Where are things defined?
+
+In Keras, string options are used for convenience to reference specific functions or settings.
+
+::: {.content-visible unless-format="revealjs"}
+Meaning that setting `activation="relu"` (with in strings) is same as setting `activation=relu` after bringing in the `relu` function from `keras.activations`. 
+:::
+
+```{python}
+model = Sequential([
+    Dense(30, activation="relu"),
+    Dense(1, activation="exponential")
+])
+```
+
+is the same as
+
+```{python}
+from keras.activations import relu, exponential
+
+model = Sequential([
+    Dense(30, activation=relu),
+    Dense(1, activation=exponential)
+])
+```
+
+```{python}
+x = [-1.0, 0.0, 1.0]
+print(relu(x))
+print(exponential(x))
+```
+::: {.content-visible unless-format="revealjs"}
+We can see how `relu` function gives out _x_ when _x_  is non-negative, and gives out 0 when _x_ is negative. `exponential` function, takes in _x_ and gives out the _exp(x)_.
+:::
+
+## String arguments to `.compile`
+
+When we run
+
+```{python}
+model.compile(optimizer="adam", loss="poisson")
+```
+
+it is equivalent to
+
+```{python}
+from keras.losses import poisson
+from keras.optimizers import Adam
+
+model.compile(optimizer=Adam(), loss=poisson)
+```
+::: {.content-visible unless-format="revealjs"}
+This is akin to specifying the activation function directly. Setting `optimizer="adam"` and `loss="poisson"` as strings is equivalent to using `optimizer=Adam()` and `loss=poisson` after importing `Adam` from `keras.optimizers` and `poisson` from `keras.losses`. Another important thing to note here is that, the loss function is no longer `mse`. Since we assume a Poisson distribution for the target variable, and the goal is to optimise the algorithm for count data, Poisson loss is more appropriate.
+:::
+
+Why do this manually? To adjust the object:
+
+::: {.content-visible unless-format="revealjs"}
+One of the main reasons why we would want to bring in the functions from the libraries (as opposed to using strings) is because it allows us to control the hyper-parameters of the object. For instance, in the example below, we can see how we set the `learning_rate` to a specific value. `learning_rate` is an important hyper-parameter in neural network training because it controls the pace at which weights of the neural networks are updated. Too small learning rates can result in slower learning, hence, longer training time. Too large learning rates lead to large steps in weights updates, hence, might miss the optimal solution.
+:::
+```{python}
+optimizer = Adam(learning_rate=0.01)
+model.compile(optimizer=optimizer, loss="poisson")
+```
+
+or to get help.
+
+## Keras' "poisson" loss
+
+```{python}
+help(keras.losses.poisson)
+```
+::: {.content-visible unless-format="revealjs"}
+Using the help function in this case provides information about the Poisson loss function in the `keras.losses library`. It shows that how `poisson` loss is calculated, by taking two inputs, (i) actual values and (ii) predicted values.
+:::
+
+## Subsample and split
+
+```{python}
+freq = freq.drop("IDpol", axis=1).head(25_000)                          #<1>
+
+X_train, X_test, y_train, y_test = train_test_split(                    #<2>
+  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=2023)     #<2>
+
+# Reset each index to start at 0 again.
+X_train = X_train.reset_index(drop=True)                                #<3>
+X_test = X_test.reset_index(drop=True)                                  #<3>
+```
+
+## What values do we see in the data?
+
+::: {layout-ncol=2 layout-nrow=2}
+```{python}
+X_train["Area"].value_counts()
+```
+
+```{python}
+X_train["VehBrand"].value_counts()
+```
+
+```{python}
+X_train["VehGas"].value_counts()
+```
+
+```{python}
+X_train["Region"].value_counts()
+```
+:::
+
+## Preprocess ordinal & continuous
+
+```{python}
+from sklearn.compose import make_column_transformer
+
+ct = make_column_transformer(
+  (OrdinalEncoder(), ["Area", "VehGas"]),
+  ("drop", ["VehBrand", "Region"]),
+  remainder=StandardScaler(),
+  verbose_feature_names_out=False
+)
+X_train_ct = ct.fit_transform(X_train)
+```
+
+::: columns
+::: column
+```{python}
+X_train.head(3)
+```
+:::
+::: column
+```{python}
+X_train_ct.head(3)
+```
+:::
+:::
+
+# Categorical Variables & Entity Embeddings {visibility="uncounted"}
+
+## Region column
+
+![French Administrative Regions](french-regions.png)
+
+::: footer
+Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
+:::
+
+## One-hot encoding
+
+```{python}
+oe = OneHotEncoder(sparse_output=False)
+X_train_oh = oe.fit_transform(X_train[["Region"]])
+X_test_oh = oe.transform(X_test[["Region"]])
+print(list(X_train["Region"][:5]))
+X_train_oh.head()
+```
+::: {.content-visible unless-format="revealjs"}
+One hot encoding is a way to assign numerical values to nominal variables. One hot encoding is different from ordinal encoding in the way in which it transforms the data. Ordinal encoding assigns a numerical integer to each unique category of the data column and returns one integer column. In contrast, one hot encoding returns a binary vector for each unique category. As a result, what we get from one hot encoding is not a single column vector, but a matrix with number of columns equal to the number of unique categories in that nominal data column.
+:::
+
+## Train on one-hot inputs
+
+```{python}
+num_regions = len(oe.categories_[0])                            #<1>
+
+random.seed(12)
+model = Sequential([                                            #<2> 
+  Dense(2, input_dim=num_regions),
+  Dense(1, activation="exponential")
+])
+
+model.compile(optimizer="adam", loss="poisson")                #<3>  
+
+es = EarlyStopping(verbose=True)                               #<4> 
+hist = model.fit(X_train_oh, y_train, epochs=100, verbose=0,   #<5> 
+    validation_split=0.2, callbacks=[es])                       
+hist.history["val_loss"][-1]                                   #<6> 
+```
+::: {.content-visible unless-format="revealjs"}
+The above code shows how we can train a neural network using only the one-hot encoded variables.  The example is similar to the case of training neural networks for ordinal encoding. 
+1. Computes the number of unique categories in the encoded column and store it in `num_regions`
+2. Constructs the neural network. This time, it is a neural network with 1 hidden layer and 1 output layer. `Dense(2, input_dim=num_regions)` takes in an input matrix of with columns = `num_regions` and transofrmas it down to an output with 2 neurons
+Steps 3-6 is similar to what we saw during training with ordinal encoded variables.
+:::
+
+## Consider the first layer {.smaller}
+
+```{python}
+every_category = pd.DataFrame(np.eye(num_regions), columns=oe.categories_[0])
+every_category.head(3)
+```
+
+```{python}
+# Put this through the first layer of the model
+X = every_category.to_numpy()                       #<1>
+model.layers[0](X)                                  #<2>
+```
+::: {.content-visible unless-format="revealjs"}
+We can extract each layer separately from a trained neural network and observe its output given a specific input. 
+1. Converts the dataframe to a numpy array
+2. Takes out the first layer and feeds in the numpy array _X_. This returns an array with 2 columns
+:::
+## The first layer
+
+```{python}
+layer = model.layers[0]                     #<1>
+W, b = layer.get_weights()                  #<2>
+X.shape, W.shape, b.shape                   #<3>
+```
+::: {.content-visible unless-format="revealjs"}
+We can also extract the layer, get its wieghts and compute manually. 
+1. Extracts the layer
+2. Gets the weights and biases and stores the weights in _W_ and biases in _b_
+3. Returns the shapes of the matrices
+:::
+
+::: columns
+::: column
+```{python}
+X @ W + b
+```
+:::
+::: column
+```{python}
+W + b
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above codes manually compute and returns the same answers as before.
+:::
+## Just a look-up operation
+
+::: columns
+::: column
+```{python}
+display(list(oe.categories_[0]))
+```
+:::
+::: column
+```{python}
+W + b
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above outputs show that the neural network thinks the best way to represent "R11" for this particular problem is using the vector [-0.2, -0.12]. 
+:::
+## Turn the region into an index
+
+```{python}
+oe = OrdinalEncoder()
+X_train_reg = oe.fit_transform(X_train[["Region"]])
+X_test_reg = oe.transform(X_test[["Region"]])
+
+for i, reg in enumerate(oe.categories_[0][:3]):
+  print(f"The Region value {reg} gets turned into {i}.")
+```
+
+## Embedding
+
+```{python}
+from keras.layers import Embedding
+num_regions = len(np.unique(X_train[["Region"]]))
+
+random.seed(12)
+model = Sequential([
+  Embedding(input_dim=num_regions, output_dim=2),
+  Dense(1, activation="exponential")
+])
+
+model.compile(optimizer="adam", loss="poisson")
+```
+
+## Fitting that model
+
+```{python}
+es = EarlyStopping(verbose=True)
+hist = model.fit(X_train_reg, y_train, epochs=100, verbose=0,
+    validation_split=0.2, callbacks=[es])
+hist.history["val_loss"][-1]
+```
+
+```{python}
+model.layers
+```
+::: {.content-visible unless-format="revealjs"}
+Embedding layer can learn the optimal representation for a category of a categorical variable, during training. 
+In the above example, encoding the variable _Region_ using ordinal encoding and passing it through an embedding layer learns the optimal representation for the region during training. Ordinal encoding followed with an embedding layer is a better alternative to one-hot encoding. It is computationally less expensive (compared to generating large matrices in one-hot encoding) particularly when the number of categories is high.
+:::
+
+## Keras' Embedding Layer
+
+::: columns
+::: column
+```{python}
+model.layers[0].get_weights()[0]
+```
+:::
+::: column
+
+```{python}
+X_train["Region"].head(4)
+```
+
+```{python}
+X_sample = X_train_reg[:4].to_numpy()
+X_sample
+```
+
+```{python}
+enc_tensor = model.layers[0](X_sample)
+keras.ops.convert_to_numpy(enc_tensor).squeeze()
+```
+
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+
+1. Returns the weights of the Embedding layer. The function `model.layers[0].get_weights()[0]` returns a 22 $\times$ 2 weights matrix with optimal representations for each category. Here 22 corresponds to the number of unique categories, and 2 corresponds to the size of the lower dimensional space using which we represent each category. 
+2. Returns the first 4 rows of train set
+3. Converts first 4 rows to a numpy array
+4. Sends the numpy array through the Embedding layer to retrieve corresponding weights
+We can observe how the last code returns a numpy array with representations corresponding to R24, R93, R11 and R42. 
+
+:::
+
+## The learned embeddings
+
+::: {.content-visible unless-format="revealjs"}
+
+If we only have two-dimensional embeddings we can plot them.
+
+:::
+
+```{python}
+points = model.layers[0].get_weights()[0]
+plt.scatter(points[:,0], points[:,1])
+for i in range(num_regions):
+  plt.text(points[i,0]+0.01, points[i,1] , s=oe.categories_[0][i])
+```
+
+::: {.content-visible unless-format="revealjs"}
+While it not always the case, entity embeddings can at times be meaningful instead of just being useful representations. The above figure shows how plotting the learned embeddings help reveal regions which might be similar (e.g. coastal areas, hilly areas etc.).
+:::
+
+## Entity embeddings 
+
+![Embeddings will gradually improve during training.](entity-embeddings.png)
+
+::: footer
+Source: Marcus Lautier (2022).
+:::
+
+## Embeddings & other inputs
+
+::: {.content-visible unless-format="revealjs"}
+Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data in to the neural network. Numerical variables are inherently numeric hence, do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.
+:::
+
+![Illustration of a neural network with both continuous and categorical inputs.](nn-with-entity-embedding-diagram.png)
+
+We can't do this with Sequential models...
+
+::: footer
+Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning](https://www.lotuslabs.ai/accurate-insurance-claims-prediction-with-deep-learning/).
+:::
+
+# Keras' Functional API {visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+Sequential models are easy to use and do not require many specifications, however, they cannot model complex neural network architectures. Keras Functional API approach on the other hand allows the users to build complex architectures. 
+:::
+
+## Converting Sequential models
+
+```{python}
+from keras.models import Model
+from keras.layers import Input
+```
+
+::: columns
+::: column
+```{python}
+random.seed(12)
+
+model = Sequential([
+  Dense(30, "leaky_relu"),
+  Dense(1, "exponential")
+])
+
+model.compile(
+  optimizer="adam",
+  loss="poisson")
+
+hist = model.fit(
+  X_train_oh, y_train,
+  epochs=1, verbose=0,
+  validation_split=0.2)
+hist.history["val_loss"][-1]
+```
+:::
+::: column
+```{python}
+random.seed(12)
+
+inputs = Input(shape=(X_train_oh.shape[1],))
+x = Dense(30, "leaky_relu")(inputs)
+out = Dense(1, "exponential")(x)
+model = Model(inputs, out)
+
+model.compile(
+  optimizer="adam",
+  loss="poisson")
+
+hist = model.fit(
+  X_train_oh, y_train,
+  epochs=1, verbose=0,
+  validation_split=0.2)
+hist.history["val_loss"][-1]
+```
+:::
+:::
+
+See [one-length tuples](https://pat-laub.github.io/DeepLearningMaterials/2023/Lecture-1-Artificial-Intelligence/python.html#/one-length-tuples).
+
+::: {.content-visible unless-format="revealjs"}
+The above code shows how to construct the same neural network using sequential models and Keras functional API. There are some differences in the construction. In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer. `model = Model(inputs, out)` function specifies the input and output of the model. This manner of specifying the inputs and outputs of the model allow the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
+:::
+
+## Wide & Deep network
+
+::: columns
+::: {.column width="45%"}
+![An illustration of the wide & deep network architecture.](wide-and-deep-network.png)
+:::
+::: {.column width="55%"}
+Add a _skip connection_ from input to output layers.
+
+```{python}
+from keras.layers \
+    import Concatenate
+
+inp = Input(shape=X_train.shape[1:])
+hidden1 = Dense(30, "leaky_relu")(inp)
+hidden2 = Dense(30, "leaky_relu")(hidden1)
+concat = Concatenate()(
+  [inp, hidden2])
+output = Dense(1)(concat)
+model = Model(
+    inputs=[inp],
+    outputs=[output])
+```
+:::
+:::
+
+::: footer
+Sources: Marcus Lautier (2022) & Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 10 code snippet.
+:::
+
+## Naming the layers
+
+For complex networks, it is often useful to give meaningul names to the layers.
+
+```{python}
+input_ = Input(shape=X_train.shape[1:], name="input")
+hidden1 = Dense(30, activation="leaky_relu", name="hidden1")(input_)
+hidden2 = Dense(30, activation="leaky_relu", name="hidden2")(hidden1)
+concat = Concatenate(name="combined")([input_, hidden2])
+output = Dense(1, name="output")(concat)
+model = Model(inputs=[input_], outputs=[output])
+```
+
+## Inspecting a complex model
+
+```{python}
+from keras.utils import plot_model
+```
+
+::: columns
+::: {.column width="30%"}
+```{python}
+plot_model(model, show_layer_names=True)
+```
+:::
+::: {.column width="70%"}
+::: {.smaller}
+```{python}
+model.summary(line_length=75)
+```
+:::
+:::
+:::
+
+# French Motor Dataset with Embeddings {visibility="uncounted"}
+
+## The desired architecture
+
+![Illustration of a neural network with both continuous and categorical inputs.](nn-with-entity-embedding-diagram.png)
+
+::: footer
+Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning](https://www.lotuslabs.ai/accurate-insurance-claims-prediction-with-deep-learning/).
+:::
+
+## Preprocess all French motor inputs
+
+Transform the categorical variables to integers:
+
+```{python}
+num_brands, num_regions = X_train.nunique()[["VehBrand", "Region"]]         #<1>
+
+ct = make_column_transformer(
+  (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),             #<2>
+  remainder=StandardScaler(),                                               #<3>
+  verbose_feature_names_out=False                                           #<4>
+)
+X_train_ct = ct.fit_transform(X_train)                                      #<5>
+X_test_ct = ct.transform(X_test)                                            #<6>
+```
+
+::: {.content-visible unless-format="revealjs"}
+1. Stores separately the number of unique categorical in the nominal variables, as would require these values later for entity embedding
+2. Contructs columns transformer by first ordinally encoding all categorical variables. Ordinal variables are ordinal encoded because it is the sensible thing. Nominal variables are ordinal encoded as an intermediate step before passing through an entity embedding layer 
+3. Applies standard scaling to all other numerical variables
+4. `verbose_feature_names_out=False` stops unnecessarily printing out the outputs of the process
+5. Fits the column transformer to the train set and transforms it
+6. Transforms the test set using the column transformer fitted using the train set
+:::
+
+Split the brand and region data apart from the rest:
+
+```{python}
+X_train_brand = X_train_ct["VehBrand"]; X_test_brand = X_test_ct["VehBrand"]
+X_train_region = X_train_ct["Region"]; X_test_region = X_test_ct["Region"]
+X_train_rest = X_train_ct.drop(["VehBrand", "Region"], axis=1)
+X_test_rest = X_test_ct.drop(["VehBrand", "Region"], axis=1)
+```
+
+## Organise the inputs
+
+Make a Keras `Input` for: vehicle brand, region, & others.
+
+```{python}
+veh_brand = Input(shape=(1,), name="vehBrand")
+region = Input(shape=(1,), name="region")
+other_inputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+```
+Create embeddings and join them with the other inputs. 
+```{python}
+from keras.layers import Reshape                                                #<1>
+
+random.seed(1337)
+veh_brand_ee = Embedding(input_dim=num_brands, output_dim=2,                    #<2>
+    name="vehBrandEE")(veh_brand)                                
+veh_brand_ee = Reshape(target_shape=(2,))(veh_brand_ee)                         #<3>
+
+region_ee = Embedding(input_dim=num_regions, output_dim=2,                      #<4>
+    name="regionEE")(region)
+region_ee = Reshape(target_shape=(2,))(region_ee)                               #<5>
+
+x = Concatenate(name="combined")([veh_brand_ee, region_ee, other_inputs])       #<6>
+```
+
+::: {.content-visible unless-format="revealjs"}
+1. Imports `Reshape` class from `keras.layers` library
+2. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimensions we want the input to be summarised in to)
+3. Reshapes the output to match the format required at the model building step
+4. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension
+5. Reshapes the output to match the format required at the model building step
+6. Combines the entity embedded matrices and other inputs together
+:::
+## Complete the model and fit it
+
+Feed the combined embeddings & continuous inputs to some normal dense layers.
+
+```{python}
+x = Dense(30, "relu", name="hidden")(x)
+out = Dense(1, "exponential", name="out")(x)
+
+model = Model([veh_brand, region, other_inputs], out)                     #<1>
+model.compile(optimizer="adam", loss="poisson")
+
+hist = model.fit((X_train_brand, X_train_region, X_train_rest),           #<2>
+    y_train, epochs=100, verbose=0,
+    callbacks=[EarlyStopping(patience=5)], validation_split=0.2)
+np.min(hist.history["val_loss"])
+```
+::: {.content-visible unless-format="revealjs"}
+1. Model building stage requires all inputs to be passed in together
+2. Passes in the three sets of data, since the format defined at the model building stage requires 3 data sets
+:::
+## Plotting this model
+
+```{python}
+plot_model(model, show_layer_names=True)
+```
+
+## Why we need to reshape
+
+```{python}
+plot_model(model, show_layer_names=True, show_shapes=True)
+```
+
+::: {.content-visible unless-format="revealjs"}
+The plotted model shows how, for example, `region` starts off as a matrix with `(None,1)` shape. This indicates that, `region` was a column matrix with some number of rows. Entity embedding the `region` variable resulted in a 3D array of shape (`(None,1,2)`) which is not the required format for concatenating. Therefore, we reshape it using the `Reshape` function. This results in column array of shape, `(None,2)` which is what we need for concatenating.
+:::
+
+# Scale By Exposure {visibility="uncounted"}
+
+## Two different models
+
+Have $\{ (\mathbf{x}_i, y_i) \}_{i=1, \dots, n}$ for $\mathbf{x}_i \in \mathbb{R}^{47}$ and $y_i \in \mathbb{N}_0$.
+
+**Model 1**: Say $Y_i \sim \mathsf{Poisson}(\lambda(\mathbf{x}_i))$.
+
+But, the exposures are different for each policy.
+$\lambda(\mathbf{x}_i)$ is the expected number of claims for the duration of policy $i$'s contract.
+
+**Model 2**: Say $Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\mathbf{x}_i))$.
+
+Now, $\text{Exposure}_i \not\in \mathbf{x}_i$, and $\lambda(\mathbf{x}_i)$ is the rate _per year_.
+
+## Just take continuous variables
+
+::: {.content-visible unless-format="revealjs"}
+For convenience, following code only considers the numerical variables during this implementation.
+:::
+
+```{python}
+ct = make_column_transformer(                                           #<1>
+  ("passthrough", ["Exposure"]),                                        #<2>
+  ("drop", ["VehBrand", "Region", "Area", "VehGas"]),                   #<3>
+  remainder=StandardScaler(),                                           #<4>
+  verbose_feature_names_out=False                                       #<5>
+)
+X_train_ct = ct.fit_transform(X_train)                                  #<6>
+X_test_ct = ct.transform(X_test)                                        #<7>
+```
+::: {.content-visible unless-format="revealjs"}
+1. Starts defining the column transformer 
+2. Lets `Exposure` passthrough the neural network as it is without peprocessing
+3. Drops the categorical variables (for the ease of implementation)
+4. Scales the remaining variables
+5. Avoids printing unnecessary outputs
+6. Fits and transforms the train set
+7. Only transforms the test set
+:::
+
+Split exposure apart from the rest:
+
+```{python}
+X_train_exp = X_train_ct["Exposure"]; X_test_exp = X_test_ct["Exposure"]    #<1>
+X_train_rest = X_train_ct.drop("Exposure", axis=1)                          #<2>
+X_test_rest = X_test_ct.drop("Exposure", axis=1)                            #<3>
+```
+
+::: {.content-visible unless-format="revealjs"}
+1. Takes out `Exposure` seperately
+2. Drops `Exposure` from train set
+3. Drops `Exposure` from test set
+:::
+
+Organise the inputs:
+
+```{python}
+exposure = Input(shape=(1,), name="exposure")
+other_inputs = Input(shape=X_train_rest.shape[1:], name="otherInputs")
+```
+
+## Make & fit the model
+
+Feed the continuous inputs to some normal dense layers.
+
+```{python}
+random.seed(1337)
+x = Dense(30, "relu", name="hidden1")(other_inputs)
+x = Dense(30, "relu", name="hidden2")(x)
+lambda_ = Dense(1, "exponential", name="lambda")(x)
+```
+
+```{python}
+from keras.layers import Multiply
+
+out = Multiply(name="out")([lambda_, exposure])
+model = Model([exposure, other_inputs], out)
+model.compile(optimizer="adam", loss="poisson")
+
+es = EarlyStopping(patience=10, restore_best_weights=True, verbose=1)
+hist = model.fit((X_train_exp, X_train_rest),
+    y_train, epochs=100, verbose=0,
+    callbacks=[es], validation_split=0.2)
+np.min(hist.history["val_loss"])
+```
+
+## Plot the model
+
+```{python}
+plot_model(model, show_layer_names=True)
+```
+
+## Package Versions {.appendix data-visibility="uncounted"}
+
+```{python}
+from watermark import watermark
+print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tf_keras"))
+```
+
+## Glossary {.appendix data-visibility="uncounted"}
+
+::: columns
+:::: column
+- entity embeddings
+- Input layer
+- Keras functional API
+::::
+:::: column
+- Reshape layer
+- skip connection
+- wide & deep network structure
+::::
+:::
+
+```{python}
+#| echo: false
+!rm model.png
+```
