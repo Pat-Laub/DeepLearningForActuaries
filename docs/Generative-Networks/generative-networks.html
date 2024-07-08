@@ -1,0 +1,2515 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.554">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Patrick Laub">
+
+<title>AI for Actuaries - Generative Networks</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Generative-Networks/gans.html" rel="next">
+<link href="../Labs/distributional-regression-lab.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Generative-Networks/generative-networks.html">Module 8</a></li><li class="breadcrumb-item"><a href="../Generative-Networks/generative-networks.html">Generative Networks</a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">AI for Actuaries</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Module 1</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Artificial-Intelligence/course-overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Artificial-Intelligence/artificial-intelligence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Artificial Intelligence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Artificial-Intelligence/python.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Intro Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-for-data-science-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Python for Data Science</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/chess-ai.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Chess AI</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">Module 2</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/deep-learning-keras.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Deep Learning with Keras</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/categorical-variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Categorical Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/classification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classification</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/project.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Project Details</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/matplotlib-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Matplotlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/victorian-crash-severity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Victorian Car Crash Severity</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/french-motor-frequency.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: French Motor Claim Frequency</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Module 3</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Computer-Vision/computer-vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/latex-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Markdown</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/hurricane-damage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Aerial Photos of Hurricane Damage</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text">Module 4</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Natural-Language-Processing/natural-language-processing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/police-reports.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Police Reports of US Car Crashes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text">Module 5</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Time-Series-And-Recurrent-Neural-Networks/time-series-and-rnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series &amp; Recurrent Neural Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/sydney-airport-temperature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Sydney Temperature Forecasting</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text">Module 6</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Tabular-Data/advanced-tabular-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Advanced Tabular Data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Tabular-Data/optimisation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/forward-pass-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Forward Pass</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/optimisation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/backpropagation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Backpropagation</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true">
+ <span class="menu-text">Module 7</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Distributional-Regression/distributional-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Distributional Regression</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Topics/interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interpretability</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/distributional-regression-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Distributional Regression</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true">
+ <span class="menu-text">Module 8</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Generative-Networks/generative-networks.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Generative Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Generative-Networks/gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Adversarial Networks</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true">
+ <span class="menu-text">Module 9</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Topics/next-steps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Next Steps</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#text-generation" id="toc-text-generation" class="nav-link active" data-scroll-target="#text-generation">Text Generation</a>
+  <ul class="collapse">
+  <li><a href="#generative-deep-learning" id="toc-generative-deep-learning" class="nav-link" data-scroll-target="#generative-deep-learning">Generative deep learning</a></li>
+  <li><a href="#text-generation-1" id="toc-text-generation-1" class="nav-link" data-scroll-target="#text-generation-1">Text generation</a></li>
+  <li><a href="#word-level-language-model" id="toc-word-level-language-model" class="nav-link" data-scroll-target="#word-level-language-model">Word-level language model</a></li>
+  <li><a href="#character-level-language-model" id="toc-character-level-language-model" class="nav-link" data-scroll-target="#character-level-language-model">Character-level language model</a></li>
+  <li><a href="#useful-for-speech-recognition" id="toc-useful-for-speech-recognition" class="nav-link" data-scroll-target="#useful-for-speech-recognition">Useful for speech recognition</a></li>
+  <li><a href="#generating-shakespeare-i" id="toc-generating-shakespeare-i" class="nav-link" data-scroll-target="#generating-shakespeare-i">Generating Shakespeare I</a></li>
+  <li><a href="#generating-shakespeare-ii" id="toc-generating-shakespeare-ii" class="nav-link" data-scroll-target="#generating-shakespeare-ii">Generating Shakespeare II</a></li>
+  <li><a href="#generating-shakespeare-iii" id="toc-generating-shakespeare-iii" class="nav-link" data-scroll-target="#generating-shakespeare-iii">Generating Shakespeare III</a></li>
+  </ul></li>
+  <li><a href="#sampling-strategy" id="toc-sampling-strategy" class="nav-link" data-scroll-target="#sampling-strategy">Sampling strategy</a>
+  <ul class="collapse">
+  <li><a href="#softmax-temperature" id="toc-softmax-temperature" class="nav-link" data-scroll-target="#softmax-temperature">Softmax temperature</a></li>
+  <li><a href="#i-am-a" id="toc-i-am-a" class="nav-link" data-scroll-target="#i-am-a">“I am a” …</a></li>
+  <li><a href="#generating-laub-temp-0.01" id="toc-generating-laub-temp-0.01" class="nav-link" data-scroll-target="#generating-laub-temp-0.01">Generating Laub (temp = 0.01)</a></li>
+  <li><a href="#generating-laub-temp-0.25" id="toc-generating-laub-temp-0.25" class="nav-link" data-scroll-target="#generating-laub-temp-0.25">Generating Laub (temp = 0.25)</a></li>
+  <li><a href="#generating-laub-temp-0.5" id="toc-generating-laub-temp-0.5" class="nav-link" data-scroll-target="#generating-laub-temp-0.5">Generating Laub (temp = 0.5)</a></li>
+  <li><a href="#generating-laub-temp-1" id="toc-generating-laub-temp-1" class="nav-link" data-scroll-target="#generating-laub-temp-1">Generating Laub (temp = 1)</a></li>
+  <li><a href="#generating-laub-temp-1.5" id="toc-generating-laub-temp-1.5" class="nav-link" data-scroll-target="#generating-laub-temp-1.5">Generating Laub (temp = 1.5)</a></li>
+  <li><a href="#generate-the-most-likely-sequence" id="toc-generate-the-most-likely-sequence" class="nav-link" data-scroll-target="#generate-the-most-likely-sequence">Generate the most likely sequence</a></li>
+  <li><a href="#beam-search" id="toc-beam-search" class="nav-link" data-scroll-target="#beam-search">Beam search</a></li>
+  </ul></li>
+  <li><a href="#transformers" id="toc-transformers" class="nav-link" data-scroll-target="#transformers">Transformers</a>
+  <ul class="collapse">
+  <li><a href="#transformer-architecture" id="toc-transformer-architecture" class="nav-link" data-scroll-target="#transformer-architecture">Transformer architecture</a></li>
+  <li><a href="#transformer-architecture-reference" id="toc-transformer-architecture-reference" class="nav-link" data-scroll-target="#transformer-architecture-reference">Transformer architecture reference</a></li>
+  <li><a href="#transformers-package" id="toc-transformers-package" class="nav-link" data-scroll-target="#transformers-package">🤗 Transformers package</a></li>
+  <li><a href="#reading-the-course-profile" id="toc-reading-the-course-profile" class="nav-link" data-scroll-target="#reading-the-course-profile">Reading the course profile</a></li>
+  <li><a href="#question-answering" id="toc-question-answering" class="nav-link" data-scroll-target="#question-answering">Question answering</a></li>
+  <li><a href="#chatgpt-is-transformer-rlhf" id="toc-chatgpt-is-transformer-rlhf" class="nav-link" data-scroll-target="#chatgpt-is-transformer-rlhf">ChatGPT is Transformer + RLHF</a></li>
+  <li><a href="#chatgpt-internals" id="toc-chatgpt-internals" class="nav-link" data-scroll-target="#chatgpt-internals">ChatGPT internals</a></li>
+  <li><a href="#chatgpt" id="toc-chatgpt" class="nav-link" data-scroll-target="#chatgpt">ChatGPT</a></li>
+  <li><a href="#recommended-reading" id="toc-recommended-reading" class="nav-link" data-scroll-target="#recommended-reading">Recommended reading</a></li>
+  </ul></li>
+  <li><a href="#image-generation" id="toc-image-generation" class="nav-link" data-scroll-target="#image-generation">Image Generation</a>
+  <ul class="collapse">
+  <li><a href="#reverse-engineering-a-cnn" id="toc-reverse-engineering-a-cnn" class="nav-link" data-scroll-target="#reverse-engineering-a-cnn">Reverse-engineering a CNN</a></li>
+  <li><a href="#adversarial-examples" id="toc-adversarial-examples" class="nav-link" data-scroll-target="#adversarial-examples">Adversarial examples</a></li>
+  <li><a href="#adversarial-stickers" id="toc-adversarial-stickers" class="nav-link" data-scroll-target="#adversarial-stickers">Adversarial stickers</a></li>
+  <li><a href="#adversarial-text" id="toc-adversarial-text" class="nav-link" data-scroll-target="#adversarial-text">Adversarial text</a></li>
+  <li><a href="#deep-dream" id="toc-deep-dream" class="nav-link" data-scroll-target="#deep-dream">Deep Dream</a></li>
+  <li><a href="#deepdream" id="toc-deepdream" class="nav-link" data-scroll-target="#deepdream">DeepDream</a></li>
+  <li><a href="#deepdream-1" id="toc-deepdream-1" class="nav-link" data-scroll-target="#deepdream-1">DeepDream</a></li>
+  <li><a href="#original" id="toc-original" class="nav-link" data-scroll-target="#original">Original</a></li>
+  <li><a href="#transformed" id="toc-transformed" class="nav-link" data-scroll-target="#transformed">Transformed</a></li>
+  </ul></li>
+  <li><a href="#neural-style-transfer" id="toc-neural-style-transfer" class="nav-link" data-scroll-target="#neural-style-transfer">Neural style transfer</a>
+  <ul class="collapse">
+  <li><a href="#neural-style-transfer-1" id="toc-neural-style-transfer-1" class="nav-link" data-scroll-target="#neural-style-transfer-1">Neural style transfer</a></li>
+  <li><a href="#goal-of-nst" id="toc-goal-of-nst" class="nav-link" data-scroll-target="#goal-of-nst">Goal of NST</a></li>
+  <li><a href="#a-wanderer-in-greenland" id="toc-a-wanderer-in-greenland" class="nav-link" data-scroll-target="#a-wanderer-in-greenland">A wanderer in Greenland</a></li>
+  <li><a href="#a-wanderer-in-greenland-ii" id="toc-a-wanderer-in-greenland-ii" class="nav-link" data-scroll-target="#a-wanderer-in-greenland-ii">A wanderer in Greenland II</a></li>
+  <li><a href="#a-new-style-image" id="toc-a-new-style-image" class="nav-link" data-scroll-target="#a-new-style-image">A new style image</a></li>
+  <li><a href="#a-new-content-image" id="toc-a-new-content-image" class="nav-link" data-scroll-target="#a-new-content-image">A new content image</a></li>
+  <li><a href="#another-neural-style-transfer" id="toc-another-neural-style-transfer" class="nav-link" data-scroll-target="#another-neural-style-transfer">Another neural style transfer</a></li>
+  <li><a href="#why-is-this-important" id="toc-why-is-this-important" class="nav-link" data-scroll-target="#why-is-this-important">Why is this important?</a></li>
+  </ul></li>
+  <li><a href="#autoencoders" id="toc-autoencoders" class="nav-link" data-scroll-target="#autoencoders">Autoencoders</a>
+  <ul class="collapse">
+  <li><a href="#autoencoder" id="toc-autoencoder" class="nav-link" data-scroll-target="#autoencoder">Autoencoder</a></li>
+  <li><a href="#autoencoder-ii" id="toc-autoencoder-ii" class="nav-link" data-scroll-target="#autoencoder-ii">Autoencoder II</a></li>
+  <li><a href="#example-psam" id="toc-example-psam" class="nav-link" data-scroll-target="#example-psam">Example: PSAM</a></li>
+  <li><a href="#a-compression-game" id="toc-a-compression-game" class="nav-link" data-scroll-target="#a-compression-game">A compression game</a></li>
+  <li><a href="#make-a-basic-autoencoder" id="toc-make-a-basic-autoencoder" class="nav-link" data-scroll-target="#make-a-basic-autoencoder">Make a basic autoencoder</a></li>
+  <li><a href="#the-model" id="toc-the-model" class="nav-link" data-scroll-target="#the-model">The model</a></li>
+  <li><a href="#some-recovered-image" id="toc-some-recovered-image" class="nav-link" data-scroll-target="#some-recovered-image">Some recovered image</a></li>
+  <li><a href="#invert-the-images" id="toc-invert-the-images" class="nav-link" data-scroll-target="#invert-the-images">Invert the images</a></li>
+  <li><a href="#try-inverting-the-images" id="toc-try-inverting-the-images" class="nav-link" data-scroll-target="#try-inverting-the-images">Try inverting the images</a></li>
+  <li><a href="#the-model-1" id="toc-the-model-1" class="nav-link" data-scroll-target="#the-model-1">The model</a></li>
+  <li><a href="#some-recovered-image-1" id="toc-some-recovered-image-1" class="nav-link" data-scroll-target="#some-recovered-image-1">Some recovered image</a></li>
+  <li><a href="#cnn-enhanced-encoder" id="toc-cnn-enhanced-encoder" class="nav-link" data-scroll-target="#cnn-enhanced-encoder">CNN-enhanced encoder</a></li>
+  <li><a href="#encoder-summary" id="toc-encoder-summary" class="nav-link" data-scroll-target="#encoder-summary">Encoder summary</a></li>
+  <li><a href="#decoder-summary" id="toc-decoder-summary" class="nav-link" data-scroll-target="#decoder-summary">Decoder summary</a></li>
+  <li><a href="#some-recovered-image-2" id="toc-some-recovered-image-2" class="nav-link" data-scroll-target="#some-recovered-image-2">Some recovered image</a></li>
+  <li><a href="#latent-space-vs-word-embedding" id="toc-latent-space-vs-word-embedding" class="nav-link" data-scroll-target="#latent-space-vs-word-embedding">Latent space vs word embedding</a></li>
+  <li><a href="#latent-space-vs-word-embedding-1" id="toc-latent-space-vs-word-embedding-1" class="nav-link" data-scroll-target="#latent-space-vs-word-embedding-1">Latent space vs word embedding</a></li>
+  <li><a href="#intentionally-add-noise-to-inputs" id="toc-intentionally-add-noise-to-inputs" class="nav-link" data-scroll-target="#intentionally-add-noise-to-inputs">Intentionally add noise to inputs</a></li>
+  <li><a href="#denoising-autoencoder" id="toc-denoising-autoencoder" class="nav-link" data-scroll-target="#denoising-autoencoder">Denoising autoencoder</a></li>
+  </ul></li>
+  <li><a href="#variational-autoencoders" id="toc-variational-autoencoders" class="nav-link" data-scroll-target="#variational-autoencoders">Variational Autoencoders</a>
+  <ul class="collapse">
+  <li><a href="#variational-autoencoder" id="toc-variational-autoencoder" class="nav-link" data-scroll-target="#variational-autoencoder">Variational autoencoder</a></li>
+  <li><a href="#vae-schematic-process" id="toc-vae-schematic-process" class="nav-link" data-scroll-target="#vae-schematic-process">VAE schematic process</a></li>
+  <li><a href="#focus-on-the-decoder" id="toc-focus-on-the-decoder" class="nav-link" data-scroll-target="#focus-on-the-decoder">Focus on the decoder</a></li>
+  <li><a href="#exploring-the-mnist-latent-space" id="toc-exploring-the-mnist-latent-space" class="nav-link" data-scroll-target="#exploring-the-mnist-latent-space">Exploring the MNIST latent space</a></li>
+  <li><a href="#recommended-viewing" id="toc-recommended-viewing" class="nav-link" data-scroll-target="#recommended-viewing">Recommended Viewing</a></li>
+  </ul></li>
+  <li><a href="#diffusion-models" id="toc-diffusion-models" class="nav-link" data-scroll-target="#diffusion-models">Diffusion Models</a>
+  <ul class="collapse">
+  <li><a href="#using-kerascv" id="toc-using-kerascv" class="nav-link" data-scroll-target="#using-kerascv">Using KerasCV</a></li>
+  
+  
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="generative-networks.slides.html"><i class="bi bi-file-slides"></i>RevealJS</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Generative-Networks/generative-networks.html">Module 8</a></li><li class="breadcrumb-item"><a href="../Generative-Networks/generative-networks.html">Generative Networks</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Generative Networks</h1>
+<p class="subtitle lead">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Patrick Laub </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div id="1abb5a58" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>Show the package imports</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy.random <span class="im">as</span> rnd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> keras</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras <span class="im">import</span> layers</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<section id="text-generation" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="text-generation">Text Generation</h2>
+<section id="generative-deep-learning" class="level3">
+<h3 class="anchored" data-anchor-id="generative-deep-learning">Generative deep learning</h3>
+<ul>
+<li>Using AI as augmented intelligence rather than artificial intelligence.</li>
+<li>Use of deep learning to augment creative activities such as writing, music and art, to <em>generate</em> new things.</li>
+<li>Some applications: text generation, deep dreaming, neural style transfer, variational autoencoders and generative adversarial networks.</li>
+</ul>
+</section>
+<section id="text-generation-1" class="level3">
+<h3 class="anchored" data-anchor-id="text-generation-1">Text generation</h3>
+<blockquote class="blockquote">
+<p>Generating sequential data is the closest computers get to dreaming.</p>
+</blockquote>
+<ul>
+<li>Generate sequence data: Train a model to predict the next token or next few tokens in a sentence, using previous tokens as input.</li>
+<li>A network that models the probability of the next tokens given the previous ones is called a <em>language model</em>.</li>
+</ul>
+<div class="notes">
+<p>GPT-3 is a 175 billion parameter text-generation model trained by the startup OpenAI on a large text corpus of digitally available books, Wikipedia and web crawling. GPT-3 made headlines in 2020 due to its capability to generate plausible-sounding text paragraphs on virtually any topic.</p>
+</div>
+<div class="footer">
+<p>Source: Alex Graves (2013), <a href="https://arxiv.org/abs/1308.0850">Generating Sequences With Recurrent Neural Networks</a></p>
+</div>
+</section>
+<section id="word-level-language-model" class="level3">
+<h3 class="anchored" data-anchor-id="word-level-language-model">Word-level language model</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="word-level-language-model.png" class="img-fluid figure-img"></p>
+<figcaption>Diagram of a word-level language model.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Marcus Lautier (2022).</p>
+</div>
+<p>The way how word-level language models work is that, it first takes in the input text and then generates the probability distribution of the next word. This distribution tells us how likely a certain word is to be the next word. Thereafter, the model implements a appropriate sampling strategy to select the next word. Once the next word is predicted, it is appended to the input text and then passed in to the model again to predict the next word. The idea here is to predict the word after word.</p>
+</section>
+<section id="character-level-language-model" class="level3">
+<h3 class="anchored" data-anchor-id="character-level-language-model">Character-level language model</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="tensorflow-text_generation_sampling.png" class="img-fluid figure-img"></p>
+<figcaption>Diagram of a character-level language model (Char-RNN)</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Tensorflow tutorial, <a href="https://www.tensorflow.org/text/tutorials/text_generation">Text generation with an RNN</a>.</p>
+</div>
+<p>Character-level language predtics the next character given a certain input character. They capture patterns at a much granular level and do not aim to capture semantics of words.</p>
+</section>
+<section id="useful-for-speech-recognition" class="level3">
+<h3 class="anchored" data-anchor-id="useful-for-speech-recognition">Useful for speech recognition</h3>
+<div id="fig-speech-recognition" class="quarto-figure quarto-figure-center quarto-float anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-speech-recognition-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>RNN output</th>
+<th>Decoded Transcription</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>what is the weather like in bostin right now</td>
+<td>what is the weather like in boston right now</td>
+</tr>
+<tr class="even">
+<td>prime miniter nerenr modi</td>
+<td>prime minister narendra modi</td>
+</tr>
+<tr class="odd">
+<td>arther n tickets for the game</td>
+<td>are there any tickets for the game</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-speech-recognition-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Examples of transcriptions directly from the RNN with errors that are fixed by addition of a language model.
+</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Hannun et al.&nbsp;(2014), <a href="https://arxiv.org/pdf/1412.5567.pdf">Deep Speech: Scaling up end-to-end speech recognition</a>, arXiv:1412.5567, Table 1.</p>
+</div>
+<p>The above example shows how RNN predictions (for sequential data processing) can be improved by fixing errors using a language model.</p>
+</section>
+<section id="generating-shakespeare-i" class="level3">
+<h3 class="anchored" data-anchor-id="generating-shakespeare-i">Generating Shakespeare I</h3>
+<p>The following is an example how a language model trained on works of Shakespeare starts predicting words after we input a string. This is an example of a character-level prediction, where we aim to predict the most likely character, not the word.</p>
+<blockquote class="blockquote">
+<div class="line-block">ROMEO:<br>
+Why, sir, what think you, sir?<br>
+<br>
+AUTOLYCUS:<br>
+A dozen; shall I be deceased.<br>
+The enemy is parting with your general,<br>
+As bias should still combit them offend<br>
+That Montague is as devotions that did satisfied;<br>
+But not they are put your pleasure.</div>
+</blockquote>
+<div class="footer">
+<p>Source: Tensorflow tutorial, <a href="https://www.tensorflow.org/text/tutorials/text_generation">Text generation with an RNN</a>.</p>
+</div>
+</section>
+<section id="generating-shakespeare-ii" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="generating-shakespeare-ii">Generating Shakespeare II</h3>
+<blockquote class="blockquote">
+<div class="line-block">DUKE OF YORK:<br>
+Peace, sing! do you must be all the law;<br>
+And overmuting Mercutio slain;<br>
+And stand betide that blows which wretched shame;<br>
+Which, I, that have been complaints me older hours.<br>
+<br>
+LUCENTIO:<br>
+What, marry, may shame, the forish priest-lay estimest you, sir,<br>
+Whom I will purchase with green limits o’ the commons’ ears!</div>
+</blockquote>
+<div class="footer">
+<p>Source: Tensorflow tutorial, <a href="https://www.tensorflow.org/text/tutorials/text_generation">Text generation with an RNN</a>.</p>
+</div>
+</section>
+<section id="generating-shakespeare-iii" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="generating-shakespeare-iii">Generating Shakespeare III</h3>
+<blockquote class="blockquote">
+<div class="line-block">ANTIGONUS:<br>
+To be by oath enjoin’d to this. Farewell!<br>
+The day frowns more and more: thou’rt like to have<br>
+A lullaby too rough: I never saw<br>
+The heavens so dim by day. A savage clamour!<br>
+<br>
+[Exit, pursued by a bear]</div>
+</blockquote>
+</section>
+</section>
+<section id="sampling-strategy" class="level2">
+<h2 class="anchored" data-anchor-id="sampling-strategy">Sampling strategy</h2>
+<p>The sampling strategy refers to the way how we pick the next word/character as the prediction after observing the distribution. There are different sampling strategies and they aim to serve different levels of trade-offs between exploration and exploitation when generating text sequences.</p>
+<ul>
+<li><em>Greedy sampling</em> will choose the token with the highest probability. It makes the resulting sentence repetitive and predictable.</li>
+<li><em>Stochastic sampling</em>: if a word has probability 0.3 of being next in the sentence according to the model, we’ll choose it 30% of the time. But the result is still not interesting enough and still quite predictable.</li>
+<li>Use a <em>softmax temperature</em> to control the randomness. More randomness results in more surprising and creative sentences.</li>
+</ul>
+<section id="softmax-temperature" class="level3">
+<h3 class="anchored" data-anchor-id="softmax-temperature">Softmax temperature</h3>
+<ul>
+<li>The softmax temperature is a parameter that controls the randomness of the next token.</li>
+<li>The formula is: <span class="math display"> \text{softmax}_\text{temperature}(x) = \frac{\exp(x / \text{temperature})}{\sum_i \exp(x_i / \text{temperature})} </span></li>
+</ul>
+</section>
+<section id="i-am-a" class="level3">
+<h3 class="anchored" data-anchor-id="i-am-a">“I am a” …</h3>
+<div id="f01a14a6" class="cell" data-execution_count="3">
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-4-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="footer">
+<p>Idea inspired by Mehta (2023), <a href="https://shivammehta25.github.io/posts/temperature-in-language-models-open-ai-whisper-probabilistic-machine-learning/">The need for sampling temperature and differences between whisper, GPT-3, and probabilistic model’s temperature</a></p>
+</div>
+<p>The graphical illustration above shows how the distribution of words change with different levels of <code>Temp</code> values. Higher levels of temperatures result in less predictable(more interesting) outcomes. If we continue to increase the <code>Temp</code> levels, after a certain point, outcomes will be picked completely at random. This predictions after this point might not be meaningful. Hence, attention to the trade-off between predictability and interestingness is important when deciding the <code>Temp</code> levels.</p>
+<p>The following sections show how a neural network turned on the same dataset, and given the same starting input string <em>In today’s lecture we will</em> shall generate very different sequences of text as predictions. <code>Temp=0.25</code> may give interesting outputs compared to <code>Temp=0.01</code> and <code>Temp=0.50</code> may give interesting outputs compared to <code>Temp=0.25</code>. However, when we keep on increasing <code>Temp</code> levels, the neural network starts giving out random(meaningless) outcomes.</p>
+</section>
+<section id="generating-laub-temp-0.01" class="level3">
+<h3 class="anchored" data-anchor-id="generating-laub-temp-0.01">Generating Laub (temp = 0.01)</h3>
+<blockquote class="blockquote">
+<p><em>In today’s lecture we will</em> be different situation. So, next one is what they rective that each commit to be able to learn some relationships from the course, and that is part of the image that it’s very clese and black problems that you’re trying to fit the neural network to do there instead of like a specific though shef series of layers mean about full of the chosen the baseline of car was in the right, but that’s an important facts and it’s a very small summary with very scrort by the beginning of the sentence.</p>
+</blockquote>
+</section>
+<section id="generating-laub-temp-0.25" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="generating-laub-temp-0.25">Generating Laub (temp = 0.25)</h3>
+<blockquote class="blockquote">
+<p><em>In today’s lecture we will</em> decreas before model that we that we have to think about it, this mightsks better, for chattely the same project, because you might use the test set because it’s to be picked up the things that I wanted to heard of things that I like that even real you and you’re using the same thing again now because we need to understand what it’s doing the same thing but instead of putting it in particular week, and we can say that’s a thing I mainly link it’s three columns.</p>
+</blockquote>
+</section>
+<section id="generating-laub-temp-0.5" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="generating-laub-temp-0.5">Generating Laub (temp = 0.5)</h3>
+<blockquote class="blockquote">
+<p><em>In today’s lecture we will</em> probably the adw n wait lots of ngobs teulagedation to calculate the gradient and then I’ll be less than one layer the next slide will br input over and over the threshow you ampaigey the one that we want to apply them quickly. So, here this is the screen here the main top kecw onct three thing to told them, and the output is a vertical variables and Marceparase of things that you’re moving the blurring and that just data set is to maybe kind of categorical variants here but there’s more efficiently not basically replace that with respect to the best and be the same thing.</p>
+</blockquote>
+</section>
+<section id="generating-laub-temp-1" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="generating-laub-temp-1">Generating Laub (temp = 1)</h3>
+<blockquote class="blockquote">
+<p><em>In today’s lecture we will</em> put it different shates to touch on last week, so I want to ask what are you object frod current. They don’t have any zero into it, things like that which mistakes. 10 claims that the average version was relden distever ditgs and Python for the whole term wo long right to really. The name of these two options. There are in that seems to be modified version. If you look at when you’re putting numbers into your, that that’s over. And I went backwards, up, if they’rina functional pricing working with.</p>
+</blockquote>
+</section>
+<section id="generating-laub-temp-1.5" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="generating-laub-temp-1.5">Generating Laub (temp = 1.5)</h3>
+<blockquote class="blockquote">
+<p><em>In today’s lecture we will</em> put it could be bedinnth. Lowerstoriage nruron. So rochain the everything that I just sGiming. If there was a large. It’s gonua draltionation. Tow many, up, would that black and 53% that’s girter thankAty will get you jast typically stickK thing. But maybe. Anyway, I’m going to work on this libry two, past, at shit citcs jast pleming to memorize overcamples like pre pysing, why wareed to smart a one in this reportbryeccuriay.</p>
+</blockquote>
+</section>
+<section id="generate-the-most-likely-sequence" class="level3">
+<h3 class="anchored" data-anchor-id="generate-the-most-likely-sequence">Generate the most likely sequence</h3>
+<p>Similar to other sequence generating tasks such as generating the next word or generating the next character, generating an entire sequence of words is also useful. The task involves generating the most likely sequence after observing model predictions.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chatbot.png" class="img-fluid figure-img"></p>
+<figcaption>An example sequence-to-sequence chatbot model.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Payne (2021), <a href="https://www.width.ai/post/what-is-beam-search">What is beam search</a>, Width.ai blog.</p>
+</div>
+</section>
+<section id="beam-search" class="level3">
+<h3 class="anchored" data-anchor-id="beam-search">Beam search</h3>
+<p>Instead of trying to carry forward only the highest probable prediction, beam search carries forward several high probable predictions, and then decide the highest probable combination of predictions. Beam search helps expand the exploration horizon for predictions which can contribute to more contextually relevant model predictions. However, this comes at a certain computational complexity.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="beam-search.png" class="img-fluid figure-img"></p>
+<figcaption>Illustration of a beam search.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Doshi (2021), <a href="https://towardsdatascience.com/foundations-of-nlp-explained-visually-beam-search-how-it-works-1586b9849a24">Foundations of NLP Explained Visually: Beam Search, How It Works</a>, towardsdatascience.com.</p>
+</div>
+</section>
+</section>
+<section id="transformers" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="transformers">Transformers</h2>
+<p>Transformers are a special type of neural networks that are proven to be highly effective in NLP tasks. They can capture long-run dependencies in the sequential data that is useful for generating predictions with contextual meaning. It makes use of the <em>self-attention</em> mechanism which studies all inputs in the sequence together, tries to understand the dependencies among them, and then utilizes the information about long-run dependencies to predict the output sequence.</p>
+<section id="transformer-architecture" class="level3">
+<h3 class="anchored" data-anchor-id="transformer-architecture">Transformer architecture</h3>
+<blockquote class="blockquote">
+<p>GPT makes use of a mechanism known as attention, which removes the need for recurrent layers (e.g., LSTMs). It works like an information retrieval system, utilizing queries, keys, and values to decide how much information it wants to extract from each input token.</p>
+<p>Attention heads can be grouped together to form what is known as a multihead attention layer. These are then wrapped up inside a Transformer block, which includes layer normalization and skip connections around the attention layer. Transformer blocks can be stacked to create very deep neural networks.</p>
+</blockquote>
+<div class="footer">
+<p>Source: David Foster (2023), Generative Deep Learning, 2nd Edition, O’Reilly Media, Chapter 9.</p>
+</div>
+</section>
+<section id="transformer-architecture-reference" class="level3">
+<h3 class="anchored" data-anchor-id="transformer-architecture-reference">Transformer architecture reference</h3>
+<div class="quarto-video ratio ratio-16x9"><iframe data-external="1" src="https://www.youtube.com/embed/LE3NfEULV6k" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
+</section>
+<section id="transformers-package" class="level3">
+<h3 class="anchored" data-anchor-id="transformers-package">🤗 Transformers package</h3>
+<p>The following code uses transformers library from <em>Hugging Face</em> to create a text generation pipeline using the GPT2 (Generative Pre-trained Transformer 2).</p>
+<div id="77693134" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="annotated-cell-1"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-1-1" class="code-annotation-target"><a href="#annotated-cell-1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> transformers</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-1-2" class="code-annotation-target"><a href="#annotated-cell-1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> transformers <span class="im">import</span> pipeline</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-1-3" class="code-annotation-target"><a href="#annotated-cell-1-3" aria-hidden="true" tabindex="-1"></a>generator <span class="op">=</span> pipeline(task<span class="op">=</span><span class="st">"text-generation"</span>, model<span class="op">=</span><span class="st">"gpt2"</span>, revision<span class="op">=</span><span class="st">"6c0e608"</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-1" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="1" data-code-annotation="1">Imports the <code>transformers</code> library</span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="2" data-code-annotation="2">Imports the class <code>pipeline</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="3" data-code-annotation="3">Creates a pipeline object called the <code>generator</code>, whose task would be to generate text, using the pretrained model GPT2. <code>revision="6c0e608"</code> specifies the specific revision of the model to refer</span>
+</dd>
+</dl>
+</div>
+</div>
+<div id="d8276bac" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="annotated-cell-2"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-2-1" class="code-annotation-target"><a href="#annotated-cell-2-1" aria-hidden="true" tabindex="-1"></a>transformers.set_seed(<span class="dv">1</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-2" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-2-2" class="code-annotation-target"><a href="#annotated-cell-2-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-2" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="1" data-code-annotation="1">Sets the seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-2" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-2" data-code-lines="2" data-code-annotation="2">Applies the <code>generator</code> object to generate a text based on the input <em>It’s the holidays so I’m going to enjoy</em>. The result from genrator would be a list of generated texts. To select the first output sequence hence, we pass the command <code>[0]["generated_text"]</code></span>
+</dd>
+</dl>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Setting `pad_token_id` to `eos_token_id`:50256 for open-end generation.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>It's the holidays so I'm going to enjoy playing in there."
+
+Advertisement
+
+But how many other holiday-goers would want to join his team?
+
+
+"They wouldn't know if I would be there, not that I'm</code></pre>
+</div>
+</div>
+<p>We can try the same code with a different seed value, and it would give a very different output.</p>
+<div id="4a12707c" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>transformers.set_seed(<span class="dv">2</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(generator(<span class="st">"It's the holidays so I'm going to enjoy"</span>)[<span class="dv">0</span>][<span class="st">"generated_text"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Setting `pad_token_id` to `eos_token_id`:50256 for open-end generation.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>It's the holidays so I'm going to enjoy it. It's also a good holiday or we're going to go back and play soccer."
+
+If Murgatroyd are to sign a deal with the club this summer, it is</code></pre>
+</div>
+</div>
+</section>
+<section id="reading-the-course-profile" class="level3">
+<h3 class="anchored" data-anchor-id="reading-the-course-profile">Reading the course profile</h3>
+<p>Another application of pipeline is the ability to generate texts in the answer format. The following is an example of how a pretrained model can be used to answer questions by relating it to a body of text information(context).</p>
+<div id="01555334" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>context <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="st">StoryWall Formative Discussions: An initial StoryWall, worth 2%, is due by noon on June 3. The following StoryWalls are worth 4</span><span class="sc">% e</span><span class="st">ach (taking the best 7 of 9) and are due at noon on the following dates:</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="st">The project will be submitted in stages: draft due at noon on July 1 (10%), recorded presentation due at noon on July 22 (15%), final report due at noon on August 1 (15%).</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="st">As a student at UNSW you are expected to display academic integrity in your work and interactions. Where a student breaches the UNSW Student Code with respect to academic integrity, the University may take disciplinary action under the Student Misconduct Procedure. To assure academic integrity, you may be required to demonstrate reasoning, research and the process of constructing work submitted for assessment.</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="st">To assist you in understanding what academic integrity means, and how to ensure that you do comply with the UNSW Student Code, it is strongly recommended that you complete the Working with Academic Integrity module before submitting your first assessment task. It is a free, online self-paced Moodle module that should take about one hour to complete.</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="st">StoryWall (30%)</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="st">The StoryWall format will be used for small weekly questions. Each week of questions will be released on a Monday, and most of them will be due the following Monday at midday (see assessment table for exact dates). Students will upload their responses to the question sets, and give comments on another student's submission. Each week will be worth 4%, and the grading is pass/fail, with the best 7 of 9 being counted. The first week's basic 'introduction' StoryWall post is counted separately and is worth 2%.</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="st">Project (40%)</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="st">Over the term, students will complete an individual project. There will be a selection of deep learning topics to choose from (this will be outlined during Week 1).</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="st">The deliverables for the project will include: a draft/progress report mid-way through the term, a presentation (recorded), a final report including a written summary of the project and the relevant Python code (Jupyter notebook).</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="st">Exam (30%)</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a><span class="st">The exam will test the concepts presented in the lectures. For example, students will be expected to: provide definitions for various deep learning terminology, suggest neural network designs to solve risk and actuarial problems, give advice to mock deep learning engineers whose projects have hit common roadblocks, find/explain common bugs in deep learning Python code.</span></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="question-answering" class="level3">
+<h3 class="anchored" data-anchor-id="question-answering">Question answering</h3>
+<div id="787ebd6c" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="annotated-cell-5"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-5" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-5-1" class="code-annotation-target"><a href="#annotated-cell-5-1" aria-hidden="true" tabindex="-1"></a>qa <span class="op">=</span> pipeline(<span class="st">"question-answering"</span>, model<span class="op">=</span><span class="st">"distilbert-base-cased-distilled-squad"</span>, revision<span class="op">=</span><span class="st">"626af31"</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-5" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-5" data-code-lines="1" data-code-annotation="1">Creates a <em>question and answer</em> style pipeline object by referring to the pretrained model pre-trained <em>DistilBERT</em> model (fine-tuned on the SQuAD: Stanford Question Answering Dataset) with revision <code>626af31</code></span>
+</dd>
+</dl>
+</div>
+</div>
+<div id="7b410cb4" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="annotated-cell-6"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-6-1" class="code-annotation-target"><a href="#annotated-cell-6-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"What weight is the exam?"</span>, context<span class="op">=</span>context)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-6" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-6" data-code-lines="1" data-code-annotation="1">Answers the questions <em>What weight is the exam</em> given the context specified</span>
+</dd>
+</dl>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<pre><code>{'score': 0.5019668340682983, 'start': 2092, 'end': 2095, 'answer': '30%'}</code></pre>
+</div>
+</div>
+<div id="d783120f" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"What topics are in the exam?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="10">
+<pre><code>{'score': 0.2127601057291031,
+ 'start': 1778,
+ 'end': 1791,
+ 'answer': 'deep learning'}</code></pre>
+</div>
+</div>
+<div id="fcffedff" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"When is the presentation due?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="11">
+<pre><code>{'score': 0.5296486020088196,
+ 'start': 1319,
+ 'end': 1335,
+ 'answer': 'Monday at midday'}</code></pre>
+</div>
+</div>
+<div id="d0fc6199" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>qa(question<span class="op">=</span><span class="st">"How many StoryWall tasks are there?"</span>, context<span class="op">=</span>context)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
+<pre><code>{'score': 0.21390895545482635, 'start': 1155, 'end': 1158, 'answer': '30%'}</code></pre>
+</div>
+</div>
+</section>
+<section id="chatgpt-is-transformer-rlhf" class="level3">
+<h3 class="anchored" data-anchor-id="chatgpt-is-transformer-rlhf">ChatGPT is Transformer + RLHF</h3>
+<blockquote class="blockquote">
+<p>At the time of writing, there is no official paper that describes how ChatGPT works in detail, but from the official blog post we know that it uses a technique called reinforcement learning from human feedback (RLHF) to fine-tune the GPT-3.5 model.</p>
+</blockquote>
+<div class="footer">
+<p>Source: David Foster (2023), Generative Deep Learning, 2nd Edition, O’Reilly Media, Chapter 9.</p>
+</div>
+</section>
+<section id="chatgpt-internals" class="level3">
+<h3 class="anchored" data-anchor-id="chatgpt-internals">ChatGPT internals</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="ChatGPT-Diagram.png" class="img-fluid figure-img"></p>
+<figcaption>It uses a fair bit of human feedback</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: <a href="https://openai.com/blog/chatgpt">OpenAI blog</a>.</p>
+</div>
+</section>
+<section id="chatgpt" class="level3">
+<h3 class="anchored" data-anchor-id="chatgpt">ChatGPT</h3>
+<blockquote class="blockquote">
+<p>While ChatGPT still has many limitations (such as sometimes “hallucinating” factually incorrect information), it is a powerful example of how Transformers can be used to build generative models that can produce complex, long-ranging, and novel output that is often indistinguishable from human-generated text. The progress made thus far by models like ChatGPT serves as a testament to the potential of AI and its transformative impact on the world.</p>
+</blockquote>
+<div class="footer">
+<p>Source: David Foster (2023), Generative Deep Learning, 2nd Edition, O’Reilly Media, Chapter 9.</p>
+</div>
+</section>
+<section id="recommended-reading" class="level3 smaller">
+<h3 class="smaller anchored" data-anchor-id="recommended-reading">Recommended reading</h3>
+<ul>
+<li>The Verge (2022), <a href="https://www.theverge.com/c/23194235/ai-fiction-writing-amazon-kindle-sudowrite-jasper">The Great Fiction of AI: The strange world of high-speed semi-automated genre fiction</a></li>
+<li>Vaswani et al.&nbsp;(2017), <a href="https://arxiv.org/pdf/1706.03762.pdf">Attention Is All You Need</a>, NeurIPS</li>
+<li>Bommasani et al.&nbsp;(2021), <a href="https://arxiv.org/pdf/2108.07258.pdf">On the Opportunities and Risks of Foundation Models</a></li>
+<li>Gary Marcus (2022), <a href="https://nautil.us/deep-learning-is-hitting-a-wall-14467/">Deep Learning Is Hitting a Wall</a>, Nautilus article</li>
+<li>SDS 564, <a href="https://podcasts.apple.com/au/podcast/super-data-science/id1163599059?i=1000556643700">Clem Delangue on Hugging Face and Transformers</a></li>
+<li>SDS 559, <a href="https://podcasts.apple.com/au/podcast/super-data-science/id1163599059?i=1000554847681">GPT-3 for Natural Language Processing</a></li>
+<li>Computerphile (2019), <a href="https://youtu.be/rURRYI66E54">AI Language Models &amp; Transformers</a> (20m)</li>
+<li>Computerphile (2020), <a href="https://youtu.be/_8yVOC4ciXc">GPT3: An Even Bigger Language Model</a> (25m)</li>
+<li>Nicholas Renotte (2021), <a href="https://youtu.be/JctmnczWg0U">AI Blog Post Summarization with Hugging Face Transformers…</a> (33m)</li>
+<li>Seattle Applied Deep Learning (2019), <a href="https://youtu.be/S27pHKBEp30">LSTM is dead. Long Live Transformers!</a> (28m)</li>
+</ul>
+</section>
+</section>
+<section id="image-generation" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="image-generation">Image Generation</h2>
+<section id="reverse-engineering-a-cnn" class="level3">
+<h3 class="anchored" data-anchor-id="reverse-engineering-a-cnn">Reverse-engineering a CNN</h3>
+<p>Reverse engineering is a process where we manipulate the inputs <em>x</em> while keeping the loss function and the model architecture the same. This is useful in understanding the inner workings of the model, especially when we do not have access to the model architecture or the original train dataset. The idea here is to tweak/distort the input feature data and observe how model predictions vary. This provides meaningful insights in to what patterns in the input data are most critical to making model predictions.</p>
+<p>This task however requires computing the gradients of the model’s outputs with respect to all input features, hence, can be time consuming.</p>
+<p>A CNN is a function <span class="math inline">f_{\boldsymbol{\theta}}(\mathbf{x})</span> that takes a vector (image) <span class="math inline">\mathbf{x}</span> and returns a vector (distribution) <span class="math inline">\widehat{\mathbf{y}}</span>.</p>
+<p>Normally, we train it by modifying <span class="math inline">\boldsymbol{\theta}</span> so that</p>
+<p><span class="math display"> \boldsymbol{\theta}^*\ =\  \underset{\boldsymbol{\theta}}{\mathrm{argmin}} \,\, \text{Loss} \bigl( f_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y} \bigr). </span></p>
+<p>However, it is possible to <em>not train</em> the network but to modify <span class="math inline">\mathbf{x}</span>, like</p>
+<p><span class="math display"> \mathbf{x}^*\ =\  \underset{\mathbf{x}}{\mathrm{argmin}} \,\, \text{Loss} \bigl( f_{\boldsymbol{\theta}}(\mathbf{x}), \mathbf{y} \bigr). </span></p>
+<p>This is very slow as we do gradient descent every single time.</p>
+</section>
+<section id="adversarial-examples" class="level3">
+<h3 class="anchored" data-anchor-id="adversarial-examples">Adversarial examples</h3>
+<p>An adversarial attack refers to a small carefully created modifications to the input data that aims to trick the model in to making wrong predictions while keeping the <em>y_true</em> same. The goal is to identify instances where subtle modifications in the input data (which are not instantaneously recognized) can lead to erroneous model predictions.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="adversarial-example.png" class="img-fluid figure-img"></p>
+<figcaption>A demonstration of fast adversarial example generation applied to GoogLeNet on ImageNet. By adding an imperceptibly small vector whose elements are equal to the sign of the elements of the gradient of the cost function with respect to the input, we can change GoogLeNet’s classification of the image.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Goodfellow et al.&nbsp;(2015), <a href="https://arxiv.org/pdf/1412.6572.pdf">Explaining and Harnessing Adversarial Examples</a>, ICLR.</p>
+</div>
+<p>The above example shows how a small perturbation to the image of a panda led to the model predicting the image as a gibbon with high confidence. This indicates that there may be certain patterns in the data which are not clearly seen by the human eye, but the model is relying on them to make predictions. Identifying these sensitivities/vulnerabilities are important to understand how a model is making its predictions.</p>
+</section>
+<section id="adversarial-stickers" class="level3">
+<h3 class="anchored" data-anchor-id="adversarial-stickers">Adversarial stickers</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="the-verge-adversarial_patch_.0.gif" class="img-fluid figure-img"></p>
+<figcaption>Adversarial stickers.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: The Verge (2018), <a href="https://www.theverge.com/2018/1/3/16844842/ai-computer-vision-trick-adversarial-patches-google">These stickers make computer vision software hallucinate things that aren’t there</a>.</p>
+</div>
+<p>The above graphical illustration shows how adding a metal component changes the model predictions from <em>Banana</em> to <em>toaster</em> with high confidence.</p>
+</section>
+<section id="adversarial-text" class="level3">
+<h3 class="anchored" data-anchor-id="adversarial-text">Adversarial text</h3>
+<p>Adversarial attacks on text generation models help users get an understanding of the inner workings NLP models. This includes identifying input patterns that are critical to model predictions, and assessing performance of NLP models for robustness.</p>
+<p>“<a href="https://github.com/QData/TextAttack">TextAttack</a> 🐙 is a Python framework for adversarial attacks, data augmentation, and model training in NLP”</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://jxmo.io/files/textattack.gif" class="img-fluid figure-img" style="width:80.0%"></p>
+<figcaption>Demo</figcaption>
+</figure>
+</div>
+</section>
+<section id="deep-dream" class="level3">
+<h3 class="anchored" data-anchor-id="deep-dream">Deep Dream</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="deep-dream.jpeg" class="img-fluid figure-img"></p>
+<figcaption>Deep Dream is an image-modification program released by Google in 2015.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Wikipedia, <a href="https://commons.wikimedia.org/wiki/File:Aurelia-aurita-3-0009.jpg">DeepDream page</a>.</p>
+</div>
+</section>
+<section id="deepdream" class="level3">
+<h3 class="anchored" data-anchor-id="deepdream">DeepDream</h3>
+<ul>
+<li>Even though many deep learning models are black boxes, convnets are quite interpretable via visualization. Some visualization techniques are: visualizing convnet outputs shows how convnet layers transform the input, visualizing convnet filters shows what visual patterns or concept each filter is receptive to, etc.</li>
+<li>The activations of the first few layers of the network carries more information about the visual contents, while deeper layers encode higher, more abstract concepts.</li>
+</ul>
+</section>
+<section id="deepdream-1" class="level3">
+<h3 class="anchored" data-anchor-id="deepdream-1">DeepDream</h3>
+<ul>
+<li>Each filter is receptive to a visual pattern. To visualize a convnet filter, gradient ascent is used to maximize the response of the filter. Gradient ascent maximize a loss function and moves the image in a direction that activate the filter more strongly to enhance its reading of the visual pattern.</li>
+<li>DeepDream maximizes the activation of the entire convnet layer rather than that of a specific filter, thus mixing together many visual patterns all at once.</li>
+<li>DeepDream starts with an existing image, latches on to preexisting visual patterns, distorting elements of the image in a somewhat artistic fashion.</li>
+</ul>
+</section>
+<section id="original" class="level3">
+<h3 class="anchored" data-anchor-id="original">Original</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="deep-dream-melbourne-original.jpg" class="img-fluid figure-img"></p>
+<figcaption>A sunny day on the Mornington peninsula.</figcaption>
+</figure>
+</div>
+</section>
+<section id="transformed" class="level3">
+<h3 class="anchored" data-anchor-id="transformed">Transformed</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="deep-dream-melbourne.png" class="img-fluid figure-img"></p>
+<figcaption>Deep-dreaming version.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Generated by <a href="https://keras.io/examples/generative/deep_dream/">Keras’ Deep Dream tutorial</a>.</p>
+</div>
+</section>
+</section>
+<section id="neural-style-transfer" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="neural-style-transfer">Neural style transfer</h2>
+<section id="neural-style-transfer-1" class="level3">
+<h3 class="anchored" data-anchor-id="neural-style-transfer-1">Neural style transfer</h3>
+<p>Applying the style of a reference image to a target image while conserving the content of the target image.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="neuralstyletransfer.png" class="img-fluid figure-img"></p>
+<figcaption>An example neural style transfer.</figcaption>
+</figure>
+</div>
+<div class="notes">
+<ul>
+<li>Style: textures, colors, visual patterns (blue-and-yellow circular brushstrokes in Vincent Van Gogh’s Starry Night)</li>
+<li>Content: the higher-level macrostructure of the image (buildings in the Tübingen photograph).</li>
+</ul>
+</div>
+<div class="footer">
+<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.9.</p>
+</div>
+</section>
+<section id="goal-of-nst" class="level3">
+<h3 class="anchored" data-anchor-id="goal-of-nst">Goal of NST</h3>
+<p>What the model does:</p>
+<ul>
+<li><p>Preserve content by maintaining similar deeper layer activations between the original image and the generated image. The convnet should “see” both the original image and the generated image as containing the same things.</p></li>
+<li><p>Preserve style by maintaining similar correlations within activations for both low level layers and high-level layers. Feature correlations within a layer capture textures: the generated image and the style-reference image should share the same textures at different spatial scales.</p></li>
+</ul>
+</section>
+<section id="a-wanderer-in-greenland" class="level3">
+<h3 class="anchored" data-anchor-id="a-wanderer-in-greenland">A wanderer in Greenland</h3>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p>Content</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="ninja.jpg" class="img-fluid figure-img"></p>
+<figcaption>Some striking young hiker in Greenland.</figcaption>
+</figure>
+</div>
+</div><div class="column" style="width:50%;">
+<p>Style</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="wanderer.jpg" class="img-fluid figure-img"></p>
+<figcaption><em>Wanderer above the Sea of Fog</em> by Caspar David Friedrich.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="footer">
+<p>Source: Laub (2018), <a href="https://pat-laub.github.io/2018/01/07/neural-style-transfer.html">On Neural Style Transfer</a>, Blog post.</p>
+</div>
+</section>
+<section id="a-wanderer-in-greenland-ii" class="level3">
+<h3 class="anchored" data-anchor-id="a-wanderer-in-greenland-ii">A wanderer in Greenland II</h3>
+<div class="columns">
+<div class="column" style="width:45%;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="ninja.gif" class="img-fluid figure-img"></p>
+<figcaption>Animation of NST in progress.</figcaption>
+</figure>
+</div>
+</div><div class="column" style="width:55%;">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="ninja-wanderer.png" class="img-fluid figure-img"></p>
+<figcaption>One result of NST.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Question
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>How would you make this faster for one specific style image?</p>
+</div>
+</div>
+<div class="footer">
+<p>Source: Laub (2018), <a href="https://pat-laub.github.io/2018/01/07/neural-style-transfer.html">On Neural Style Transfer</a>, Blog post.</p>
+</div>
+</section>
+<section id="a-new-style-image" class="level3">
+<h3 class="anchored" data-anchor-id="a-new-style-image">A new style image</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="wave.jpg" class="img-fluid figure-img"></p>
+<figcaption>Hokusai’s Great Wave off Kanagawa</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Laub (2018), <a href="https://pat-laub.github.io/2018/01/07/neural-style-transfer.html">On Neural Style Transfer</a>, Blog post.</p>
+</div>
+</section>
+<section id="a-new-content-image" class="level3">
+<h3 class="anchored" data-anchor-id="a-new-content-image">A new content image</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="qingdao.jpg" class="img-fluid figure-img"></p>
+<figcaption>The seascape in Qingdao</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Laub (2018), <a href="https://pat-laub.github.io/2018/01/07/neural-style-transfer.html">On Neural Style Transfer</a>, Blog post.</p>
+</div>
+</section>
+<section id="another-neural-style-transfer" class="level3">
+<h3 class="anchored" data-anchor-id="another-neural-style-transfer">Another neural style transfer</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="qwave.jpg" class="img-fluid figure-img"></p>
+<figcaption>The seascape in Qingdao in the style of Hokusai’s Great Wave off Kanagawa</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Laub (2018), <a href="https://pat-laub.github.io/2018/01/07/neural-style-transfer.html">On Neural Style Transfer</a>, Blog post.</p>
+</div>
+</section>
+<section id="why-is-this-important" class="level3">
+<h3 class="anchored" data-anchor-id="why-is-this-important">Why is this important?</h3>
+<p>Taking derivatives with respect to the input image can be a first step toward explainable AI for convolutional networks.</p>
+<ul>
+<li><a href="https://youtu.be/y8cwyeccuy4">Saliency maps</a></li>
+<li><a href="https://youtu.be/xGZfAoh0xKs">Grad-CAM</a></li>
+</ul>
+</section>
+</section>
+<section id="autoencoders" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="autoencoders">Autoencoders</h2>
+<section id="autoencoder" class="level3">
+<h3 class="anchored" data-anchor-id="autoencoder">Autoencoder</h3>
+<p>An autoencoder takes a data/image, maps it to a latent space via an encoder module, then decodes it back to an output with the same dimensions via a decoder module.</p>
+<p>They are useful in learning latent representations of the data.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="autoencoder.png" class="img-fluid figure-img"></p>
+<figcaption>Schematic of an autoencoder.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Marcus Lautier (2022).</p>
+</div>
+</section>
+<section id="autoencoder-ii" class="level3 smaller">
+<h3 class="smaller anchored" data-anchor-id="autoencoder-ii">Autoencoder II</h3>
+<ul>
+<li>An autoencoder is trained by using the same image as both the input and the target, meaning an autoencoder learns to reconstruct the original inputs. Therefore it’s <em>not supervised learning</em>, but <em>self-supervised learning</em>.</li>
+<li>If we impose constraints on the encoders to be low-dimensional and sparse, <em>the input data will be compressed</em> into fewer bits of information.</li>
+<li>Latent space is a place that stores low-dimensional representation of data. It can be used for <em>data compression</em>, where data is compressed to a point in a latent space.</li>
+<li>An image can be compressed into a latent representation, which can then be reconstructed back to a <em>slightly different image</em>.</li>
+</ul>
+<div class="notes">
+<p>For image editing, an image can be projected onto a latent space and moved inside the latent space in a meaningful way (which means we modify its latent representation), before being mapped back to the image space. This will edit the image and allow us to generate images that have never been seen before.</p>
+</div>
+</section>
+<section id="example-psam" class="level3">
+<h3 class="anchored" data-anchor-id="example-psam">Example: PSAM</h3>
+<p>Loading the dataset off-screen (using <a href="https://pat-laub.github.io/DeepLearningMaterials/Lecture-6-Computer-Vision/computer-vision.html#/downloading-the-dataset">Lecture 6 code</a>).</p>
+<div class="columns">
+<div class="column">
+<div id="2c5d57da" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">0</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-15-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="077f53e3" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-16-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="a-compression-game" class="level3">
+<h3 class="anchored" data-anchor-id="a-compression-game">A compression game</h3>
+<p>Encoding is the overall process of compressing an input with containing data in a high dimensional space to a low dimension space. Compressing is the action of identifying necessary information in the data (versus redundant data) and representing the input in a more concise form. The following slides show two different ways of representing the same data. The second representation is more concise (and smarter) than the first.</p>
+<div class="columns">
+<div class="column">
+<div id="e7ab4b3c" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(img_width <span class="op">*</span> img_height)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>6400</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-17-output-2.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<blockquote class="blockquote">
+<p><em>A 4 with a curly foot, a flat line goes across the middle of the 4, two feet come off the bottom.</em></p>
+</blockquote>
+<p>96 characters</p>
+<blockquote class="blockquote">
+<p><em>A Dōng character, rotated counterclockwise 15 degrees.</em></p>
+</blockquote>
+<p>54 characters</p>
+</div>
+</div>
+</section>
+<section id="make-a-basic-autoencoder" class="level3">
+<h3 class="anchored" data-anchor-id="make-a-basic-autoencoder">Make a basic autoencoder</h3>
+<p>The following code is an example of constructing a basic autoencoder. The high-level idea here is to take an image, compress the information of the image from 6400 pixels to 400 pixels (encoding stage) and decode it back to the original image size (decoding stage). Note that we train the neural network keeping the input and the output the same.</p>
+<div id="32b2b001" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>num_hidden_layer <span class="op">=</span> <span class="dv">400</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Compress from </span><span class="sc">{</span>img_height <span class="op">*</span> img_width<span class="sc">}</span><span class="ss"> pixels to </span><span class="sc">{</span>num_hidden_layer<span class="sc">}</span><span class="ss"> latent variables."</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Compress from 6400 pixels to 400 latent variables.</code></pre>
+</div>
+</div>
+<div id="06de8a57" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="annotated-cell-11"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-11-1" class="code-annotation-target"><a href="#annotated-cell-11-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="annotated-cell-11-2"><a href="#annotated-cell-11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-11-3"><a href="#annotated-cell-11-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([</span>
+<span id="annotated-cell-11-4"><a href="#annotated-cell-11-4" aria-hidden="true" tabindex="-1"></a>    layers.Input((img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-11-5" class="code-annotation-target"><a href="#annotated-cell-11-5" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-11-6" class="code-annotation-target"><a href="#annotated-cell-11-6" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-11-7" class="code-annotation-target"><a href="#annotated-cell-11-7" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-11-8" class="code-annotation-target"><a href="#annotated-cell-11-8" aria-hidden="true" tabindex="-1"></a>    layers.Dense(img_height<span class="op">*</span>img_width, <span class="st">"sigmoid"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-11-9" class="code-annotation-target"><a href="#annotated-cell-11-9" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-11-10" class="code-annotation-target"><a href="#annotated-cell-11-10" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
+<span id="annotated-cell-11-11"><a href="#annotated-cell-11-11" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-11-12"><a href="#annotated-cell-11-12" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="8" onclick="event.preventDefault();">8</a><span id="annotated-cell-11-13" class="code-annotation-target"><a href="#annotated-cell-11-13" aria-hidden="true" tabindex="-1"></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="9" onclick="event.preventDefault();">9</a><span id="annotated-cell-11-14" class="code-annotation-target"><a href="#annotated-cell-11-14" aria-hidden="true" tabindex="-1"></a>epochs <span class="op">=</span> <span class="dv">1_000</span></span>
+<span id="annotated-cell-11-15"><a href="#annotated-cell-11-15" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> keras.callbacks.EarlyStopping(</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="10" onclick="event.preventDefault();">10</a><span id="annotated-cell-11-16" class="code-annotation-target"><a href="#annotated-cell-11-16" aria-hidden="true" tabindex="-1"></a>    patience<span class="op">=</span><span class="dv">5</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>)</span>
+<span id="annotated-cell-11-17"><a href="#annotated-cell-11-17" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="11" onclick="event.preventDefault();">11</a><span id="annotated-cell-11-18" class="code-annotation-target"><a href="#annotated-cell-11-18" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-11" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="1" data-code-annotation="1">Sets the random seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="5" data-code-annotation="2">Scales the image input by the number of pixels so that the input is scaled to [0,1] range</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="6" data-code-annotation="3">Reshapes the 2D input into a 1D representation</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="7" data-code-annotation="4">Condenses the information from 6400 variables to 400 latent variables (the encoding stage ends here)</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="8" data-code-annotation="5">Convers the condensed representation from 400 to 6400 again. Note that the sigmoid activation is used to ensure output is between [0,1]</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="9" data-code-annotation="6">Reshapes the 1D representation to a 2D array</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="7">7</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="10" data-code-annotation="7">Rescales the input information back to the actual input scaling by multiplying with 255 (this completes the decoding stage, and now the input is in its original shape)</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="8">8</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="13" data-code-annotation="8">Compiles the model with the loss function and the optimizer</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="9">9</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="14" data-code-annotation="9">Specifies the number of epochs to run the algorithm</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="10">10</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="16" data-code-annotation="10">Specifies the early stopping criteria. Here, the early stopping activates after 5 iterations with no improvement in the validation loss</span>
+</dd>
+<dt data-target-cell="annotated-cell-11" data-target-annotation="11">11</dt>
+<dd>
+<span data-code-cell="annotated-cell-11" data-code-lines="18" data-code-annotation="11">Fits the model specifying the train set, validation set, the number of epochs to run, and the early stopping criteria.</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="the-model" class="level3">
+<h3 class="anchored" data-anchor-id="the-model">The model</h3>
+<div id="49e83c56" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>model.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "sequential"</span>
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃<span style="font-weight: bold"> Layer (type)                    </span>┃<span style="font-weight: bold"> Output Shape           </span>┃<span style="font-weight: bold">       Param # </span>┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ rescaling (<span style="color: #0087ff; text-decoration-color: #0087ff">Rescaling</span>)           │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ flatten (<span style="color: #0087ff; text-decoration-color: #0087ff">Flatten</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">6400</span>)           │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)                   │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">400</span>)            │     <span style="color: #00af00; text-decoration-color: #00af00">2,560,400</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">6400</span>)           │     <span style="color: #00af00; text-decoration-color: #00af00">2,566,400</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ reshape (<span style="color: #0087ff; text-decoration-color: #0087ff">Reshape</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ rescaling_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Rescaling</span>)         │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Total params: </span><span style="color: #00af00; text-decoration-color: #00af00">15,380,402</span> (58.67 MB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">5,126,800</span> (19.56 MB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Non-trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">0</span> (0.00 B)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Optimizer params: </span><span style="color: #00af00; text-decoration-color: #00af00">10,253,602</span> (39.11 MB)
+</pre>
+</div>
+</div>
+<div id="7b0c65d5" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>2509.009765625</code></pre>
+</div>
+</div>
+</section>
+<section id="some-recovered-image" class="level3">
+<h3 class="anchored" data-anchor-id="some-recovered-image">Some recovered image</h3>
+<div id="44d0a8cf" class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="columns">
+<div class="column">
+<div id="6faaf71f" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-23-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="de15a26c" class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-24-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The recovered image is not as sharp as the original image, however, we can see that the high-level representation of the original picture is reconstrcuted.</p>
+</section>
+<section id="invert-the-images" class="level3">
+<h3 class="anchored" data-anchor-id="invert-the-images">Invert the images</h3>
+<p>Another way to attempt the autoencoder would be to invert the colours of the image. Following example shows, how the colours in the images are swapped. The areas which were previously in white are now in black and vice versa. The motivation behind inverting the colours is to make the input more suited for the <code>relu</code> activation. <code>relu</code> returns <em>zeros</em>, and zero corresponds to the black colour. If the image has more black colour, there is a chance the neural network might train more efficiently. Hence we try inverting the colours as a preprocessing before we pass it through the encoding stage.</p>
+<div class="columns">
+<div class="column">
+<div id="5ae90288" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">0</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-25-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="b7f9dd3b" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-26-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="try-inverting-the-images" class="level3">
+<h3 class="anchored" data-anchor-id="try-inverting-the-images">Try inverting the images</h3>
+<p>Following code shows how the same code as before is implemented, but with an additional step for inverting the pixel values of the data before parsing it through the encoding step.</p>
+<div id="31143b9d" class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="annotated-cell-15"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-15-1"><a href="#annotated-cell-15-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="annotated-cell-15-2"><a href="#annotated-cell-15-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-15-3"><a href="#annotated-cell-15-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([</span>
+<span id="annotated-cell-15-4"><a href="#annotated-cell-15-4" aria-hidden="true" tabindex="-1"></a>    layers.Input((img_height, img_width, <span class="dv">1</span>)),</span>
+<span id="annotated-cell-15-5"><a href="#annotated-cell-15-5" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-15-6" class="code-annotation-target"><a href="#annotated-cell-15-6" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<span id="annotated-cell-15-7"><a href="#annotated-cell-15-7" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<span id="annotated-cell-15-8"><a href="#annotated-cell-15-8" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>),</span>
+<span id="annotated-cell-15-9"><a href="#annotated-cell-15-9" aria-hidden="true" tabindex="-1"></a>    layers.Dense(img_height<span class="op">*</span>img_width, <span class="st">"sigmoid"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-15-10" class="code-annotation-target"><a href="#annotated-cell-15-10" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<span id="annotated-cell-15-11"><a href="#annotated-cell-15-11" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((img_height, img_width, <span class="dv">1</span>)),</span>
+<span id="annotated-cell-15-12"><a href="#annotated-cell-15-12" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
+<span id="annotated-cell-15-13"><a href="#annotated-cell-15-13" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-15-14"><a href="#annotated-cell-15-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-15-15"><a href="#annotated-cell-15-15" aria-hidden="true" tabindex="-1"></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="annotated-cell-15-16"><a href="#annotated-cell-15-16" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-15-17"><a href="#annotated-cell-15-17" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-15" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-15" data-code-lines="6" data-code-annotation="1">Inverts the colours by mapping the function with <code>x: 1-x</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-15" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-15" data-code-lines="10" data-code-annotation="2">Reverses the inversion to make sure the same input image is reconstructed</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="the-model-1" class="level3">
+<h3 class="anchored" data-anchor-id="the-model-1">The model</h3>
+<div id="a87c6bbb" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>model.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "sequential_1"</span>
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃<span style="font-weight: bold"> Layer (type)                    </span>┃<span style="font-weight: bold"> Output Shape           </span>┃<span style="font-weight: bold">       Param # </span>┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ rescaling_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Rescaling</span>)         │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lambda (<span style="color: #0087ff; text-decoration-color: #0087ff">Lambda</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ flatten_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Flatten</span>)             │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">6400</span>)           │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">400</span>)            │     <span style="color: #00af00; text-decoration-color: #00af00">2,560,400</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_3 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">6400</span>)           │     <span style="color: #00af00; text-decoration-color: #00af00">2,566,400</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lambda_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Lambda</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">6400</span>)           │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ reshape_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Reshape</span>)             │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ rescaling_3 (<span style="color: #0087ff; text-decoration-color: #0087ff">Rescaling</span>)         │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Total params: </span><span style="color: #00af00; text-decoration-color: #00af00">15,380,402</span> (58.67 MB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">5,126,800</span> (19.56 MB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Non-trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">0</span> (0.00 B)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Optimizer params: </span><span style="color: #00af00; text-decoration-color: #00af00">10,253,602</span> (39.11 MB)
+</pre>
+</div>
+</div>
+<div id="41b25f73" class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="28">
+<pre><code>4163.06298828125</code></pre>
+</div>
+</div>
+</section>
+<section id="some-recovered-image-1" class="level3">
+<h3 class="anchored" data-anchor-id="some-recovered-image-1">Some recovered image</h3>
+<div id="b2047cef" class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="columns">
+<div class="column">
+<div id="495d8563" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-31-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="b418fbf5" class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-32-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The recovered image is not too different to the image from the previous example.</p>
+</section>
+<section id="cnn-enhanced-encoder" class="level3">
+<h3 class="anchored" data-anchor-id="cnn-enhanced-encoder">CNN-enhanced encoder</h3>
+<p>To further improve the process, we can try neural networks specialized for image processing. Here we use a Convolutional Neural Network lith convolutional and pooling layers. The following example shows how we first specify the encoder, and then the decoder. The two architectures are combined at the final stage.</p>
+<div id="325c7db9" class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="annotated-cell-19"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-19-1" class="code-annotation-target"><a href="#annotated-cell-19-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">123</span>)</span>
+<span id="annotated-cell-19-2"><a href="#annotated-cell-19-2" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-19-3" class="code-annotation-target"><a href="#annotated-cell-19-3" aria-hidden="true" tabindex="-1"></a>encoder <span class="op">=</span> keras.models.Sequential([</span>
+<span id="annotated-cell-19-4"><a href="#annotated-cell-19-4" aria-hidden="true" tabindex="-1"></a>    layers.Input((img_height, img_width, <span class="dv">1</span>)),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-19-5" class="code-annotation-target"><a href="#annotated-cell-19-5" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="fl">1.</span><span class="op">/</span><span class="dv">255</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-19-6" class="code-annotation-target"><a href="#annotated-cell-19-6" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-19-7" class="code-annotation-target"><a href="#annotated-cell-19-7" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">16</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-19-8" class="code-annotation-target"><a href="#annotated-cell-19-8" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-19-9" class="code-annotation-target"><a href="#annotated-cell-19-9" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">32</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-19-10"><a href="#annotated-cell-19-10" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
+<span id="annotated-cell-19-11"><a href="#annotated-cell-19-11" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-19-12"><a href="#annotated-cell-19-12" aria-hidden="true" tabindex="-1"></a>    layers.MaxPooling2D(),</span>
+<span id="annotated-cell-19-13"><a href="#annotated-cell-19-13" aria-hidden="true" tabindex="-1"></a>    layers.Flatten(),</span>
+<span id="annotated-cell-19-14"><a href="#annotated-cell-19-14" aria-hidden="true" tabindex="-1"></a>    layers.Dense(num_hidden_layer, <span class="st">"relu"</span>)</span>
+<span id="annotated-cell-19-15"><a href="#annotated-cell-19-15" aria-hidden="true" tabindex="-1"></a>])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-19" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="1" data-code-annotation="1">Sets the random seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="3" data-code-annotation="2">Starts specifying the encoder</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="5" data-code-annotation="3">Rescales the image pixel values to range between [0,1]</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="6" data-code-annotation="4">Inverts the colours of the image</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="7" data-code-annotation="5">Applies a 2D convolutional layer with 16 filters, each of size 3 <span class="math inline">\times</span> 3, and having the <code>same</code> padding. <code>same</code> padding ensures that the output from the layer has the same heigh and width as the input</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="8" data-code-annotation="6">Performs max-pooling to reduce the dimension of the feature space</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="7">7</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="9" data-code-annotation="7">CNN-enhanced decoder</span>
+</dd>
+</dl>
+</div>
+</div>
+<div id="431415dc" class="cell" data-execution_count="33">
+<div class="sourceCode cell-code" id="annotated-cell-20"><pre class="sourceCode python code-annotation-code code-with-copy"><code class="sourceCode python"><span id="annotated-cell-20-1"><a href="#annotated-cell-20-1" aria-hidden="true" tabindex="-1"></a>decoder <span class="op">=</span> keras.models.Sequential([</span>
+<span id="annotated-cell-20-2"><a href="#annotated-cell-20-2" aria-hidden="true" tabindex="-1"></a>    keras.Input(shape<span class="op">=</span>(num_hidden_layer,)),</span>
+<span id="annotated-cell-20-3"><a href="#annotated-cell-20-3" aria-hidden="true" tabindex="-1"></a>    layers.Dense(<span class="dv">20</span><span class="op">*</span><span class="dv">20</span>),</span>
+<span id="annotated-cell-20-4"><a href="#annotated-cell-20-4" aria-hidden="true" tabindex="-1"></a>    layers.Reshape((<span class="dv">20</span>, <span class="dv">20</span>, <span class="dv">1</span>)),</span>
+<span id="annotated-cell-20-5"><a href="#annotated-cell-20-5" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">128</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-20-6"><a href="#annotated-cell-20-6" aria-hidden="true" tabindex="-1"></a>    layers.UpSampling2D(),</span>
+<span id="annotated-cell-20-7"><a href="#annotated-cell-20-7" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">64</span>, <span class="dv">3</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-20-8"><a href="#annotated-cell-20-8" aria-hidden="true" tabindex="-1"></a>    layers.UpSampling2D(),</span>
+<span id="annotated-cell-20-9"><a href="#annotated-cell-20-9" aria-hidden="true" tabindex="-1"></a>    layers.Conv2D(<span class="dv">1</span>, <span class="dv">1</span>, padding<span class="op">=</span><span class="st">"same"</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="annotated-cell-20-10"><a href="#annotated-cell-20-10" aria-hidden="true" tabindex="-1"></a>    layers.Lambda(<span class="kw">lambda</span> x: <span class="dv">1</span> <span class="op">-</span> x),</span>
+<span id="annotated-cell-20-11"><a href="#annotated-cell-20-11" aria-hidden="true" tabindex="-1"></a>    layers.Rescaling(<span class="dv">255</span>),</span>
+<span id="annotated-cell-20-12"><a href="#annotated-cell-20-12" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-20-13"><a href="#annotated-cell-20-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-20-14"><a href="#annotated-cell-20-14" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> keras.models.Sequential([encoder, decoder])</span>
+<span id="annotated-cell-20-15"><a href="#annotated-cell-20-15" aria-hidden="true" tabindex="-1"></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="annotated-cell-20-16"><a href="#annotated-cell-20-16" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, X_train, epochs<span class="op">=</span>epochs, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-20-17"><a href="#annotated-cell-20-17" aria-hidden="true" tabindex="-1"></a>    validation_data<span class="op">=</span>(X_val, X_val), callbacks<span class="op">=</span>es)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>2024-07-08 21:41:30.880221: E tensorflow/core/util/util.cc:131] oneDNN supports DT_INT32 only on platforms with AVX-512. Falling back to the default Eigen-based implementation if present.</code></pre>
+</div>
+</div>
+</section>
+<section id="encoder-summary" class="level3">
+<h3 class="anchored" data-anchor-id="encoder-summary">Encoder summary</h3>
+<div id="6659acd0" class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>encoder.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "sequential_2"</span>
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃<span style="font-weight: bold"> Layer (type)                    </span>┃<span style="font-weight: bold"> Output Shape           </span>┃<span style="font-weight: bold">       Param # </span>┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ rescaling_4 (<span style="color: #0087ff; text-decoration-color: #0087ff">Rescaling</span>)         │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lambda_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Lambda</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d (<span style="color: #0087ff; text-decoration-color: #0087ff">Conv2D</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">16</span>)     │           <span style="color: #00af00; text-decoration-color: #00af00">160</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d (<span style="color: #0087ff; text-decoration-color: #0087ff">MaxPooling2D</span>)    │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">16</span>)     │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Conv2D</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">32</span>)     │         <span style="color: #00af00; text-decoration-color: #00af00">4,640</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">MaxPooling2D</span>)  │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">32</span>)     │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Conv2D</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">64</span>)     │        <span style="color: #00af00; text-decoration-color: #00af00">18,496</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ max_pooling2d_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">MaxPooling2D</span>)  │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">10</span>, <span style="color: #00af00; text-decoration-color: #00af00">10</span>, <span style="color: #00af00; text-decoration-color: #00af00">64</span>)     │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ flatten_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Flatten</span>)             │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">6400</span>)           │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ dense_4 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">400</span>)            │     <span style="color: #00af00; text-decoration-color: #00af00">2,560,400</span> │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Total params: </span><span style="color: #00af00; text-decoration-color: #00af00">2,583,696</span> (9.86 MB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">2,583,696</span> (9.86 MB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Non-trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">0</span> (0.00 B)
+</pre>
+</div>
+</div>
+</section>
+<section id="decoder-summary" class="level3">
+<h3 class="anchored" data-anchor-id="decoder-summary">Decoder summary</h3>
+<div id="8155b68e" class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>decoder.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "sequential_3"</span>
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃<span style="font-weight: bold"> Layer (type)                    </span>┃<span style="font-weight: bold"> Output Shape           </span>┃<span style="font-weight: bold">       Param # </span>┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ dense_5 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)                 │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">400</span>)            │       <span style="color: #00af00; text-decoration-color: #00af00">160,400</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ reshape_2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Reshape</span>)             │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_3 (<span style="color: #0087ff; text-decoration-color: #0087ff">Conv2D</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">20</span>, <span style="color: #00af00; text-decoration-color: #00af00">128</span>)    │         <span style="color: #00af00; text-decoration-color: #00af00">1,280</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ up_sampling2d (<span style="color: #0087ff; text-decoration-color: #0087ff">UpSampling2D</span>)    │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">128</span>)    │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_4 (<span style="color: #0087ff; text-decoration-color: #0087ff">Conv2D</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">40</span>, <span style="color: #00af00; text-decoration-color: #00af00">64</span>)     │        <span style="color: #00af00; text-decoration-color: #00af00">73,792</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ up_sampling2d_1 (<span style="color: #0087ff; text-decoration-color: #0087ff">UpSampling2D</span>)  │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">64</span>)     │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ conv2d_5 (<span style="color: #0087ff; text-decoration-color: #0087ff">Conv2D</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │            <span style="color: #00af00; text-decoration-color: #00af00">65</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ lambda_3 (<span style="color: #0087ff; text-decoration-color: #0087ff">Lambda</span>)               │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+├─────────────────────────────────┼────────────────────────┼───────────────┤
+│ rescaling_5 (<span style="color: #0087ff; text-decoration-color: #0087ff">Rescaling</span>)         │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">80</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)      │             <span style="color: #00af00; text-decoration-color: #00af00">0</span> │
+└─────────────────────────────────┴────────────────────────┴───────────────┘
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Total params: </span><span style="color: #00af00; text-decoration-color: #00af00">235,537</span> (920.07 KB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">235,537</span> (920.07 KB)
+</pre>
+</div>
+<div class="cell-output cell-output-display">
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold"> Non-trainable params: </span><span style="color: #00af00; text-decoration-color: #00af00">0</span> (0.00 B)
+</pre>
+</div>
+</div>
+<div id="02422d1d" class="cell" data-execution_count="36">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val, X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="36">
+<pre><code>3399.930419921875</code></pre>
+</div>
+</div>
+</section>
+<section id="some-recovered-image-2" class="level3">
+<h3 class="anchored" data-anchor-id="some-recovered-image-2">Some recovered image</h3>
+<div id="a846682d" class="cell" data-execution_count="37">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>X_val_rec <span class="op">=</span> model.predict(X_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>WARNING:tensorflow:5 out of the last 5 calls to &lt;function TensorFlowTrainer.make_predict_function.&lt;locals&gt;.one_step_on_data_distributed at 0x770c24370360&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.
+WARNING:tensorflow:6 out of the last 6 calls to &lt;function TensorFlowTrainer.make_predict_function.&lt;locals&gt;.one_step_on_data_distributed at 0x770c24370360&gt; triggered tf.function retracing. Tracing is expensive and the excessive number of tracings could be due to (1) creating @tf.function repeatedly in a loop, (2) passing tensors with different shapes, (3) passing Python objects instead of tensors. For (1), please define your @tf.function outside of the loop. For (2), @tf.function has reduce_retracing=True option that can avoid unnecessary retracing. For (3), please refer to https://www.tensorflow.org/guide/function#controlling_retracing and https://www.tensorflow.org/api_docs/python/tf/function for  more details.</code></pre>
+</div>
+</div>
+<div class="columns">
+<div class="column">
+<div id="15b2d6a5" class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-39-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="06e7ab89" class="cell" data-execution_count="39">
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>plt.imshow(X_val_rec[<span class="dv">42</span>], cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-40-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="latent-space-vs-word-embedding" class="level3 smaller">
+<h3 class="smaller anchored" data-anchor-id="latent-space-vs-word-embedding">Latent space vs word embedding</h3>
+<ul>
+<li>We revisit the concept of word embedding, where words in the vocabulary are mapped into vector representations. Words with similar meaning should lie close to one another in the word-embedding space.</li>
+<li>Latent space contains low-dimensional representation of data. Data/Images that are similar should lie close in the latent space.</li>
+<li>There are pre-trained word-embedding spaces such as those for English-language movie review, German-language legal documents, etc. Semantic relationships between words differ for different tasks. Similarly, the structure of latent spaces for different data sets (humans faces, animals, etc) are different.</li>
+</ul>
+</section>
+<section id="latent-space-vs-word-embedding-1" class="level3">
+<h3 class="anchored" data-anchor-id="latent-space-vs-word-embedding-1">Latent space vs word embedding</h3>
+<ul>
+<li>Given a latent space of representations, or an embedding space, certain directions in the space may encode interesting axes of variation in the original data.</li>
+<li>A <strong>concept vector</strong> is a direction of variation in the data. For example there may be a smile vector such that if <span class="math inline">z</span> is the latent representation of a face, then <span class="math inline">z+s</span> is the representation of the same face, smiling. We can generate an image of the person smiling from this latent representation.</li>
+</ul>
+</section>
+<section id="intentionally-add-noise-to-inputs" class="level3">
+<h3 class="anchored" data-anchor-id="intentionally-add-noise-to-inputs">Intentionally add noise to inputs</h3>
+<div class="columns">
+<div class="column">
+<div id="927a20d1" class="cell" data-execution_count="40">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> rnd.random(size<span class="op">=</span>X_train.shape[<span class="dv">1</span>:]) <span class="op">&lt;</span> <span class="fl">0.5</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>plt.imshow(mask <span class="op">*</span> (<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">0</span>]), cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-41-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="886519cd" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>mask <span class="op">=</span> rnd.random(size<span class="op">=</span>X_train.shape[<span class="dv">1</span>:]) <span class="op">&lt;</span> <span class="fl">0.5</span></span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>plt.imshow(mask <span class="op">*</span> (<span class="dv">255</span> <span class="op">-</span> X_train[<span class="dv">42</span>]) <span class="op">*</span> mask, cmap<span class="op">=</span><span class="st">"gray"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="generative-networks_files/figure-html/cell-42-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="denoising-autoencoder" class="level3">
+<h3 class="anchored" data-anchor-id="denoising-autoencoder">Denoising autoencoder</h3>
+<p>Can be used to do <a href="https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629">feature engineering for supervised learning problems</a></p>
+<blockquote class="blockquote">
+<p>It is also possible to include input variables as outputs to infer missing values or just help the model “understand” the features – in fact the winning solution of a claims prediction Kaggle competition heavily used denoising autoencoders together with model stacking and ensembling – read more here.</p>
+</blockquote>
+<p>Jacky Poon</p>
+<div class="footer">
+<p>Source: Poon (2021), <a href="https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html"><em>Multitasking Risk Pricing Using Deep Learning</em></a>, Actuaries’ Analytical Cookbook.</p>
+</div>
+</section>
+</section>
+<section id="variational-autoencoders" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="variational-autoencoders">Variational Autoencoders</h2>
+<section id="variational-autoencoder" class="level3">
+<h3 class="anchored" data-anchor-id="variational-autoencoder">Variational autoencoder</h3>
+<div class="notes">
+<p>A slightly different sample from the distribution in the latent space will be decoded to a slightly different image. The stochasticity of this process improves robustness and forces the latent space to encode meaningful representation everywhere: every point in the latent space is decoded to a valid output. So the latent spaces of VAEs are continuous and highly-structured.</p>
+</div>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chollet-VAE.png" class="img-fluid figure-img"></p>
+<figcaption>Schematic of a variational autoencoder.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.17.</p>
+</div>
+</section>
+<section id="vae-schematic-process" class="level3">
+<h3 class="anchored" data-anchor-id="vae-schematic-process">VAE schematic process</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chollet-VAEcode.png" class="img-fluid figure-img"></p>
+<figcaption>Keras code for a VAE.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Unnumbered listing in Chapter 12.</p>
+</div>
+</section>
+<section id="focus-on-the-decoder" class="level3">
+<h3 class="anchored" data-anchor-id="focus-on-the-decoder">Focus on the decoder</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chollet-latentspace.png" class="img-fluid figure-img"></p>
+<figcaption>Sampling new artificial images from the latent space.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.13.</p>
+</div>
+</section>
+<section id="exploring-the-mnist-latent-space" class="level3">
+<h3 class="anchored" data-anchor-id="exploring-the-mnist-latent-space">Exploring the MNIST latent space</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="chollet-VAEdecoded.png" class="img-fluid figure-img"></p>
+<figcaption>Example of MNIST-like images generated from the latent space.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: François Chollet (2021), <em>Deep Learning with Python</em>, Second Edition, Figure 12.18.</p>
+</div>
+</section>
+<section id="recommended-viewing" class="level3">
+<h3 class="anchored" data-anchor-id="recommended-viewing">Recommended Viewing</h3>
+<div class="quarto-video ratio ratio-16x9"><iframe data-external="1" src="https://www.youtube.com/embed/7Rb4s9wNOmc" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
+<p>Both autoencoders and variational autoencoders aim to obtain latent representations of input data that carry same information but in a lower dimensional space. The difference between the two is that, autoencoders outputs the latent representations as vectors, while variational auto encoders first identifies the distribution of the input in the latent space, and then sample an observation from that as the vector. Autoencoders are better suited for dimensionality reduction and feature learning tasks. Variation autoencoders are better suited for generative modelling tasks and uncertainty estimation.</p>
+</section>
+</section>
+<section id="diffusion-models" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="diffusion-models">Diffusion Models</h2>
+<section id="using-kerascv" class="level3">
+<h3 class="anchored" data-anchor-id="using-kerascv">Using KerasCV</h3>
+<div class="quarto-video ratio ratio-16x9"><iframe data-external="1" src="https://www.youtube.com/embed/pstsh2C2roc" title="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe></div>
+</section>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section id="package-versions" class="level3 appendix" data-visibility="uncounted"><h2 class="anchored quarto-appendix-heading">Package Versions</h2><div class="quarto-appendix-contents">
+
+<div id="39b2fbae" class="cell" data-execution_count="42">
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Python implementation: CPython
+Python version       : 3.11.9
+IPython version      : 8.24.0
+
+keras     : 3.3.3
+matplotlib: 3.9.0
+numpy     : 1.26.4
+pandas    : 2.2.2
+seaborn   : 0.13.2
+scipy     : 1.11.0
+torch     : 2.3.1
+tensorflow: 2.16.1
+tf_keras  : 2.16.0
+</code></pre>
+</div>
+</div>
+</div></section><section id="glossary" class="level3 appendix" data-visibility="uncounted"><h2 class="anchored quarto-appendix-heading">Glossary</h2><div class="quarto-appendix-contents">
+
+<div class="columns">
+<div class="column">
+<ul>
+<li>autoencoder (variational)</li>
+<li>beam search</li>
+<li>bias</li>
+<li>ChatGPT (&amp; RLHF)</li>
+<li>DeepDream</li>
+<li>greedy sampling</li>
+</ul>
+</div><div class="column">
+<ul>
+<li>HuggingFace</li>
+<li>language model</li>
+<li>latent space</li>
+<li>neural style transfer</li>
+<li>softmax temperature</li>
+<li>stochastic sampling</li>
+</ul>
+</div>
+</div>
+
+
+</div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../Labs/distributional-regression-lab.html" class="pagination-link" aria-label="Lab: Distributional Regression">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Lab: Distributional Regression</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Generative-Networks/gans.html" class="pagination-link" aria-label="Generative Adversarial Networks">
+        <span class="nav-page-text">Generative Adversarial Networks</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

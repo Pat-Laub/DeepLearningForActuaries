@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.4.554">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Eric Dong &amp; Patrick Laub">
+
+<title>AI for Actuaries - Distributional Regression</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../Advanced-Topics/interpretability.html" rel="next">
+<link href="../Labs/backpropagation-lab.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.15.1/dist/katex.min.css">
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Distributional-Regression/distributional-regression.html">Module 7</a></li><li class="breadcrumb-item"><a href="../Distributional-Regression/distributional-regression.html">Distributional Regression</a></li></ol></nav>
+        <a class="flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">AI for Actuaries</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Home</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true">
+ <span class="menu-text">Module 1</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Artificial-Intelligence/course-overview.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Course Overview</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Artificial-Intelligence/artificial-intelligence.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Artificial Intelligence</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Artificial-Intelligence/python.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Intro Python</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/python-for-data-science-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Python for Data Science</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/chess-ai.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Chess AI</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true">
+ <span class="menu-text">Module 2</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/deep-learning-keras.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Deep Learning with Keras</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/categorical-variables.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Categorical Variables</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/classification.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Classification</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Tabular-Data/project.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Project Details</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/matplotlib-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Matplotlib</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/victorian-crash-severity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Victorian Car Crash Severity</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/french-motor-frequency.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: French Motor Claim Frequency</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true">
+ <span class="menu-text">Module 3</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Computer-Vision/computer-vision.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Computer Vision</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/latex-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Markdown</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/hurricane-damage.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Aerial Photos of Hurricane Damage</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true">
+ <span class="menu-text">Module 4</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Natural-Language-Processing/natural-language-processing.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Natural Language Processing</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/police-reports.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Police Reports of US Car Crashes</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true">
+ <span class="menu-text">Module 5</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Time-Series-And-Recurrent-Neural-Networks/time-series-and-rnns.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Time Series &amp; Recurrent Neural Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Exercises/sydney-airport-temperature.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Exercise: Sydney Temperature Forecasting</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true">
+ <span class="menu-text">Module 6</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Tabular-Data/advanced-tabular-data.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Advanced Tabular Data</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Tabular-Data/optimisation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/forward-pass-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Forward Pass</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/optimisation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Optimisation</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/backpropagation-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Backpropagation</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true">
+ <span class="menu-text">Module 7</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Distributional-Regression/distributional-regression.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Distributional Regression</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Topics/interpretability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Interpretability</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Labs/distributional-regression-lab.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Lab: Distributional Regression</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true">
+ <span class="menu-text">Module 8</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-8" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-8" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Generative-Networks/generative-networks.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Networks</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Generative-Networks/gans.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Generative Adversarial Networks</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true">
+ <span class="menu-text">Module 9</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-9" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-9" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../Advanced-Topics/next-steps.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Next Steps</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#uncertainty" id="toc-uncertainty" class="nav-link active" data-scroll-target="#uncertainty">Uncertainty</a>
+  <ul class="collapse">
+  <li><a href="#quiz" id="toc-quiz" class="nav-link" data-scroll-target="#quiz">Quiz</a></li>
+  <li><a href="#answer" id="toc-answer" class="nav-link" data-scroll-target="#answer">Answer</a></li>
+  <li><a href="#aleatoric-uncertainty" id="toc-aleatoric-uncertainty" class="nav-link" data-scroll-target="#aleatoric-uncertainty">Aleatoric Uncertainty</a></li>
+  <li><a href="#epistemic-uncertainty" id="toc-epistemic-uncertainty" class="nav-link" data-scroll-target="#epistemic-uncertainty">Epistemic Uncertainty</a></li>
+  <li><a href="#uncertainty-1" id="toc-uncertainty-1" class="nav-link" data-scroll-target="#uncertainty-1">Uncertainty</a></li>
+  <li><a href="#code-data" id="toc-code-data" class="nav-link" data-scroll-target="#code-data">Code: Data</a></li>
+  <li><a href="#code-preprocessing" id="toc-code-preprocessing" class="nav-link" data-scroll-target="#code-preprocessing">Code: Preprocessing</a></li>
+  <li><a href="#code-preprocessing-1" id="toc-code-preprocessing-1" class="nav-link" data-scroll-target="#code-preprocessing-1">Code: Preprocessing</a></li>
+  <li><a href="#histogram-of-the-claimamount" id="toc-histogram-of-the-claimamount" class="nav-link" data-scroll-target="#histogram-of-the-claimamount">Histogram of the <code>ClaimAmount</code></a></li>
+  </ul></li>
+  <li><a href="#aleatoric-uncertainty-1" id="toc-aleatoric-uncertainty-1" class="nav-link" data-scroll-target="#aleatoric-uncertainty-1">Aleatoric Uncertainty</a>
+  <ul class="collapse">
+  <li><a href="#glm" id="toc-glm" class="nav-link" data-scroll-target="#glm">GLM</a></li>
+  <li><a href="#gamma-glm" id="toc-gamma-glm" class="nav-link" data-scroll-target="#gamma-glm">Gamma GLM</a></li>
+  <li><a href="#loss-function-for-a-gamma-glm" id="toc-loss-function-for-a-gamma-glm" class="nav-link" data-scroll-target="#loss-function-for-a-gamma-glm">“Loss Function” for a Gamma GLM</a></li>
+  <li><a href="#fitting-steps" id="toc-fitting-steps" class="nav-link" data-scroll-target="#fitting-steps">Fitting Steps</a></li>
+  <li><a href="#code-gamma-glm" id="toc-code-gamma-glm" class="nav-link" data-scroll-target="#code-gamma-glm">Code: Gamma GLM</a></li>
+  <li><a href="#cann" id="toc-cann" class="nav-link" data-scroll-target="#cann">CANN</a></li>
+  <li><a href="#architecture" id="toc-architecture" class="nav-link" data-scroll-target="#architecture">Architecture</a></li>
+  <li><a href="#code-architecture" id="toc-code-architecture" class="nav-link" data-scroll-target="#code-architecture">Code: Architecture</a></li>
+  <li><a href="#code-loss-function" id="toc-code-loss-function" class="nav-link" data-scroll-target="#code-loss-function">Code: Loss Function</a></li>
+  <li><a href="#code-model-training" id="toc-code-model-training" class="nav-link" data-scroll-target="#code-model-training">Code: Model Training</a></li>
+  <li><a href="#mixture-distribution" id="toc-mixture-distribution" class="nav-link" data-scroll-target="#mixture-distribution">Mixture Distribution</a></li>
+  <li><a href="#mixture-distribution-1" id="toc-mixture-distribution-1" class="nav-link" data-scroll-target="#mixture-distribution-1">Mixture Distribution</a></li>
+  <li><a href="#mixture-density-network" id="toc-mixture-density-network" class="nav-link" data-scroll-target="#mixture-density-network">Mixture Density Network</a></li>
+  <li><a href="#mixture-density-network-1" id="toc-mixture-density-network-1" class="nav-link" data-scroll-target="#mixture-density-network-1">Mixture Density Network</a></li>
+  <li><a href="#model-specification" id="toc-model-specification" class="nav-link" data-scroll-target="#model-specification">Model Specification</a></li>
+  <li><a href="#output" id="toc-output" class="nav-link" data-scroll-target="#output">Output</a></li>
+  <li><a href="#architecture-1" id="toc-architecture-1" class="nav-link" data-scroll-target="#architecture-1">Architecture</a></li>
+  <li><a href="#code-architecture-1" id="toc-code-architecture-1" class="nav-link" data-scroll-target="#code-architecture-1">Code: Architecture</a></li>
+  <li><a href="#loss-function" id="toc-loss-function" class="nav-link" data-scroll-target="#loss-function">Loss Function</a></li>
+  <li><a href="#code-loss-function-1" id="toc-code-loss-function-1" class="nav-link" data-scroll-target="#code-loss-function-1">Code: Loss Function</a></li>
+  <li><a href="#code-model-training-1" id="toc-code-model-training-1" class="nav-link" data-scroll-target="#code-model-training-1">Code: Model Training</a></li>
+  <li><a href="#proper-scoring-rules" id="toc-proper-scoring-rules" class="nav-link" data-scroll-target="#proper-scoring-rules">Proper Scoring Rules</a></li>
+  <li><a href="#proper-scoring-rules-1" id="toc-proper-scoring-rules-1" class="nav-link" data-scroll-target="#proper-scoring-rules-1">Proper Scoring Rules</a></li>
+  <li><a href="#code-nll" id="toc-code-nll" class="nav-link" data-scroll-target="#code-nll">Code: NLL</a></li>
+  <li><a href="#model-comparisons" id="toc-model-comparisons" class="nav-link" data-scroll-target="#model-comparisons">Model Comparisons</a></li>
+  </ul></li>
+  <li><a href="#epistemic-uncertainty-1" id="toc-epistemic-uncertainty-1" class="nav-link" data-scroll-target="#epistemic-uncertainty-1">Epistemic Uncertainty</a>
+  <ul class="collapse">
+  <li><a href="#dropout" id="toc-dropout" class="nav-link" data-scroll-target="#dropout">Dropout</a></li>
+  <li><a href="#dropout-quote-1" id="toc-dropout-quote-1" class="nav-link" data-scroll-target="#dropout-quote-1">Dropout quote #1</a></li>
+  <li><a href="#dropout-quote-2" id="toc-dropout-quote-2" class="nav-link" data-scroll-target="#dropout-quote-2">Dropout quote #2</a></li>
+  <li><a href="#code-dropout" id="toc-code-dropout" class="nav-link" data-scroll-target="#code-dropout">Code: Dropout</a></li>
+  <li><a href="#code-dropout-after-training" id="toc-code-dropout-after-training" class="nav-link" data-scroll-target="#code-dropout-after-training">Code: Dropout after training</a></li>
+  <li><a href="#dropout-limitation" id="toc-dropout-limitation" class="nav-link" data-scroll-target="#dropout-limitation">Dropout Limitation</a></li>
+  <li><a href="#bayesian-neural-network" id="toc-bayesian-neural-network" class="nav-link" data-scroll-target="#bayesian-neural-network">Bayesian Neural Network</a></li>
+  <li><a href="#tractability-of-posterior-distribution" id="toc-tractability-of-posterior-distribution" class="nav-link" data-scroll-target="#tractability-of-posterior-distribution">Tractability of Posterior Distribution</a></li>
+  <li><a href="#variational-approximation" id="toc-variational-approximation" class="nav-link" data-scroll-target="#variational-approximation">Variational Approximation</a></li>
+  <li><a href="#demonstration" id="toc-demonstration" class="nav-link" data-scroll-target="#demonstration">Demonstration</a></li>
+  <li><a href="#code-variational-layers" id="toc-code-variational-layers" class="nav-link" data-scroll-target="#code-variational-layers">Code: Variational Layers</a></li>
+  <li><a href="#architecture-2" id="toc-architecture-2" class="nav-link" data-scroll-target="#architecture-2">Architecture</a></li>
+  <li><a href="#loss-function-1" id="toc-loss-function-1" class="nav-link" data-scroll-target="#loss-function-1">Loss Function</a></li>
+  <li><a href="#evaluation-of-loss" id="toc-evaluation-of-loss" class="nav-link" data-scroll-target="#evaluation-of-loss">Evaluation of Loss</a></li>
+  <li><a href="#bayesian-gamma-loss" id="toc-bayesian-gamma-loss" class="nav-link" data-scroll-target="#bayesian-gamma-loss">“Bayesian-Gamma” Loss</a></li>
+  <li><a href="#architecture-3" id="toc-architecture-3" class="nav-link" data-scroll-target="#architecture-3">Architecture</a></li>
+  <li><a href="#code-architecture-2" id="toc-code-architecture-2" class="nav-link" data-scroll-target="#code-architecture-2">Code: Architecture</a></li>
+  <li><a href="#code-loss-function-and-training" id="toc-code-loss-function-and-training" class="nav-link" data-scroll-target="#code-loss-function-and-training">Code: Loss Function and Training</a></li>
+  <li><a href="#code-output-sampling" id="toc-code-output-sampling" class="nav-link" data-scroll-target="#code-output-sampling">Code: Output Sampling</a></li>
+  <li><a href="#sampled-density-functions" id="toc-sampled-density-functions" class="nav-link" data-scroll-target="#sampled-density-functions">Sampled Density Functions</a></li>
+  <li><a href="#uncertainty-quantification-uq" id="toc-uncertainty-quantification-uq" class="nav-link" data-scroll-target="#uncertainty-quantification-uq">Uncertainty Quantification (UQ)</a></li>
+  <li><a href="#code-applying-uq" id="toc-code-applying-uq" class="nav-link" data-scroll-target="#code-applying-uq">Code: Applying UQ</a></li>
+  <li><a href="#deep-ensembles" id="toc-deep-ensembles" class="nav-link" data-scroll-target="#deep-ensembles">Deep Ensembles</a></li>
+  <li><a href="#code-deep-ensembles-i" id="toc-code-deep-ensembles-i" class="nav-link" data-scroll-target="#code-deep-ensembles-i">Code: Deep Ensembles I</a></li>
+  <li><a href="#code-deep-ensembles-ii" id="toc-code-deep-ensembles-ii" class="nav-link" data-scroll-target="#code-deep-ensembles-ii">Code: Deep Ensembles II</a></li>
+  <li><a href="#code-deep-ensembles-iii" id="toc-code-deep-ensembles-iii" class="nav-link" data-scroll-target="#code-deep-ensembles-iii">Code: Deep Ensembles III</a></li>
+  
+  
+  </ul></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="distributional-regression.slides.html"><i class="bi bi-file-slides"></i>RevealJS</a></li></ul></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../Distributional-Regression/distributional-regression.html">Module 7</a></li><li class="breadcrumb-item"><a href="../Distributional-Regression/distributional-regression.html">Distributional Regression</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Distributional Regression</h1>
+<p class="subtitle lead">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Eric Dong &amp; Patrick Laub </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This page is out of date for 2024, and will be updated shortly.</p>
+</div>
+</div>
+<div id="7647bf49" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>Show the package imports</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy.random <span class="im">as</span> rnd</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tf_keras</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow <span class="im">as</span> tf</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.callbacks <span class="im">import</span> EarlyStopping</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.layers <span class="im">import</span> Dense</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.models <span class="im">import</span> Sequential</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.layers <span class="im">import</span> Input, Dense, Concatenate</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.models <span class="im">import</span> Model</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.initializers <span class="im">import</span> Constant</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> StandardScaler</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OrdinalEncoder</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<section id="uncertainty" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="uncertainty">Uncertainty</h2>
+<p>Uncertainty in deep learning refers to the level of doubt one would have about the predictions made by an AI-driven algorithm. Identifying and quantifying different sources of uncertainty that could exist in AI-driven algorithms is therefore important to ensure a credible application.</p>
+<section id="quiz" class="level3">
+<h3 class="anchored" data-anchor-id="quiz">Quiz</h3>
+<p>Question: <em>If you decide to predict the claim amount of Bob using a deep learning model, which source(s) of uncertainty are you confronting?</em></p>
+<ol type="1">
+<li>The inherent variability of the data-generating process.</li>
+<li>Parameter error.</li>
+<li>Model error.</li>
+<li>Data uncertainty.</li>
+<li>All of the above.</li>
+</ol>
+</section>
+<section id="answer" class="level3">
+<h3 class="anchored" data-anchor-id="answer">Answer</h3>
+<p>All of the above!</p>
+<p>Parameter error stems primarily due to lack of data. Model error stems from assuming wrong distributional properties of the data. Data uncertainty arises due to the lack of confidence we may have about the quality of the collected data. Noisy data, inconsistent data, data with missing values or data with missing important variables can result in data uncertainty.</p>
+<p>There are two major types of uncertainty in statistical or machine learning:</p>
+<ul>
+<li>Aleatoric uncertainty</li>
+<li>Epistemic uncertainty</li>
+</ul>
+<p>Since there is no consensus on the definitions of aleatoric and epistemic uncertainty, we provide the most acknowledged definitions in the following slides.</p>
+</section>
+<section id="aleatoric-uncertainty" class="level3">
+<h3 class="anchored" data-anchor-id="aleatoric-uncertainty">Aleatoric Uncertainty</h3>
+<dl>
+<dt>Qualitative Definition</dt>
+<dd>
+<p><em>Aleatoric uncertainty refers to the statistical variability and inherent noise with data distribution that modelling cannot explain.</em></p>
+</dd>
+<dt>Quantitative Definition</dt>
+<dd>
+<p><span class="math display">\text{Ale}(Y|\boldsymbol{x}) = \mathbb{V}[Y|\boldsymbol{x}],</span>i.e., if <span class="math inline">Y|\boldsymbol{x} \sim \mathcal{N}(\mu, \sigma^2)</span>, the aleatoric uncertainty would be <span class="math inline">\sigma^2</span>. Simply, it is the conditional variance of the response variable <span class="math inline">Y</span> given features/covariates <span class="math inline">\boldsymbol{x}</span>.</p>
+</dd>
+</dl>
+</section>
+<section id="epistemic-uncertainty" class="level3">
+<h3 class="anchored" data-anchor-id="epistemic-uncertainty">Epistemic Uncertainty</h3>
+<dl>
+<dt>Qualitative Definition</dt>
+<dd>
+<p><em>Epistemic uncertainty refers to the lack of knowledge, limited data information, parameter errors and model errors.</em></p>
+</dd>
+<dt>Quantitative Definition</dt>
+<dd>
+<p><span class="math display">\text{Epi}(Y|\boldsymbol{x}) = \text{Uncertainty}(Y|\boldsymbol{x}) - \text{Ale}(Y|\boldsymbol{x}),</span></p>
+</dd>
+</dl>
+<p>i.e., the total uncertainty subtracting the aleatoric uncertainty <span class="math inline">\mathbb{V}[Y|\boldsymbol{x}]</span> would be the epistemic uncertainty.</p>
+</section>
+<section id="uncertainty-1" class="level3">
+<h3 class="anchored" data-anchor-id="uncertainty-1">Uncertainty</h3>
+<p>Let’s go back to the question at the beginning:</p>
+<p><em>If you decide to predict the claim amount of an individual using a deep learning model, which source(s) of uncertainty are you dealing with?</em></p>
+<ol type="1">
+<li>The inherent variability of the data-generating process <span class="math inline">\rightarrow</span> aleatoric uncertainty.</li>
+<li>Parameter error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+<li>Model error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+<li>Data uncertainty <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+</ol>
+<p>The following sections show how we prepare the datasets for studying uncertainty.</p>
+</section>
+<section id="code-data" class="level3">
+<h3 class="anchored" data-anchor-id="code-data">Code: Data</h3>
+<div id="209d7c88" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="annotated-cell-1"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-1-1"><a href="#annotated-cell-1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-1-2" class="code-annotation-target"><a href="#annotated-cell-1-2" aria-hidden="true" tabindex="-1"></a>sev_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2sev.csv'</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-1-3" class="code-annotation-target"><a href="#annotated-cell-1-3" aria-hidden="true" tabindex="-1"></a>freq_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2freq.csv'</span>)</span>
+<span id="annotated-cell-1-4"><a href="#annotated-cell-1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-1-5"><a href="#annotated-cell-1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a copy of freq dataframe without 'claimfreq' column</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-1-6" class="code-annotation-target"><a href="#annotated-cell-1-6" aria-hidden="true" tabindex="-1"></a>freq_without_claimfreq <span class="op">=</span> freq_df.drop(columns<span class="op">=</span>[<span class="st">'ClaimNb'</span>])</span>
+<span id="annotated-cell-1-7"><a href="#annotated-cell-1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-1-8"><a href="#annotated-cell-1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge severity dataframe with freq_without_claimfreq dataframe</span></span>
+<span id="annotated-cell-1-9"><a href="#annotated-cell-1-9" aria-hidden="true" tabindex="-1"></a>new_sev_df <span class="op">=</span> pd.merge(sev_df, freq_without_claimfreq, on<span class="op">=</span><span class="st">'IDpol'</span>, </span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-1-10" class="code-annotation-target"><a href="#annotated-cell-1-10" aria-hidden="true" tabindex="-1"></a>                                                      how<span class="op">=</span><span class="st">'left'</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-1-11" class="code-annotation-target"><a href="#annotated-cell-1-11" aria-hidden="true" tabindex="-1"></a>new_sev_df <span class="op">=</span> new_sev_df.dropna()</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-1-12" class="code-annotation-target"><a href="#annotated-cell-1-12" aria-hidden="true" tabindex="-1"></a>new_sev_df <span class="op">=</span> new_sev_df.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-1" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-1-13" class="code-annotation-target"><a href="#annotated-cell-1-13" aria-hidden="true" tabindex="-1"></a>new_sev_df[:<span class="dv">2</span>]</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-1" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="2" data-code-annotation="1">Imports <code>freMTPL2sev.csv</code> dataset</span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="3" data-code-annotation="2">Imports <code>freMTPL2freq.csv</code> dataset</span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="6" data-code-annotation="3">Drops <code>ClaimNb</code> column</span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="10" data-code-annotation="4">Merges the two datasets ,<code>sev_df</code> and <code>freq_without_claimfreq</code> by matching the <code>IDpol</code> column. Assigning <code>how='left'</code> ensures that all rows from the left dataset <code>sev_df</code> is considered, and only the matching columns from <code>freq_without_claimfreq</code> are selected</span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="11" data-code-annotation="5">Drops missing values or/and NAN values</span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="12" data-code-annotation="6">Drops the <code>IDpol</code> column from <code>new_sev_df</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-1" data-target-annotation="7">7</dt>
+<dd>
+<span data-code-cell="annotated-cell-1" data-code-lines="13" data-code-annotation="7">Retrieves first two rows of the dataset</span>
+</dd>
+</dl>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="3">
+<div>
+<div>
+
+
+<table class="dataframe table table-sm table-striped small" data-quarto-postprocess="true" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">ClaimAmount</th>
+<th data-quarto-table-cell-role="th">Exposure</th>
+<th data-quarto-table-cell-role="th">VehPower</th>
+<th data-quarto-table-cell-role="th">VehAge</th>
+<th data-quarto-table-cell-role="th">DrivAge</th>
+<th data-quarto-table-cell-role="th">BonusMalus</th>
+<th data-quarto-table-cell-role="th">VehBrand</th>
+<th data-quarto-table-cell-role="th">VehGas</th>
+<th data-quarto-table-cell-role="th">Area</th>
+<th data-quarto-table-cell-role="th">Density</th>
+<th data-quarto-table-cell-role="th">Region</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">0</td>
+<td>995.20</td>
+<td>0.59</td>
+<td>11.0</td>
+<td>0.0</td>
+<td>39.0</td>
+<td>56.0</td>
+<td>B12</td>
+<td>Diesel</td>
+<td>D</td>
+<td>778.0</td>
+<td>Picardie</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">1</td>
+<td>1128.12</td>
+<td>0.95</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>49.0</td>
+<td>50.0</td>
+<td>B12</td>
+<td>Regular</td>
+<td>E</td>
+<td>2354.0</td>
+<td>Ile-de-France</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="code-preprocessing" class="level3">
+<h3 class="anchored" data-anchor-id="code-preprocessing">Code: Preprocessing</h3>
+<p>Next we carry out some basic preprocessing</p>
+<div id="d297696b" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  new_sev_df.drop(<span class="st">"ClaimAmount"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  new_sev_df[<span class="st">"ClaimAmount"</span>],</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  random_state<span class="op">=</span><span class="dv">2023</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Reset each index to start at 0 again.</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> X_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> X_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>y_train <span class="op">=</span> y_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>y_test <span class="op">=</span> y_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="code-preprocessing-1" class="level3">
+<h3 class="anchored" data-anchor-id="code-preprocessing-1">Code: Preprocessing</h3>
+<p>Next we define the column transfer. The column transfer first applies ordinal encoding to <code>VehBrand</code>, <code>Region</code>, <code>Area</code> and <code>VehGas</code> variables, and applies standard scaling to all remaining numerical values. Next we fit the defined column transfer to the training set. The fitted transformation is then applied on both training and test sets. (Note that the fitting is only carried out on the train set and the same fit is applied to both train, validation and test sets.)</p>
+<p>Since this task does not apply entity embeddings, <code>VehBrand</code> and <code>Region</code> variables are dropped from the dataframe.</p>
+<div id="174d5c1e" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Transformation</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>   verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># We don't apply entity embedding </span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>X_train_ct <span class="op">=</span> ct.fit_transform(X_train)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>X_test_ct <span class="op">=</span> ct.transform(X_test)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> X_train_ct.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> X_test_ct.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<ul>
+<li><span class="math inline">\texttt{VehGas=1}</span> if the car gas is regular.</li>
+<li><span class="math inline">\texttt{Area=0}</span> represents the rural area, and <span class="math inline">\texttt{Area=5}</span> represents the urban center.</li>
+</ul>
+</section>
+<section id="histogram-of-the-claimamount" class="level3">
+<h3 class="anchored" data-anchor-id="histogram-of-the-claimamount">Histogram of the <code>ClaimAmount</code></h3>
+<p>Plotting the empirical distribution of the target variable help us get an understanding of the inherent variability associated with the data.</p>
+<div id="d287472e" class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>plt.hist(y_train[y_train <span class="op">&lt;</span> <span class="dv">5000</span>], bins<span class="op">=</span><span class="dv">30</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="distributional-regression_files/figure-html/cell-7-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="aleatoric-uncertainty-1" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="aleatoric-uncertainty-1">Aleatoric Uncertainty</h2>
+<p>Aleatoric uncertainty refers to the inherent variability associated with the data generating process. Among many ways to capture the aleatoric uncertainty, (i) combining with probabilistic models and (ii) considering mixture models are two useful methods to quantify the inherent variability.</p>
+<p>The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter <span class="math inline">\phi_{CANN}</span> for the neural network. The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.</p>
+<section id="glm" class="level3">
+<h3 class="anchored" data-anchor-id="glm">GLM</h3>
+<p>The generalised linear model (GLM) is a statistical regression model that estimates the conditional mean of the response variable <span class="math inline">Y</span> given an instance <span class="math inline">\boldsymbol{x}</span> via a link function <span class="math inline">g</span>: <span class="math display">
+    \mathbb{E}[Y|\boldsymbol{x}]
+    = \mu(\boldsymbol{x}; \boldsymbol{\beta}_{\text{GLM}})
+    = g^{-1} \big(\big \langle \boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x} \big \rangle\big),
+</span> where</p>
+<ul>
+<li><span class="math inline">\boldsymbol{x} \in \mathbb{R}^{d_{\boldsymbol{x}}}</span> is the vector of explanatory variables, with <span class="math inline">d_{\boldsymbol{x}}</span> denoting its dimension.</li>
+<li><span class="math inline">\boldsymbol{\beta}_{\text{GLM}}</span> represents the vector of regression coefficients.</li>
+<li><span class="math inline">\langle \boldsymbol{a}, \boldsymbol{b}\rangle</span> represents the inner product of <span class="math inline">\boldsymbol{a}</span> and <span class="math inline">\boldsymbol{b}</span>.</li>
+</ul>
+<p>The idea of GLM is to find a linear combination of independent variables <span class="math inline">\boldsymbol{x}</span> and coefficients <span class="math inline">\boldsymbol{\beta}</span>, apply a non-linear transformation (<span class="math inline">g^{-1}</span>) to that linear combination and set it equal to conditional mean of the response variable <span class="math inline">Y</span> given an instance <span class="math inline">\boldsymbol{x}</span>. The non-linear transformation provides added flexibility.</p>
+</section>
+<section id="gamma-glm" class="level3">
+<h3 class="anchored" data-anchor-id="gamma-glm">Gamma GLM</h3>
+<p>Suppose a fitted gamma GLM model has</p>
+<ul>
+<li>a log link function <span class="math inline">g(x)=\log(x)</span> and</li>
+<li>regression coefficients <span class="math inline">\boldsymbol{\beta}_{\text{GLM}}=(\beta_0, \beta_1, \beta_2, \beta_3)</span>.</li>
+</ul>
+<p>Then, it estimates the conditional mean of <span class="math inline">Y</span> given a new instance <span class="math inline">\boldsymbol{x}=(1, x_1, x_2, x_3)</span> as follows: <span class="math display">
+    \mathbb{E}[Y|\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
+</span></p>
+<p>A GLM can model any other exponential family distribution using an appropriate link function <span class="math inline">g</span>.</p>
+</section>
+<section id="loss-function-for-a-gamma-glm" class="level3">
+<h3 class="anchored" data-anchor-id="loss-function-for-a-gamma-glm">“Loss Function” for a Gamma GLM</h3>
+<p>If <span class="math inline">Y|\boldsymbol{x}</span> is a gamma r.v., we can parameterise its density by its mean <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta})</span> and dispersion parameter <span class="math inline">\phi</span>: <span class="math display">
+    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}, \boldsymbol{\beta}, \phi)
+    = \frac{(\mu (\boldsymbol{x}; \boldsymbol{\beta})\cdot \phi)^{-1/\phi}}{{\Gamma(1/\phi)}} \cdot y^{1/\phi - 1} \cdot \mathrm{e}^{-y/(\mu (\boldsymbol{x}; \boldsymbol{\beta})\cdot\phi)}.
+</span> The “loss function” for a gamma GLM is typically the negative log-likelihood (NLL): <span class="math display">
+    \sum_{i=1}^{N}-\log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}_i, \boldsymbol{\beta},\phi)
+    \propto \sum_{i=1}^{N}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
+</span> i.e., we ignore the dispersion parameter <span class="math inline">\phi</span> while estimating the regression coefficients.</p>
+</section>
+<section id="fitting-steps" class="level3">
+<h3 class="anchored" data-anchor-id="fitting-steps">Fitting Steps</h3>
+<p>Step 1. Use the advanced second derivative iterative method to find the regression coefficients: <span class="math display">
+    \boldsymbol{\beta}_{\text{GLM}} = \underset{\boldsymbol{\beta}}{\text{arg min}} \ \sum_{i=1}^{N}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
+</span></p>
+<p>Step 2. Estimate the dispersion parameter: <span class="math display">
+    \phi_{\text{GLM}}=\frac{1}{N-d_{\boldsymbol{x}}}\sum_{i=1}^{N}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta}_{\text{GLM}} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta}_{\text{GLM}} )^2}
+</span></p>
+</section>
+<section id="code-gamma-glm" class="level3">
+<h3 class="anchored" data-anchor-id="code-gamma-glm">Code: Gamma GLM</h3>
+<p>In Python, we can fit a gamma GLM as follows:</p>
+<div id="323625ca" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a column of ones to include an intercept in the model</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>X_train_design <span class="op">=</span> sm.add_constant(X_train)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a Gamma GLM with a log link function</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>gamma_GLM <span class="op">=</span> sm.GLM(y_train, X_train_design,                   </span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>            family<span class="op">=</span>sm.families.Gamma(sm.families.links.Log()))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit the model</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>gamma_GLM <span class="op">=</span> gamma_GLM.fit()</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Dispersion Parameter</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>mus <span class="op">=</span> gamma_GLM.predict(X_train_design)</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>residuals <span class="op">=</span> mus<span class="op">-</span>y_train</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>phi_GLM <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance)<span class="op">/</span>dof</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(phi_GLM)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>59.6306232357824</code></pre>
+</div>
+</div>
+<p>The above example of fitting a Gamma distribution assumes a constant dispersion, meaning that, the dispersion of claim amount is constant for all policyholders. If we believe that the constant dispersion assumption is quite strong, we can use a double GLM model. Fitting a GLM is the traditional way of modelling a claim amount.</p>
+</section>
+<section id="cann" class="level3">
+<h3 class="anchored" data-anchor-id="cann">CANN</h3>
+<p>The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by Schelldorfer and Wüthrich (2019). We summarise the CANN approach as follows:</p>
+<ul>
+<li>Find the coefficients <span class="math inline">\boldsymbol{\beta}_{\text{GLM}}</span> of the GLM with a link function <span class="math inline">g(\cdot)</span>.</li>
+<li>Find the weights <span class="math inline">\boldsymbol{w}_{\text{CANN}}</span> of a neural network <span class="math inline">\mathcal{M}_{\text{CANN}}:\mathbb{R}^{d_{\boldsymbol{x}}}\to\mathbb{R}</span>.</li>
+<li>Given a new instance <span class="math inline">\boldsymbol{x}</span>, we have <span class="math display">\mathbb{E}[Y|\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).</span></li>
+</ul>
+</section>
+<section id="architecture" class="level3">
+<h3 class="anchored" data-anchor-id="architecture">Architecture</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./CANN.png" class="img-fluid figure-img"></p>
+<figcaption><span style="color:darkblue;">Figure</span>: CANN approach.</figcaption>
+</figure>
+</div>
+</section>
+<section id="code-architecture" class="level3">
+<h3 class="anchored" data-anchor-id="code-architecture">Code: Architecture</h3>
+<div id="eb8f56a2" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>gamma_GLM.params</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<pre><code>const         7.786576
+Area         -0.073226
+VehGas        0.082292
+                ...   
+DrivAge      -0.022147
+BonusMalus    0.157204
+Density       0.010539
+Length: 9, dtype: float64</code></pre>
+</div>
+</div>
+<div id="8ee7bcf8" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="annotated-cell-7"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-7-1"><a href="#annotated-cell-7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure reproducibility</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-7-2" class="code-annotation-target"><a href="#annotated-cell-7-2" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
+<span id="annotated-cell-7-3"><a href="#annotated-cell-7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-7-4"><a href="#annotated-cell-7-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Pre-defined constants</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-7-5" class="code-annotation-target"><a href="#annotated-cell-7-5" aria-hidden="true" tabindex="-1"></a>glm_weights <span class="op">=</span> gamma_GLM.params.iloc[<span class="dv">1</span>:]</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-7-6" class="code-annotation-target"><a href="#annotated-cell-7-6" aria-hidden="true" tabindex="-1"></a>glm_bias <span class="op">=</span> gamma_GLM.params.iloc[<span class="dv">0</span>]</span>
+<span id="annotated-cell-7-7"><a href="#annotated-cell-7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-7-8"><a href="#annotated-cell-7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Define model inputs</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-7-9" class="code-annotation-target"><a href="#annotated-cell-7-9" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="annotated-cell-7-10"><a href="#annotated-cell-7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-7-11"><a href="#annotated-cell-7-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Non-trainable GLM linear part</span></span>
+<span id="annotated-cell-7-12"><a href="#annotated-cell-7-12" aria-hidden="true" tabindex="-1"></a>glm_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, trainable<span class="op">=</span><span class="va">False</span>,</span>
+<span id="annotated-cell-7-13"><a href="#annotated-cell-7-13" aria-hidden="true" tabindex="-1"></a>                     kernel_initializer<span class="op">=</span>Constant(glm_weights),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-7-14" class="code-annotation-target"><a href="#annotated-cell-7-14" aria-hidden="true" tabindex="-1"></a>                     bias_initializer<span class="op">=</span>Constant(glm_bias))(inputs)</span>
+<span id="annotated-cell-7-15"><a href="#annotated-cell-7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-7-16"><a href="#annotated-cell-7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Neural network layers</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-7-17" class="code-annotation-target"><a href="#annotated-cell-7-17" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-7-18" class="code-annotation-target"><a href="#annotated-cell-7-18" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="8" onclick="event.preventDefault();">8</a><span id="annotated-cell-7-19" class="code-annotation-target"><a href="#annotated-cell-7-19" aria-hidden="true" tabindex="-1"></a>cann_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>)(x)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-7" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="2" data-code-annotation="1">Sets the random seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="5" data-code-annotation="2">Stores weights computed from GLM in <code>glm_weights</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="6" data-code-annotation="3">Stores bias computed from GLM in <code>glm_bias</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="9" data-code-annotation="4">Specifies the model input features</span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="14" data-code-annotation="5">Adds a <code>Dense</code> layer with just one neuron, to store the model output from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. <code>kernel_initializer=Constant(glm_weights)</code> and <code>bias_initializer=Constant(glm_bias)</code> ensures that weights are initialized with the optimal values estimated from GLM fit.</span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="17" data-code-annotation="6">Adds another <code>Dense</code> layer</span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="7">7</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="18" data-code-annotation="7">Adds another <code>Dense</code> layer</span>
+</dd>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="8">8</dt>
+<dd>
+<span data-code-cell="annotated-cell-7" data-code-lines="19" data-code-annotation="8">Adds the output layer with linear activation</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="code-loss-function" class="level3">
+<h3 class="anchored" data-anchor-id="code-loss-function">Code: Loss Function</h3>
+<div id="222f1abd" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="annotated-cell-8"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-8-1"><a href="#annotated-cell-8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine GLM and CANN estimates</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-8" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-8-2" class="code-annotation-target"><a href="#annotated-cell-8-2" aria-hidden="true" tabindex="-1"></a>CANN <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([cann_logmu, glm_logmu]))</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-8" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-8" data-code-lines="2" data-code-annotation="1">Since the output of the model is evaluated by combining the output from both branches, the model is constructed by concatenating outputs from <code>cann_logmu</code> and <code>glm_logmu</code>. Note that there are two predicted values, one predicted value from the <code>glm_logmu</code> component and the other coming from the <code>cann_logmu</code> component.</span>
+</dd>
+</dl>
+</div>
+</div>
+<p>We need to customise the loss function for CANN.</p>
+<div id="eec857c2" class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="annotated-cell-9"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-9-1"><a href="#annotated-cell-9-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> CANN_negative_log_likelihood(y_true, y_pred):</span>
+<span id="annotated-cell-9-2"><a href="#annotated-cell-9-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">#the new mean estimate</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-9" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-9-3" class="code-annotation-target"><a href="#annotated-cell-9-3" aria-hidden="true" tabindex="-1"></a>    CANN_logmu <span class="op">=</span> y_pred[:, <span class="dv">0</span>]</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-9" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-9-4" class="code-annotation-target"><a href="#annotated-cell-9-4" aria-hidden="true" tabindex="-1"></a>    GLM_logmu <span class="op">=</span> y_pred[:, <span class="dv">1</span>]</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-9" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-9-5" class="code-annotation-target"><a href="#annotated-cell-9-5" aria-hidden="true" tabindex="-1"></a>    mu <span class="op">=</span> tf.math.exp(CANN_logmu <span class="op">+</span> GLM_logmu)</span>
+<span id="annotated-cell-9-6"><a href="#annotated-cell-9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-9-7"><a href="#annotated-cell-9-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Compute the negative log likelihood of the Gamma distribution</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-9" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-9-8" class="code-annotation-target"><a href="#annotated-cell-9-8" aria-hidden="true" tabindex="-1"></a>    nll <span class="op">=</span> tf.reduce_mean(CANN_logmu <span class="op">+</span> GLM_logmu <span class="op">+</span> y_true<span class="op">/</span>mu)</span>
+<span id="annotated-cell-9-9"><a href="#annotated-cell-9-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="annotated-cell-9-10"><a href="#annotated-cell-9-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> nll</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-9" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-9" data-code-lines="3" data-code-annotation="1">Stores the first column of the <code>y_pred</code> matrix as <code>CANN_logmu</code> (the prediction from the CANN)</span>
+</dd>
+<dt data-target-cell="annotated-cell-9" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-9" data-code-lines="4" data-code-annotation="2">Stores the second column of the <code>y_pred</code> matrix as <code>GLM_logmu</code> (the prediction from the glm)</span>
+</dd>
+<dt data-target-cell="annotated-cell-9" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-9" data-code-lines="5" data-code-annotation="3">Computes the exponential of the sum of them as <code>mu</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-9" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-9" data-code-lines="8" data-code-annotation="4">Computes the negative log likelihood of a Gamma distribution where <span class="math inline">log(\mu)</span> is now the sum <code>CANN_logmu + GLM_logmu</code></span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="code-model-training" class="level3">
+<h3 class="anchored" data-anchor-id="code-model-training">Code: Model Training</h3>
+<div id="e404d286" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="annotated-cell-10"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-10" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-10-1" class="code-annotation-target"><a href="#annotated-cell-10-1" aria-hidden="true" tabindex="-1"></a>CANN.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>CANN_negative_log_likelihood)</span>
+<span id="annotated-cell-10-2"><a href="#annotated-cell-10-2" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> CANN.fit(X_train, y_train,</span>
+<span id="annotated-cell-10-3"><a href="#annotated-cell-10-3" aria-hidden="true" tabindex="-1"></a>    epochs<span class="op">=</span><span class="dv">300</span>, </span>
+<span id="annotated-cell-10-4"><a href="#annotated-cell-10-4" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">30</span>)],  </span>
+<span id="annotated-cell-10-5"><a href="#annotated-cell-10-5" aria-hidden="true" tabindex="-1"></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-10-6"><a href="#annotated-cell-10-6" aria-hidden="true" tabindex="-1"></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-10" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-10-7" class="code-annotation-target"><a href="#annotated-cell-10-7" aria-hidden="true" tabindex="-1"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-10" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-10" data-code-lines="1" data-code-annotation="1">Compiles the model with adam optimizer and the custom loss function</span>
+</dd>
+<dt data-target-cell="annotated-cell-10" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-10" data-code-lines="7" data-code-annotation="2">Fits the model (with a validation split defined inside the fit function)</span>
+</dd>
+</dl>
+</div>
+</div>
+<p>Find the dispersion parameter.</p>
+<div id="778c6b14" class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>mus <span class="op">=</span> np.exp(np.sum(CANN.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>residuals <span class="op">=</span> mus<span class="op">-</span>y_train</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>phi_CANN <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance) <span class="op">/</span> dof</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(phi_CANN)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>98.60976911896634</code></pre>
+</div>
+</div>
+</section>
+<section id="mixture-distribution" class="level3">
+<h3 class="anchored" data-anchor-id="mixture-distribution">Mixture Distribution</h3>
+<p>One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict <em>y</em> coming from a Gaussian distribution. Most common method would be to predict <span class="math inline">(\hat{y})</span> directly using a single neuron at the output layer. Another possible way would be to estimate the parameters (<span class="math inline">\mu</span> and <span class="math inline">\sigma</span>) of the <em>y</em> distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for <em>y</em> can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of <em>y</em> values is bimodal or multi modal. In such situations, assuming a mixture distribution is more intuitive.</p>
+<p>Given a finite set of resulting random variables <span class="math inline">(Y_1, ..., Y_{K})</span>, one can generate a multinomial random variable <span class="math inline">Y\sim \text{Multinomial}(1, \boldsymbol{\pi})</span>. Meanwhile, <span class="math inline">Y</span> can be regarded as a mixture of <span class="math inline">Y_1, ..., Y_{K}</span>, i.e., <span class="math display">
+  Y = \begin{cases}
+      Y_1 &amp; \text{w.p. } \pi_1, \\
+      \vdots &amp; \vdots\\
+      Y_K &amp; \text{w.p. } \pi_K, \\
+  \end{cases}
+</span> where we define a set of finite set of weights <span class="math inline">\boldsymbol{\pi}=(\pi_{1} ..., \pi_{K})</span> such that <span class="math inline">\pi_k \ge 0</span> for <span class="math inline">k \in \{1, ..., K\}</span> and <span class="math inline">\sum_{k=1}^{K}\pi_k=1</span>.</p>
+</section>
+<section id="mixture-distribution-1" class="level3">
+<h3 class="anchored" data-anchor-id="mixture-distribution-1">Mixture Distribution</h3>
+<p>Let <span class="math inline">f_{Y_k|\boldsymbol{X}}</span> and <span class="math inline">F_{Y_k|\boldsymbol{X}}</span> be the probability density function and the cumulative density function, respectively, of <span class="math inline">Y_k|\boldsymbol{X}</span> for all <span class="math inline">k\in \{1, ..., K\}</span>. The random variable <span class="math inline">Y|\boldsymbol{X}</span>, which mixes <span class="math inline">Y_k|\boldsymbol{X}</span>’s with weights <span class="math inline">\pi_k</span>’s, has the density function <span class="math display">
+    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) f_{k}(y|\boldsymbol{x}),
+</span> and the cumulative density function <span class="math display">
+    F_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) F_{k}(y|\boldsymbol{x}).
+</span></p>
+</section>
+<section id="mixture-density-network" class="level3">
+<h3 class="anchored" data-anchor-id="mixture-density-network">Mixture Density Network</h3>
+<p>A mixture density network (MDN) <span class="math inline">\mathcal{M}_{\boldsymbol{w}^*}</span> outputs each distribution component’s mixing weights and parameters of <span class="math inline">Y</span> given the input features <span class="math inline">\boldsymbol{x}</span>, i.e., <span class="math display">
+    \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
+</span> where <span class="math inline">\boldsymbol{w}^*</span> is the networks’ weights found by minimising the following negative log-likelihood loss function <span class="math display">
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})= - \sum_{i=1}^{N} \log f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w}^*),
+</span> where <span class="math inline">\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{N}</span> is the training dataset.</p>
+</section>
+<section id="mixture-density-network-1" class="level3">
+<h3 class="anchored" data-anchor-id="mixture-density-network-1">Mixture Density Network</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./MDN.png" class="img-fluid figure-img"></p>
+<figcaption><span style="color:darkblue;">Figure</span>: An MDN that outputs the parameters for a <span class="math inline">K</span> component mixture distribution. <span class="math inline">\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), ..., \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))</span> consists of the parameter estimates for the <span class="math inline">k</span>th mixture component.</figcaption>
+</figure>
+</div>
+</section>
+<section id="model-specification" class="level3">
+<h3 class="anchored" data-anchor-id="model-specification">Model Specification</h3>
+<p>Suppose there are two types of claims:</p>
+<ul>
+<li>Type I: <span class="math inline">Y_1|\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))</span> and,</li>
+<li>Type II: <span class="math inline">Y_2|\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))</span>.</li>
+</ul>
+<p>The density of the actual claim amount <span class="math inline">Y|\boldsymbol{x}</span> follows <span class="math display">
+    \begin{align*}
+        f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
+        &amp;= \pi_1(\boldsymbol{x})\cdot \frac{\beta_1(\boldsymbol{x})^{\alpha_1(\boldsymbol{x})}}{\Gamma(\alpha_1(\boldsymbol{x}))}\mathrm{e}^{-\beta_1(\boldsymbol{x})y}y^{\alpha_1(\boldsymbol{x})-1} \\
+        &amp;\quad + (1-\pi_1(\boldsymbol{x}))\cdot \frac{\beta_2(\boldsymbol{x})^{\alpha_2(\boldsymbol{x})}}{\Gamma(\alpha_2(\boldsymbol{x}))}\mathrm{e}^{-\beta_2(\boldsymbol{x})y}y^{\alpha_2(\boldsymbol{x})-1}.
+    \end{align*}
+</span> where <span class="math inline">\pi_1(\boldsymbol{x})</span> is the probability of a Type I claim given <span class="math inline">\boldsymbol{x}</span>.</p>
+</section>
+<section id="output" class="level3">
+<h3 class="anchored" data-anchor-id="output">Output</h3>
+<p>The aim is to find the optimum weights <span class="math display">
+    \boldsymbol{w}^* = \underset{w}{\text{arg min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
+</span> for the Gamma mixture density network <span class="math inline">\mathcal{M}_{\boldsymbol{w}^*}</span> that outputs the mixing weights, shapes and scales of <span class="math inline">Y</span> given the input features <span class="math inline">\boldsymbol{x}</span>, i.e., <span class="math display">
+    \begin{align*}
+        \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})
+        = ( &amp;\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
+             \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
+            &amp;\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
+            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*),\\
+            &amp;\beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
+            \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
+        ).
+    \end{align*}
+</span></p>
+</section>
+<section id="architecture-1" class="level3">
+<h3 class="anchored" data-anchor-id="architecture-1">Architecture</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./Gamma_MDN.png" class="img-fluid figure-img"></p>
+<figcaption><span style="color:darkblue;">Figure</span>: We demonstrate the structure of a gamma MDN that outputs the parameters for a gamma mixture with two components.</figcaption>
+</figure>
+</div>
+</section>
+<section id="code-architecture-1" class="level3">
+<h3 class="anchored" data-anchor-id="code-architecture-1">Code: Architecture</h3>
+<p>The following code resembles the architecture of the architecture of the gamma MDN from the previous slide.</p>
+<div id="419b7b26" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="annotated-cell-12"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-12-1"><a href="#annotated-cell-12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure reproducibility</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-12-2" class="code-annotation-target"><a href="#annotated-cell-12-2" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
+<span id="annotated-cell-12-3"><a href="#annotated-cell-12-3" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-12-4" class="code-annotation-target"><a href="#annotated-cell-12-4" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="annotated-cell-12-5"><a href="#annotated-cell-12-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-12-6"><a href="#annotated-cell-12-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Two hidden layers </span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-12-7" class="code-annotation-target"><a href="#annotated-cell-12-7" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
+<span id="annotated-cell-12-8"><a href="#annotated-cell-12-8" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
+<span id="annotated-cell-12-9"><a href="#annotated-cell-12-9" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-12-10" class="code-annotation-target"><a href="#annotated-cell-12-10" aria-hidden="true" tabindex="-1"></a>pis <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'softmax'</span>)(x) <span class="co">#mixing weights</span></span>
+<span id="annotated-cell-12-11"><a href="#annotated-cell-12-11" aria-hidden="true" tabindex="-1"></a>alphas <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co">#shape parameters</span></span>
+<span id="annotated-cell-12-12"><a href="#annotated-cell-12-12" aria-hidden="true" tabindex="-1"></a>betas <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co">#scale parameters</span></span>
+<span id="annotated-cell-12-13"><a href="#annotated-cell-12-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-12-14"><a href="#annotated-cell-12-14" aria-hidden="true" tabindex="-1"></a><span class="co"># `y_pred` will now have 6 columns</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-12-15" class="code-annotation-target"><a href="#annotated-cell-12-15" aria-hidden="true" tabindex="-1"></a>gamma_mdn <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([pis, alphas, betas]))</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-12" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="2" data-code-annotation="1">Sets the random seeds for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="4" data-code-annotation="2">Defines the input layer with the number of neurons being equal to the number of input features</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="7" data-code-annotation="3">Specifies the hidden layers of the neural network</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="10" data-code-annotation="4">Specifies the neurons of the output layer. Here, <code>softmax</code> is used for <span class="math inline">\pi</span> values as they must sum up to 1. <code>exponential</code> activation is used for both <span class="math inline">\alpha</span>’s and <span class="math inline">\beta</span>’s as they must be non-negative.</span>
+</dd>
+<dt data-target-cell="annotated-cell-12" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-12" data-code-lines="15" data-code-annotation="5">Defines the model by specifying the inputs and outputs</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="loss-function" class="level3">
+<h3 class="anchored" data-anchor-id="loss-function">Loss Function</h3>
+<p>The negative log-likelihood loss function is given by</p>
+<p><span class="math display">
+    \mathcal{L}(\mathcal{D}, \boldsymbol{w})
+    = - \sum_{i=1}^{N} \log \  f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w})
+</span> where the <span class="math inline">f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w})</span> is defined by <span class="math display">
+\begin{align*}
+    &amp;\pi_1(\boldsymbol{x};\boldsymbol{w})\cdot \frac{\beta_1(\boldsymbol{x};\boldsymbol{w})^{\alpha_1(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_1(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_1(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_1(\boldsymbol{x};\boldsymbol{w})-1} \\
+    &amp; \quad + (1-\pi_1(\boldsymbol{x};\boldsymbol{w}))\cdot \frac{\beta_2(\boldsymbol{x};\boldsymbol{w})^{\alpha_2(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_2(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_2(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_2(\boldsymbol{x};\boldsymbol{w})-1}
+\end{align*}
+</span></p>
+</section>
+<section id="code-loss-function-1" class="level3">
+<h3 class="anchored" data-anchor-id="code-loss-function-1">Code: Loss Function</h3>
+<p>We employ functions from <code>tensorflow_probability</code> to code the loss function for the gamma MDN. The <code>MixtureSameFamily</code> function facilitates defining a mixture distribution all components from the same distribution but have different parametrization.</p>
+<div id="36d91caf" class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="annotated-cell-13"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-13-1" class="code-annotation-target"><a href="#annotated-cell-13-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-13-2" class="code-annotation-target"><a href="#annotated-cell-13-2" aria-hidden="true" tabindex="-1"></a>tfd <span class="op">=</span> tfp.distributions</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-13-3" class="code-annotation-target"><a href="#annotated-cell-13-3" aria-hidden="true" tabindex="-1"></a>K <span class="op">=</span> <span class="dv">2</span> <span class="co"># number of mixture components</span></span>
+<span id="annotated-cell-13-4"><a href="#annotated-cell-13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-13-5"><a href="#annotated-cell-13-5" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gamma_mixture_NLL(y_true, y_pred):                                      </span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-13-6" class="code-annotation-target"><a href="#annotated-cell-13-6" aria-hidden="true" tabindex="-1"></a>    K <span class="op">=</span> y_pred.shape[<span class="dv">1</span>] <span class="op">//</span> <span class="dv">3</span></span>
+<span id="annotated-cell-13-7"><a href="#annotated-cell-13-7" aria-hidden="true" tabindex="-1"></a>    pis <span class="op">=</span>  y_pred[:, :K]                                                    </span>
+<span id="annotated-cell-13-8"><a href="#annotated-cell-13-8" aria-hidden="true" tabindex="-1"></a>    alphas <span class="op">=</span> y_pred[:, K:<span class="dv">2</span><span class="op">*</span>K]                                               </span>
+<span id="annotated-cell-13-9"><a href="#annotated-cell-13-9" aria-hidden="true" tabindex="-1"></a>    betas <span class="op">=</span> y_pred[:, <span class="dv">2</span><span class="op">*</span>K:<span class="dv">3</span><span class="op">*</span>K]                                              </span>
+<span id="annotated-cell-13-10"><a href="#annotated-cell-13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-13-11"><a href="#annotated-cell-13-11" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The mixture distribution is a MixtureSameFamily distribution</span></span>
+<span id="annotated-cell-13-12"><a href="#annotated-cell-13-12" aria-hidden="true" tabindex="-1"></a>    mixture_distribution <span class="op">=</span> tfd.MixtureSameFamily(</span>
+<span id="annotated-cell-13-13"><a href="#annotated-cell-13-13" aria-hidden="true" tabindex="-1"></a>        mixture_distribution<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>pis),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-13-14" class="code-annotation-target"><a href="#annotated-cell-13-14" aria-hidden="true" tabindex="-1"></a>        components_distribution<span class="op">=</span>tfd.Gamma(alphas, betas))</span>
+<span id="annotated-cell-13-15"><a href="#annotated-cell-13-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-13-16"><a href="#annotated-cell-13-16" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The loss is the negative log-likelihood of the data</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-13-17" class="code-annotation-target"><a href="#annotated-cell-13-17" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span>mixture_distribution.log_prob(y_true)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-13" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-13" data-code-lines="1" data-code-annotation="1">Imports <code>tfp</code> class from <code>tensorflow_probability</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-13" data-code-lines="2" data-code-annotation="2">Stores statistical distributions in the <code>tfp</code> class as <code>tfd</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-13" data-code-lines="3" data-code-annotation="3">Specifies the number of components in the mixture model</span>
+</dd>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-13" data-code-lines="6" data-code-annotation="4">Extracts predicted values for all model components and stores them in separate matrices</span>
+</dd>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-13" data-code-lines="14" data-code-annotation="5">Specifies the mixture distribution using computed model components</span>
+</dd>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-13" data-code-lines="17" data-code-annotation="6">Use the fitted model to calculate negative log likelihood given the observed data</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="code-model-training-1" class="level3">
+<h3 class="anchored" data-anchor-id="code-model-training-1">Code: Model Training</h3>
+<div id="6f10ae54" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="annotated-cell-14"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-14-1"><a href="#annotated-cell-14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Employ the loss function from previous slide</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-14" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-14-2" class="code-annotation-target"><a href="#annotated-cell-14-2" aria-hidden="true" tabindex="-1"></a>gamma_mdn.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>gamma_mixture_NLL)</span>
+<span id="annotated-cell-14-3"><a href="#annotated-cell-14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-14-4"><a href="#annotated-cell-14-4" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> gamma_mdn.fit(X_train, y_train,</span>
+<span id="annotated-cell-14-5"><a href="#annotated-cell-14-5" aria-hidden="true" tabindex="-1"></a>    epochs<span class="op">=</span><span class="dv">300</span>, </span>
+<span id="annotated-cell-14-6"><a href="#annotated-cell-14-6" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">30</span>)],  </span>
+<span id="annotated-cell-14-7"><a href="#annotated-cell-14-7" aria-hidden="true" tabindex="-1"></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-14-8"><a href="#annotated-cell-14-8" aria-hidden="true" tabindex="-1"></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-14" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-14-9" class="code-annotation-target"><a href="#annotated-cell-14-9" aria-hidden="true" tabindex="-1"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-14" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-14" data-code-lines="2" data-code-annotation="1">Compiles the model using <code>adam</code> optimizer and the <code>gamma_mixture_NLL</code>(negative log likelihood) as the loss function</span>
+</dd>
+<dt data-target-cell="annotated-cell-14" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-14" data-code-lines="9" data-code-annotation="2">Fits the model using the training data, with a validation split</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="proper-scoring-rules" class="level3">
+<h3 class="anchored" data-anchor-id="proper-scoring-rules">Proper Scoring Rules</h3>
+<p>Proper scoring rules provide a summary measure for the performance of the probabilistic predictions. They are useful in comparing performances across models.</p>
+<dl>
+<dt>Definition</dt>
+<dd>
+<p><em>The scoring rule</em> <span class="math inline">S : \mathcal{F} \times \mathbb{R} \to \bar{\mathbb{R}}</span> is proper relative to the class <span class="math inline">\mathcal{F}</span> if <span class="math display">
+S(G, G)\le S(F, G)
+</span> for all <span class="math inline">F,G\in \mathcal{F}</span>. It is strictly proper if equality holds only if <span class="math inline">F = G</span>.</p>
+</dd>
+</dl>
+<p>Examples:</p>
+<ul>
+<li>Logarithmic Score (NLL)</li>
+<li>Continuous Ranked Probability Score (CRPS)</li>
+</ul>
+</section>
+<section id="proper-scoring-rules-1" class="level3">
+<h3 class="anchored" data-anchor-id="proper-scoring-rules-1">Proper Scoring Rules</h3>
+<dl>
+<dt>Logarithmic Score (NLL)</dt>
+<dd>
+<p>The logarithmic score is defined as <span class="math display">
+    \mathrm{LogS}(f, y) = - \log f(y),
+</span> where <span class="math inline">f</span> is the predictive density.</p>
+</dd>
+<dt>Continuous Ranked Probability Score (CRPS)</dt>
+<dd>
+<p>The continuous ranked probability score is defined as <span class="math display">
+    \mathrm{crps}(F, y) = \int_{-\infty}^{\infty} (F(t) - {1}_{t\ge y})^2 \ \mathrm{d}t,
+</span> where <span class="math inline">F</span> is the cumulative distribution function.</p>
+</dd>
+</dl>
+</section>
+<section id="code-nll" class="level3">
+<h3 class="anchored" data-anchor-id="code-nll">Code: NLL</h3>
+<div id="1e763540" class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> scipy.stats <span class="im">import</span> gamma</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gamma_nll(mean, dispersion, y):</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate shape and scale parameters from mean and dispersion</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    shape <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> dispersion<span class="op">;</span> scale <span class="op">=</span> mean <span class="op">*</span> dispersion</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Create a gamma distribution object</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    gamma_dist <span class="op">=</span> gamma(a<span class="op">=</span>shape, scale<span class="op">=</span>scale)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span>np.mean(gamma_dist.logpdf(y))</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co"># GLM</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>X_test_design <span class="op">=</span> sm.add_constant(X_test)</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>mus <span class="op">=</span> gamma_GLM.predict(X_test_design)</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>NLL_GLM <span class="op">=</span> gamma_nll(mus, phi_GLM, y_test)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># CANN</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>mus <span class="op">=</span> np.exp(np.sum(CANN.predict(X_test, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>NLL_CANN <span class="op">=</span> gamma_nll(mus, phi_CANN, y_test)</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a><span class="co"># MDN</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>NLL_MDN <span class="op">=</span> gamma_mdn.evaluate(X_test, y_test, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="model-comparisons" class="level3">
+<h3 class="anchored" data-anchor-id="model-comparisons">Model Comparisons</h3>
+<div id="ab3cabf0" class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'GLM: </span><span class="sc">{</span>round(NLL_GLM, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'CANN: </span><span class="sc">{</span>round(NLL_CANN, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f'MDN: </span><span class="sc">{</span>round(NLL_MDN, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>GLM: 11.02
+CANN: 11.5
+MDN: 8.67</code></pre>
+</div>
+</div>
+<p>The above results show that MDN provides the lowest value for the Logarithmic Score(NLL). Low values for NLL indicate better calibration. One possible reason for the better performance of the MDN model(compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.</p>
+</section>
+</section>
+<section id="epistemic-uncertainty-1" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="epistemic-uncertainty-1">Epistemic Uncertainty</h2>
+<section id="dropout" class="level3">
+<h3 class="anchored" data-anchor-id="dropout">Dropout</h3>
+<p>Dropout is one of the most popular methods for handling epistemic uncertainty. However this method does not directly quantify the epistemic uncertainty, rather, it helps reduce the risk of overfitting. Dropout is the act of randomly selecting a proportion of neurons and deactivating them during each training iteration. It is a regularization technique that aims to reduce overfitting and improve the generalization ability of the model.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./dropout.png" class="img-fluid figure-img"></p>
+<figcaption>An example of neurons dropped during training.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Sources: Marcus Lautier (2022).</p>
+</div>
+</section>
+<section id="dropout-quote-1" class="level3">
+<h3 class="anchored" data-anchor-id="dropout-quote-1">Dropout quote #1</h3>
+<blockquote class="blockquote">
+<p>It’s surprising at first that this destructive technique works at all. Would a company perform better if its employees were told to toss a coin every morning to decide whether or not to go to work? Well, who knows; perhaps it would! The company would be forced to adapt its organization; it could not rely on any single person to work the coffee machine or perform any other critical tasks, so this expertise would have to be spread across several people. Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.</p>
+</blockquote>
+<div class="footer">
+<p>Source: Aurélien Géron (2019), <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow</em>, 2nd Edition, p.&nbsp;366</p>
+</div>
+</section>
+<section id="dropout-quote-2" class="level3">
+<h3 class="anchored" data-anchor-id="dropout-quote-2">Dropout quote #2</h3>
+<blockquote class="blockquote">
+<p>The company would become much more resilient. If one person quit, it wouldn’t make much of a difference. It’s unclear whether this idea would actually work for companies, but it certainly does for neural networks. Neurons trained with dropout cannot co-adapt with their neighboring neurons; they have to be as useful as possible on their own. They also cannot rely excessively on just a few input neurons; they must pay attention to each of their input neurons. They end up being less sensitive to slight changes in the inputs. In the end, you get a more robust network that generalizes better.</p>
+</blockquote>
+<div class="footer">
+<p>Source: Aurélien Géron (2019), <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow</em>, 2nd Edition, p.&nbsp;366</p>
+</div>
+</section>
+<section id="code-dropout" class="level3">
+<h3 class="anchored" data-anchor-id="code-dropout">Code: Dropout</h3>
+<p>Dropout is just another layer in Keras.</p>
+<p>The following code shows how we can apply a dropout to each hidden layer in the neural network. The dropout rate for each layer is 0.2. There is also an option called <code>seed</code> in the <code>Dropout</code> function, which can be used to ensure reproducibility.</p>
+<div id="509e1cd3" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> tf_keras.layers <span class="im">import</span> Dropout</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure reproducibility</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">2</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">2</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>),</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>),</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"output"</span>)</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>model.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="code-dropout-after-training" class="level3">
+<h3 class="anchored" data-anchor-id="code-dropout-after-training">Code: Dropout after training</h3>
+<p>Making predictions is the same as any other model:</p>
+<p>Dropout has no impact on model predictions because <code>Dropout</code> function is carried out only during the training stage. Once the model finishes its training (once the weights and biases are computed), all neurons together contribute to the predictions(no dropping out during the prediction stage). Therefore, predictions from the model will not change across different runs.</p>
+<div class="columns">
+<div class="column">
+<div id="2422f24a" class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>model.predict(X_test.head(<span class="dv">3</span>),</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>array([[ 53.365997],
+       [149.5073  ],
+       [ 84.2315  ]], dtype=float32)</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div id="1be7ec3d" class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>model.predict(X_test.head(<span class="dv">3</span>),</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="21">
+<pre><code>array([[ 53.365997],
+       [149.5073  ],
+       [ 84.2315  ]], dtype=float32)</code></pre>
+</div>
+</div>
+</div>
+</div>
+<p>We can make the model think it is still training:</p>
+<p>By setting the <code>training=True</code>, we can let drop out happen during prediction stage as well. This will change predictions for the same output different. This is known as the <em>Monte Carlo dropout</em>.</p>
+<div class="columns">
+<div class="column">
+<div id="19c6b5fa" class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>model(X_test.head(<span class="dv">3</span>).to_numpy(),</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>    training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="22">
+<pre><code>array([[ 45.215286],
+       [506.83798 ],
+       [ 80.71608 ]], dtype=float32)</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div id="7d510523" class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>model(X_test.head(<span class="dv">3</span>).to_numpy(),</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>    training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="23">
+<pre><code>array([[170.87773],
+       [140.37846],
+       [231.01816]], dtype=float32)</code></pre>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="dropout-limitation" class="level3">
+<h3 class="anchored" data-anchor-id="dropout-limitation">Dropout Limitation</h3>
+<ul>
+<li>Increased Training Time: Since dropout introduces noise into the training process, it can make the training process slower.</li>
+<li>Sensitivity to Dropout Rates: the performance of dropout is highly dependent on the chosen dropout rate.</li>
+<li>Uncertainty Quantification: the dropout can only provide a crude approximation to the theoretically justified Bayesian approach in terms of quantifying uncertainty.</li>
+</ul>
+</section>
+<section id="bayesian-neural-network" class="level3">
+<h3 class="anchored" data-anchor-id="bayesian-neural-network">Bayesian Neural Network</h3>
+<p>Bayesian Neural Networks facilitate a systematic way to quantify uncertainty about the model predictions. BNNs assume a distribution for each parameter (weights and biases) of the model. Since BNNs assume distributions for the parameters of the model, the model end up with distributions for the outputs as well. The distributions of the output help in quantifying the uncertainty related to model predictions.</p>
+<p>The weights <span class="math inline">\boldsymbol{w}</span> of a Bayesian neural network (BNN) have their posterior distribution: <span class="math display">p(\boldsymbol{w}|\mathcal{D})\propto \mathcal{L}(\mathcal{D}|\boldsymbol{w})p(\boldsymbol{w})</span> according to the Bayes’ theorem.</p>
+<ul>
+<li><span class="math inline">\mathcal{L}(\mathcal{D}|\boldsymbol{w})</span> represents the likelihood of data given the weights.</li>
+<li><span class="math inline">p(\boldsymbol{w})</span> represents the density of the prior distribution of the weights.</li>
+</ul>
+</section>
+<section id="tractability-of-posterior-distribution" class="level3">
+<h3 class="anchored" data-anchor-id="tractability-of-posterior-distribution">Tractability of Posterior Distribution</h3>
+<p>Let <span class="math inline">\boldsymbol{\theta}_0=(\boldsymbol{\mu}_{\boldsymbol{w}_0},\boldsymbol{\sigma}_{\boldsymbol{w}_0})</span> be the parameters of the prior distribution of weights: <span class="math display">
+    \boldsymbol{w}\sim \mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{w}_0},\boldsymbol{\sigma}_{\boldsymbol{w}_0}).
+</span> The derivation of the true posterior <span class="math display">
+    p(\boldsymbol{w}|\mathcal{D})
+    \propto \mathcal{L}(\mathcal{D}|\boldsymbol{w})p(\boldsymbol{w})
+</span> is non-trivial due to the complexity of the model. We cannot compute the true posterior distribution efficiently.</p>
+</section>
+<section id="variational-approximation" class="level3">
+<h3 class="anchored" data-anchor-id="variational-approximation">Variational Approximation</h3>
+<p>The variational approximation is a potential solution. Intuitively, we approximate the true posterior distribution with a variational distribution that is more tractable: <span class="math display">
+    \underbrace{p(\boldsymbol{w}|\mathcal{D})}_{\text{True Posterior Distribution}}\approx \underbrace{q(\boldsymbol{w}|\boldsymbol{\theta})}_{\text{Variational Distribution}}
+    \sim\mathcal{N}(\boldsymbol{\mu}_{\boldsymbol{w}},\boldsymbol{\sigma}_{\boldsymbol{w}}),
+</span> i.e., a normal distribution with parameters <span class="math inline">\boldsymbol{\theta}= (\boldsymbol{\mu}_{\boldsymbol{w}},\boldsymbol{\sigma}_{\boldsymbol{w}})</span> is used to approximate the true posterior distribution of <span class="math inline">\boldsymbol{w}|\mathcal{D}</span>.</p>
+</section>
+<section id="demonstration" class="level3">
+<h3 class="anchored" data-anchor-id="demonstration">Demonstration</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./VA.png" class="img-fluid figure-img"></p>
+<figcaption><span style="color:darkblue;">Figure</span>: The idea is to use the <span style="color:blue;">blue</span> curve (variational distribution) to approximate the <span style="color:purple;">purple</span> curve (true posterior).</figcaption>
+</figure>
+</div>
+</section>
+<section id="code-variational-layers" class="level3">
+<h3 class="anchored" data-anchor-id="code-variational-layers">Code: Variational Layers</h3>
+<div id="4014bbc8" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="annotated-cell-18"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-18-1" class="code-annotation-target"><a href="#annotated-cell-18-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-18-2" class="code-annotation-target"><a href="#annotated-cell-18-2" aria-hidden="true" tabindex="-1"></a>tfd <span class="op">=</span> tfp.distributions</span>
+<span id="annotated-cell-18-3"><a href="#annotated-cell-18-3" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-18-4" class="code-annotation-target"><a href="#annotated-cell-18-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> prior(kernel_size, bias_size, dtype<span class="op">=</span><span class="va">None</span>):</span>
+<span id="annotated-cell-18-5"><a href="#annotated-cell-18-5" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> kernel_size <span class="op">+</span> bias_size</span>
+<span id="annotated-cell-18-6"><a href="#annotated-cell-18-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="kw">lambda</span> t: tfd.Independent(</span>
+<span id="annotated-cell-18-7"><a href="#annotated-cell-18-7" aria-hidden="true" tabindex="-1"></a>        tfd.Normal(loc<span class="op">=</span>tf.zeros(n, dtype<span class="op">=</span>dtype),</span>
+<span id="annotated-cell-18-8"><a href="#annotated-cell-18-8" aria-hidden="true" tabindex="-1"></a>                   scale<span class="op">=</span><span class="dv">1</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-18-9" class="code-annotation-target"><a href="#annotated-cell-18-9" aria-hidden="true" tabindex="-1"></a>                   reinterpreted_batch_ndims<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="annotated-cell-18-10"><a href="#annotated-cell-18-10" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-18-11" class="code-annotation-target"><a href="#annotated-cell-18-11" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> posterior(kernel_size, bias_size, dtype<span class="op">=</span><span class="va">None</span>):</span>
+<span id="annotated-cell-18-12"><a href="#annotated-cell-18-12" aria-hidden="true" tabindex="-1"></a>    n <span class="op">=</span> kernel_size <span class="op">+</span> bias_size</span>
+<span id="annotated-cell-18-13"><a href="#annotated-cell-18-13" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> Sequential([</span>
+<span id="annotated-cell-18-14"><a href="#annotated-cell-18-14" aria-hidden="true" tabindex="-1"></a>      tfp.layers.VariableLayer(<span class="dv">2</span> <span class="op">*</span> n, dtype<span class="op">=</span>dtype),</span>
+<span id="annotated-cell-18-15"><a href="#annotated-cell-18-15" aria-hidden="true" tabindex="-1"></a>      tfp.layers.DistributionLambda(<span class="kw">lambda</span> t: tfd.Independent(</span>
+<span id="annotated-cell-18-16"><a href="#annotated-cell-18-16" aria-hidden="true" tabindex="-1"></a>          tfd.Normal(loc<span class="op">=</span>t[..., :n],</span>
+<span id="annotated-cell-18-17"><a href="#annotated-cell-18-17" aria-hidden="true" tabindex="-1"></a>                     scale<span class="op">=</span><span class="fl">1e-5</span> <span class="op">+</span> tf.nn.softplus(<span class="fl">0.01</span> <span class="op">*</span> t[..., n:])),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-18-18" class="code-annotation-target"><a href="#annotated-cell-18-18" aria-hidden="true" tabindex="-1"></a>          reinterpreted_batch_ndims<span class="op">=</span><span class="dv">1</span>)),</span>
+<span id="annotated-cell-18-19"><a href="#annotated-cell-18-19" aria-hidden="true" tabindex="-1"></a>    ])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-18" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-18" data-code-lines="1" data-code-annotation="1">Imports <code>tensorflow_probability</code> using the shortened name <code>tfp</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-18" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-18" data-code-lines="2" data-code-annotation="2">Stores statistical distributions in the <code>tfp</code> class as <code>tfd</code></span>
+</dd>
+<dt data-target-cell="annotated-cell-18" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-18" data-code-lines="4" data-code-annotation="3">Specifies the prior which takes in the number of weights and biases (their sum would be the total number of parameters to estimate)</span>
+</dd>
+<dt data-target-cell="annotated-cell-18" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-18" data-code-lines="9" data-code-annotation="4">Specifies the prior for each parameter (normal distribution with mean=0 and standard deviation=1) <code>reinterpreted_batch_ndims=1</code> specifies that the distributions of weights and biases should be considered as independent distributions.</span>
+</dd>
+<dt data-target-cell="annotated-cell-18" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-18" data-code-lines="11" data-code-annotation="5">Specifies the posterior distribution which taken in the number of weights and biases.</span>
+</dd>
+<dt data-target-cell="annotated-cell-18" data-target-annotation="6">6</dt>
+<dd>
+<span data-code-cell="annotated-cell-18" data-code-lines="18" data-code-annotation="6">Builds a sequential model with (i) a <code>VariableLayer</code> which manages the parameters of the model(since there are <em>n</em> parameters with their own Normal distribution, there 2*<em>n</em> prior parameters) and (ii) a <code>DistributionLambda</code> layer which wraps the independent normal distributions as a Keras layer.</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="architecture-2" class="level3">
+<h3 class="anchored" data-anchor-id="architecture-2">Architecture</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./BNN_raw.png" class="img-fluid figure-img"></p>
+<figcaption><span style="color:darkblue;">Figure</span>: We demonstrate the typical structure of a Bayesian neural network (BNN).</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Blundell et al.&nbsp;(2015), Weight Uncertainty in Neural Networks.</p>
+</div>
+</section>
+<section id="loss-function-1" class="level3">
+<h3 class="anchored" data-anchor-id="loss-function-1">Loss Function</h3>
+<p>The KL divergence between the true posterior and variational distribution is given by: <span class="math display">
+    D_{\text{KL}}\left[q(\boldsymbol{w}|\boldsymbol{\theta}) || p(\boldsymbol{w}|\mathcal{D})\right]
+    =\mathbb{E}_{\boldsymbol{w} \sim q(\boldsymbol{w}|\boldsymbol{\theta})}\left[\log\left(\frac{q(\boldsymbol{w}|\boldsymbol{\theta})}{p(\boldsymbol{w}|\mathcal{D})}\right) \right]
+</span> After some algebra, we acknowledge the final representation: <span class="math display">
+\begin{align*}
+    D_{\text{KL}}\left[q(\boldsymbol{w}|\boldsymbol{\theta}) || p(\boldsymbol{w}|\mathcal{D})\right]
+    &amp;=\underbrace{D_{\text{KL}}\left[{q(\boldsymbol{w}|\boldsymbol{\theta})} || {p(\boldsymbol{w})}\right]}_{{\text{Complexity Loss}}}  \underbrace{-\mathbb{E}_{\boldsymbol{w} \sim q(\boldsymbol{w}|\boldsymbol{\theta})}\left[\log{p(\mathcal{D}|\boldsymbol{w})}\right]}_{{\text{Error Loss}}} \\
+    &amp; \quad\quad\quad\quad\quad\quad+  \ \text{const}.
+\end{align*}
+</span></p>
+<p>Error Loss here corresponds to the NLL. Average loss is obtained by calculating the error for each random sample and then averaging over it.</p>
+</section>
+<section id="evaluation-of-loss" class="level3">
+<h3 class="anchored" data-anchor-id="evaluation-of-loss">Evaluation of Loss</h3>
+<p>In practice, we estimate loss function <span class="math display">
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})
+    =\underbrace{D_{\text{KL}}\left[{q(\boldsymbol{w}|\boldsymbol{\theta})} || {p(\boldsymbol{w})}\right]}_{{\text{Complexity Loss}}}  \underbrace{-\mathbb{E}_{\boldsymbol{w} \sim q(\boldsymbol{w}|\boldsymbol{\theta})}\left[\log{p(\mathcal{D}|\boldsymbol{w})}\right]}_{{\text{Error Loss}}}
+</span> through Monte Carlo estimates <span class="math display">
+   \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})\approx\frac{1}{M}\sum_{m=1}^{M}\underbrace{\log\Bigg({\frac{q\left(\boldsymbol{w}^{(m)}|\boldsymbol{\theta}^{(m)}\right) }{ p\left(\boldsymbol{w}^{(m)}\right)}}\Bigg)}_{\text{Complexity Loss}}
+   \underbrace{-\log{p\left(\mathcal{D}|\boldsymbol{w}^{(m)}\right)}}_{\text{Error Loss}}
+</span> where <span class="math inline">\left\{\boldsymbol{w}^{(m)}\right\}_{m=1}^{M}</span> are random samples of <span class="math inline">\boldsymbol{w}|\boldsymbol{\theta}</span>.</p>
+</section>
+<section id="bayesian-gamma-loss" class="level3">
+<h3 class="anchored" data-anchor-id="bayesian-gamma-loss">“Bayesian-Gamma” Loss</h3>
+<p>If the output consists of the shape and scale parameter of a gamma distribution, the loss function would be <span class="math display">
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})\approx\frac{1}{M}\sum_{m=1}^{M}\underbrace{\log\Bigg({\frac{q\left(\boldsymbol{w}^{(m)}|\boldsymbol{\theta}^{(m)}\right) }{ p\left(\boldsymbol{w}^{(m)}\right)}}\Bigg)}_{\text{Complexity Loss}}
+   \underbrace{-\sum_{i=1}^{N}\log \ f(y_i|\boldsymbol{x}_i,\boldsymbol{w}^{(m)})}_{\text{Error Loss}},
+</span> where <span class="math inline">f(y_i|\boldsymbol{x}_i,\boldsymbol{w}^{(m)})</span> denotes the density value of <span class="math inline">y_i</span> given <span class="math inline">\boldsymbol{x}_i</span>, under the <span class="math inline">m</span>th Monte Carlo sample <span class="math inline">\boldsymbol{w}^{(m)}</span>, i.e., <span class="math display">
+    f(y_i|\boldsymbol{x}_i,\boldsymbol{w}^{(m)})=\frac{\beta(\boldsymbol{x};\boldsymbol{w}^{(m)})^{\alpha(\boldsymbol{x};\boldsymbol{w}^{(m)})}}{\Gamma(\alpha(\boldsymbol{x}^{(m)};\boldsymbol{w}^{(m)}))}\mathrm{e}^{-\beta(\boldsymbol{x};\boldsymbol{w}^{(m)})y}y^{\alpha(\boldsymbol{x};\boldsymbol{w}^{(m)})-1}.
+</span></p>
+</section>
+<section id="architecture-3" class="level3">
+<h3 class="anchored" data-anchor-id="architecture-3">Architecture</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./Bayesian_Gamma.png" class="img-fluid figure-img"></p>
+<figcaption><span style="color:darkblue;">Figure</span>: The output of our Bayesian neural network now consists of the shape parameter <span class="math inline">\alpha(\boldsymbol{x}; \boldsymbol{w})</span> and the scale parameter <span class="math inline">\beta(\boldsymbol{x}; \boldsymbol{w})</span>.</figcaption>
+</figure>
+</div>
+</section>
+<section id="code-architecture-2" class="level3">
+<h3 class="anchored" data-anchor-id="code-architecture-2">Code: Architecture</h3>
+<p>The <code>tfp.layers</code> allows us to extract the parameters from the output, which is a gamma distribution object.</p>
+<div id="ad554a3a" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="annotated-cell-19"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-19-1"><a href="#annotated-cell-19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Ensure reproducibility</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-19-2" class="code-annotation-target"><a href="#annotated-cell-19-2" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
+<span id="annotated-cell-19-3"><a href="#annotated-cell-19-3" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-19-4" class="code-annotation-target"><a href="#annotated-cell-19-4" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="annotated-cell-19-5"><a href="#annotated-cell-19-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-19-6"><a href="#annotated-cell-19-6" aria-hidden="true" tabindex="-1"></a><span class="co"># DenseVariational layer</span></span>
+<span id="annotated-cell-19-7"><a href="#annotated-cell-19-7" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> tfp.layers.DenseVariational(<span class="dv">64</span>, posterior, prior,</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-19-8" class="code-annotation-target"><a href="#annotated-cell-19-8" aria-hidden="true" tabindex="-1"></a>                kl_weight<span class="op">=</span><span class="dv">1</span><span class="op">/</span>X_train.shape[<span class="dv">0</span>])(inputs)</span>
+<span id="annotated-cell-19-9"><a href="#annotated-cell-19-9" aria-hidden="true" tabindex="-1"></a>outputs <span class="op">=</span> Dense(<span class="dv">2</span>, activation <span class="op">=</span> <span class="st">'softplus'</span>)(x)</span>
+<span id="annotated-cell-19-10"><a href="#annotated-cell-19-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-19-11"><a href="#annotated-cell-19-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Construct the Gamma distribution on the last layer</span></span>
+<span id="annotated-cell-19-12"><a href="#annotated-cell-19-12" aria-hidden="true" tabindex="-1"></a>distributions <span class="op">=</span> tfp.layers.DistributionLambda(</span>
+<span id="annotated-cell-19-13"><a href="#annotated-cell-19-13" aria-hidden="true" tabindex="-1"></a>      <span class="kw">lambda</span> t: tfd.Gamma(concentration<span class="op">=</span>t[..., <span class="dv">0</span>:<span class="dv">1</span>], </span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-19-14" class="code-annotation-target"><a href="#annotated-cell-19-14" aria-hidden="true" tabindex="-1"></a>                          rate<span class="op">=</span>t[..., <span class="dv">1</span>:<span class="dv">2</span>]))(outputs)</span>
+<span id="annotated-cell-19-15"><a href="#annotated-cell-19-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the model</span></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-19-16" class="code-annotation-target"><a href="#annotated-cell-19-16" aria-hidden="true" tabindex="-1"></a>gamma_bnn <span class="op">=</span> Model(inputs, distributions)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-19" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="2" data-code-annotation="1">Sets the random seed for reproducibility</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="4" data-code-annotation="2">Specifies the input layer with dimensions equal to the number of features</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="8" data-code-annotation="3">Specifies the <code>DenseVariational</code> layer with 64 neurons, posteriors, prior and KL divergence weight. In the above example KL divergence term in the loss function is scaled by the inverse of the train set size. Scaling helps stabilize the training process</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="4">4</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="14" data-code-annotation="4">Takes the outputs from the previous layers and specifies a gamma distribution with first component as the concentration parameter and second component as the rate parameter</span>
+</dd>
+<dt data-target-cell="annotated-cell-19" data-target-annotation="5">5</dt>
+<dd>
+<span data-code-cell="annotated-cell-19" data-code-lines="16" data-code-annotation="5">Specifies the model architecture</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="code-loss-function-and-training" class="level3">
+<h3 class="anchored" data-anchor-id="code-loss-function-and-training">Code: Loss Function and Training</h3>
+<div id="3a25254c" class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="annotated-cell-20"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-20-1" class="code-annotation-target"><a href="#annotated-cell-20-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> gamma_loss(y_true, y_pred):</span>
+<span id="annotated-cell-20-2"><a href="#annotated-cell-20-2" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="op">-</span>y_pred.log_prob(y_true)</span>
+<span id="annotated-cell-20-3"><a href="#annotated-cell-20-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-20-4"><a href="#annotated-cell-20-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Then use the loss function when compiling the model</span></span>
+<span id="annotated-cell-20-5"><a href="#annotated-cell-20-5" aria-hidden="true" tabindex="-1"></a>gamma_bnn.compile(optimizer<span class="op">=</span>tf_keras.optimizers.Adam(learning_rate<span class="op">=</span><span class="fl">0.001</span>),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-20-6" class="code-annotation-target"><a href="#annotated-cell-20-6" aria-hidden="true" tabindex="-1"></a>                loss<span class="op">=</span>gamma_loss)</span>
+<span id="annotated-cell-20-7"><a href="#annotated-cell-20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-20-8"><a href="#annotated-cell-20-8" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> gamma_bnn.fit(X_train, y_train,</span>
+<span id="annotated-cell-20-9"><a href="#annotated-cell-20-9" aria-hidden="true" tabindex="-1"></a>    epochs<span class="op">=</span><span class="dv">300</span>,</span>
+<span id="annotated-cell-20-10"><a href="#annotated-cell-20-10" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">30</span>)],</span>
+<span id="annotated-cell-20-11"><a href="#annotated-cell-20-11" aria-hidden="true" tabindex="-1"></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-20-12"><a href="#annotated-cell-20-12" aria-hidden="true" tabindex="-1"></a>    batch_size<span class="op">=</span><span class="dv">64</span>,</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-20-13" class="code-annotation-target"><a href="#annotated-cell-20-13" aria-hidden="true" tabindex="-1"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-annotation">
+<dl class="code-annotation-container-grid">
+<dt data-target-cell="annotated-cell-20" data-target-annotation="1">1</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="1" data-code-annotation="1">Defines the loss function which computes the negative log likelihood of observing the true data under the predicted probability distribution</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="2">2</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="6" data-code-annotation="2">Compiles the model with the optimizer, loss function and a custom learning rate</span>
+</dd>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="3">3</dt>
+<dd>
+<span data-code-cell="annotated-cell-20" data-code-lines="13" data-code-annotation="3">Fits the BNN model using train set with a validation split defined inside the function</span>
+</dd>
+</dl>
+</div>
+</div>
+</section>
+<section id="code-output-sampling" class="level3">
+<h3 class="anchored" data-anchor-id="code-output-sampling">Code: Output Sampling</h3>
+<p>In practice, we can further increase the number of samples.</p>
+<div id="5e1a7a47" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Define the number of samples</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>n_samples <span class="op">=</span> <span class="dv">1000</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Store all predictions in a list</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>alphas <span class="op">=</span> []<span class="op">;</span> betas <span class="op">=</span> []</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run the model `n_samples` times and store the predicted parameters</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(n_samples):</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Predict the distributions</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  predicted_distributions <span class="op">=</span> gamma_bnn(X_test[<span class="dv">9</span>:<span class="dv">10</span>].values)</span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Get the parameters</span></span>
+<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>  alphas.append(predicted_distributions.concentration.numpy())</span>
+<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>  betas.append(predicted_distributions.rate.numpy())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="sampled-density-functions" class="level3">
+<h3 class="anchored" data-anchor-id="sampled-density-functions">Sampled Density Functions</h3>
+<div id="f0e1c124" class="cell" data-execution_count="28">
+<div class="cell-output cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="distributional-regression_files/figure-html/cell-29-output-1.png" class="img-fluid figure-img"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>We plot some of the sampled posterior density functions. The variability of the sampled density functions is one critical consideration for epistemic uncertainty.</p>
+</section>
+<section id="uncertainty-quantification-uq" class="level3">
+<h3 class="anchored" data-anchor-id="uncertainty-quantification-uq">Uncertainty Quantification (UQ)</h3>
+<p>We analyse the total variance formula: <span class="math display">
+\begin{align*}
+    \mathbb{V}[Y]&amp;=\mathbb{E}[\mathbb{V}[Y|\boldsymbol{x}]] + \mathbb{V}[\mathbb{E}[Y|\boldsymbol{x}]]\\
+    &amp;\approx \underbrace{\frac{1}{M}\sum_{m=1}^{M}\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]}_{\text{Aleatoric}} \\
+    &amp;\quad \quad +\underbrace{\frac{1}{M}\sum_{m=1}^{M}\bigg(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]-\frac{1}{M}\sum_{m=1}^{M}\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(m)}\big]\bigg)^2}_{\text{Epistemic}},
+\end{align*}
+</span> where <span class="math inline">M</span> is the number of posterior samples generated.</p>
+</section>
+<section id="code-applying-uq" class="level3">
+<h3 class="anchored" data-anchor-id="code-applying-uq">Code: Applying UQ</h3>
+<div id="1d6a8b69" class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to numpy array for easier manipulation</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>alphas <span class="op">=</span> np.array(alphas)<span class="op">;</span> betas <span class="op">=</span> np.array(betas)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Aleatoric uncertainty: Mean of the variances of the predicted Gamma distributions</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>aleatoric_uncertainty <span class="op">=</span> np.mean(alphas<span class="op">/</span>betas<span class="op">**</span><span class="dv">2</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Epistemic uncertainty: Variance of the means of the model's predictions</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>epistemic_uncertainty <span class="op">=</span> np.var(alphas<span class="op">/</span>betas)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Aleatoric uncertainty: </span><span class="sc">{</span>aleatoric_uncertainty<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Epistemic uncertainty: </span><span class="sc">{</span>epistemic_uncertainty<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Aleatoric uncertainty: 12227515.0
+Epistemic uncertainty: 1425106.75</code></pre>
+</div>
+</div>
+</section>
+<section id="deep-ensembles" class="level3">
+<h3 class="anchored" data-anchor-id="deep-ensembles">Deep Ensembles</h3>
+<p>Lakshminarayanan et al.&nbsp;(2017) proposed deep ensembles as another prominent approach to obtaining epistemic uncertainty. Such a technique can be an alternative to BNNs. It’s simple to implement and requires very little hyperparameter tuning.</p>
+<p>We summarise the deep ensemble approach for uncertainty quantification as follows:</p>
+<ol type="1">
+<li>Train <span class="math inline">D</span> neural networks with different random weights initialisations independently in parallel. The trained weights are <span class="math inline">\boldsymbol{w}^{(1)}, ..., \boldsymbol{w}^{(D)}</span> .</li>
+</ol>
+</section>
+<section id="code-deep-ensembles-i" class="level3">
+<h3 class="anchored" data-anchor-id="code-deep-ensembles-i">Code: Deep Ensembles I</h3>
+<div id="d3288d02" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>K <span class="op">=</span> <span class="dv">1</span> <span class="co"># number of mixtures</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> MDN_DE(num_ensembles):</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  models <span class="op">=</span> []</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> k <span class="kw">in</span> <span class="bu">range</span>(num_ensembles):</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Ensure reproducibility</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>    random.seed(k)<span class="op">;</span> tf.random.set_seed(k)</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>    inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Two hidden layers </span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>    x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    pis <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'softmax'</span>)(x) <span class="co"># mixing weights</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>    alphas <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'softplus'</span>)(x) <span class="co"># shape parameters</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>    betas <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'softplus'</span>)(x) <span class="co"># scale parameters</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Concatenate by columns: `y_pred` will now have 6 columns</span></span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>    gamma_mdn_new <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([pis, alphas, betas]))</span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>    gamma_mdn_new.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>                          loss<span class="op">=</span>gamma_mixture_NLL)</span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>    gamma_mdn_new.fit(X_train, y_train,</span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>        epochs<span class="op">=</span><span class="dv">100</span>, callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a>        verbose<span class="op">=</span><span class="dv">0</span>, batch_size<span class="op">=</span><span class="dv">64</span>, validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a>    models.append(gamma_mdn_new)</span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span>(models)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="code-deep-ensembles-ii" class="level3">
+<h3 class="anchored" data-anchor-id="code-deep-ensembles-ii">Code: Deep Ensembles II</h3>
+<ol start="2" type="1">
+<li>For a new instance <span class="math inline">\boldsymbol{x}</span>, obtain <span class="math display">\Big\{\big(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big],\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big]\big)\Big\}_{d=1}^{D},</span></li>
+</ol>
+<div id="82f7d04d" class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>D <span class="op">=</span> <span class="dv">10</span> <span class="co"># number of MDNs</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>MDN_models <span class="op">=</span> MDN_DE(D)</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Store all predictions in a list</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>weights <span class="op">=</span> [<span class="dv">0</span>]<span class="op">*</span>D<span class="op">;</span> alphas <span class="op">=</span> [<span class="dv">0</span>]<span class="op">*</span>D<span class="op">;</span> betas <span class="op">=</span> [<span class="dv">0</span>]<span class="op">*</span>D</span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Store the parameters</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(D):</span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  weights[i], alphas[i], betas[i] <span class="op">=</span> MDN_models[i].predict(X_test[<span class="dv">9</span>:<span class="dv">10</span>], verbose<span class="op">=</span><span class="dv">0</span>)[<span class="dv">0</span>]</span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Predict the means and variances</span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a>means <span class="op">=</span> np.array(alphas)<span class="op">/</span>np.array(betas)</span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a>variances <span class="op">=</span> np.array(alphas)<span class="op">/</span>np.array(betas)<span class="op">**</span><span class="dv">2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="code-deep-ensembles-iii" class="level3">
+<h3 class="anchored" data-anchor-id="code-deep-ensembles-iii">Code: Deep Ensembles III</h3>
+<ol start="3" type="1">
+<li>Apply the variance decomposition <span class="math display">
+    \mathbb{V}[Y]=\mathbb{E}[\mathbb{V}[Y|\boldsymbol{x}]] + \mathbb{V}[\mathbb{E}[Y|\boldsymbol{x}]]
+</span></li>
+</ol>
+<div id="31f06b89" class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>aleatoric_uncertainty <span class="op">=</span> np.mean(variances)</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>epistemic_uncertainty <span class="op">=</span> np.var(means)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Aleatoric uncertainty: </span><span class="sc">{</span>aleatoric_uncertainty<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Epistemic uncertainty: </span><span class="sc">{</span>epistemic_uncertainty<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Aleatoric uncertainty: 75940600.0
+Epistemic uncertainty: 16657899.0</code></pre>
+</div>
+</div>
+</section>
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section id="package-versions" class="level3 appendix" data-visibility="uncounted"><h2 class="anchored quarto-appendix-heading">Package Versions</h2><div class="quarto-appendix-contents">
+
+<div id="5c45c2bd" class="cell" data-execution_count="33">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tensorflow_probability,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Python implementation: CPython
+Python version       : 3.11.9
+IPython version      : 8.24.0
+
+keras                 : 3.3.3
+matplotlib            : 3.9.0
+numpy                 : 1.26.4
+pandas                : 2.2.2
+seaborn               : 0.13.2
+scipy                 : 1.11.0
+torch                 : 2.3.1
+tensorflow            : 2.16.1
+tensorflow_probability: 0.24.0
+tf_keras              : 2.16.0
+</code></pre>
+</div>
+</div>
+</div></section><section id="glossary" class="level3 appendix" data-visibility="uncounted"><h2 class="anchored quarto-appendix-heading">Glossary</h2><div class="quarto-appendix-contents">
+
+<div class="columns">
+<div class="column">
+<ul>
+<li>aleatoric and epistemic uncertainty</li>
+<li>Bayesian neural network</li>
+<li>deep ensembles</li>
+<li>dropout</li>
+<li>CANN</li>
+<li>GLM</li>
+</ul>
+</div><div class="column">
+<ul>
+<li>MDN</li>
+<li>mixture distribution</li>
+<li>posterior sampling</li>
+<li>proper scoring rule</li>
+<li>uncertainty quantification</li>
+<li>variational approximation</li>
+</ul>
+</div>
+</div>
+
+
+</div></section></div></main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../Labs/backpropagation-lab.html" class="pagination-link" aria-label="Lab: Backpropagation">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Lab: Backpropagation</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../Advanced-Topics/interpretability.html" class="pagination-link" aria-label="Interpretability">
+        <span class="nav-page-text">Interpretability</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
