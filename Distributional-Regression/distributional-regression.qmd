@@ -85,7 +85,7 @@ from sklearn.preprocessing import OrdinalEncoder
 
 :::
 
-# Uncertainty {visibility="uncounted"}
+# Uncertainty & Distributional Regression {visibility="uncounted"}
 
 ::: {.content-visible unless-format="revealjs"}
 Uncertainty in deep learning refers to the level of doubt one would have about the predictions made by an AI-driven algorithm. Identifying and quantifying different sources of uncertainty that could exist in AI-driven algorithms is therefore important to ensure a credible application.
@@ -154,6 +154,7 @@ Let's go back to the question at the beginning:
 The following sections show how we prepare the datasets for studying uncertainty.
 :::
 
+
 ## Code: Data
 
 ``` {python}
@@ -198,6 +199,7 @@ y_test = y_test.reset_index(drop=True)
 ```
 
 ## Code: Preprocessing
+
 ::: {.content-visible unless-format="revealjs"}
 Next we define the column transfer. The column transfer first applies ordinal encoding to `VehBrand`, `Region`, `Area` and `VehGas` variables, and applies standard scaling to all remaining numerical values. Next we fit the defined column transfer to the training set. The fitted transformation is then applied on both training and test sets. (Note that the fitting is only carried out on the train set and the same fit is applied to both train, validation and test sets.)
 :::
@@ -234,16 +236,20 @@ Plotting the empirical distribution of the target variable help us get an unders
 plt.hist(y_train[y_train < 5000], bins=30);
 ```
 
+<!--
 # Aleatoric Uncertainty {visibility="uncounted"}
 
 ::: {.content-visible unless-format="revealjs"}
 Aleatoric uncertainty refers to the inherent variability associated with the data generating process. Among many ways to capture the aleatoric uncertainty, (i) combining with probabilistic models and (ii) considering mixture models are two useful methods to quantify the inherent variability.
 :::
 
-
+-->
 ::: {.content-visible unless-format="revealjs"}
-The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{CANN}$ for the neural network. The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.
+The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{CANN}$ for the neural network.
+<!--The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.-->
 :::
+
+# Generalised Linear Model (GLM) {visibility="uncounted"}
 
 ## GLM
 
@@ -316,24 +322,26 @@ import statsmodels.api as sm
 X_train_design = sm.add_constant(X_train)
 
 # Create a Gamma GLM with a log link function
-gamma_GLM = sm.GLM(y_train, X_train_design,                   
+gamma_glm = sm.GLM(y_train, X_train_design,                   
             family=sm.families.Gamma(sm.families.links.Log()))
 
 # Fit the model
-gamma_GLM = gamma_GLM.fit()
+gamma_glm = gamma_glm.fit()
 
 # Dispersion Parameter
-mus = gamma_GLM.predict(X_train_design)
+mus = gamma_glm.predict(X_train_design)
 residuals = mus-y_train
 variance = mus**2
 dof = (len(y_train)-X_train.shape[1])
-phi_GLM =  np.sum(residuals**2/variance)/dof
-print(phi_GLM)
+phi_glm =  np.sum(residuals**2/variance)/dof
+print(phi_glm)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
 The above example of fitting a Gamma distribution assumes a constant dispersion, meaning that, the dispersion of claim amount is constant for all policyholders. If we believe that the constant dispersion assumption is quite strong, we can use a double GLM model. Fitting a GLM is the traditional way of modelling a claim amount.
 :::
+
+# Combined Actuarial Neural Network {visibility="uncounted"}
 
 ## CANN
 
@@ -345,13 +353,12 @@ The Combined Actuarial Neural Network is a novel actuarial neural network archit
 
 ## Architecture
 
-
-![[Figure]{style="color:darkblue;"}: CANN approach.](./CANN.png)
+![CANN approach.](CANN.png)
 
 ## Code: Architecture
 
 ```{python}
-gamma_GLM.params
+gamma_glm.params
 ```
 
 ```{python}
@@ -359,8 +366,8 @@ gamma_GLM.params
 random.seed(1); tf.random.set_seed(1)                                   #<1>
 
 # Pre-defined constants
-glm_weights = gamma_GLM.params.iloc[1:]                                    #<2>
-glm_bias = gamma_GLM.params.iloc[0]                                        #<3>
+glm_weights = gamma_glm.params.iloc[1:]                                    #<2>
+glm_bias = gamma_glm.params.iloc[0]                                        #<3>
 
 # Define model inputs
 inputs = Input(shape=X_train.shape[1:])                                 #<4>
@@ -388,36 +395,36 @@ cann_logmu = Dense(1, activation='linear')(x)                           #<8>
 
 ```{python}
 # Combine GLM and CANN estimates
-CANN = Model(inputs, Concatenate(axis=1)([cann_logmu, glm_logmu]))      #<1>
+cann = Model(inputs, Concatenate(axis=1)([cann_logmu, glm_logmu]))      #<1>
 ```
 1. Since the output of the model is evaluated by combining the output from both branches, the model is constructed by concatenating outputs from `cann_logmu` and `glm_logmu`. Note that there are two predicted values, one predicted value from the `glm_logmu` component and the other coming from the `cann_logmu` component.
 
 We need to customise the loss function for CANN.
 
 ```{python}
-def CANN_negative_log_likelihood(y_true, y_pred):
+def cann_negative_log_likelihood(y_true, y_pred):
     #the new mean estimate
-    CANN_logmu = y_pred[:, 0]                                       #<1>
-    GLM_logmu = y_pred[:, 1]                                        #<2>
-    mu = tf.math.exp(CANN_logmu + GLM_logmu)                        #<3>
+    cann_logmu = y_pred[:, 0]                                       #<1>
+    glm_logmu = y_pred[:, 1]                                        #<2>
+    mu = tf.math.exp(cann_logmu + glm_logmu)                        #<3>
 
     # Compute the negative log likelihood of the Gamma distribution
-    nll = tf.reduce_mean(CANN_logmu + GLM_logmu + y_true/mu)        #<4>
+    nll = tf.reduce_mean(cann_logmu + glm_logmu + y_true/mu)        #<4>
     
     return nll
 ```
-1. Stores the first column of the `y_pred` matrix as `CANN_logmu` (the prediction from the CANN)
-2. Stores the second column of the `y_pred` matrix as `GLM_logmu` (the prediction from the glm)
+1. Stores the first column of the `y_pred` matrix as `cann_logmu` (the prediction from the CANN)
+2. Stores the second column of the `y_pred` matrix as `glm_logmu` (the prediction from the glm)
 3. Computes the exponential of the sum of them as `mu`
-4. Computes the negative log likelihood of a Gamma distribution where $log(\mu)$ is now the sum `CANN_logmu + GLM_logmu`
+4. Computes the negative log likelihood of a Gamma distribution where $\log(\mu)$ is now the sum `cann_logmu + glm_logmu`
 
 ## Code: Model Training
 
 ```{python}
-CANN.compile(optimizer="adam", loss=CANN_negative_log_likelihood)       #<1>
-hist = CANN.fit(X_train, y_train,
-    epochs=300, 
-    callbacks=[EarlyStopping(patience=30)],  
+cann.compile(optimizer="adam", loss=cann_negative_log_likelihood)       #<1>
+hist = cann.fit(X_train, y_train,
+    epochs=100, 
+    callbacks=[EarlyStopping(patience=10)],  
     verbose=0,
     batch_size=64, 
     validation_split=0.2)                                               #<2>
@@ -428,18 +435,20 @@ hist = CANN.fit(X_train, y_train,
 Find the dispersion parameter.
 
 ``` {python}
-mus = np.exp(np.sum(CANN.predict(X_train, verbose=0), axis = 1))
+mus = np.exp(np.sum(cann.predict(X_train, verbose=0), axis = 1))
 residuals = mus-y_train
 variance = mus**2
 dof = (len(y_train)-X_train.shape[1])
-phi_CANN =  np.sum(residuals**2/variance) / dof
-print(phi_CANN)
+phi_cann =  np.sum(residuals**2/variance) / dof
+print(phi_cann)
 ```
+
+# Mixture Density Network {visibility="uncounted"}
 
 ## Mixture Distribution
 
 ::: {.content-visible unless-format="revealjs"}
-One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict _y_ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the _y_ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for _y_ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of _y_ values is bimodal or multi modal. In such situations, assuming a mixture distribution is more intuitive.    
+One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multi modal. In such situations, assuming a mixture distribution is more intuitive.    
 :::
 
 Given a finite set of resulting random variables $(Y_1, ..., Y_{K})$, one can generate a multinomial random variable $Y\sim \text{Multinomial}(1, \boldsymbol{\pi})$. Meanwhile, $Y$ can be regarded as a mixture of $Y_1, ..., Y_{K}$, i.e.,
@@ -477,7 +486,7 @@ where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{N}$ is the training dataset
 
 ## Mixture Density Network
 
-![[Figure]{style="color:darkblue;"}: An MDN that outputs the parameters for a $K$ component mixture distribution. $\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), ..., \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))$ consists of the parameter estimates for the $k$th mixture component.](./MDN.png)
+![An MDN that outputs the parameters for a $K$ component mixture distribution. $\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), ..., \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))$ consists of the parameter estimates for the $k$th mixture component.](MDN.png)
 
 ## Model Specification
 
@@ -518,7 +527,7 @@ $$
 
 ## Architecture
 
-![[Figure]{style="color:darkblue;"}: We demonstrate the structure of a gamma MDN that outputs the parameters for a gamma mixture with two components.](./Gamma_MDN.png)
+![We demonstrate the structure of a gamma MDN that outputs the parameters for a gamma mixture with two components.](Gamma_MDN.png)
 
 ## Code: Architecture
 
@@ -574,7 +583,7 @@ import tensorflow_probability as tfp                                        #<1>
 tfd = tfp.distributions                                                     #<2>
 K = 2 # number of mixture components                                        #<3>
 
-def gamma_mixture_NLL(y_true, y_pred):                                      
+def gamma_mixture_nll(y_true, y_pred):                                      
     K = y_pred.shape[1] // 3                                                #<4>
     pis =  y_pred[:, :K]                                                    
     alphas = y_pred[:, K:2*K]                                               
@@ -599,17 +608,19 @@ def gamma_mixture_NLL(y_true, y_pred):
 
 ```{python}
 # Employ the loss function from previous slide
-gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_NLL)             #<1>
+gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)             #<1>
 
 hist = gamma_mdn.fit(X_train, y_train,
-    epochs=300, 
-    callbacks=[EarlyStopping(patience=30)],  
+    epochs=100, 
+    callbacks=[EarlyStopping(patience=10)],  
     verbose=0,
     batch_size=64, 
     validation_split=0.2)                                               #<2>
 ```
-1. Compiles the model using `adam` optimizer and the `gamma_mixture_NLL`(negative log likelihood) as the loss function
+1. Compiles the model using `adam` optimizer and the `gamma_mixture_nll` (negative log likelihood) as the loss function
 2. Fits the model using the training data, with a validation split
+
+# Metrics for Distributional Regression {visibility="uncounted"}
 
 ## Proper Scoring Rules
 
@@ -662,27 +673,27 @@ def gamma_nll(mean, dispersion, y):
 
 # GLM
 X_test_design = sm.add_constant(X_test)
-mus = gamma_GLM.predict(X_test_design)
-NLL_GLM = gamma_nll(mus, phi_GLM, y_test)
+mus = gamma_glm.predict(X_test_design)
+nll_glm = gamma_nll(mus, phi_glm, y_test)
 
 # CANN
-mus = np.exp(np.sum(CANN.predict(X_test, verbose=0), axis = 1))
-NLL_CANN = gamma_nll(mus, phi_CANN, y_test)
+mus = np.exp(np.sum(cann.predict(X_test, verbose=0), axis = 1))
+nll_cann = gamma_nll(mus, phi_cann, y_test)
 
 # MDN
-NLL_MDN = gamma_mdn.evaluate(X_test, y_test, verbose=0)
+nll_mdn = gamma_mdn.evaluate(X_test, y_test, verbose=0)
 ```
 
 ## Model Comparisons
 
 ```{python}
-print(f'GLM: {round(NLL_GLM, 2)}')
-print(f'CANN: {round(NLL_CANN, 2)}')
-print(f'MDN: {round(NLL_MDN, 2)}')
+print(f'GLM: {round(nll_glm, 2)}')
+print(f'CANN: {round(nll_cann, 2)}')
+print(f'MDN: {round(nll_mdn, 2)}')
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The above results show that MDN provides the lowest value for the Logarithmic Score(NLL). Low values for NLL indicate better calibration. One possible reason for the better performance of the MDN model(compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
+The above results show that MDN provides the lowest value for the Logarithmic Score (NLL). Low values for NLL indicate better calibration. One possible reason for the better performance of the MDN model (compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
 :::
 
 
@@ -698,9 +709,7 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 ::: columns
 ::: column
 - aleatoric and epistemic uncertainty
-- Bayesian neural network
 - deep ensembles
-- dropout
 - CANN
 - GLM
 :::
@@ -709,7 +718,5 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - mixture distribution
 - posterior sampling
 - proper scoring rule
-- uncertainty quantification
-- variational approximation
 :::
 :::
