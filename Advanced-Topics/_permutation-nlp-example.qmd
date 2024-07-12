@@ -1,0 +1,406 @@
+
+# Illustrative Example {visibility="uncounted"}
+
+## First attempt at NLP task
+
+```{python}
+#| output: false
+#| code-fold: true
+df_raw = pd.read_parquet("../Natural-Language-Processing/NHTSA_NMVCCS_extract.parquet.gzip")
+
+df_raw["NUM_VEHICLES"] = df_raw["NUMTOTV"].map(lambda x: str(x) if x <= 2 else "3+")
+
+weather_cols = [f"WEATHER{i}" for i in range(1, 9)]
+features = df_raw[["SUMMARY_EN"] + weather_cols]
+
+target_labels = df_raw["NUM_VEHICLES"]
+target = LabelEncoder().fit_transform(target_labels)
+
+X_main, X_test, y_main, y_test = train_test_split(features, target, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+```
+
+::: columns
+::: column
+```{python}
+df_raw["SUMMARY_EN"]
+```
+:::
+::: column
+```{python}
+df_raw["NUM_VEHICLES"].value_counts()\
+  .sort_index()
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Trained neural networks performing really well on predictions does not necessarily imply good performance. Interrogating the model can help us understand inside workings of the model to ensure there are no underlying problems with model.
+:::
+
+::: footer
+Source: [JSchelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
+:::
+
+## Bag of words for the top 1,000 words
+
+```{python}
+#| code-fold: true
+def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):
+    X_vects = vect.transform(X[txt_col]).toarray()
+    X_other = X.drop(txt_col, axis=1)
+
+    if not dataframe:
+        return np.concatenate([X_vects, X_other], axis=1)                           
+    else:
+        # Add column names and indices to the combined dataframe.
+        vocab = list(vect.get_feature_names_out())
+        X_vects_df = pd.DataFrame(X_vects, columns=vocab, index=X.index)
+        return pd.concat([X_vects_df, X_other], axis=1) 
+```
+
+```{python}
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+
+X_train_bow = vectorise_dataset(X_train, vect)
+X_val_bow = vectorise_dataset(X_val, vect)
+X_test_bow = vectorise_dataset(X_test, vect)
+
+vectorise_dataset(X_train, vect, dataframe=True).head()
+```
+
+## Trained a basic neural network on that
+
+```{python}
+#| code-fold: true
+def build_model(num_features, num_cats):
+    random.seed(42)
+    
+    model = Sequential([
+        Input((num_features,)),
+        Dense(100, activation="relu"),
+        Dense(num_cats, activation="softmax")
+    ])
+    
+    topk = SparseTopKCategoricalAccuracy(k=2, name="topk")
+    model.compile("adam", "sparse_categorical_crossentropy",
+        metrics=["accuracy", topk])
+    
+    return model
+```
+
+```{python}
+#| warning: false
+num_features = X_train_bow.shape[1]
+num_cats = df_raw["NUM_VEHICLES"].nunique()
+model = build_model(num_features, num_cats)
+es = EarlyStopping(patience=1, restore_best_weights=True, monitor="val_accuracy")
+```
+
+```{python}
+#| eval: false
+model.fit(X_train_bow, y_train, epochs=10,
+    callbacks=[es], validation_data=(X_val_bow, y_val), verbose=0)
+model.summary()
+```
+
+```{python}
+#| echo: false
+if not Path("nlp-fail-model.keras").exists():
+    model.fit(X_train_bow, y_train, epochs=1_000, callbacks=es,
+        validation_data=(X_val_bow, y_val), verbose=0)
+    model.save("nlp-fail-model.keras")
+else:
+    model = keras.models.load_model("nlp-fail-model.keras")
+
+model.summary()
+```
+
+```{python}
+model.evaluate(X_train_bow, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_bow, y_val, verbose=0)
+```
+
+## Permutation importance algorithm {.smaller}
+
+Taken directly from scikit-learn documentation: 
+
+- Inputs: fitted predictive model $m$, tabular dataset (training or
+  validation) $D$.
+- Compute the reference score $s$ of the model $m$ on data
+  $D$ (for instance the accuracy for a classifier or the $R^2$ for
+  a regressor).
+- For each feature $j$ (column of $D$):
+
+  - For each repetition $k$ in ${1, \dots, K}$:
+
+    - Randomly shuffle column $j$ of dataset $D$ to generate a
+      corrupted version of the data named $\tilde{D}_{k,j}$.
+    - Compute the score $s_{k,j}$ of model $m$ on corrupted data
+      $\tilde{D}_{k,j}$.
+
+  - Compute importance $i_j$ for feature $f_j$ defined as:
+
+    $$ i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} $$
+
+::: footer
+Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
+:::
+
+## Find important inputs
+
+```{python}
+def permutation_test(model, X, y, num_reps=1, seed=42):
+    """
+    Run the permutation test for variable importance.
+    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
+    """
+    rnd.seed(seed)
+    scores = []    
+
+    for j in range(X.shape[1]):
+        original_column = np.copy(X[:, j])
+        col_scores = []
+
+        for r in range(num_reps):
+            rnd.shuffle(X[:,j])
+            col_scores.append(model.evaluate(X, y, verbose=0))
+
+        scores.append(np.mean(col_scores, axis=0))
+        X[:,j] = original_column
+    
+    return np.array(scores)
+```
+
+## Run the permutation test
+
+```{python}
+all_perm_scores = permutation_test(model, X_val_bow, y_val) #<1>
+all_perm_scores
+```
+1. The `permutation_test`, aims to evaluate the model's performance on different sets of unseen data. The idea here is to shuffle the order of the _val_ set, and compare the `model` performance.
+
+## Plot the permutated accuracies
+
+```{python}
+perm_scores = all_perm_scores[:,1]                                #<1>
+plt.plot(perm_scores)
+plt.xlabel("Input index")
+plt.ylabel("Accuracy when shuffled");
+```
+1. `[:,1]` part will extract the accuracy of the output from the model evaluation and store is as a vector. 
+
+::: {.content-visible unless-format="revealjs"}
+The above method on a high-level says that, if we corrupt the information contained in a feature by changing the order of the data in that feature column, then we are able to see how much information the variable brings in. If a certain variable is not contributing to the prediction accuracy, then changing the order of the variable will not result in a notable drop in accuracy. However, if a certain variable is highly important, then changing the order of data will result in a larger drop. This is an indication of variable importance. The plot above shows how model's accuracy fluctuates across variables, and we can see how certain variables result in larger drops of accuracies.
+:::
+
+## Find the most significant inputs
+
+```{python}
+vocab = vect.get_feature_names_out()                            #<1>
+input_cols = list(vocab) + weather_cols                         #<2>
+
+best_input_inds = np.argsort(perm_scores)[:100]                 #<3>
+best_inputs = [input_cols[idx] for idx in best_input_inds]      #<4>
+
+print(best_inputs)                                              #<5>
+```
+1. Extracts the names of the features in a vectorizer object
+2. Combines the list of names in the vectorizer object with the weather columns
+3. Sorts the `perm_scores` in the ascending order and select the 100 observation which had the most impact on model's accuracy
+4. Find the names of the input features by mapping the index
+5. Prints the output
+
+## How about a simple decision tree?
+
+::: {.content-visible unless-format="revealjs"}
+We can try building a simpler model using only the most important features. Here, we chose a classification decision tree.
+:::
+
+```{python}
+from sklearn import tree                                                #<1>
+
+clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)     #<2>
+clf.fit(X_train_bow[:, best_input_inds], y_train);                      #<3>
+```
+1. Imports `tree` class from `sklearn`
+2. Specifies a decision tree with 3 leaf nodes. `max_leaf_nodes=3` ensures that the fitted tree will have at most 3 leaf nodes
+3. Fits the decision tree on the selected dataset. Here we only select the `best_input_inds` columns from the train set
+
+```{python}
+print(clf.score(X_train_bow[:, best_input_inds], y_train))
+print(clf.score(X_val_bow[:, best_input_inds], y_val))
+```
+
+The decision tree ends up giving pretty good results.
+
+## Decision tree 
+
+```{python}
+#| eval: false
+tree.plot_tree(clf, feature_names=best_inputs, filled=True);
+```
+
+```{python}
+#| echo: false
+import graphviz
+dot_data = tree.export_graphviz(clf, out_file=None, 
+            feature_names=best_inputs,  
+            class_names=["1", "2", "3+"],
+            rounded=True,  
+            filled=True
+)  
+graph = graphviz.Source(dot_data)  
+graph 
+```
+
+```{python}
+print(np.where(clf.feature_importances_ > 0)[0])
+[best_inputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
+```
+
+# Illustrative Example (Fixed) {visibility="uncounted"}
+
+## This is why we replace "v1", "v2", "v3"
+
+```{python}
+#| code-fold: true
+# Go through every summary and find the words "V1", "V2" and "V3".
+# For each summary, replace "V1" with a random number like "V1623", and "V2" with a different random number like "V1234".
+rnd.seed(123)
+
+df = df_raw.copy()
+for i, summary in enumerate(df["SUMMARY_EN"]):
+    word_numbers = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+    num_cars = 10
+    new_car_nums = [f"V{rnd.randint(100, 10000)}" for _ in range(num_cars)]
+    num_spaces = 4
+
+    for car in range(1, num_cars+1):
+        new_num = new_car_nums[car-1]
+        summary = summary.replace(f"V-{car}", new_num)
+        summary = summary.replace(f"Vehicle {word_numbers[car-1]}", new_num).replace(f"vehicle {word_numbers[car-1]}", new_num)
+        summary = summary.replace(f"Vehicle #{word_numbers[car-1]}", new_num).replace(f"vehicle #{word_numbers[car-1]}", new_num)
+        summary = summary.replace(f"Vehicle {car}", new_num).replace(f"vehicle {car}", new_num)
+        summary = summary.replace(f"Vehicle #{car}", new_num).replace(f"vehicle #{car}", new_num)
+        summary = summary.replace(f"Vehicle # {car}", new_num).replace(f"vehicle # {car}", new_num)
+
+        for j in range(num_spaces+1):
+            summary = summary.replace(f"V{' '*j}{car}", new_num).replace(f"V{' '*j}#{car}", new_num).replace(f"V{' '*j}# {car}", new_num)
+            summary = summary.replace(f"v{' '*j}{car}", new_num).replace(f"v{' '*j}#{car}", new_num).replace(f"v{' '*j}# {car}", new_num)
+         
+    df.loc[i, "SUMMARY_EN"] = summary
+```
+
+There was a slide in the NLP deck titled "Just ignore this for now..."
+That was going through each summary and replacing the words "V1", "V2", "V3" with random numbers. This was done to see if the model was overfitting to these words.
+
+```{python}
+#| code-fold: true
+features = df[["SUMMARY_EN"] + weather_cols]
+X_main, X_test, y_main, y_test = train_test_split(features, target, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+vect = CountVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
+
+X_train_bow = vectorise_dataset(X_train, vect)
+X_val_bow = vectorise_dataset(X_val, vect)
+X_test_bow = vectorise_dataset(X_test, vect)
+
+model = build_model(num_features, num_cats)
+
+es = EarlyStopping(patience=1, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+```
+
+```{python}
+#| eval: false
+model.fit(X_train_bow, y_train, epochs=10,
+    callbacks=[es], validation_data=(X_val_bow, y_val), verbose=0);
+```
+
+```{python}
+#| echo: false
+if not Path("nlp-fixed-model.keras").exists():
+    model.fit(X_train_bow, y_train, epochs=10, callbacks=es,
+        validation_data=(X_val_bow, y_val), verbose=0)
+    model.save("nlp-fixed-model.keras")
+else:
+    model = keras.models.load_model("nlp-fixed-model.keras")
+```
+
+Retraining on the fixed dataset gives us a more realistic (lower) accuracy.
+
+```{python}
+model.evaluate(X_train_bow, y_train, verbose=0)
+```
+
+```{python}
+model.evaluate(X_val_bow, y_val, verbose=0)
+```
+
+## Permutation importance accuracy plot
+
+```{python}
+perm_scores = permutation_test(model, X_val_bow, y_val)[:,1]
+plt.plot(perm_scores)
+plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
+```
+
+## Find the most significant inputs
+
+```{python}
+vocab = vect.get_feature_names_out()
+input_cols = list(vocab) + weather_cols
+
+best_input_inds = np.argsort(perm_scores)[:100]
+best_inputs = [input_cols[idx] for idx in best_input_inds]
+
+print(best_inputs)
+```
+
+## How about a simple decision tree?
+
+```{python}
+clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)
+clf.fit(X_train_bow[:, best_input_inds], y_train);
+```
+
+```{python}
+print(clf.score(X_train_bow[:, best_input_inds], y_train))
+print(clf.score(X_val_bow[:, best_input_inds], y_val))
+```
+
+## Decision tree 
+
+```{python}
+#| eval: false
+tree.plot_tree(clf, feature_names=best_inputs, filled=True);
+```
+::: {.content-visible unless-format="revealjs"}
+The tree shows how, the model would check for the word _v3_, and decides the prediction as _3+_. This is not very meaningful, because having _v3_ in the input is a direct indication of the number of vehicles. 
+:::
+
+
+```{python}
+#| echo: false
+dot_data = tree.export_graphviz(clf, out_file=None, 
+            feature_names=best_inputs,  
+            class_names=["1", "2", "3+"],
+            rounded=True,  
+            filled=True
+)  
+graph = graphviz.Source(dot_data)  
+graph 
+```
+
+```{python}
+print(np.where(clf.feature_importances_ > 0)[0])
+[best_inputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
+```
