@@ -1,11 +1,81 @@
 ---
 title: Interpretability
-author: Eric Dong & Patrick Laub
 ---
+
+::: {.content-visible unless-format="revealjs"}
+
+### Acknowledgments
+
+Thanks to Eric Dong for making the original version of these slides.
+
+:::
 
 ::: {.callout-warning}
 This page is out of date for 2024, and will be updated shortly.
 :::
+
+```{python}
+#| echo: false
+#| warning: false
+import os
+
+# # os.environ["KERAS_BACKEND"] = "torch"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
+import torch
+
+torch.set_num_threads(1)
+
+import matplotlib.pyplot
+
+
+def set_square_figures():
+    matplotlib.pyplot.rcParams["figure.figsize"] = (2.0, 2.0)
+
+
+def set_rectangular_figures():
+    matplotlib.pyplot.rcParams["figure.figsize"] = (5.0, 2.0)
+
+
+def square_fig():
+    return matplotlib.pyplot.figure(figsize=(2, 2), dpi=350).gca()
+
+
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortest_side = min(xl[1], yl[1])
+    matplotlib.pyplot.plot(
+        [0, shortest_side], [0, shortest_side], color="black", linestyle="--"
+    )
+
+
+import cycler
+
+colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
+matplotlib.pyplot.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
+
+set_rectangular_figures()
+matplotlib.pyplot.rcParams["figure.dpi"] = 350
+matplotlib.pyplot.rcParams["savefig.bbox"] = "tight"
+matplotlib.pyplot.rcParams["font.family"] = "serif"
+
+matplotlib.pyplot.rcParams["axes.spines.right"] = False
+matplotlib.pyplot.rcParams["axes.spines.top"] = False
+
+import pandas
+
+pandas.options.display.max_rows = 6
+
+import numpy
+
+numpy.set_printoptions(precision=2)
+numpy.random.seed(123)
+
+import keras
+
+keras.utils.set_random_seed(1)
+```
 
 ::: {.content-visible unless-format="revealjs"}
 
@@ -13,9 +83,22 @@ This page is out of date for 2024, and will be updated shortly.
 #| code-fold: true
 #| code-summary: Show the package imports
 import random
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as rnd
+import pandas as pd
+
+import keras
+from keras.metrics import SparseTopKCategoricalAccuracy
+from keras.models import Sequential
+from keras.layers import Dense, Input
+from keras.callbacks import EarlyStopping
+ 
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split 
 ```
 
 :::
@@ -43,6 +126,8 @@ Interpretability Definition
 :   *Interpretability refers to the ease with which one can understand and comprehend the model's algorithm and predictions.*
 
 Interpretability of black-box models can be crucial to ascertaining trust.
+
+# Aspects of Interpretability {visibility="uncounted"}
 
 ## First Dimension of Interpretability
 
@@ -227,7 +312,7 @@ Suppose we want to explain the instance $\boldsymbol{x}_{\text{Bob}}=(1, 2, 0.5)
 
 ::: columns
 ::: {.column width="60%"}
-![](./LIME_Bob.png)
+![](LIME_Bob.png)
 :::
 ::: {.column width="40%"}
 The bold [red]{style="color:red;"} cross is the instance being explained. LIME samples instances ([grey]{style="color:gray;"} nodes), gets predictions using $f$ (gamma MDN) and weighs them by the proximity to the instance being explained (represented here by size). The dashed line $g$ is the learned local explanation.
@@ -253,7 +338,7 @@ where $p$ is the number of features. A positive SHAP value indicates that the va
 Reference: Lundberg & Lee (2017), [A Unified Approach to Interpreting Model Predictions](https://arxiv.org/pdf/1705.07874.pdf), Advances in Neural Information Processing Systems, 30.
 :::
 
-# Explaining Specific Models {visibility="uncounted"}
+<!-- # Explaining Specific Models {visibility="uncounted"} -->
 
 ## Grad-CAM
 
@@ -269,6 +354,8 @@ Reference: Lundberg & Lee (2017), [A Unified Approach to Interpreting Model Pred
 ::: footer
 See Chollet (2021), Deep Learning with Python, Section 9.4.3.
 :::
+
+{{< include _permutation-nlp-example.qmd >}}
 
 ## Package Versions {.appendix data-visibility="uncounted"}
 
