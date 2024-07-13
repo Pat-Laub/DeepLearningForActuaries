@@ -1,10 +1,13 @@
 ---
 title: Distributional Regression
-author: Eric Dong & Patrick Laub
 ---
 
-::: {.callout-warning}
-This page is out of date for 2024, and will be updated shortly.
+::: {.content-visible unless-format="revealjs"}
+
+### Acknowledgments
+
+Thanks to Eric Dong for making the original version of these slides.
+
 :::
 
 ```{python}
@@ -64,8 +67,10 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.random as rnd
+import pandas as pd
 
 from sklearn import set_config
+from sklearn.linear_model import LinearRegression
 set_config(transform_output="pandas")
 
 import tf_keras
@@ -81,79 +86,478 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import make_column_transformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OrdinalEncoder
+
+import scipy.stats as stats
+import statsmodels.api as sm
 ```
 
 :::
 
-# Uncertainty & Distributional Regression {visibility="uncounted"}
+# Traditional Regression {visibility="uncounted"}
 
-::: {.content-visible unless-format="revealjs"}
-Uncertainty in deep learning refers to the level of doubt one would have about the predictions made by an AI-driven algorithm. Identifying and quantifying different sources of uncertainty that could exist in AI-driven algorithms is therefore important to ensure a credible application.
+## Traditional Regression
+
+Multiple linear regression assumes the data-generating process is
+
+$$Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \ldots + \beta_p x_{ip} + \varepsilon$$
+
+where $\varepsilon \sim \mathcal{N}(0, \sigma^2)$.
+
+We estimate the coefficients $\beta_0, \beta_1, \ldots, \beta_p$ by minimising the sum of squared residuals or mean squared error
+
+$$\text{RSS} := \sum_{i=1}^n (y_i - \hat{y}_i)^2
+, \quad \text{MSE} := \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 ,
+$$
+
+where $\hat{y}_i$ is the predicted value for the $i$th observation.
+
+## The probabilistic view
+
+$$Y_i \sim \mathcal{N}(\mu_i, \sigma^2)$$
+
+where $\mu_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip}$,
+and the $\sigma^2$ is known.
+
+The $\mathcal{N}(\mu, \sigma^2)$ normal distribution has p.d.f.
+
+$$f(y) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y - \mu)^2}{2\sigma^2}\right) .$$
+
+The likelihood function is
+
+$$
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - \mu_i)^2}{2\sigma^2}\right)
+$$
+$$
+\Rightarrow \ell(\boldsymbol{\beta}) = -\frac{n}{2}\log(2\pi) - \frac{n}{2}\log(\sigma^2) - \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
+$$
+
+Perform maximum likelihood estimation to find $\boldsymbol{\beta}$.
+
+## The machine learning view
+
+The negative log-likelihood $\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})$ is to be minimised:
+
+$$
+\text{NLL}(\boldsymbol{\beta})
+= \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
+$$
+
+As $\sigma^2$ is fixed, minimising NLL is equivalent to minimising MSE:
+
+$$
+\begin{aligned}
+\widehat{\boldsymbol{\beta}}
+&= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{NLL}(\boldsymbol{\beta}) \\
+&= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 \\
+&= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{1}{n} \sum_{i=1}^n \Bigl( y_i - \hat{y}_i(\boldsymbol{x}_i; \boldsymbol{\beta}) \Bigr)^2 \\
+&= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{MSE}\bigl( \boldsymbol{y}, \hat{\boldsymbol{y}}(\boldsymbol{\mathbf{X}}; \boldsymbol{\beta}) \bigr).
+\end{aligned}
+$$
+
+## Generalised Linear Model (GLM)
+
+The GLM is often characterised by the mean prediction:
+
+$$
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = g^{-1} \left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)
+$$
+
+where $g$ is the link function.
+
+Common GLM distributions for the response variable include: 
+
+- Normal distribution with identity link (just MLR)
+- Bernoulli distribution with logit link (logistic regression)
+- Poisson distribution with log link (Poisson regression)
+- Gamma distribution with log link
+
+## Logistic regression
+
+A Bernoulli distribution with parameter $p$ has p.m.f.
+
+$$
+f(y)\ =\ \begin{cases}
+p & \text{if } y = 1 \\
+1 - p & \text{if } y = 0
+\end{cases}
+\ =\ p^y (1 - p)^{1 - y}.
+$$
+
+Our model is $Y|\boldsymbol{X}=\boldsymbol{x}$ follows a Bernoulli distribution with parameter
+
+$$
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \frac{1}{1 + \exp\left(-\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)} = \mathbb{P}(Y=1|\boldsymbol{X}=\boldsymbol{x}).
+$$
+
+The likelihood function, using $\mu_i := \mu(\boldsymbol{x}_i; \boldsymbol{\beta})$, is
+
+$$
+L(\boldsymbol{\beta})
+\ =\ \prod_{i=1}^n \begin{cases}
+\mu_i & \text{if } y_i = 1 \\
+1 - \mu_i & \text{if } y_i = 0
+\end{cases}
+\ =\ \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i} .
+$$
+
+## Binary cross-entropy loss
+
+$$
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i}
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+$$
+
+The negative log-likelihood is
+
+$$
+\text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+$$
+
+The binary cross-entropy loss is identical:
+$$
+\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+$$
+
+## Poisson regression
+
+A Poisson distribution with rate $\lambda$ has p.m.f.
+$$
+f(y) = \frac{\lambda^y \exp(-\lambda)}{y!}.
+$$
+
+Our model is $Y|\boldsymbol{X}=\boldsymbol{x}$ is Poisson distributed with parameter
+
+$$
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right) .
+$$
+
+The likelihood function is
+
+$$
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
+$$
+$$
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( -\mu_i + y_i \log(\mu_i) - \log(y_i!) \Bigr).
+$$
+
+## Poisson loss
+
+The negative log-likelihood is
+
+$$
+\text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) + \log(y_i!) \Bigr) .
+$$
+
+The Poisson loss is
+
+$$
+\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
+$$
+
+## Gamma regression
+
+A gamma distribution with mean $\mu$ and dispersion $\phi$ has p.d.f.
+$$
+f(y; \mu, \phi) = \frac{(\mu \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y^{\frac{1}{\phi} - 1} \mathrm{e}^{-\frac{y}{\mu \phi}}
+$$
+
+Our model is $Y|\boldsymbol{X}=\boldsymbol{x}$ is gamma distributed with a dispersion of $\phi$ and a mean of
+$\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)$.
+
+The likelihood function is
+$$
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y_i^{\frac{1}{\phi} - 1} \exp\left(-\frac{y_i}{\mu_i \phi}\right)
+$$
+
+$$
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ -\frac{1}{\phi} \log(\mu_i \phi) - \log \Gamma\left(\frac{1}{\phi}\right) + \left(\frac{1}{\phi} - 1\right) \log(y_i) - \frac{y_i}{\mu_i \phi} \right].
+$$
+
+## Gamma loss
+
+The negative log-likelihood is
+
+$$
+\text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i \phi) + \log \Gamma\left(\frac{1}{\phi}\right) - \left(\frac{1}{\phi} - 1\right) \log(y_i) + \frac{y_i}{\mu_i \phi} \right].
+$$
+
+Since $\phi$ is a nuisance parameter
+$$
+\text{NLL}(\boldsymbol{\beta})
+= \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i) + \frac{y_i}{\mu_i \phi} \right] + \text{const} 
+\propto \sum_{i=1}^n \left[ \log(\mu_i) + \frac{y_i}{\mu_i} \right].
+$$
+
+::: {.callout-note}
+As $\log(\mu_i) = \log(y_i) - \log(y_i / \mu_i)$, we could write an alternative version
+$$
+\text{NLL}(\boldsymbol{\beta})
+\propto \sum_{i=1}^n \left[ \log(y_i) - \log\Bigl(\frac{y_i}{\mu_i}\Bigr) + \frac{y_i}{\mu_i} \right]
+\propto \sum_{i=1}^n \left[ \frac{y_i}{\mu_i} - \log\Bigl(\frac{y_i}{\mu_i}\Bigr) \right].
+$$
 :::
 
-## Quiz
+## Why do actuaries use GLMs?
 
-Question: *If you decide to predict the claim amount of Bob using a deep learning model, which source(s) of uncertainty are you confronting?*
+- GLMs are interpretable.
+- GLMs are flexible (can handle different types of response variables).
+- We get the full distribution of the response variable, not just the mean.
 
-1. The inherent variability of the data-generating process.
-2. Parameter error.
-3. Model error.
-4. Data uncertainty.
-5. All of the above.
+This last point is particularly important for analysing worst-case scenarios.
 
-## Answer
+# Forecasts with noise {visibility="uncounted"}
 
-All of the above!
+## Stock price forecasting
 
-::: {.content-visible unless-format="revealjs"}
-Parameter error stems primarily due to lack of data. Model error stems from assuming wrong distributional properties of the data. Data uncertainty arises due to the lack of confidence we may have about the quality of the collected data. Noisy data, inconsistent data, data with missing values or data with missing important variables can result in data uncertainty.
+```{python}
+#| code-fold: true
+def lagged_timeseries(df, target, window=30):
+    lagged = pd.DataFrame()
+    for i in range(window, 0, -1):
+        lagged[f"T-{i}"] = df[target].shift(i)
+    lagged["T"] = df[target].values
+    return lagged
+
+
+stocks = pd.read_csv("../Time-Series-And-Recurrent-Neural-Networks/aus_fin_stocks.csv")
+stocks["Date"] = pd.to_datetime(stocks["Date"])
+stocks = stocks.set_index("Date")
+_ = stocks.pop("ASX200")
+stock = stocks[["CBA"]]
+stock = stock.ffill()
+
+df_lags = lagged_timeseries(stock, "CBA", 40)
+
+# Split the data in time
+X_train = df_lags.loc[:"2018"]
+X_val = df_lags.loc["2019"]
+X_test = df_lags.loc["2020":]
+
+# Remove any with NAs and split into X and y
+X_train = X_train.dropna()
+X_val = X_val.dropna()
+X_test = X_test.dropna()
+
+y_train = X_train.pop("T")
+y_val = X_val.pop("T")
+y_test = X_test.pop("T")
+
+X_train = X_train / 100
+X_val = X_val / 100
+X_test = X_test / 100
+y_train = y_train / 100
+y_val = y_val / 100
+y_test = y_test / 100
+
+lr = LinearRegression()
+lr.fit(X_train, y_train);
+
+stocks.plot()
+plt.ylabel("Stock Price")
+plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
+```
+
+## Noisy auto-regressive forecast
+
+```{python}
+def noisy_autoregressive_forecast(model, X_val, sigma, suppress=False):
+    """
+    Generate a multi-step forecast using the given model.
+    """
+    multi_step = pd.Series(index=X_val.index, name="Multi Step")
+
+    # Initialize the input data for forecasting
+    input_data = X_val.iloc[0].values.reshape(1, -1)
+
+    for i in range(len(multi_step)):
+        # Ensure input_data has the correct feature names
+        input_df = pd.DataFrame(input_data, columns=X_val.columns)
+        if suppress:
+            next_value = model.predict(input_df, verbose=0)
+        else:
+            next_value = model.predict(input_df)
+
+        next_value += np.random.normal(0, sigma)
+
+        multi_step.iloc[i] = next_value
+
+        # Append that prediction to the input for the next forecast
+        if i + 1 < len(multi_step):
+            input_data = np.append(input_data[:, 1:], next_value).reshape(1, -1)
+
+    return multi_step
+```
+
+## Original forecast
+
+```{python}
+lr_forecast = noisy_autoregressive_forecast(lr, X_val, 0)
+```
+
+```{python}
+#| code-fold: true
+stock.loc[lr_forecast.index, "AR Linear"] = 100 * lr_forecast
+
+def plot_forecasts(stock):
+    stock.loc["2018-12":"2019"].plot()
+    plt.axvline("2019", color="black", linestyle="--")
+    plt.ylabel("Stock Price")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+plot_forecasts(stock)
+```
+
+```{python}
+residuals = y_train - lr.predict(X_train)
+sigma = np.std(residuals)
+```
+
+## With noise
+
+```{python}
+np.random.seed(1)
+lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_val, sigma)
+```
+
+```{python}
+#| code-fold: true
+stock.loc[lr_noisy_forecast.index, "AR Noisy Linear"] = 100 * lr_noisy_forecast
+plot_forecasts(stock)
+```
+
+## With noise {visibility="uncounted"}
+
+```{python}
+np.random.seed(2)
+lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_val, sigma)
+```
+
+```{python}
+#| code-fold: true
+stock.loc[lr_noisy_forecast.index, "AR Noisy Linear"] = 100 * lr_noisy_forecast
+plot_forecasts(stock)
+```
+
+## With noise {visibility="uncounted"}
+
+```{python}
+np.random.seed(3)
+lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_val, sigma)
+```
+
+```{python}
+#| code-fold: true
+stock.loc[lr_noisy_forecast.index, "AR Noisy Linear"] = 100 * lr_noisy_forecast
+plot_forecasts(stock)
+```
+
+## Many noisy forecasts {visibility="uncounted"}
+
+```{python}
+num_forecasts = 500
+forecasts = []
+for i in range(num_forecasts):
+    forecasts.append(noisy_autoregressive_forecast(lr, X_val, sigma) * 100)
+noisy_forecasts = pd.concat(forecasts, axis=1)
+noisy_forecasts.index = X_val.index
+```
+
+```{python}
+#| code-fold: true
+noisy_forecasts.loc["2018-12":"2019"].plot(legend=False, alpha=0.4)
+plt.ylabel("Stock Price");
+```
+
+## 95% "prediction intervals"
+
+```{python}
+# Calculate quantiles for the forecasts
+lower_quantile = noisy_forecasts.quantile(0.025, axis=1)
+upper_quantile = noisy_forecasts.quantile(0.975, axis=1)
+mean_forecast = noisy_forecasts.mean(axis=1)
+```
+
+```{python}
+#| code-fold: true
+# Plot the mean forecast
+plt.figure(figsize=(8, 3))
+
+plt.plot(stock.loc["2018-12":"2019"].index, stock.loc["2018-12":"2019"]["CBA"], label="CBA")
+
+plt.plot(mean_forecast, label="Mean")
+
+# Plot the quantile-based shaded area
+plt.fill_between(mean_forecast.index, 
+                 lower_quantile, 
+                 upper_quantile, 
+                 color="grey", alpha=0.2)
+
+# Plot settings
+plt.axvline(pd.Timestamp("2019-01-01"), color="black", linestyle="--")
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+plt.xlabel("Date")
+plt.ylabel("Stock Price")
+plt.tight_layout();
+```
+
+## Residuals 
+
+```{python}
+#| echo: false
+set_square_figures()
+```
+
+::: columns
+::: column
+```{python}
+y_pred = lr.predict(X_train)
+residuals = y_train - y_pred
+residuals -= np.mean(residuals)
+residuals /= np.std(residuals)
+stats.shapiro(residuals)
+```
+
+::: {.callout-note .fragment}
+Probably should model the log-returns instead of the stock prices.
 :::
 
-There are two major types of uncertainty in statistical or machine learning:
-
-- Aleatoric uncertainty
-- Epistemic uncertainty
-
-Since there is no consensus on the definitions of aleatoric and epistemic uncertainty, we provide the most acknowledged definitions in the following slides.
-
-## Aleatoric Uncertainty
-
-Qualitative Definition
-
-:   *Aleatoric uncertainty refers to the statistical variability and inherent noise with data distribution that modelling cannot explain.*
-
-Quantitative Definition
-
-:   $$\text{Ale}(Y|\boldsymbol{x}) = \mathbb{V}[Y|\boldsymbol{x}],$$i.e., if $Y|\boldsymbol{x} \sim \mathcal{N}(\mu, \sigma^2)$, the aleatoric uncertainty would be $\sigma^2$. Simply, it is the conditional variance of the response variable $Y$ given features/covariates $\boldsymbol{x}$.
-
-## Epistemic Uncertainty
-
-Qualitative Definition
-
-:   *Epistemic uncertainty refers to the lack of knowledge, limited data information, parameter errors and model errors.*
-
-Quantitative Definition
-
-:   $$\text{Epi}(Y|\boldsymbol{x}) = \text{Uncertainty}(Y|\boldsymbol{x}) - \text{Ale}(Y|\boldsymbol{x}),$$
-
-i.e., the total uncertainty subtracting the aleatoric uncertainty $\mathbb{V}[Y|\boldsymbol{x}]$ would be the epistemic uncertainty.
-
-## Uncertainty
-
-Let's go back to the question at the beginning:
-
-*If you decide to predict the claim amount of an individual using a deep learning model, which source(s) of uncertainty are you dealing with?*
-
-1. The inherent variability of the data-generating process $\rightarrow$ aleatoric uncertainty.
-2. Parameter error $\rightarrow$ epistemic uncertainty.
-3. Model error $\rightarrow$ epistemic uncertainty.
-4. Data uncertainty $\rightarrow$ epistemic uncertainty.
-
-
-::: {.content-visible unless-format="revealjs"}
-The following sections show how we prepare the datasets for studying uncertainty.
+:::
+::: column
+```{python}
+#| code-fold: true
+plt.hist(residuals, bins=40, density=True)
+x = np.linspace(-3, 3, 100)
+plt.xlim(-3, 3)
+plt.plot(x, stats.norm.pdf(x, 0, 1));
+```
+:::
 :::
 
+
+## Q-Q plot and P-P plot {visibility="uncounted"}
+
+
+::: columns
+::: column
+```{python}
+#| code-fold: true
+sm.qqplot(residuals, line="45");
+```
+:::
+::: column
+```{python}
+#| code-fold: true
+sm.ProbPlot(residuals).ppplot(line="45");
+```
+:::
+:::
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+```
+
+# GLMs and Neural Networks {visibility="uncounted"}
 
 ## Code: Data
 
@@ -236,34 +640,10 @@ Plotting the empirical distribution of the target variable help us get an unders
 plt.hist(y_train[y_train < 5000], bins=30);
 ```
 
-<!--
-# Aleatoric Uncertainty {visibility="uncounted"}
-
-::: {.content-visible unless-format="revealjs"}
-Aleatoric uncertainty refers to the inherent variability associated with the data generating process. Among many ways to capture the aleatoric uncertainty, (i) combining with probabilistic models and (ii) considering mixture models are two useful methods to quantify the inherent variability.
-:::
-
--->
 ::: {.content-visible unless-format="revealjs"}
 The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{CANN}$ for the neural network.
 <!--The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.-->
 :::
-
-# Generalised Linear Model (GLM) {visibility="uncounted"}
-
-## GLM
-
-The generalised linear model (GLM) is a statistical regression model that estimates the conditional mean of the response variable $Y$ given an instance $\boldsymbol{x}$ via a link function $g$:
-$$
-    \mathbb{E}[Y|\boldsymbol{x}]
-    = \mu(\boldsymbol{x}; \boldsymbol{\beta}_{\text{GLM}})
-    = g^{-1} \big(\big \langle \boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x} \big \rangle\big),
-$$
-where
-
-- $\boldsymbol{x} \in \mathbb{R}^{d_{\boldsymbol{x}}}$ is the vector of explanatory variables, with $d_{\boldsymbol{x}}$ denoting its dimension.
-- $\boldsymbol{\beta}_{\text{GLM}}$ represents the vector of regression coefficients.
-- $\langle \boldsymbol{a}, \boldsymbol{b}\rangle$ represents the inner product of $\boldsymbol{a}$ and $\boldsymbol{b}$.
 
 ::: {.content-visible unless-format="revealjs"}
 The idea of GLM is to find a linear combination of independent variables $\boldsymbol{x}$ and coefficients $\boldsymbol{\beta}$, apply a non-linear transformation ($g^{-1}$) to that linear combination and set it equal to conditional mean of the response variable $Y$ given an instance $\boldsymbol{x}$. The non-linear transformation provides added flexibility.
@@ -274,40 +654,33 @@ The idea of GLM is to find a linear combination of independent variables $\bolds
 Suppose a fitted gamma GLM model has
 
 - a log link function $g(x)=\log(x)$ and
-- regression coefficients $\boldsymbol{\beta}_{\text{GLM}}=(\beta_0, \beta_1, \beta_2, \beta_3)$.
+- regression coefficients $\boldsymbol{\beta}=(\beta_0, \beta_1, \beta_2, \beta_3)$.
 
 Then, it estimates the conditional mean of $Y$ given a new instance $\boldsymbol{x}=(1, x_1, x_2, x_3)$ as follows:
 $$
-    \mathbb{E}[Y|\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
+    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
 $$
 
 A GLM can model any other exponential family distribution using an appropriate link function $g$.
 
-## "Loss Function" for a Gamma GLM
+## Gamma GLM loss
 
-If $Y|\boldsymbol{x}$ is a gamma r.v., we can parameterise its density by its mean $\mu(\boldsymbol{x}; \boldsymbol{\beta})$ and dispersion parameter $\phi$:
+If $Y|\boldsymbol{X}=\boldsymbol{x}$ is a gamma r.v. with mean $\mu(\boldsymbol{x}; \boldsymbol{\beta})$ and dispersion parameter $\phi$, we can minimise the negative log-likelihood (NLL)
 $$
-    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}, \boldsymbol{\beta}, \phi)
-    = \frac{(\mu (\boldsymbol{x}; \boldsymbol{\beta})\cdot \phi)^{-1/\phi}}{{\Gamma(1/\phi)}} \cdot y^{1/\phi - 1} \cdot \mathrm{e}^{-y/(\mu (\boldsymbol{x}; \boldsymbol{\beta})\cdot\phi)}.
-$$
-The "loss function" for a gamma GLM is typically the negative log-likelihood (NLL):
-$$
-    \sum_{i=1}^{N}-\log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}_i, \boldsymbol{\beta},\phi) 
-    \propto \sum_{i=1}^{N}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
+    \text{NLL} \propto \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
 $$
 i.e., we ignore the dispersion parameter $\phi$ while estimating the regression coefficients.
-
 
 ## Fitting Steps
 
 Step 1. Use the advanced second derivative iterative method to find the regression coefficients:
 $$
-    \boldsymbol{\beta}_{\text{GLM}} = \underset{\boldsymbol{\beta}}{\text{arg min}} \ \sum_{i=1}^{N}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
+    \widehat{\boldsymbol{\beta}} = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
 $$
 
 Step 2. Estimate the dispersion parameter:
 $$
-    \phi_{\text{GLM}}=\frac{1}{N-d_{\boldsymbol{x}}}\sum_{i=1}^{N}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta}_{\text{GLM}} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta}_{\text{GLM}} )^2}
+    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
 $$ 
 
 ## Code: Gamma GLM
@@ -327,18 +700,37 @@ gamma_glm = sm.GLM(y_train, X_train_design,
 
 # Fit the model
 gamma_glm = gamma_glm.fit()
+```
 
+::: columns
+::: column
+```{python}
+gamma_glm.params
+```
+:::
+::: column
+```{python}
 # Dispersion Parameter
 mus = gamma_glm.predict(X_train_design)
-residuals = mus-y_train
+residuals = y_train - mus
 variance = mus**2
 dof = (len(y_train)-X_train.shape[1])
 phi_glm =  np.sum(residuals**2/variance)/dof
 print(phi_glm)
 ```
+:::
+:::
 
 ::: {.content-visible unless-format="revealjs"}
 The above example of fitting a Gamma distribution assumes a constant dispersion, meaning that, the dispersion of claim amount is constant for all policyholders. If we believe that the constant dispersion assumption is quite strong, we can use a double GLM model. Fitting a GLM is the traditional way of modelling a claim amount.
+:::
+
+## ANN can feed into a GLM
+
+![Combining GLM & ANN.](richman-glm-and-ann.png)
+
+::: footer
+Source: Ronald Richman (2022), Mind the Gap - Safely Incorporating Deep Learning Models into the Actuarial Toolkit, IFoA seminar, Slide 14.
 :::
 
 # Combined Actuarial Neural Network {visibility="uncounted"}
@@ -347,19 +739,15 @@ The above example of fitting a Gamma distribution assumes a constant dispersion,
 
 The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by Schelldorfer and Wüthrich (2019). We summarise the CANN approach as follows:
 
-- Find the coefficients $\boldsymbol{\beta}_{\text{GLM}}$ of the GLM with a link function $g(\cdot)$.
-- Find the weights $\boldsymbol{w}_{\text{CANN}}$ of a neural network $\mathcal{M}_{\text{CANN}}:\mathbb{R}^{d_{\boldsymbol{x}}}\to\mathbb{R}$.
-- Given a new instance $\boldsymbol{x}$, we have $$\mathbb{E}[Y|\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).$$
+- Find the coefficients $\boldsymbol{\beta}$ of the GLM with a link function $g(\cdot)$.
+- Find the weights $\boldsymbol{w}_{\text{CANN}}$ of a neural network $\mathcal{M}_{\text{CANN}}:\mathbb{R}^{p}\to\mathbb{R}$.
+- Given a new instance $\boldsymbol{x}$, we have $$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).$$
 
 ## Architecture
 
 ![CANN approach.](CANN.png)
 
 ## Code: Architecture
-
-```{python}
-gamma_glm.params
-```
 
 ```{python}
 # Ensure reproducibility
@@ -436,7 +824,7 @@ Find the dispersion parameter.
 
 ``` {python}
 mus = np.exp(np.sum(cann.predict(X_train, verbose=0), axis = 1))
-residuals = mus-y_train
+residuals = y_train - mus
 variance = mus**2
 dof = (len(y_train)-X_train.shape[1])
 phi_cann =  np.sum(residuals**2/variance) / dof
@@ -463,7 +851,9 @@ where we define a set of finite set of weights $\boldsymbol{\pi}=(\pi_{1} ..., \
 
 ## Mixture Distribution
 
-Let $f_{Y_k|\boldsymbol{X}}$ and $F_{Y_k|\boldsymbol{X}}$ be the probability density function and the cumulative density function, respectively, of $Y_k|\boldsymbol{X}$ for all $k\in \{1, ..., K\}$. The random variable $Y|\boldsymbol{X}$, which mixes $Y_k|\boldsymbol{X}$'s with weights $\pi_k$'s, has the density function
+Let $f_{Y_k|\boldsymbol{X}}$ and $F_{Y_k|\boldsymbol{X}}$ be the p.d.f. and the c.d.f of $Y_k|\boldsymbol{X}$ for all $k \in \{1, ..., K\}$.
+
+The random variable $Y|\boldsymbol{X}$, which mixes $Y_k|\boldsymbol{X}$'s with weights $\pi_k$'s, has the density function
 $$
     f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) f_{k}(y|\boldsymbol{x}),
 $$
@@ -480,9 +870,9 @@ $$
 $$
 where $\boldsymbol{w}^*$ is the networks' weights found by minimising the following negative log-likelihood loss function 
 $$
-    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})= - \sum_{i=1}^{N} \log f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w}^*),
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})= - \sum_{i=1}^{n} \log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}^*),
 $$
-where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{N}$ is the training dataset.
+where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{n}$ is the training dataset.
 
 ## Mixture Density Network
 
@@ -492,10 +882,10 @@ where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{N}$ is the training dataset
 
 Suppose there are two types of claims:
 
-- Type I: $Y_1|\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))$ and,
-- Type II: $Y_2|\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))$.
+- Type I: $Y_1|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))$ and,
+- Type II: $Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))$.
 
-The density of the actual claim amount $Y|\boldsymbol{x}$ follows
+The density of the actual claim amount $Y|\boldsymbol{X}=\boldsymbol{x}$ follows
 $$
     \begin{align*}
         f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
@@ -509,7 +899,7 @@ where $\pi_1(\boldsymbol{x})$ is the probability of a Type I claim given $\bolds
 
 The aim is to find the optimum weights
 $$
-    \boldsymbol{w}^* = \underset{w}{\text{arg min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
+    \boldsymbol{w}^* = \underset{w}{\text{arg\,min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
 $$
 for the Gamma mixture density network $\mathcal{M}_{\boldsymbol{w}^*}$ that outputs the mixing weights, shapes and scales of $Y$ given the input features $\boldsymbol{x}$, i.e.,
 $$
@@ -563,9 +953,9 @@ The negative log-likelihood loss function is given by
 
 $$
     \mathcal{L}(\mathcal{D}, \boldsymbol{w})
-    = - \sum_{i=1}^{N} \log \  f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w}) 
+    = - \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}) 
 $$
-where the $f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w})$ is defined by
+where the $f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})$ is defined by
 $$
 \begin{align*}
     &\pi_1(\boldsymbol{x};\boldsymbol{w})\cdot \frac{\beta_1(\boldsymbol{x};\boldsymbol{w})^{\alpha_1(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_1(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_1(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_1(\boldsymbol{x};\boldsymbol{w})-1} \\
@@ -696,6 +1086,91 @@ print(f'MDN: {round(nll_mdn, 2)}')
 The above results show that MDN provides the lowest value for the Logarithmic Score (NLL). Low values for NLL indicate better calibration. One possible reason for the better performance of the MDN model (compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
 :::
 
+
+# Aleatoric and Epistemic Uncertainty {visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+Uncertainty in deep learning refers to the level of doubt one would have about the predictions made by an AI-driven algorithm.
+Identifying and quantifying different sources of uncertainty that could exist in AI-driven algorithms is therefore important to ensure a credible application.
+:::
+
+## Categories of uncertainty
+
+There are two major categories of uncertainty in statistical or machine learning:
+
+- Aleatoric uncertainty
+- Epistemic uncertainty
+
+Since there is no consensus on the definitions of aleatoric and epistemic uncertainty, we provide the most acknowledged definitions in the following slides.
+
+## Aleatoric Uncertainty
+
+::: {.content-visible unless-format="revealjs"}
+Aleatoric uncertainty refers to the inherent variability associated with the data generating process. Among many ways to capture the aleatoric uncertainty, (i) combining with probabilistic models and (ii) considering mixture models are two useful methods to quantify the inherent variability.
+:::
+
+Qualitative Definition
+
+:   *Aleatoric uncertainty refers to the statistical variability and inherent noise with data distribution that modelling cannot explain.*
+
+Quantitative Definition
+
+:   $$\text{Ale}(Y|\boldsymbol{X}=\boldsymbol{x}) = \mathbb{V}[Y|\boldsymbol{X}=\boldsymbol{x}],$$i.e., if $Y|\boldsymbol{X}=\boldsymbol{x} \sim \mathcal{N}(\mu, \sigma^2)$, the aleatoric uncertainty would be $\sigma^2$. Simply, it is the conditional variance of the response variable $Y$ given features/covariates $\boldsymbol{x}$.
+
+## Epistemic Uncertainty
+
+Qualitative Definition
+
+:   *Epistemic uncertainty refers to the lack of knowledge, limited data information, parameter errors and model errors.*
+
+Quantitative Definition
+
+:   $$\text{Epi}(Y|\boldsymbol{X}=\boldsymbol{x}) = \text{Uncertainty}(Y|\boldsymbol{X}=\boldsymbol{x}) - \text{Ale}(Y|\boldsymbol{X}=\boldsymbol{x}),$$
+
+i.e., the total uncertainty subtracting the aleatoric uncertainty $\mathbb{V}[Y|\boldsymbol{X}=\boldsymbol{x}]$ would be the epistemic uncertainty.
+
+## Sources of uncertainty
+
+::: {.content-visible unless-format="revealjs"}
+There are many sources of uncertainty in statistical or machine learning models.
+Parameter error stems primarily due to lack of data.
+Model error stems from assuming wrong distributional properties of the data.
+Data uncertainty arises due to the lack of confidence we may have about the quality of the collected data.
+Noisy data, inconsistent data, data with missing values or data with missing important variables can result in data uncertainty.
+:::
+
+*If you decide to predict the claim amount of an individual using a deep learning model, which source(s) of uncertainty are you dealing with?*
+
+1. The inherent variability of the data-generating process $\rightarrow$ aleatoric uncertainty.
+2. Parameter error $\rightarrow$ epistemic uncertainty.
+3. Model error $\rightarrow$ epistemic uncertainty.
+4. Data uncertainty $\rightarrow$ epistemic uncertainty.
+
+## Notation {.appendix data-visibility="uncounted"}
+
+- scalars are denoted by lowercase letters, e.g., $y$,
+- vectors are denoted by bold lowercase letters, e.g.,
+$$\boldsymbol{y} = (y_1, \ldots, y_n) ,$$
+- random variables are denoted by capital letters, e.g., $Y$
+- random vectors are denoted by bold capital letters, e.g.,
+$$\boldsymbol{X} = (X_1, \ldots, X_p) ,$$
+- matrices are denoted by bold uppercase non-italics letters, e.g.,
+$$\mathbf{X} = \begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vdots \\ x_{n1} & \cdots & x_{np} \end{pmatrix} .$$
+
+<!-- If we need random matrices, then run to the nearest fire exit. -->
+
+## Regression notation {.appendix data-visibility="uncounted"}
+
+- $n$ is the number of observations, $p$ is the number of features,
+- the true coefficients are $\boldsymbol{\beta} = (\beta_0, \beta_1, \ldots, \beta_p)$,
+- $\beta_0$ is the intercept, $\beta_1, \ldots, \beta_p$ are the coefficients,
+- $\widehat{\boldsymbol{\beta}}$ is the estimated coefficient vector,
+- $\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})$ is the feature vector for the $i$th observation,
+- $y_i$ is the response variable for the $i$th observation,
+- $\hat{y}_i$ is the predicted value for the $i$th observation,
+- probability density functions (p.d.f.), probability mass functions (p.m.f.), cumulative distribution functions (c.d.f.).
+
+<!-- - the error $\varepsilon$ random variable is not capitalised, -->
 
 ## Package Versions {.appendix data-visibility="uncounted"}
 
