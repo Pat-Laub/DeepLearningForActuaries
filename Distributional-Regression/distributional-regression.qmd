@@ -111,6 +111,40 @@ $$
 
 where $\hat{y}_i$ is the predicted value for the $i$th observation.
 
+## Visualising the distribution of each $Y$
+
+```{python}
+#| code-fold: true
+# Generate sample data for linear regression
+np.random.seed(0)
+X = np.linspace(0, 10, 10)
+np.random.shuffle(X)
+
+beta_0 = 2
+beta_1 = 3
+y = beta_0 + beta_1 * X + np.random.normal(scale=2, size=X.shape)
+
+# Fit a simple linear regression model
+coefficients = np.polyfit(X, y, 1)
+predicted_y = np.polyval(coefficients, X)
+
+# Plot the data points and the fitted line
+plt.scatter(X, y, label='Data Points')
+plt.plot(X, predicted_y, color='red', label='Fitted Line')
+
+# Draw the normal distribution bell curve sideways at each data point
+for i in range(len(X)):
+    mu = predicted_y[i]
+    sigma = 2  # Assuming a standard deviation for the normal distribution
+    y_values = np.linspace(mu - 4*sigma, mu + 4*sigma, 100)
+    x_values = stats.norm.pdf(y_values, mu, sigma) + X[i]
+    plt.plot(x_values, y_values, color='blue', alpha=0.5)
+
+plt.xlabel('$x$')
+plt.ylabel('$y$')
+plt.legend()
+```
+
 ## The probabilistic view
 
 $$Y_i \sim \mathcal{N}(\mu_i, \sigma^2)$$
@@ -132,6 +166,29 @@ $$
 $$
 
 Perform maximum likelihood estimation to find $\boldsymbol{\beta}$.
+
+## The predicted distributions
+
+```{python}
+#| code-fold: true
+y_pred = np.polyval(coefficients, X[:4])
+
+fig, axes = plt.subplots(4, 1, figsize=(5.0, 3.0))
+
+x_min = y_pred[:4].min() - 4*sigma
+x_max = y_pred[:4].max() + 4*sigma
+x_grid = np.linspace(x_min, x_max, 100)
+
+# Plot each normal distribution with different means vertically
+for i, ax in enumerate(axes):
+    mu = y_pred[i]
+    y_grid = stats.norm.pdf(x_grid, mu, sigma)
+    ax.plot(x_grid, y_grid)
+    ax.set_ylabel(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
+    ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
+
+plt.tight_layout();
+```
 
 ## The machine learning view
 
@@ -305,7 +362,7 @@ $$
 
 This last point is particularly important for analysing worst-case scenarios.
 
-# Forecasts with noise {visibility="uncounted"}
+# Stochastic Forecasts {visibility="uncounted"}
 
 ## Stock price forecasting
 
@@ -613,18 +670,15 @@ Since this task does not apply entity embeddings, `VehBrand` and `Region` variab
 :::
 
 ```{python}
-# Transformation
 ct = make_column_transformer(
-  (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),
+  (OrdinalEncoder(), ["Area", "VehGas"]),
+  ("drop", ["VehBrand", "Region"]),
   remainder=StandardScaler(),
-   verbose_feature_names_out=False
+  verbose_feature_names_out=False
 )
 
-# We don't apply entity embedding 
-X_train_ct = ct.fit_transform(X_train)
-X_test_ct = ct.transform(X_test)
-X_train = X_train_ct.drop(["VehBrand", "Region"], axis=1)
-X_test = X_test_ct.drop(["VehBrand", "Region"], axis=1)
+X_train = ct.fit_transform(X_train)
+X_test = ct.transform(X_test)
 ```
 
 - $\texttt{VehGas=1}$ if the car gas is regular.
@@ -754,8 +808,8 @@ The Combined Actuarial Neural Network is a novel actuarial neural network archit
 random.seed(1); tf.random.set_seed(1)                                   #<1>
 
 # Pre-defined constants
-glm_weights = gamma_glm.params.iloc[1:]                                    #<2>
-glm_bias = gamma_glm.params.iloc[0]                                        #<3>
+glm_weights = gamma_glm.params.iloc[1:].values                          #<2>
+glm_bias = gamma_glm.params.iloc[0]                                     #<3>
 
 # Define model inputs
 inputs = Input(shape=X_train.shape[1:])                                 #<4>
@@ -791,7 +845,7 @@ We need to customise the loss function for CANN.
 
 ```{python}
 def cann_negative_log_likelihood(y_true, y_pred):
-    #the new mean estimate
+    # The new mean estimate
     cann_logmu = y_pred[:, 0]                                       #<1>
     glm_logmu = y_pred[:, 1]                                        #<2>
     mu = tf.math.exp(cann_logmu + glm_logmu)                        #<3>
@@ -809,6 +863,7 @@ def cann_negative_log_likelihood(y_true, y_pred):
 ## Code: Model Training
 
 ```{python}
+#| eval: false
 cann.compile(optimizer="adam", loss=cann_negative_log_likelihood)       #<1>
 hist = cann.fit(X_train, y_train,
     epochs=100, 
@@ -820,6 +875,22 @@ hist = cann.fit(X_train, y_train,
 1. Compiles the model with adam optimizer and the custom loss function
 2. Fits the model (with a validation split defined inside the fit function)
 
+```{python}
+#| echo: false
+if not os.path.exists("cann.keras"):
+    cann.compile(optimizer="adam", loss=cann_negative_log_likelihood)
+    cann.fit(X_train, y_train,
+      epochs=100, 
+      callbacks=[EarlyStopping(patience=10)],  
+      verbose=0,
+      batch_size=64, 
+      validation_split=0.2)
+    cann.save("cann.keras")
+else:
+    cann = tf_keras.models.load_model("cann.keras", 
+                                      custom_objects={"cann_negative_log_likelihood": cann_negative_log_likelihood})
+```
+
 Find the dispersion parameter.
 
 ``` {python}
@@ -827,7 +898,7 @@ mus = np.exp(np.sum(cann.predict(X_train, verbose=0), axis = 1))
 residuals = y_train - mus
 variance = mus**2
 dof = (len(y_train)-X_train.shape[1])
-phi_cann =  np.sum(residuals**2/variance) / dof
+phi_cann = np.sum(residuals**2/variance) / dof
 print(phi_cann)
 ```
 
@@ -839,7 +910,7 @@ print(phi_cann)
 One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multi modal. In such situations, assuming a mixture distribution is more intuitive.    
 :::
 
-Given a finite set of resulting random variables $(Y_1, ..., Y_{K})$, one can generate a multinomial random variable $Y\sim \text{Multinomial}(1, \boldsymbol{\pi})$. Meanwhile, $Y$ can be regarded as a mixture of $Y_1, ..., Y_{K}$, i.e.,
+Given a finite set of resulting random variables $(Y_1, \ldots, Y_{K})$, one can generate a multinomial random variable $Y\sim \text{Multinomial}(1, \boldsymbol{\pi})$. Meanwhile, $Y$ can be regarded as a mixture of $Y_1, \ldots, Y_{K}$, i.e.,
 $$
   Y = \begin{cases} 
       Y_1 & \text{w.p. } \pi_1, \\ 
@@ -847,11 +918,11 @@ $$
       Y_K & \text{w.p. } \pi_K, \\ 
   \end{cases}
 $$
-where we define a set of finite set of weights $\boldsymbol{\pi}=(\pi_{1} ..., \pi_{K})$ such that $\pi_k \ge 0$ for $k \in \{1, ..., K\}$ and $\sum_{k=1}^{K}\pi_k=1$.
+where we define a set of finite set of weights $\boldsymbol{\pi}=(\pi_{1} \ldots, \pi_{K})$ such that $\pi_k \ge 0$ for $k \in \{1, \ldots, K\}$ and $\sum_{k=1}^{K}\pi_k=1$.
 
 ## Mixture Distribution
 
-Let $f_{Y_k|\boldsymbol{X}}$ and $F_{Y_k|\boldsymbol{X}}$ be the p.d.f. and the c.d.f of $Y_k|\boldsymbol{X}$ for all $k \in \{1, ..., K\}$.
+Let $f_{Y_k|\boldsymbol{X}}$ and $F_{Y_k|\boldsymbol{X}}$ be the p.d.f. and the c.d.f of $Y_k|\boldsymbol{X}$ for all $k \in \{1, \ldots, K\}$.
 
 The random variable $Y|\boldsymbol{X}$, which mixes $Y_k|\boldsymbol{X}$'s with weights $\pi_k$'s, has the density function
 $$
@@ -876,7 +947,7 @@ where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{n}$ is the training dataset
 
 ## Mixture Density Network
 
-![An MDN that outputs the parameters for a $K$ component mixture distribution. $\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), ..., \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))$ consists of the parameter estimates for the $k$th mixture component.](MDN.png)
+![An MDN that outputs the parameters for a $K$ component mixture distribution. $\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), \ldots, \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))$ consists of the parameter estimates for the $k$th mixture component.](MDN.png)
 
 ## Model Specification
 
@@ -933,9 +1004,9 @@ inputs = Input(shape=X_train.shape[1:])                                 #<2>
 x = Dense(64, activation='relu')(inputs)                                #<3>
 x = Dense(64, activation='relu')(x)
 
-pis = Dense(2, activation='softmax')(x) #mixing weights                 #<4>
-alphas = Dense(2, activation='exponential')(x) #shape parameters
-betas = Dense(2, activation='exponential')(x) #scale parameters
+pis = Dense(2, activation='softmax')(x) # Mixing weights                 #<4>
+alphas = Dense(2, activation='exponential')(x) # Shape parameters
+betas = Dense(2, activation='exponential')(x) # Scale parameters
 
 # `y_pred` will now have 6 columns
 gamma_mdn = Model(inputs, Concatenate(axis=1)([pis, alphas, betas]))    #<5>
@@ -997,6 +1068,7 @@ def gamma_mixture_nll(y_true, y_pred):
 ## Code: Model Training
 
 ```{python}
+#| eval: false
 # Employ the loss function from previous slide
 gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)             #<1>
 
@@ -1009,6 +1081,26 @@ hist = gamma_mdn.fit(X_train, y_train,
 ```
 1. Compiles the model using `adam` optimizer and the `gamma_mixture_nll` (negative log likelihood) as the loss function
 2. Fits the model using the training data, with a validation split
+
+```{python}
+#| echo: false
+if not os.path.exists("gamma_mdn.keras"):
+    gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)
+    gamma_mdn.fit(X_train, y_train,
+      epochs=100, 
+      callbacks=[EarlyStopping(patience=10)],  
+      verbose=0,
+      batch_size=64, 
+      validation_split=0.2)
+    gamma_mdn.save("gamma_mdn.keras")
+else:
+    gamma_mdn = tf_keras.models.load_model("gamma_mdn.keras", 
+                                           custom_objects={'gamma_mixture_nll': gamma_mixture_nll})
+```
+
+<!--
+# Calibration
+-->
 
 # Metrics for Distributional Regression {visibility="uncounted"}
 
