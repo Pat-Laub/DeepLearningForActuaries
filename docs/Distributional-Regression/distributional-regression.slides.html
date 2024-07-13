@@ -11,7 +11,7 @@
 <link href="../site_libs/quarto-contrib/reveal-auto-agenda-0.0.3/reveal-auto-agenda.css" rel="stylesheet"><meta charset="utf-8">
   <meta name="generator" content="quarto-1.4.554">
 
-  <meta name="author" content="Eric Dong &amp; Patrick Laub">
+  <meta name="author" content="Patrick Laub">
   <title>AI for Actuaries - Distributional Regression</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -418,41 +418,28 @@
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
 <div class="quarto-title-author-name">
-Eric Dong &amp; Patrick Laub 
+Patrick Laub 
 </div>
 </div>
 </div>
 
-</section>
-<section class="slide level2">
-
-<div class="callout callout-warning callout-titled callout-style-default">
-<div class="callout-body">
-<div class="callout-title">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<p><strong>Warning</strong></p>
-</div>
-<div class="callout-content">
-<p>This page is out of date for 2024, and will be updated shortly.</p>
-</div>
-</div>
-</div>
 </section>
 <section>
-<section id="uncertainty-distributional-regression" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
-<h1>Uncertainty &amp; Distributional Regression</h1>
+<section id="traditional-regression" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Traditional Regression</h1>
 <div class="agenda-heading">
 <p>Lecture Outline</p>
 </div>
 <div class="agenda">
 <ul>
 <li><div class="agenda-active">
-<p>Uncertainty &amp; Distributional Regression</p>
+<p>Traditional Regression</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Generalised Linear Model (GLM)</p>
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>GLMs and Neural Networks</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
 <p>Combined Actuarial Neural Network</p>
@@ -463,85 +450,557 @@ Eric Dong &amp; Patrick Laub
 <li><div class="agenda-inactive agenda-post-active">
 <p>Metrics for Distributional Regression</p>
 </div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
 </ul>
 </div>
 </section>
-<section id="quiz" class="slide level2">
-<h2>Quiz</h2>
-<p>Question: <em>If you decide to predict the claim amount of Bob using a deep learning model, which source(s) of uncertainty are you confronting?</em></p>
-<ol type="1">
-<li>The inherent variability of the data-generating process.</li>
-<li>Parameter error.</li>
-<li>Model error.</li>
-<li>Data uncertainty.</li>
-<li>All of the above.</li>
-</ol>
+<section id="traditional-regression-1" class="slide level2">
+<h2>Traditional Regression</h2>
+<p>Multiple linear regression assumes the data-generating process is</p>
+<p><span class="math display">Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \ldots + \beta_p x_{ip} + \varepsilon</span></p>
+<p>where <span class="math inline">\varepsilon \sim \mathcal{N}(0, \sigma^2)</span>.</p>
+<p>We estimate the coefficients <span class="math inline">\beta_0, \beta_1, \ldots, \beta_p</span> by minimising the sum of squared residuals or mean squared error</p>
+<p><span class="math display">\text{RSS} := \sum_{i=1}^n (y_i - \hat{y}_i)^2
+, \quad \text{MSE} := \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 ,
+</span></p>
+<p>where <span class="math inline">\hat{y}_i</span> is the predicted value for the <span class="math inline">i</span>th observation.</p>
 </section>
-<section id="answer" class="slide level2">
-<h2>Answer</h2>
-<p>All of the above!</p>
-<p>There are two major types of uncertainty in statistical or machine learning:</p>
+<section id="the-probabilistic-view" class="slide level2">
+<h2>The probabilistic view</h2>
+<p><span class="math display">Y_i \sim \mathcal{N}(\mu_i, \sigma^2)</span></p>
+<p>where <span class="math inline">\mu_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip}</span>, and the <span class="math inline">\sigma^2</span> is known.</p>
+<p>The <span class="math inline">\mathcal{N}(\mu, \sigma^2)</span> normal distribution has p.d.f.</p>
+<p><span class="math display">f(y) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y - \mu)^2}{2\sigma^2}\right) .</span></p>
+<p>The likelihood function is</p>
+<p><span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - \mu_i)^2}{2\sigma^2}\right)
+</span> <span class="math display">
+\Rightarrow \ell(\boldsymbol{\beta}) = -\frac{n}{2}\log(2\pi) - \frac{n}{2}\log(\sigma^2) - \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
+</span></p>
+<p>Perform maximum likelihood estimation to find <span class="math inline">\boldsymbol{\beta}</span>.</p>
+</section>
+<section id="the-machine-learning-view" class="slide level2">
+<h2>The machine learning view</h2>
+<p>The negative log-likelihood <span class="math inline">\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})</span> is to be minimised:</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta})
+= \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
+</span></p>
+<p>As <span class="math inline">\sigma^2</span> is fixed, minimising NLL is equivalent to minimising MSE:</p>
+<p><span class="math display">
+\begin{aligned}
+\widehat{\boldsymbol{\beta}}
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{NLL}(\boldsymbol{\beta}) \\
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 \\
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{1}{n} \sum_{i=1}^n \Bigl( y_i - \hat{y}_i(\boldsymbol{x}_i; \boldsymbol{\beta}) \Bigr)^2 \\
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{MSE}\bigl( \boldsymbol{y}, \hat{\boldsymbol{y}}(\boldsymbol{\mathbf{X}}; \boldsymbol{\beta}) \bigr).
+\end{aligned}
+</span></p>
+</section>
+<section id="generalised-linear-model-glm" class="slide level2">
+<h2>Generalised Linear Model (GLM)</h2>
+<p>The GLM is often characterised by the mean prediction:</p>
+<p><span class="math display">
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = g^{-1} \left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)
+</span></p>
+<p>where <span class="math inline">g</span> is the link function.</p>
+<p>Common GLM distributions for the response variable include:</p>
 <ul>
-<li>Aleatoric uncertainty</li>
-<li>Epistemic uncertainty</li>
+<li>Normal distribution with identity link (just MLR)</li>
+<li>Bernoulli distribution with logit link (logistic regression)</li>
+<li>Poisson distribution with log link (Poisson regression)</li>
+<li>Gamma distribution with log link</li>
 </ul>
-<p>Since there is no consensus on the definitions of aleatoric and epistemic uncertainty, we provide the most acknowledged definitions in the following slides.</p>
 </section>
-<section id="aleatoric-uncertainty" class="slide level2">
-<h2>Aleatoric Uncertainty</h2>
-<dl>
-<dt>Qualitative Definition</dt>
-<dd>
-<p><em>Aleatoric uncertainty refers to the statistical variability and inherent noise with data distribution that modelling cannot explain.</em></p>
-</dd>
-<dt>Quantitative Definition</dt>
-<dd>
-<p><span class="math display">\text{Ale}(Y|\boldsymbol{x}) = \mathbb{V}[Y|\boldsymbol{x}],</span>i.e., if <span class="math inline">Y|\boldsymbol{x} \sim \mathcal{N}(\mu, \sigma^2)</span>, the aleatoric uncertainty would be <span class="math inline">\sigma^2</span>. Simply, it is the conditional variance of the response variable <span class="math inline">Y</span> given features/covariates <span class="math inline">\boldsymbol{x}</span>.</p>
-</dd>
-</dl>
+<section id="logistic-regression" class="slide level2">
+<h2>Logistic regression</h2>
+<p>A Bernoulli distribution with parameter <span class="math inline">p</span> has p.m.f.</p>
+<p><span class="math display">
+f(y)\ =\ \begin{cases}
+p &amp; \text{if } y = 1 \\
+1 - p &amp; \text{if } y = 0
+\end{cases}
+\ =\ p^y (1 - p)^{1 - y}.
+</span></p>
+<p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> follows a Bernoulli distribution with parameter</p>
+<p><span class="math display">
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \frac{1}{1 + \exp\left(-\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)} = \mathbb{P}(Y=1|\boldsymbol{X}=\boldsymbol{x}).
+</span></p>
+<p>The likelihood function, using <span class="math inline">\mu_i := \mu(\boldsymbol{x}_i; \boldsymbol{\beta})</span>, is</p>
+<p><span class="math display">
+L(\boldsymbol{\beta})
+\ =\ \prod_{i=1}^n \begin{cases}
+\mu_i &amp; \text{if } y_i = 1 \\
+1 - \mu_i &amp; \text{if } y_i = 0
+\end{cases}
+\ =\ \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i} .
+</span></p>
 </section>
-<section id="epistemic-uncertainty" class="slide level2">
-<h2>Epistemic Uncertainty</h2>
-<dl>
-<dt>Qualitative Definition</dt>
-<dd>
-<p><em>Epistemic uncertainty refers to the lack of knowledge, limited data information, parameter errors and model errors.</em></p>
-</dd>
-<dt>Quantitative Definition</dt>
-<dd>
-<p><span class="math display">\text{Epi}(Y|\boldsymbol{x}) = \text{Uncertainty}(Y|\boldsymbol{x}) - \text{Ale}(Y|\boldsymbol{x}),</span></p>
-</dd>
-</dl>
-<p>i.e., the total uncertainty subtracting the aleatoric uncertainty <span class="math inline">\mathbb{V}[Y|\boldsymbol{x}]</span> would be the epistemic uncertainty.</p>
+<section id="binary-cross-entropy-loss" class="slide level2">
+<h2>Binary cross-entropy loss</h2>
+<p><span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i}
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+</span></p>
+<p>The negative log-likelihood is</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+</span></p>
+<p>The binary cross-entropy loss is identical: <span class="math display">
+\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+</span></p>
 </section>
-<section id="uncertainty" class="slide level2">
-<h2>Uncertainty</h2>
-<p>Let’s go back to the question at the beginning:</p>
-<p><em>If you decide to predict the claim amount of an individual using a deep learning model, which source(s) of uncertainty are you dealing with?</em></p>
-<ol type="1">
-<li>The inherent variability of the data-generating process <span class="math inline">\rightarrow</span> aleatoric uncertainty.</li>
-<li>Parameter error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
-<li>Model error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
-<li>Data uncertainty <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
-</ol>
+<section id="poisson-regression" class="slide level2">
+<h2>Poisson regression</h2>
+<p>A Poisson distribution with rate <span class="math inline">\lambda</span> has p.m.f. <span class="math display">
+f(y) = \frac{\lambda^y \exp(-\lambda)}{y!}.
+</span></p>
+<p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is Poisson distributed with parameter</p>
+<p><span class="math display">
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right) .
+</span></p>
+<p>The likelihood function is</p>
+<p><span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
+</span> <span class="math display">
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( -\mu_i + y_i \log(\mu_i) - \log(y_i!) \Bigr).
+</span></p>
+</section>
+<section id="poisson-loss" class="slide level2">
+<h2>Poisson loss</h2>
+<p>The negative log-likelihood is</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) + \log(y_i!) \Bigr) .
+</span></p>
+<p>The Poisson loss is</p>
+<p><span class="math display">
+\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
+</span></p>
+</section>
+<section id="gamma-regression" class="slide level2">
+<h2>Gamma regression</h2>
+<p>A gamma distribution with mean <span class="math inline">\mu</span> and dispersion <span class="math inline">\phi</span> has p.d.f. <span class="math display">
+f(y; \mu, \phi) = \frac{(\mu \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y^{\frac{1}{\phi} - 1} \mathrm{e}^{-\frac{y}{\mu \phi}}
+</span></p>
+<p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is gamma distributed with a dispersion of <span class="math inline">\phi</span> and a mean of <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)</span>.</p>
+<p>The likelihood function is <span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y_i^{\frac{1}{\phi} - 1} \exp\left(-\frac{y_i}{\mu_i \phi}\right)
+</span></p>
+<p><span class="math display">
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ -\frac{1}{\phi} \log(\mu_i \phi) - \log \Gamma\left(\frac{1}{\phi}\right) + \left(\frac{1}{\phi} - 1\right) \log(y_i) - \frac{y_i}{\mu_i \phi} \right].
+</span></p>
+</section>
+<section id="gamma-loss" class="slide level2">
+<h2>Gamma loss</h2>
+<p>The negative log-likelihood is</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i \phi) + \log \Gamma\left(\frac{1}{\phi}\right) - \left(\frac{1}{\phi} - 1\right) \log(y_i) + \frac{y_i}{\mu_i \phi} \right].
+</span></p>
+<p>Since <span class="math inline">\phi</span> is a nuisance parameter <span class="math display">
+\text{NLL}(\boldsymbol{\beta})
+= \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i) + \frac{y_i}{\mu_i \phi} \right] + \text{const}
+\propto \sum_{i=1}^n \left[ \log(\mu_i) + \frac{y_i}{\mu_i} \right].
+</span></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Note</strong></p>
+</div>
+<div class="callout-content">
+<p>As <span class="math inline">\log(\mu_i) = \log(y_i) - \log(y_i / \mu_i)</span>, we could write an alternative version <span class="math display">
+\text{NLL}(\boldsymbol{\beta})
+\propto \sum_{i=1}^n \left[ \log(y_i) - \log\Bigl(\frac{y_i}{\mu_i}\Bigr) + \frac{y_i}{\mu_i} \right]
+\propto \sum_{i=1}^n \left[ \frac{y_i}{\mu_i} - \log\Bigl(\frac{y_i}{\mu_i}\Bigr) \right].
+</span></p>
+</div>
+</div>
+</div>
+</section>
+<section id="why-do-actuaries-use-glms" class="slide level2">
+<h2>Why do actuaries use GLMs?</h2>
+<ul>
+<li>GLMs are interpretable.</li>
+<li>GLMs are flexible (can handle different types of response variables).</li>
+<li>We get the full distribution of the response variable, not just the mean.</li>
+</ul>
+<p>This last point is particularly important for analysing worst-case scenarios.</p>
+</section></section>
+<section>
+<section id="forecasts-with-noise" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Forecasts with noise</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="stock-price-forecasting" class="slide level2">
+<h2>Stock price forecasting</h2>
+<div id="2ea01285" class="cell" data-execution_count="3">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a></a><span class="kw">def</span> lagged_timeseries(df, target, window<span class="op">=</span><span class="dv">30</span>):</span>
+<span id="cb1-2"><a></a>    lagged <span class="op">=</span> pd.DataFrame()</span>
+<span id="cb1-3"><a></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(window, <span class="dv">0</span>, <span class="op">-</span><span class="dv">1</span>):</span>
+<span id="cb1-4"><a></a>        lagged[<span class="ss">f"T-</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>] <span class="op">=</span> df[target].shift(i)</span>
+<span id="cb1-5"><a></a>    lagged[<span class="st">"T"</span>] <span class="op">=</span> df[target].values</span>
+<span id="cb1-6"><a></a>    <span class="cf">return</span> lagged</span>
+<span id="cb1-7"><a></a></span>
+<span id="cb1-8"><a></a></span>
+<span id="cb1-9"><a></a>stocks <span class="op">=</span> pd.read_csv(<span class="st">"../Time-Series-And-Recurrent-Neural-Networks/aus_fin_stocks.csv"</span>)</span>
+<span id="cb1-10"><a></a>stocks[<span class="st">"Date"</span>] <span class="op">=</span> pd.to_datetime(stocks[<span class="st">"Date"</span>])</span>
+<span id="cb1-11"><a></a>stocks <span class="op">=</span> stocks.set_index(<span class="st">"Date"</span>)</span>
+<span id="cb1-12"><a></a>_ <span class="op">=</span> stocks.pop(<span class="st">"ASX200"</span>)</span>
+<span id="cb1-13"><a></a>stock <span class="op">=</span> stocks[[<span class="st">"CBA"</span>]]</span>
+<span id="cb1-14"><a></a>stock <span class="op">=</span> stock.ffill()</span>
+<span id="cb1-15"><a></a></span>
+<span id="cb1-16"><a></a>df_lags <span class="op">=</span> lagged_timeseries(stock, <span class="st">"CBA"</span>, <span class="dv">40</span>)</span>
+<span id="cb1-17"><a></a></span>
+<span id="cb1-18"><a></a><span class="co"># Split the data in time</span></span>
+<span id="cb1-19"><a></a>X_train <span class="op">=</span> df_lags.loc[:<span class="st">"2018"</span>]</span>
+<span id="cb1-20"><a></a>X_val <span class="op">=</span> df_lags.loc[<span class="st">"2019"</span>]</span>
+<span id="cb1-21"><a></a>X_test <span class="op">=</span> df_lags.loc[<span class="st">"2020"</span>:]</span>
+<span id="cb1-22"><a></a></span>
+<span id="cb1-23"><a></a><span class="co"># Remove any with NAs and split into X and y</span></span>
+<span id="cb1-24"><a></a>X_train <span class="op">=</span> X_train.dropna()</span>
+<span id="cb1-25"><a></a>X_val <span class="op">=</span> X_val.dropna()</span>
+<span id="cb1-26"><a></a>X_test <span class="op">=</span> X_test.dropna()</span>
+<span id="cb1-27"><a></a></span>
+<span id="cb1-28"><a></a>y_train <span class="op">=</span> X_train.pop(<span class="st">"T"</span>)</span>
+<span id="cb1-29"><a></a>y_val <span class="op">=</span> X_val.pop(<span class="st">"T"</span>)</span>
+<span id="cb1-30"><a></a>y_test <span class="op">=</span> X_test.pop(<span class="st">"T"</span>)</span>
+<span id="cb1-31"><a></a></span>
+<span id="cb1-32"><a></a>X_train <span class="op">=</span> X_train <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-33"><a></a>X_val <span class="op">=</span> X_val <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-34"><a></a>X_test <span class="op">=</span> X_test <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-35"><a></a>y_train <span class="op">=</span> y_train <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-36"><a></a>y_val <span class="op">=</span> y_val <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-37"><a></a>y_test <span class="op">=</span> y_test <span class="op">/</span> <span class="dv">100</span></span>
+<span id="cb1-38"><a></a></span>
+<span id="cb1-39"><a></a>lr <span class="op">=</span> LinearRegression()</span>
+<span id="cb1-40"><a></a>lr.fit(X_train, y_train)<span class="op">;</span></span>
+<span id="cb1-41"><a></a></span>
+<span id="cb1-42"><a></a>stocks.plot()</span>
+<span id="cb1-43"><a></a>plt.ylabel(<span class="st">"Stock Price"</span>)</span>
+<span id="cb1-44"><a></a>plt.legend(loc<span class="op">=</span><span class="st">"upper center"</span>, bbox_to_anchor<span class="op">=</span>(<span class="fl">0.5</span>, <span class="op">-</span><span class="fl">0.5</span>), ncol<span class="op">=</span><span class="dv">4</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-4-output-1.png" class="r-stretch"></section>
+<section id="noisy-auto-regressive-forecast" class="slide level2">
+<h2>Noisy auto-regressive forecast</h2>
+<div id="15f5a69a" class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a></a><span class="kw">def</span> noisy_autoregressive_forecast(model, X_val, sigma, suppress<span class="op">=</span><span class="va">False</span>):</span>
+<span id="cb2-2"><a></a>    <span class="co">"""</span></span>
+<span id="cb2-3"><a></a><span class="co">    Generate a multi-step forecast using the given model.</span></span>
+<span id="cb2-4"><a></a><span class="co">    """</span></span>
+<span id="cb2-5"><a></a>    multi_step <span class="op">=</span> pd.Series(index<span class="op">=</span>X_val.index, name<span class="op">=</span><span class="st">"Multi Step"</span>)</span>
+<span id="cb2-6"><a></a></span>
+<span id="cb2-7"><a></a>    <span class="co"># Initialize the input data for forecasting</span></span>
+<span id="cb2-8"><a></a>    input_data <span class="op">=</span> X_val.iloc[<span class="dv">0</span>].values.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb2-9"><a></a></span>
+<span id="cb2-10"><a></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(multi_step)):</span>
+<span id="cb2-11"><a></a>        <span class="co"># Ensure input_data has the correct feature names</span></span>
+<span id="cb2-12"><a></a>        input_df <span class="op">=</span> pd.DataFrame(input_data, columns<span class="op">=</span>X_val.columns)</span>
+<span id="cb2-13"><a></a>        <span class="cf">if</span> suppress:</span>
+<span id="cb2-14"><a></a>            next_value <span class="op">=</span> model.predict(input_df, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb2-15"><a></a>        <span class="cf">else</span>:</span>
+<span id="cb2-16"><a></a>            next_value <span class="op">=</span> model.predict(input_df)</span>
+<span id="cb2-17"><a></a></span>
+<span id="cb2-18"><a></a>        next_value <span class="op">+=</span> np.random.normal(<span class="dv">0</span>, sigma)</span>
+<span id="cb2-19"><a></a></span>
+<span id="cb2-20"><a></a>        multi_step.iloc[i] <span class="op">=</span> next_value</span>
+<span id="cb2-21"><a></a></span>
+<span id="cb2-22"><a></a>        <span class="co"># Append that prediction to the input for the next forecast</span></span>
+<span id="cb2-23"><a></a>        <span class="cf">if</span> i <span class="op">+</span> <span class="dv">1</span> <span class="op">&lt;</span> <span class="bu">len</span>(multi_step):</span>
+<span id="cb2-24"><a></a>            input_data <span class="op">=</span> np.append(input_data[:, <span class="dv">1</span>:], next_value).reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb2-25"><a></a></span>
+<span id="cb2-26"><a></a>    <span class="cf">return</span> multi_step</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="original-forecast" class="slide level2">
+<h2>Original forecast</h2>
+<div id="873de877" class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a></a>lr_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="673c148e" class="cell" data-execution_count="6">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a></a>stock.loc[lr_forecast.index, <span class="st">"AR Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_forecast</span>
+<span id="cb4-2"><a></a></span>
+<span id="cb4-3"><a></a><span class="kw">def</span> plot_forecasts(stock):</span>
+<span id="cb4-4"><a></a>    stock.loc[<span class="st">"2018-12"</span>:<span class="st">"2019"</span>].plot()</span>
+<span id="cb4-5"><a></a>    plt.axvline(<span class="st">"2019"</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb4-6"><a></a>    plt.ylabel(<span class="st">"Stock Price"</span>)</span>
+<span id="cb4-7"><a></a>    plt.legend(loc<span class="op">=</span><span class="st">"center left"</span>, bbox_to_anchor<span class="op">=</span>(<span class="dv">1</span>, <span class="fl">0.5</span>))</span>
+<span id="cb4-8"><a></a></span>
+<span id="cb4-9"><a></a>plot_forecasts(stock)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-7-output-1.png" class="r-stretch"><div id="3a046d99" class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> lr.predict(X_train)</span>
+<span id="cb5-2"><a></a>sigma <span class="op">=</span> np.std(residuals)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="with-noise" class="slide level2">
+<h2>With noise</h2>
+<div id="c87f858a" class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a></a>np.random.seed(<span class="dv">1</span>)</span>
+<span id="cb6-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, sigma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="d7928c21" class="cell" data-execution_count="9">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a></a>stock.loc[lr_noisy_forecast.index, <span class="st">"AR Noisy Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_noisy_forecast</span>
+<span id="cb7-2"><a></a>plot_forecasts(stock)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-10-output-1.png" class="r-stretch"></section>
+<section id="with-noise-1" class="slide level2" data-visibility="uncounted">
+<h2>With noise</h2>
+<div id="7f55b93f" class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a></a>np.random.seed(<span class="dv">2</span>)</span>
+<span id="cb8-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, sigma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="90be3b3f" class="cell" data-execution_count="11">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a></a>stock.loc[lr_noisy_forecast.index, <span class="st">"AR Noisy Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_noisy_forecast</span>
+<span id="cb9-2"><a></a>plot_forecasts(stock)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-12-output-1.png" class="r-stretch"></section>
+<section id="with-noise-2" class="slide level2" data-visibility="uncounted">
+<h2>With noise</h2>
+<div id="61c175b3" class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a>np.random.seed(<span class="dv">3</span>)</span>
+<span id="cb10-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, sigma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="5eb35641" class="cell" data-execution_count="13">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a></a>stock.loc[lr_noisy_forecast.index, <span class="st">"AR Noisy Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_noisy_forecast</span>
+<span id="cb11-2"><a></a>plot_forecasts(stock)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-14-output-1.png" class="r-stretch"></section>
+<section id="many-noisy-forecasts" class="slide level2" data-visibility="uncounted">
+<h2>Many noisy forecasts</h2>
+<div id="b97dffaa" class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a></a>num_forecasts <span class="op">=</span> <span class="dv">500</span></span>
+<span id="cb12-2"><a></a>forecasts <span class="op">=</span> []</span>
+<span id="cb12-3"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_forecasts):</span>
+<span id="cb12-4"><a></a>    forecasts.append(noisy_autoregressive_forecast(lr, X_val, sigma) <span class="op">*</span> <span class="dv">100</span>)</span>
+<span id="cb12-5"><a></a>noisy_forecasts <span class="op">=</span> pd.concat(forecasts, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb12-6"><a></a>noisy_forecasts.index <span class="op">=</span> X_val.index</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="55ce3683" class="cell" data-execution_count="15">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a></a>noisy_forecasts.loc[<span class="st">"2018-12"</span>:<span class="st">"2019"</span>].plot(legend<span class="op">=</span><span class="va">False</span>, alpha<span class="op">=</span><span class="fl">0.4</span>)</span>
+<span id="cb13-2"><a></a>plt.ylabel(<span class="st">"Stock Price"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-16-output-1.png" class="r-stretch"></section>
+<section id="prediction-intervals" class="slide level2">
+<h2>95% “prediction intervals”</h2>
+<div id="c73c166d" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a></a><span class="co"># Calculate quantiles for the forecasts</span></span>
+<span id="cb14-2"><a></a>lower_quantile <span class="op">=</span> noisy_forecasts.quantile(<span class="fl">0.025</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb14-3"><a></a>upper_quantile <span class="op">=</span> noisy_forecasts.quantile(<span class="fl">0.975</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb14-4"><a></a>mean_forecast <span class="op">=</span> noisy_forecasts.mean(axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="e8e9a316" class="cell" data-execution_count="17">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a></a><span class="co"># Plot the mean forecast</span></span>
+<span id="cb15-2"><a></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">3</span>))</span>
+<span id="cb15-3"><a></a></span>
+<span id="cb15-4"><a></a>plt.plot(stock.loc[<span class="st">"2018-12"</span>:<span class="st">"2019"</span>].index, stock.loc[<span class="st">"2018-12"</span>:<span class="st">"2019"</span>][<span class="st">"CBA"</span>], label<span class="op">=</span><span class="st">"CBA"</span>)</span>
+<span id="cb15-5"><a></a></span>
+<span id="cb15-6"><a></a>plt.plot(mean_forecast, label<span class="op">=</span><span class="st">"Mean"</span>)</span>
+<span id="cb15-7"><a></a></span>
+<span id="cb15-8"><a></a><span class="co"># Plot the quantile-based shaded area</span></span>
+<span id="cb15-9"><a></a>plt.fill_between(mean_forecast.index, </span>
+<span id="cb15-10"><a></a>                 lower_quantile, </span>
+<span id="cb15-11"><a></a>                 upper_quantile, </span>
+<span id="cb15-12"><a></a>                 color<span class="op">=</span><span class="st">"grey"</span>, alpha<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb15-13"><a></a></span>
+<span id="cb15-14"><a></a><span class="co"># Plot settings</span></span>
+<span id="cb15-15"><a></a>plt.axvline(pd.Timestamp(<span class="st">"2019-01-01"</span>), color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb15-16"><a></a>plt.legend(loc<span class="op">=</span><span class="st">"center left"</span>, bbox_to_anchor<span class="op">=</span>(<span class="dv">1</span>, <span class="fl">0.5</span>))</span>
+<span id="cb15-17"><a></a>plt.xlabel(<span class="st">"Date"</span>)</span>
+<span id="cb15-18"><a></a>plt.ylabel(<span class="st">"Stock Price"</span>)</span>
+<span id="cb15-19"><a></a>plt.tight_layout()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-18-output-1.png" class="r-stretch"></section>
+<section id="residuals" class="slide level2">
+<h2>Residuals</h2>
+<div class="columns">
+<div class="column">
+<div id="da528cfb" class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a></a>y_pred <span class="op">=</span> lr.predict(X_train)</span>
+<span id="cb16-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> y_pred</span>
+<span id="cb16-3"><a></a>residuals <span class="op">-=</span> np.mean(residuals)</span>
+<span id="cb16-4"><a></a>residuals <span class="op">/=</span> np.std(residuals)</span>
+<span id="cb16-5"><a></a>stats.shapiro(residuals)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="19">
+<pre><code>ShapiroResult(statistic=0.9038059115409851, pvalue=0.0)</code></pre>
+</div>
+</div>
+<div class="fragment">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Note</strong></p>
+</div>
+<div class="callout-content">
+<p>Probably should model the log-returns instead of the stock prices.</p>
+</div>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="29e85993" class="cell" data-execution_count="20">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a></a>plt.hist(residuals, bins<span class="op">=</span><span class="dv">40</span>, density<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb18-2"><a></a>x <span class="op">=</span> np.linspace(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">100</span>)</span>
+<span id="cb18-3"><a></a>plt.xlim(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb18-4"><a></a>plt.plot(x, stats.norm.pdf(x, <span class="dv">0</span>, <span class="dv">1</span>))<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-21-output-1.png"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="q-q-plot-and-p-p-plot" class="slide level2" data-visibility="uncounted">
+<h2>Q-Q plot and P-P plot</h2>
+<div class="columns">
+<div class="column">
+<div id="31a88218" class="cell" data-execution_count="21">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a></a>sm.qqplot(residuals, line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-22-output-1.png"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div id="a26b205b" class="cell" data-execution_count="22">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a></a>sm.ProbPlot(residuals).ppplot(line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-23-output-1.png"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section></section>
+<section>
+<section id="glms-and-neural-networks" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>GLMs and Neural Networks</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+</ul>
+</div>
 </section>
 <section id="code-data" class="slide level2">
 <h2>Code: Data</h2>
-<div id="32fe750d" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-2"><a></a>sev_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2sev.csv'</span>)</span>
-<span id="cb1-3"><a></a>freq_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2freq.csv'</span>)</span>
-<span id="cb1-4"><a></a></span>
-<span id="cb1-5"><a></a><span class="co"># Create a copy of freq dataframe without 'claimfreq' column</span></span>
-<span id="cb1-6"><a></a>freq_without_claimfreq <span class="op">=</span> freq_df.drop(columns<span class="op">=</span>[<span class="st">'ClaimNb'</span>])</span>
-<span id="cb1-7"><a></a></span>
-<span id="cb1-8"><a></a><span class="co"># Merge severity dataframe with freq_without_claimfreq dataframe</span></span>
-<span id="cb1-9"><a></a>new_sev_df <span class="op">=</span> pd.merge(sev_df, freq_without_claimfreq, on<span class="op">=</span><span class="st">'IDpol'</span>, </span>
-<span id="cb1-10"><a></a>                                                      how<span class="op">=</span><span class="st">'left'</span>)</span>
-<span id="cb1-11"><a></a>new_sev_df <span class="op">=</span> new_sev_df.dropna()</span>
-<span id="cb1-12"><a></a>new_sev_df <span class="op">=</span> new_sev_df.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb1-13"><a></a>new_sev_df[:<span class="dv">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
+<div id="468aea94" class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb21-2"><a></a>sev_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2sev.csv'</span>)</span>
+<span id="cb21-3"><a></a>freq_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2freq.csv'</span>)</span>
+<span id="cb21-4"><a></a></span>
+<span id="cb21-5"><a></a><span class="co"># Create a copy of freq dataframe without 'claimfreq' column</span></span>
+<span id="cb21-6"><a></a>freq_without_claimfreq <span class="op">=</span> freq_df.drop(columns<span class="op">=</span>[<span class="st">'ClaimNb'</span>])</span>
+<span id="cb21-7"><a></a></span>
+<span id="cb21-8"><a></a><span class="co"># Merge severity dataframe with freq_without_claimfreq dataframe</span></span>
+<span id="cb21-9"><a></a>new_sev_df <span class="op">=</span> pd.merge(sev_df, freq_without_claimfreq, on<span class="op">=</span><span class="st">'IDpol'</span>, </span>
+<span id="cb21-10"><a></a>                                                      how<span class="op">=</span><span class="st">'left'</span>)</span>
+<span id="cb21-11"><a></a>new_sev_df <span class="op">=</span> new_sev_df.dropna()</span>
+<span id="cb21-12"><a></a>new_sev_df <span class="op">=</span> new_sev_df.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb21-13"><a></a>new_sev_df[:<span class="dv">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="24">
 <div>
 <div>
 <style scoped="">
@@ -614,34 +1073,34 @@ Eric Dong &amp; Patrick Laub
 </section>
 <section id="code-preprocessing" class="slide level2">
 <h2>Code: Preprocessing</h2>
-<div id="4bf1bbfc" class="cell" data-execution_count="4">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
-<span id="cb2-2"><a></a>  new_sev_df.drop(<span class="st">"ClaimAmount"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
-<span id="cb2-3"><a></a>  new_sev_df[<span class="st">"ClaimAmount"</span>],</span>
-<span id="cb2-4"><a></a>  random_state<span class="op">=</span><span class="dv">2023</span>)</span>
-<span id="cb2-5"><a></a></span>
-<span id="cb2-6"><a></a><span class="co"># Reset each index to start at 0 again.</span></span>
-<span id="cb2-7"><a></a>X_train <span class="op">=</span> X_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-8"><a></a>X_test <span class="op">=</span> X_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-9"><a></a>y_train <span class="op">=</span> y_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb2-10"><a></a>y_test <span class="op">=</span> y_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="dd69aafd" class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb22-2"><a></a>  new_sev_df.drop(<span class="st">"ClaimAmount"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
+<span id="cb22-3"><a></a>  new_sev_df[<span class="st">"ClaimAmount"</span>],</span>
+<span id="cb22-4"><a></a>  random_state<span class="op">=</span><span class="dv">2023</span>)</span>
+<span id="cb22-5"><a></a></span>
+<span id="cb22-6"><a></a><span class="co"># Reset each index to start at 0 again.</span></span>
+<span id="cb22-7"><a></a>X_train <span class="op">=</span> X_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb22-8"><a></a>X_test <span class="op">=</span> X_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb22-9"><a></a>y_train <span class="op">=</span> y_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb22-10"><a></a>y_test <span class="op">=</span> y_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="code-preprocessing-1" class="slide level2">
 <h2>Code: Preprocessing</h2>
-<div id="5da7dbcf" class="cell" data-execution_count="5">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a></a><span class="co"># Transformation</span></span>
-<span id="cb3-2"><a></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb3-3"><a></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
-<span id="cb3-4"><a></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb3-5"><a></a>   verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb3-6"><a></a>)</span>
-<span id="cb3-7"><a></a></span>
-<span id="cb3-8"><a></a><span class="co"># We don't apply entity embedding </span></span>
-<span id="cb3-9"><a></a>X_train_ct <span class="op">=</span> ct.fit_transform(X_train)</span>
-<span id="cb3-10"><a></a>X_test_ct <span class="op">=</span> ct.transform(X_test)</span>
-<span id="cb3-11"><a></a>X_train <span class="op">=</span> X_train_ct.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb3-12"><a></a>X_test <span class="op">=</span> X_test_ct.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="d11d7713" class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a></a><span class="co"># Transformation</span></span>
+<span id="cb23-2"><a></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb23-3"><a></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<span id="cb23-4"><a></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb23-5"><a></a>   verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb23-6"><a></a>)</span>
+<span id="cb23-7"><a></a></span>
+<span id="cb23-8"><a></a><span class="co"># We don't apply entity embedding </span></span>
+<span id="cb23-9"><a></a>X_train_ct <span class="op">=</span> ct.fit_transform(X_train)</span>
+<span id="cb23-10"><a></a>X_test_ct <span class="op">=</span> ct.transform(X_test)</span>
+<span id="cb23-11"><a></a>X_train <span class="op">=</span> X_train_ct.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb23-12"><a></a>X_test <span class="op">=</span> X_test_ct.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <ul>
 <li><span class="math inline">\texttt{VehGas=1}</span> if the car gas is regular.</li>
@@ -650,107 +1109,90 @@ Eric Dong &amp; Patrick Laub
 </section>
 <section id="histogram-of-the-claimamount" class="slide level2">
 <h2>Histogram of the <code>ClaimAmount</code></h2>
-<div id="b2b468f4" class="cell" data-execution_count="6">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a></a>plt.hist(y_train[y_train <span class="op">&lt;</span> <span class="dv">5000</span>], bins<span class="op">=</span><span class="dv">30</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="c9e727da" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a></a>plt.hist(y_train[y_train <span class="op">&lt;</span> <span class="dv">5000</span>], bins<span class="op">=</span><span class="dv">30</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 </div>
-<img data-src="distributional-regression_files/figure-revealjs/cell-7-output-1.png" class="r-stretch"></section></section>
-<section>
-<section id="generalised-linear-model-glm" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
-<h1>Generalised Linear Model (GLM)</h1>
-<div class="agenda-heading">
-<p>Lecture Outline</p>
-</div>
-<div class="agenda">
-<ul>
-<li><div class="agenda-inactive agenda-pre-active">
-<p>Uncertainty &amp; Distributional Regression</p>
-</div></li>
-<li><div class="agenda-active">
-<p>Generalised Linear Model (GLM)</p>
-</div></li>
-<li><div class="agenda-inactive agenda-post-active">
-<p>Combined Actuarial Neural Network</p>
-</div></li>
-<li><div class="agenda-inactive agenda-post-active">
-<p>Mixture Density Network</p>
-</div></li>
-<li><div class="agenda-inactive agenda-post-active">
-<p>Metrics for Distributional Regression</p>
-</div></li>
-</ul>
-</div>
-</section>
-<section id="glm" class="slide level2">
-<h2>GLM</h2>
-<p>The generalised linear model (GLM) is a statistical regression model that estimates the conditional mean of the response variable <span class="math inline">Y</span> given an instance <span class="math inline">\boldsymbol{x}</span> via a link function <span class="math inline">g</span>: <span class="math display">
-    \mathbb{E}[Y|\boldsymbol{x}]
-    = \mu(\boldsymbol{x}; \boldsymbol{\beta}_{\text{GLM}})
-    = g^{-1} \big(\big \langle \boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x} \big \rangle\big),
-</span> where</p>
-<ul>
-<li><span class="math inline">\boldsymbol{x} \in \mathbb{R}^{d_{\boldsymbol{x}}}</span> is the vector of explanatory variables, with <span class="math inline">d_{\boldsymbol{x}}</span> denoting its dimension.</li>
-<li><span class="math inline">\boldsymbol{\beta}_{\text{GLM}}</span> represents the vector of regression coefficients.</li>
-<li><span class="math inline">\langle \boldsymbol{a}, \boldsymbol{b}\rangle</span> represents the inner product of <span class="math inline">\boldsymbol{a}</span> and <span class="math inline">\boldsymbol{b}</span>.</li>
-</ul>
-</section>
+<img data-src="distributional-regression_files/figure-revealjs/cell-28-output-1.png" class="r-stretch"></section>
 <section id="gamma-glm" class="slide level2">
 <h2>Gamma GLM</h2>
 <p>Suppose a fitted gamma GLM model has</p>
 <ul>
 <li>a log link function <span class="math inline">g(x)=\log(x)</span> and</li>
-<li>regression coefficients <span class="math inline">\boldsymbol{\beta}_{\text{GLM}}=(\beta_0, \beta_1, \beta_2, \beta_3)</span>.</li>
+<li>regression coefficients <span class="math inline">\boldsymbol{\beta}=(\beta_0, \beta_1, \beta_2, \beta_3)</span>.</li>
 </ul>
 <p>Then, it estimates the conditional mean of <span class="math inline">Y</span> given a new instance <span class="math inline">\boldsymbol{x}=(1, x_1, x_2, x_3)</span> as follows: <span class="math display">
-    \mathbb{E}[Y|\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
+    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
 </span></p>
 <p>A GLM can model any other exponential family distribution using an appropriate link function <span class="math inline">g</span>.</p>
 </section>
-<section id="loss-function-for-a-gamma-glm" class="slide level2">
-<h2>“Loss Function” for a Gamma GLM</h2>
-<p>If <span class="math inline">Y|\boldsymbol{x}</span> is a gamma r.v., we can parameterise its density by its mean <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta})</span> and dispersion parameter <span class="math inline">\phi</span>: <span class="math display">
-    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}, \boldsymbol{\beta}, \phi)
-    = \frac{(\mu (\boldsymbol{x}; \boldsymbol{\beta})\cdot \phi)^{-1/\phi}}{{\Gamma(1/\phi)}} \cdot y^{1/\phi - 1} \cdot \mathrm{e}^{-y/(\mu (\boldsymbol{x}; \boldsymbol{\beta})\cdot\phi)}.
-</span> The “loss function” for a gamma GLM is typically the negative log-likelihood (NLL): <span class="math display">
-    \sum_{i=1}^{N}-\log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}_i, \boldsymbol{\beta},\phi)
-    \propto \sum_{i=1}^{N}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
+<section id="gamma-glm-loss" class="slide level2">
+<h2>Gamma GLM loss</h2>
+<p>If <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is a gamma r.v. with mean <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta})</span> and dispersion parameter <span class="math inline">\phi</span>, we can minimise the negative log-likelihood (NLL) <span class="math display">
+    \text{NLL} \propto \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
 </span> i.e., we ignore the dispersion parameter <span class="math inline">\phi</span> while estimating the regression coefficients.</p>
 </section>
 <section id="fitting-steps" class="slide level2">
 <h2>Fitting Steps</h2>
 <p>Step 1. Use the advanced second derivative iterative method to find the regression coefficients: <span class="math display">
-    \boldsymbol{\beta}_{\text{GLM}} = \underset{\boldsymbol{\beta}}{\text{arg min}} \ \sum_{i=1}^{N}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
+    \widehat{\boldsymbol{\beta}} = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
 </span></p>
 <p>Step 2. Estimate the dispersion parameter: <span class="math display">
-    \phi_{\text{GLM}}=\frac{1}{N-d_{\boldsymbol{x}}}\sum_{i=1}^{N}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta}_{\text{GLM}} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta}_{\text{GLM}} )^2}
+    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
 </span></p>
 </section>
 <section id="code-gamma-glm" class="slide level2">
 <h2>Code: Gamma GLM</h2>
 <p>In Python, we can fit a gamma GLM as follows:</p>
-<div id="467374bc" class="cell" data-execution_count="7">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
-<span id="cb5-2"><a></a></span>
-<span id="cb5-3"><a></a><span class="co"># Add a column of ones to include an intercept in the model</span></span>
-<span id="cb5-4"><a></a>X_train_design <span class="op">=</span> sm.add_constant(X_train)</span>
-<span id="cb5-5"><a></a></span>
-<span id="cb5-6"><a></a><span class="co"># Create a Gamma GLM with a log link function</span></span>
-<span id="cb5-7"><a></a>gamma_glm <span class="op">=</span> sm.GLM(y_train, X_train_design,                   </span>
-<span id="cb5-8"><a></a>            family<span class="op">=</span>sm.families.Gamma(sm.families.links.Log()))</span>
-<span id="cb5-9"><a></a></span>
-<span id="cb5-10"><a></a><span class="co"># Fit the model</span></span>
-<span id="cb5-11"><a></a>gamma_glm <span class="op">=</span> gamma_glm.fit()</span>
-<span id="cb5-12"><a></a></span>
-<span id="cb5-13"><a></a><span class="co"># Dispersion Parameter</span></span>
-<span id="cb5-14"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_train_design)</span>
-<span id="cb5-15"><a></a>residuals <span class="op">=</span> mus<span class="op">-</span>y_train</span>
-<span id="cb5-16"><a></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
-<span id="cb5-17"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
-<span id="cb5-18"><a></a>phi_glm <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance)<span class="op">/</span>dof</span>
-<span id="cb5-19"><a></a><span class="bu">print</span>(phi_glm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="19757374" class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb25-2"><a></a></span>
+<span id="cb25-3"><a></a><span class="co"># Add a column of ones to include an intercept in the model</span></span>
+<span id="cb25-4"><a></a>X_train_design <span class="op">=</span> sm.add_constant(X_train)</span>
+<span id="cb25-5"><a></a></span>
+<span id="cb25-6"><a></a><span class="co"># Create a Gamma GLM with a log link function</span></span>
+<span id="cb25-7"><a></a>gamma_glm <span class="op">=</span> sm.GLM(y_train, X_train_design,                   </span>
+<span id="cb25-8"><a></a>            family<span class="op">=</span>sm.families.Gamma(sm.families.links.Log()))</span>
+<span id="cb25-9"><a></a></span>
+<span id="cb25-10"><a></a><span class="co"># Fit the model</span></span>
+<span id="cb25-11"><a></a>gamma_glm <span class="op">=</span> gamma_glm.fit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="columns">
+<div class="column">
+<div id="04358149" class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a></a>gamma_glm.params</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="29">
+<pre><code>const         7.786576
+Area         -0.073226
+VehGas        0.082292
+                ...   
+DrivAge      -0.022147
+BonusMalus    0.157204
+Density       0.010539
+Length: 9, dtype: float64</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div id="125e0466" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a></a><span class="co"># Dispersion Parameter</span></span>
+<span id="cb28-2"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_train_design)</span>
+<span id="cb28-3"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
+<span id="cb28-4"><a></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb28-5"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
+<span id="cb28-6"><a></a>phi_glm <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance)<span class="op">/</span>dof</span>
+<span id="cb28-7"><a></a><span class="bu">print</span>(phi_glm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>59.6306232357824</code></pre>
 </div>
+</div>
+</div>
+</div>
+</section>
+<section id="ann-can-feed-into-a-glm" class="slide level2">
+<h2>ANN can feed into a GLM</h2>
+
+<img data-src="richman-glm-and-ann.png" class="r-stretch quarto-figure-center"><p class="caption">Combining GLM &amp; ANN.</p><div class="footer">
+<p>Source: Ronald Richman (2022), Mind the Gap - Safely Incorporating Deep Learning Models into the Actuarial Toolkit, IFoA seminar, Slide 14.</p>
 </div>
 </section></section>
 <section>
@@ -762,10 +1204,13 @@ Eric Dong &amp; Patrick Laub
 <div class="agenda">
 <ul>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Uncertainty &amp; Distributional Regression</p>
+<p>Traditional Regression</p>
 </div></li>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Generalised Linear Model (GLM)</p>
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
 </div></li>
 <li><div class="agenda-active">
 <p>Combined Actuarial Neural Network</p>
@@ -776,6 +1221,9 @@ Eric Dong &amp; Patrick Laub
 <li><div class="agenda-inactive agenda-post-active">
 <p>Metrics for Distributional Regression</p>
 </div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
 </ul>
 </div>
 </section>
@@ -783,9 +1231,9 @@ Eric Dong &amp; Patrick Laub
 <h2>CANN</h2>
 <p>The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by Schelldorfer and Wüthrich (2019). We summarise the CANN approach as follows:</p>
 <ul>
-<li>Find the coefficients <span class="math inline">\boldsymbol{\beta}_{\text{GLM}}</span> of the GLM with a link function <span class="math inline">g(\cdot)</span>.</li>
-<li>Find the weights <span class="math inline">\boldsymbol{w}_{\text{CANN}}</span> of a neural network <span class="math inline">\mathcal{M}_{\text{CANN}}:\mathbb{R}^{d_{\boldsymbol{x}}}\to\mathbb{R}</span>.</li>
-<li>Given a new instance <span class="math inline">\boldsymbol{x}</span>, we have <span class="math display">\mathbb{E}[Y|\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}_{\text{GLM}}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).</span></li>
+<li>Find the coefficients <span class="math inline">\boldsymbol{\beta}</span> of the GLM with a link function <span class="math inline">g(\cdot)</span>.</li>
+<li>Find the weights <span class="math inline">\boldsymbol{w}_{\text{CANN}}</span> of a neural network <span class="math inline">\mathcal{M}_{\text{CANN}}:\mathbb{R}^{p}\to\mathbb{R}</span>.</li>
+<li>Given a new instance <span class="math inline">\boldsymbol{x}</span>, we have <span class="math display">\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).</span></li>
 </ul>
 </section>
 <section id="architecture" class="slide level2">
@@ -794,80 +1242,67 @@ Eric Dong &amp; Patrick Laub
 <img data-src="CANN.png" class="r-stretch quarto-figure-center"><p class="caption">CANN approach.</p></section>
 <section id="code-architecture" class="slide level2">
 <h2>Code: Architecture</h2>
-<div id="59c69da6" class="cell" data-execution_count="8">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a></a>gamma_glm.params</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="8">
-<pre><code>const         7.786576
-Area         -0.073226
-VehGas        0.082292
-                ...   
-DrivAge      -0.022147
-BonusMalus    0.157204
-Density       0.010539
-Length: 9, dtype: float64</code></pre>
-</div>
-</div>
-<div id="2cc4b11f" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a></a><span class="co"># Ensure reproducibility</span></span>
-<span id="cb9-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
-<span id="cb9-3"><a></a></span>
-<span id="cb9-4"><a></a><span class="co"># Pre-defined constants</span></span>
-<span id="cb9-5"><a></a>glm_weights <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">1</span>:]</span>
-<span id="cb9-6"><a></a>glm_bias <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">0</span>]</span>
-<span id="cb9-7"><a></a></span>
-<span id="cb9-8"><a></a><span class="co"># Define model inputs</span></span>
-<span id="cb9-9"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
-<span id="cb9-10"><a></a></span>
-<span id="cb9-11"><a></a><span class="co"># Non-trainable GLM linear part</span></span>
-<span id="cb9-12"><a></a>glm_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, trainable<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb9-13"><a></a>                     kernel_initializer<span class="op">=</span>Constant(glm_weights),</span>
-<span id="cb9-14"><a></a>                     bias_initializer<span class="op">=</span>Constant(glm_bias))(inputs)</span>
-<span id="cb9-15"><a></a></span>
-<span id="cb9-16"><a></a><span class="co"># Neural network layers</span></span>
-<span id="cb9-17"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
-<span id="cb9-18"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
-<span id="cb9-19"><a></a>cann_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>)(x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="8972bc58" class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a></a><span class="co"># Ensure reproducibility</span></span>
+<span id="cb30-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
+<span id="cb30-3"><a></a></span>
+<span id="cb30-4"><a></a><span class="co"># Pre-defined constants</span></span>
+<span id="cb30-5"><a></a>glm_weights <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">1</span>:]</span>
+<span id="cb30-6"><a></a>glm_bias <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">0</span>]</span>
+<span id="cb30-7"><a></a></span>
+<span id="cb30-8"><a></a><span class="co"># Define model inputs</span></span>
+<span id="cb30-9"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb30-10"><a></a></span>
+<span id="cb30-11"><a></a><span class="co"># Non-trainable GLM linear part</span></span>
+<span id="cb30-12"><a></a>glm_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, trainable<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb30-13"><a></a>                     kernel_initializer<span class="op">=</span>Constant(glm_weights),</span>
+<span id="cb30-14"><a></a>                     bias_initializer<span class="op">=</span>Constant(glm_bias))(inputs)</span>
+<span id="cb30-15"><a></a></span>
+<span id="cb30-16"><a></a><span class="co"># Neural network layers</span></span>
+<span id="cb30-17"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
+<span id="cb30-18"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
+<span id="cb30-19"><a></a>cann_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>)(x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="code-loss-function" class="slide level2">
 <h2>Code: Loss Function</h2>
-<div id="96549858" class="cell" data-execution_count="10">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a><span class="co"># Combine GLM and CANN estimates</span></span>
-<span id="cb10-2"><a></a>cann <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([cann_logmu, glm_logmu]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="2c681d54" class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a></a><span class="co"># Combine GLM and CANN estimates</span></span>
+<span id="cb31-2"><a></a>cann <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([cann_logmu, glm_logmu]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>We need to customise the loss function for CANN.</p>
-<div id="6ef9a502" class="cell" data-execution_count="11">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a></a><span class="kw">def</span> cann_negative_log_likelihood(y_true, y_pred):</span>
-<span id="cb11-2"><a></a>    <span class="co">#the new mean estimate</span></span>
-<span id="cb11-3"><a></a>    cann_logmu <span class="op">=</span> y_pred[:, <span class="dv">0</span>]</span>
-<span id="cb11-4"><a></a>    glm_logmu <span class="op">=</span> y_pred[:, <span class="dv">1</span>]</span>
-<span id="cb11-5"><a></a>    mu <span class="op">=</span> tf.math.exp(cann_logmu <span class="op">+</span> glm_logmu)</span>
-<span id="cb11-6"><a></a></span>
-<span id="cb11-7"><a></a>    <span class="co"># Compute the negative log likelihood of the Gamma distribution</span></span>
-<span id="cb11-8"><a></a>    nll <span class="op">=</span> tf.reduce_mean(cann_logmu <span class="op">+</span> glm_logmu <span class="op">+</span> y_true<span class="op">/</span>mu)</span>
-<span id="cb11-9"><a></a>    </span>
-<span id="cb11-10"><a></a>    <span class="cf">return</span> nll</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="1ffd9ada" class="cell" data-execution_count="33">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a></a><span class="kw">def</span> cann_negative_log_likelihood(y_true, y_pred):</span>
+<span id="cb32-2"><a></a>    <span class="co">#the new mean estimate</span></span>
+<span id="cb32-3"><a></a>    cann_logmu <span class="op">=</span> y_pred[:, <span class="dv">0</span>]</span>
+<span id="cb32-4"><a></a>    glm_logmu <span class="op">=</span> y_pred[:, <span class="dv">1</span>]</span>
+<span id="cb32-5"><a></a>    mu <span class="op">=</span> tf.math.exp(cann_logmu <span class="op">+</span> glm_logmu)</span>
+<span id="cb32-6"><a></a></span>
+<span id="cb32-7"><a></a>    <span class="co"># Compute the negative log likelihood of the Gamma distribution</span></span>
+<span id="cb32-8"><a></a>    nll <span class="op">=</span> tf.reduce_mean(cann_logmu <span class="op">+</span> glm_logmu <span class="op">+</span> y_true<span class="op">/</span>mu)</span>
+<span id="cb32-9"><a></a>    </span>
+<span id="cb32-10"><a></a>    <span class="cf">return</span> nll</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="code-model-training" class="slide level2">
 <h2>Code: Model Training</h2>
-<div id="065db427" class="cell" data-execution_count="12">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a></a>cann.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>cann_negative_log_likelihood)</span>
-<span id="cb12-2"><a></a>hist <span class="op">=</span> cann.fit(X_train, y_train,</span>
-<span id="cb12-3"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
-<span id="cb12-4"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
-<span id="cb12-5"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb12-6"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
-<span id="cb12-7"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="f352e27f" class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a></a>cann.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>cann_negative_log_likelihood)</span>
+<span id="cb33-2"><a></a>hist <span class="op">=</span> cann.fit(X_train, y_train,</span>
+<span id="cb33-3"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
+<span id="cb33-4"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
+<span id="cb33-5"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb33-6"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<span id="cb33-7"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Find the dispersion parameter.</p>
-<div id="55e597ea" class="cell" data-execution_count="13">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a></a>mus <span class="op">=</span> np.exp(np.sum(cann.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
-<span id="cb13-2"><a></a>residuals <span class="op">=</span> mus<span class="op">-</span>y_train</span>
-<span id="cb13-3"><a></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
-<span id="cb13-4"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
-<span id="cb13-5"><a></a>phi_cann <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance) <span class="op">/</span> dof</span>
-<span id="cb13-6"><a></a><span class="bu">print</span>(phi_cann)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="0fe7548d" class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a></a>mus <span class="op">=</span> np.exp(np.sum(cann.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
+<span id="cb34-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
+<span id="cb34-3"><a></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
+<span id="cb34-4"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
+<span id="cb34-5"><a></a>phi_cann <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance) <span class="op">/</span> dof</span>
+<span id="cb34-6"><a></a><span class="bu">print</span>(phi_cann)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>86.69498963886436</code></pre>
 </div>
@@ -882,10 +1317,13 @@ Length: 9, dtype: float64</code></pre>
 <div class="agenda">
 <ul>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Uncertainty &amp; Distributional Regression</p>
+<p>Traditional Regression</p>
 </div></li>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Generalised Linear Model (GLM)</p>
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
 </div></li>
 <li><div class="agenda-inactive agenda-pre-active">
 <p>Combined Actuarial Neural Network</p>
@@ -895,6 +1333,9 @@ Length: 9, dtype: float64</code></pre>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
 <p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
 </div></li>
 </ul>
 </div>
@@ -911,7 +1352,8 @@ Length: 9, dtype: float64</code></pre>
 </section>
 <section id="mixture-distribution-1" class="slide level2">
 <h2>Mixture Distribution</h2>
-<p>Let <span class="math inline">f_{Y_k|\boldsymbol{X}}</span> and <span class="math inline">F_{Y_k|\boldsymbol{X}}</span> be the probability density function and the cumulative density function, respectively, of <span class="math inline">Y_k|\boldsymbol{X}</span> for all <span class="math inline">k\in \{1, ..., K\}</span>. The random variable <span class="math inline">Y|\boldsymbol{X}</span>, which mixes <span class="math inline">Y_k|\boldsymbol{X}</span>’s with weights <span class="math inline">\pi_k</span>’s, has the density function <span class="math display">
+<p>Let <span class="math inline">f_{Y_k|\boldsymbol{X}}</span> and <span class="math inline">F_{Y_k|\boldsymbol{X}}</span> be the p.d.f. and the c.d.f of <span class="math inline">Y_k|\boldsymbol{X}</span> for all <span class="math inline">k \in \{1, ..., K\}</span>.</p>
+<p>The random variable <span class="math inline">Y|\boldsymbol{X}</span>, which mixes <span class="math inline">Y_k|\boldsymbol{X}</span>’s with weights <span class="math inline">\pi_k</span>’s, has the density function <span class="math display">
     f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) f_{k}(y|\boldsymbol{x}),
 </span> and the cumulative density function <span class="math display">
     F_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) F_{k}(y|\boldsymbol{x}).
@@ -922,8 +1364,8 @@ Length: 9, dtype: float64</code></pre>
 <p>A mixture density network (MDN) <span class="math inline">\mathcal{M}_{\boldsymbol{w}^*}</span> outputs each distribution component’s mixing weights and parameters of <span class="math inline">Y</span> given the input features <span class="math inline">\boldsymbol{x}</span>, i.e., <span class="math display">
     \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
 </span> where <span class="math inline">\boldsymbol{w}^*</span> is the networks’ weights found by minimising the following negative log-likelihood loss function <span class="math display">
-    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})= - \sum_{i=1}^{N} \log f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w}^*),
-</span> where <span class="math inline">\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{N}</span> is the training dataset.</p>
+    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})= - \sum_{i=1}^{n} \log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}^*),
+</span> where <span class="math inline">\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{n}</span> is the training dataset.</p>
 </section>
 <section id="mixture-density-network-2" class="slide level2">
 <h2>Mixture Density Network</h2>
@@ -933,10 +1375,10 @@ Length: 9, dtype: float64</code></pre>
 <h2>Model Specification</h2>
 <p>Suppose there are two types of claims:</p>
 <ul>
-<li>Type I: <span class="math inline">Y_1|\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))</span> and,</li>
-<li>Type II: <span class="math inline">Y_2|\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))</span>.</li>
+<li>Type I: <span class="math inline">Y_1|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))</span> and,</li>
+<li>Type II: <span class="math inline">Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))</span>.</li>
 </ul>
-<p>The density of the actual claim amount <span class="math inline">Y|\boldsymbol{x}</span> follows <span class="math display">
+<p>The density of the actual claim amount <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> follows <span class="math display">
     \begin{align*}
         f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
         &amp;= \pi_1(\boldsymbol{x})\cdot \frac{\beta_1(\boldsymbol{x})^{\alpha_1(\boldsymbol{x})}}{\Gamma(\alpha_1(\boldsymbol{x}))}\mathrm{e}^{-\beta_1(\boldsymbol{x})y}y^{\alpha_1(\boldsymbol{x})-1} \\
@@ -947,7 +1389,7 @@ Length: 9, dtype: float64</code></pre>
 <section id="output" class="slide level2">
 <h2>Output</h2>
 <p>The aim is to find the optimum weights <span class="math display">
-    \boldsymbol{w}^* = \underset{w}{\text{arg min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
+    \boldsymbol{w}^* = \underset{w}{\text{arg\,min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
 </span> for the Gamma mixture density network <span class="math inline">\mathcal{M}_{\boldsymbol{w}^*}</span> that outputs the mixing weights, shapes and scales of <span class="math inline">Y</span> given the input features <span class="math inline">\boldsymbol{x}</span>, i.e., <span class="math display">
     \begin{align*}
         \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})
@@ -968,22 +1410,22 @@ Length: 9, dtype: float64</code></pre>
 <section id="code-architecture-1" class="slide level2">
 <h2>Code: Architecture</h2>
 <p>The following code resembles the architecture of the architecture of the gamma MDN from the previous slide.</p>
-<div id="eb4db1c0" class="cell" data-execution_count="14">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a></a><span class="co"># Ensure reproducibility</span></span>
-<span id="cb15-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
-<span id="cb15-3"><a></a></span>
-<span id="cb15-4"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
-<span id="cb15-5"><a></a></span>
-<span id="cb15-6"><a></a><span class="co"># Two hidden layers </span></span>
-<span id="cb15-7"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
-<span id="cb15-8"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
-<span id="cb15-9"><a></a></span>
-<span id="cb15-10"><a></a>pis <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'softmax'</span>)(x) <span class="co">#mixing weights</span></span>
-<span id="cb15-11"><a></a>alphas <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co">#shape parameters</span></span>
-<span id="cb15-12"><a></a>betas <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co">#scale parameters</span></span>
-<span id="cb15-13"><a></a></span>
-<span id="cb15-14"><a></a><span class="co"># `y_pred` will now have 6 columns</span></span>
-<span id="cb15-15"><a></a>gamma_mdn <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([pis, alphas, betas]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="702c68da" class="cell" data-execution_count="36">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a></a><span class="co"># Ensure reproducibility</span></span>
+<span id="cb36-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
+<span id="cb36-3"><a></a></span>
+<span id="cb36-4"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb36-5"><a></a></span>
+<span id="cb36-6"><a></a><span class="co"># Two hidden layers </span></span>
+<span id="cb36-7"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
+<span id="cb36-8"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
+<span id="cb36-9"><a></a></span>
+<span id="cb36-10"><a></a>pis <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'softmax'</span>)(x) <span class="co">#mixing weights</span></span>
+<span id="cb36-11"><a></a>alphas <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co">#shape parameters</span></span>
+<span id="cb36-12"><a></a>betas <span class="op">=</span> Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co">#scale parameters</span></span>
+<span id="cb36-13"><a></a></span>
+<span id="cb36-14"><a></a><span class="co"># `y_pred` will now have 6 columns</span></span>
+<span id="cb36-15"><a></a>gamma_mdn <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([pis, alphas, betas]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="loss-function" class="slide level2">
@@ -991,8 +1433,8 @@ Length: 9, dtype: float64</code></pre>
 <p>The negative log-likelihood loss function is given by</p>
 <p><span class="math display">
     \mathcal{L}(\mathcal{D}, \boldsymbol{w})
-    = - \sum_{i=1}^{N} \log \  f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w})
-</span> where the <span class="math inline">f_{Y|\boldsymbol{x}}(y_i|\boldsymbol{x}, \boldsymbol{w})</span> is defined by <span class="math display">
+    = - \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})
+</span> where the <span class="math inline">f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})</span> is defined by <span class="math display">
 \begin{align*}
     &amp;\pi_1(\boldsymbol{x};\boldsymbol{w})\cdot \frac{\beta_1(\boldsymbol{x};\boldsymbol{w})^{\alpha_1(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_1(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_1(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_1(\boldsymbol{x};\boldsymbol{w})-1} \\
     &amp; \quad + (1-\pi_1(\boldsymbol{x};\boldsymbol{w}))\cdot \frac{\beta_2(\boldsymbol{x};\boldsymbol{w})^{\alpha_2(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_2(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_2(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_2(\boldsymbol{x};\boldsymbol{w})-1}
@@ -1002,38 +1444,38 @@ Length: 9, dtype: float64</code></pre>
 <section id="code-loss-function-1" class="slide level2">
 <h2>Code: Loss Function</h2>
 <p>We employ functions from <code>tensorflow_probability</code> to code the loss function for the gamma MDN. The <code>MixtureSameFamily</code> function facilitates defining a mixture distribution all components from the same distribution but have different parametrization.</p>
-<div id="4c1c968a" class="cell" data-execution_count="15">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
-<span id="cb16-2"><a></a>tfd <span class="op">=</span> tfp.distributions</span>
-<span id="cb16-3"><a></a>K <span class="op">=</span> <span class="dv">2</span> <span class="co"># number of mixture components</span></span>
-<span id="cb16-4"><a></a></span>
-<span id="cb16-5"><a></a><span class="kw">def</span> gamma_mixture_nll(y_true, y_pred):                                      </span>
-<span id="cb16-6"><a></a>    K <span class="op">=</span> y_pred.shape[<span class="dv">1</span>] <span class="op">//</span> <span class="dv">3</span></span>
-<span id="cb16-7"><a></a>    pis <span class="op">=</span>  y_pred[:, :K]                                                    </span>
-<span id="cb16-8"><a></a>    alphas <span class="op">=</span> y_pred[:, K:<span class="dv">2</span><span class="op">*</span>K]                                               </span>
-<span id="cb16-9"><a></a>    betas <span class="op">=</span> y_pred[:, <span class="dv">2</span><span class="op">*</span>K:<span class="dv">3</span><span class="op">*</span>K]                                              </span>
-<span id="cb16-10"><a></a></span>
-<span id="cb16-11"><a></a>    <span class="co"># The mixture distribution is a MixtureSameFamily distribution</span></span>
-<span id="cb16-12"><a></a>    mixture_distribution <span class="op">=</span> tfd.MixtureSameFamily(</span>
-<span id="cb16-13"><a></a>        mixture_distribution<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>pis),</span>
-<span id="cb16-14"><a></a>        components_distribution<span class="op">=</span>tfd.Gamma(alphas, betas))</span>
-<span id="cb16-15"><a></a></span>
-<span id="cb16-16"><a></a>    <span class="co"># The loss is the negative log-likelihood of the data</span></span>
-<span id="cb16-17"><a></a>    <span class="cf">return</span> <span class="op">-</span>mixture_distribution.log_prob(y_true)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b3138d5f" class="cell" data-execution_count="37">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
+<span id="cb37-2"><a></a>tfd <span class="op">=</span> tfp.distributions</span>
+<span id="cb37-3"><a></a>K <span class="op">=</span> <span class="dv">2</span> <span class="co"># number of mixture components</span></span>
+<span id="cb37-4"><a></a></span>
+<span id="cb37-5"><a></a><span class="kw">def</span> gamma_mixture_nll(y_true, y_pred):                                      </span>
+<span id="cb37-6"><a></a>    K <span class="op">=</span> y_pred.shape[<span class="dv">1</span>] <span class="op">//</span> <span class="dv">3</span></span>
+<span id="cb37-7"><a></a>    pis <span class="op">=</span>  y_pred[:, :K]                                                    </span>
+<span id="cb37-8"><a></a>    alphas <span class="op">=</span> y_pred[:, K:<span class="dv">2</span><span class="op">*</span>K]                                               </span>
+<span id="cb37-9"><a></a>    betas <span class="op">=</span> y_pred[:, <span class="dv">2</span><span class="op">*</span>K:<span class="dv">3</span><span class="op">*</span>K]                                              </span>
+<span id="cb37-10"><a></a></span>
+<span id="cb37-11"><a></a>    <span class="co"># The mixture distribution is a MixtureSameFamily distribution</span></span>
+<span id="cb37-12"><a></a>    mixture_distribution <span class="op">=</span> tfd.MixtureSameFamily(</span>
+<span id="cb37-13"><a></a>        mixture_distribution<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>pis),</span>
+<span id="cb37-14"><a></a>        components_distribution<span class="op">=</span>tfd.Gamma(alphas, betas))</span>
+<span id="cb37-15"><a></a></span>
+<span id="cb37-16"><a></a>    <span class="co"># The loss is the negative log-likelihood of the data</span></span>
+<span id="cb37-17"><a></a>    <span class="cf">return</span> <span class="op">-</span>mixture_distribution.log_prob(y_true)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="code-model-training-1" class="slide level2">
 <h2>Code: Model Training</h2>
-<div id="c5be8be0" class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a></a><span class="co"># Employ the loss function from previous slide</span></span>
-<span id="cb17-2"><a></a>gamma_mdn.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>gamma_mixture_nll)</span>
-<span id="cb17-3"><a></a></span>
-<span id="cb17-4"><a></a>hist <span class="op">=</span> gamma_mdn.fit(X_train, y_train,</span>
-<span id="cb17-5"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
-<span id="cb17-6"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
-<span id="cb17-7"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb17-8"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
-<span id="cb17-9"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="5628938a" class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a></a><span class="co"># Employ the loss function from previous slide</span></span>
+<span id="cb38-2"><a></a>gamma_mdn.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>gamma_mixture_nll)</span>
+<span id="cb38-3"><a></a></span>
+<span id="cb38-4"><a></a>hist <span class="op">=</span> gamma_mdn.fit(X_train, y_train,</span>
+<span id="cb38-5"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
+<span id="cb38-6"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
+<span id="cb38-7"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb38-8"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<span id="cb38-9"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section></section>
 <section>
@@ -1045,10 +1487,13 @@ Length: 9, dtype: float64</code></pre>
 <div class="agenda">
 <ul>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Uncertainty &amp; Distributional Regression</p>
+<p>Traditional Regression</p>
 </div></li>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Generalised Linear Model (GLM)</p>
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
 </div></li>
 <li><div class="agenda-inactive agenda-pre-active">
 <p>Combined Actuarial Neural Network</p>
@@ -1058,6 +1503,9 @@ Length: 9, dtype: float64</code></pre>
 </div></li>
 <li><div class="agenda-active">
 <p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
 </div></li>
 </ul>
 </div>
@@ -1097,49 +1545,150 @@ S(G, G)\le S(F, G)
 </section>
 <section id="code-nll" class="slide level2">
 <h2>Code: NLL</h2>
-<div id="b0959890" class="cell" data-execution_count="17">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a></a><span class="im">from</span> scipy.stats <span class="im">import</span> gamma</span>
-<span id="cb18-2"><a></a></span>
-<span id="cb18-3"><a></a><span class="kw">def</span> gamma_nll(mean, dispersion, y):</span>
-<span id="cb18-4"><a></a>    <span class="co"># Calculate shape and scale parameters from mean and dispersion</span></span>
-<span id="cb18-5"><a></a>    shape <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> dispersion<span class="op">;</span> scale <span class="op">=</span> mean <span class="op">*</span> dispersion</span>
-<span id="cb18-6"><a></a></span>
-<span id="cb18-7"><a></a>    <span class="co"># Create a gamma distribution object</span></span>
-<span id="cb18-8"><a></a>    gamma_dist <span class="op">=</span> gamma(a<span class="op">=</span>shape, scale<span class="op">=</span>scale)</span>
-<span id="cb18-9"><a></a>    </span>
-<span id="cb18-10"><a></a>    <span class="cf">return</span> <span class="op">-</span>np.mean(gamma_dist.logpdf(y))</span>
-<span id="cb18-11"><a></a></span>
-<span id="cb18-12"><a></a><span class="co"># GLM</span></span>
-<span id="cb18-13"><a></a>X_test_design <span class="op">=</span> sm.add_constant(X_test)</span>
-<span id="cb18-14"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_test_design)</span>
-<span id="cb18-15"><a></a>nll_glm <span class="op">=</span> gamma_nll(mus, phi_glm, y_test)</span>
-<span id="cb18-16"><a></a></span>
-<span id="cb18-17"><a></a><span class="co"># CANN</span></span>
-<span id="cb18-18"><a></a>mus <span class="op">=</span> np.exp(np.sum(cann.predict(X_test, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
-<span id="cb18-19"><a></a>nll_cann <span class="op">=</span> gamma_nll(mus, phi_cann, y_test)</span>
-<span id="cb18-20"><a></a></span>
-<span id="cb18-21"><a></a><span class="co"># MDN</span></span>
-<span id="cb18-22"><a></a>nll_mdn <span class="op">=</span> gamma_mdn.evaluate(X_test, y_test, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="8e09a5a3" class="cell" data-execution_count="39">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a></a><span class="im">from</span> scipy.stats <span class="im">import</span> gamma</span>
+<span id="cb39-2"><a></a></span>
+<span id="cb39-3"><a></a><span class="kw">def</span> gamma_nll(mean, dispersion, y):</span>
+<span id="cb39-4"><a></a>    <span class="co"># Calculate shape and scale parameters from mean and dispersion</span></span>
+<span id="cb39-5"><a></a>    shape <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> dispersion<span class="op">;</span> scale <span class="op">=</span> mean <span class="op">*</span> dispersion</span>
+<span id="cb39-6"><a></a></span>
+<span id="cb39-7"><a></a>    <span class="co"># Create a gamma distribution object</span></span>
+<span id="cb39-8"><a></a>    gamma_dist <span class="op">=</span> gamma(a<span class="op">=</span>shape, scale<span class="op">=</span>scale)</span>
+<span id="cb39-9"><a></a>    </span>
+<span id="cb39-10"><a></a>    <span class="cf">return</span> <span class="op">-</span>np.mean(gamma_dist.logpdf(y))</span>
+<span id="cb39-11"><a></a></span>
+<span id="cb39-12"><a></a><span class="co"># GLM</span></span>
+<span id="cb39-13"><a></a>X_test_design <span class="op">=</span> sm.add_constant(X_test)</span>
+<span id="cb39-14"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_test_design)</span>
+<span id="cb39-15"><a></a>nll_glm <span class="op">=</span> gamma_nll(mus, phi_glm, y_test)</span>
+<span id="cb39-16"><a></a></span>
+<span id="cb39-17"><a></a><span class="co"># CANN</span></span>
+<span id="cb39-18"><a></a>mus <span class="op">=</span> np.exp(np.sum(cann.predict(X_test, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
+<span id="cb39-19"><a></a>nll_cann <span class="op">=</span> gamma_nll(mus, phi_cann, y_test)</span>
+<span id="cb39-20"><a></a></span>
+<span id="cb39-21"><a></a><span class="co"># MDN</span></span>
+<span id="cb39-22"><a></a>nll_mdn <span class="op">=</span> gamma_mdn.evaluate(X_test, y_test, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="model-comparisons" class="slide level2">
 <h2>Model Comparisons</h2>
-<div id="1bcfac3c" class="cell" data-execution_count="18">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a></a><span class="bu">print</span>(<span class="ss">f'GLM: </span><span class="sc">{</span>round(nll_glm, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
-<span id="cb19-2"><a></a><span class="bu">print</span>(<span class="ss">f'CANN: </span><span class="sc">{</span>round(nll_cann, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
-<span id="cb19-3"><a></a><span class="bu">print</span>(<span class="ss">f'MDN: </span><span class="sc">{</span>round(nll_mdn, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="ff9fc8a8" class="cell" data-execution_count="40">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a></a><span class="bu">print</span>(<span class="ss">f'GLM: </span><span class="sc">{</span>round(nll_glm, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb40-2"><a></a><span class="bu">print</span>(<span class="ss">f'CANN: </span><span class="sc">{</span>round(nll_cann, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb40-3"><a></a><span class="bu">print</span>(<span class="ss">f'MDN: </span><span class="sc">{</span>round(nll_mdn, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>GLM: 11.02
 CANN: 11.38
 MDN: 8.67</code></pre>
 </div>
 </div>
+</section></section>
+<section>
+<section id="aleatoric-and-epistemic-uncertainty" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Aleatoric and Epistemic Uncertainty</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Forecasts with noise</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="categories-of-uncertainty" class="slide level2">
+<h2>Categories of uncertainty</h2>
+<p>There are two major categories of uncertainty in statistical or machine learning:</p>
+<ul>
+<li>Aleatoric uncertainty</li>
+<li>Epistemic uncertainty</li>
+</ul>
+<p>Since there is no consensus on the definitions of aleatoric and epistemic uncertainty, we provide the most acknowledged definitions in the following slides.</p>
+</section>
+<section id="aleatoric-uncertainty" class="slide level2">
+<h2>Aleatoric Uncertainty</h2>
+<dl>
+<dt>Qualitative Definition</dt>
+<dd>
+<p><em>Aleatoric uncertainty refers to the statistical variability and inherent noise with data distribution that modelling cannot explain.</em></p>
+</dd>
+<dt>Quantitative Definition</dt>
+<dd>
+<p><span class="math display">\text{Ale}(Y|\boldsymbol{X}=\boldsymbol{x}) = \mathbb{V}[Y|\boldsymbol{X}=\boldsymbol{x}],</span>i.e., if <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x} \sim \mathcal{N}(\mu, \sigma^2)</span>, the aleatoric uncertainty would be <span class="math inline">\sigma^2</span>. Simply, it is the conditional variance of the response variable <span class="math inline">Y</span> given features/covariates <span class="math inline">\boldsymbol{x}</span>.</p>
+</dd>
+</dl>
+</section>
+<section id="epistemic-uncertainty" class="slide level2">
+<h2>Epistemic Uncertainty</h2>
+<dl>
+<dt>Qualitative Definition</dt>
+<dd>
+<p><em>Epistemic uncertainty refers to the lack of knowledge, limited data information, parameter errors and model errors.</em></p>
+</dd>
+<dt>Quantitative Definition</dt>
+<dd>
+<p><span class="math display">\text{Epi}(Y|\boldsymbol{X}=\boldsymbol{x}) = \text{Uncertainty}(Y|\boldsymbol{X}=\boldsymbol{x}) - \text{Ale}(Y|\boldsymbol{X}=\boldsymbol{x}),</span></p>
+</dd>
+</dl>
+<p>i.e., the total uncertainty subtracting the aleatoric uncertainty <span class="math inline">\mathbb{V}[Y|\boldsymbol{X}=\boldsymbol{x}]</span> would be the epistemic uncertainty.</p>
+</section>
+<section id="sources-of-uncertainty" class="slide level2">
+<h2>Sources of uncertainty</h2>
+<p><em>If you decide to predict the claim amount of an individual using a deep learning model, which source(s) of uncertainty are you dealing with?</em></p>
+<ol type="1">
+<li>The inherent variability of the data-generating process <span class="math inline">\rightarrow</span> aleatoric uncertainty.</li>
+<li>Parameter error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+<li>Model error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+<li>Data uncertainty <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+</ol>
+</section>
+<section id="notation" class="slide level2 appendix" data-visibility="uncounted">
+<h2>Notation</h2>
+<ul>
+<li>scalars are denoted by lowercase letters, e.g., <span class="math inline">y</span>,</li>
+<li>vectors are denoted by bold lowercase letters, e.g., <span class="math display">\boldsymbol{y} = (y_1, \ldots, y_n) ,</span></li>
+<li>random variables are denoted by capital letters, e.g., <span class="math inline">Y</span></li>
+<li>random vectors are denoted by bold capital letters, e.g., <span class="math display">\boldsymbol{X} = (X_1, \ldots, X_p) ,</span></li>
+<li>matrices are denoted by bold uppercase non-italics letters, e.g., <span class="math display">\mathbf{X} = \begin{pmatrix} x_{11} &amp; \cdots &amp; x_{1p} \\ \vdots &amp; \ddots &amp; \vdots \\ x_{n1} &amp; \cdots &amp; x_{np} \end{pmatrix} .</span></li>
+</ul>
+</section>
+<section id="regression-notation" class="slide level2 appendix" data-visibility="uncounted">
+<h2>Regression notation</h2>
+<ul>
+<li><span class="math inline">n</span> is the number of observations, <span class="math inline">p</span> is the number of features,</li>
+<li>the true coefficients are <span class="math inline">\boldsymbol{\beta} = (\beta_0, \beta_1, \ldots, \beta_p)</span>,</li>
+<li><span class="math inline">\beta_0</span> is the intercept, <span class="math inline">\beta_1, \ldots, \beta_p</span> are the coefficients,</li>
+<li><span class="math inline">\widehat{\boldsymbol{\beta}}</span> is the estimated coefficient vector,</li>
+<li><span class="math inline">\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})</span> is the feature vector for the <span class="math inline">i</span>th observation,</li>
+<li><span class="math inline">y_i</span> is the response variable for the <span class="math inline">i</span>th observation,</li>
+<li><span class="math inline">\hat{y}_i</span> is the predicted value for the <span class="math inline">i</span>th observation,</li>
+<li>probability density functions (p.d.f.), probability mass functions (p.m.f.), cumulative distribution functions (c.d.f.).</li>
+</ul>
 </section>
 <section id="package-versions" class="slide level2 appendix" data-visibility="uncounted">
 <h2>Package Versions</h2>
-<div id="9ae7caa4" class="cell" data-execution_count="19">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
-<span id="cb21-2"><a></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tensorflow_probability,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="5fe78ec3" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb42-2"><a></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tensorflow_probability,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Python implementation: CPython
 Python version       : 3.11.9
