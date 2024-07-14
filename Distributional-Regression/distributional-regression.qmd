@@ -16,6 +16,7 @@ Thanks to Eric Dong for making the original version of these slides.
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
+import numpy
 import matplotlib
 
 # TODO: Update following section
@@ -42,6 +43,14 @@ plt.rcParams["font.family"] = "serif"
 plt.rcParams["axes.spines.right"] = False
 plt.rcParams["axes.spines.top"] = False
 
+def add_diagonal_line():
+    xl = matplotlib.pyplot.xlim()
+    yl = matplotlib.pyplot.ylim()
+    shortest_side = min(xl[1], yl[1])
+    matplotlib.pyplot.plot(
+        [0, shortest_side], [0, shortest_side], color="black", linestyle="--"
+    )
+
 import pandas as pandas
 
 pandas.options.display.max_rows = 6
@@ -50,7 +59,6 @@ import random
 
 random.seed(1234)
 
-import tf_keras
 import tensorflow
 
 tensorflow.random.set_seed(1)
@@ -73,14 +81,12 @@ from sklearn import set_config
 from sklearn.linear_model import LinearRegression
 set_config(transform_output="pandas")
 
-import tf_keras
+import keras
 import tensorflow as tf
-from tf_keras.callbacks import EarlyStopping
-from tf_keras.layers import Dense
-from tf_keras.models import Sequential
-from tf_keras.layers import Input, Dense, Concatenate
-from tf_keras.models import Model
-from tf_keras.initializers import Constant
+from keras.callbacks import EarlyStopping
+from keras.models import Sequential, Model
+from keras.layers import Input, Dense, Concatenate
+from keras.initializers import Constant
 
 from sklearn.model_selection import train_test_split
 from sklearn.compose import make_column_transformer
@@ -94,6 +100,32 @@ import statsmodels.api as sm
 :::
 
 # Traditional Regression {visibility="uncounted"}
+
+## Notation
+
+- scalars are denoted by lowercase letters, e.g., $y$,
+- vectors are denoted by bold lowercase letters, e.g.,
+$$\boldsymbol{y} = (y_1, \ldots, y_n) ,$$
+- random variables are denoted by capital letters, e.g., $Y$
+- random vectors are denoted by bold capital letters, e.g.,
+$$\boldsymbol{X} = (X_1, \ldots, X_p) ,$$
+- matrices are denoted by bold uppercase non-italics letters, e.g.,
+$$\mathbf{X} = \begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vdots \\ x_{n1} & \cdots & x_{np} \end{pmatrix} .$$
+
+<!-- If we need random matrices, then run to the nearest fire exit. -->
+
+## Regression notation
+
+- $n$ is the number of observations, $p$ is the number of features,
+- the true coefficients are $\boldsymbol{\beta} = (\beta_0, \beta_1, \ldots, \beta_p)$,
+- $\beta_0$ is the intercept, $\beta_1, \ldots, \beta_p$ are the coefficients,
+- $\widehat{\boldsymbol{\beta}}$ is the estimated coefficient vector,
+- $\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})$ is the feature vector for the $i$th observation,
+- $y_i$ is the response variable for the $i$th observation,
+- $\hat{y}_i$ is the predicted value for the $i$th observation,
+- probability density functions (p.d.f.), probability mass functions (p.m.f.), cumulative distribution functions (c.d.f.).
+
+<!-- - the error $\varepsilon$ random variable is not capitalised, -->
 
 ## Traditional Regression
 
@@ -887,7 +919,7 @@ if not os.path.exists("cann.keras"):
       validation_split=0.2)
     cann.save("cann.keras")
 else:
-    cann = tf_keras.models.load_model("cann.keras", 
+    cann = keras.models.load_model("cann.keras", 
                                       custom_objects={"cann_negative_log_likelihood": cann_negative_log_likelihood})
 ```
 
@@ -990,6 +1022,18 @@ $$
 
 ![We demonstrate the structure of a gamma MDN that outputs the parameters for a gamma mixture with two components.](Gamma_MDN.png)
 
+## Code: Import "legacy" Keras (for now)
+
+```{python}
+import tf_keras
+```
+
+![](keras_tfp_github_issue.png)
+![](keras_tfp_github_issue_comment.png)
+
+::: footer
+Source: Tensorflow Probability GitHub, [Keras 3 breaks Tensorflow Probability upon import](https://github.com/tensorflow/probability/issues/1774#issuecomment-1841706103), issue #1774.
+
 ## Code: Architecture
 
 The following code resembles the architecture of the architecture of the gamma MDN from the previous slide.
@@ -998,18 +1042,18 @@ The following code resembles the architecture of the architecture of the gamma M
 # Ensure reproducibility
 random.seed(1); tf.random.set_seed(1)                                   #<1>
 
-inputs = Input(shape=X_train.shape[1:])                                 #<2>
+inputs = tf_keras.layers.Input(shape=X_train.shape[1:])                                 #<2>
 
 # Two hidden layers 
-x = Dense(64, activation='relu')(inputs)                                #<3>
-x = Dense(64, activation='relu')(x)
+x = tf_keras.layers.Dense(64, activation='relu')(inputs)                                #<3>
+x = tf_keras.layers.Dense(64, activation='relu')(x)
 
-pis = Dense(2, activation='softmax')(x) # Mixing weights                 #<4>
-alphas = Dense(2, activation='exponential')(x) # Shape parameters
-betas = Dense(2, activation='exponential')(x) # Scale parameters
+pis = tf_keras.layers.Dense(2, activation='softmax')(x) # Mixing weights                 #<4>
+alphas = tf_keras.layers.Dense(2, activation='exponential')(x) # Shape parameters
+betas = tf_keras.layers.Dense(2, activation='exponential')(x) # Scale parameters
 
 # `y_pred` will now have 6 columns
-gamma_mdn = Model(inputs, Concatenate(axis=1)([pis, alphas, betas]))    #<5>
+gamma_mdn = tf_keras.Model(inputs, tf_keras.layers.Concatenate(axis=1)([pis, alphas, betas]))    #<5>
 ```
 1. Sets the random seeds for reproducibility
 2. Defines the input layer with the number of neurons being equal to the number of input features
@@ -1112,7 +1156,7 @@ Proper scoring rules provide a summary measure for the performance of the probab
 
 Definition
 
-:   *The scoring rule* $S : \mathcal{F} \times \mathbb{R} \to \bar{\mathbb{R}}$ is proper relative to the class $\mathcal{F}$ if $$
+:   *The scoring rule* $S : \mathcal{F} \times \mathbb{R} \to \overline{\mathbb{R}}$ is proper relative to the class $\mathcal{F}$ if $$
     S(G, G)\le S(F, G)
     $$ for all $F,G\in \mathcal{F}$. It is strictly proper if equality holds only if $F = G$.
 
@@ -1238,31 +1282,405 @@ Noisy data, inconsistent data, data with missing values or data with missing imp
 3. Model error $\rightarrow$ epistemic uncertainty.
 4. Data uncertainty $\rightarrow$ epistemic uncertainty.
 
-## Notation {.appendix data-visibility="uncounted"}
+# Avoiding Overfitting {visibility="uncounted"}
 
-- scalars are denoted by lowercase letters, e.g., $y$,
-- vectors are denoted by bold lowercase letters, e.g.,
-$$\boldsymbol{y} = (y_1, \ldots, y_n) ,$$
-- random variables are denoted by capital letters, e.g., $Y$
-- random vectors are denoted by bold capital letters, e.g.,
-$$\boldsymbol{X} = (X_1, \ldots, X_p) ,$$
-- matrices are denoted by bold uppercase non-italics letters, e.g.,
-$$\mathbf{X} = \begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vdots \\ x_{n1} & \cdots & x_{np} \end{pmatrix} .$$
+## Traditional regularisation
 
-<!-- If we need random matrices, then run to the nearest fire exit. -->
+Say all the $m$ weights (excluding biases) are in the vector $\boldsymbol{\theta}$.
+If we change the loss function to
+$$
+\text{Loss}_{1:n}
+= \frac{1}{n} \sum_{i=1}^n \text{Loss}_i
+  + \lambda \sum_{j=1}^{m} \left| \theta_j \right|
+$$
 
-## Regression notation {.appendix data-visibility="uncounted"}
+this would be using $L^1$ regularisation. 
+A loss like
 
-- $n$ is the number of observations, $p$ is the number of features,
-- the true coefficients are $\boldsymbol{\beta} = (\beta_0, \beta_1, \ldots, \beta_p)$,
-- $\beta_0$ is the intercept, $\beta_1, \ldots, \beta_p$ are the coefficients,
-- $\widehat{\boldsymbol{\beta}}$ is the estimated coefficient vector,
-- $\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})$ is the feature vector for the $i$th observation,
-- $y_i$ is the response variable for the $i$th observation,
-- $\hat{y}_i$ is the predicted value for the $i$th observation,
-- probability density functions (p.d.f.), probability mass functions (p.m.f.), cumulative distribution functions (c.d.f.).
+$$
+\text{Loss}_{1:n}
+= \frac{1}{n} \sum_{i=1}^n \text{Loss}_i
+  + \lambda \sum_{j=1}^{m} \theta_j^2
+$$
 
-<!-- - the error $\varepsilon$ random variable is not capitalised, -->
+is called $L^2$ regularisation.
+
+## Regularisation in Keras
+
+```{python}
+#| code-fold: true
+from sklearn.datasets import fetch_california_housing
+features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+
+NUM_FEATURES = len(features.columns)
+
+X_main, X_test, y_main, y_test = train_test_split(
+    features, target, test_size=0.2, random_state=1
+)
+X_train, X_val, y_train, y_val = train_test_split(
+    X_main, y_main, test_size=0.25, random_state=1
+)
+
+scaler = StandardScaler()
+X_train_sc = scaler.fit_transform(X_train)
+X_val_sc = scaler.transform(X_val)
+X_test_sc = scaler.transform(X_test)
+```
+
+```{python}
+from keras.regularizers import L1, L2
+
+def l1_model(regulariser_strength=0.01):
+  random.seed(123)
+  model = Sequential([
+      Dense(30,
+        activation="leaky_relu",
+        name="hidden1"),
+      Dense(30,
+        activation="leaky_relu",
+        kernel_regularizer=L1(regulariser_strength),
+        name="hidden2"),
+      Dense(1, 
+        activation="exponential",
+        name="output")
+  ])
+
+  model.compile("adam", "mse")
+  model.fit(X_train_sc, y_train, epochs=4, verbose=0)
+  return model
+```
+
+## Weights before & after $\ell_1$
+
+```{python}
+#| echo: false
+set_square_figures()
+``` 
+
+::: columns
+::: column
+```{python}
+model = l1_model(0.0)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: column
+```{python}
+model = l1_model(1.0)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: 
+
+## Weights before & after $\ell_2$
+
+```{python}
+#| echo: false
+def l2_model(regulariser_strength=0.01):
+  random.seed(123)
+  model = Sequential([
+      Dense(30,
+        activation="leaky_relu",
+        name="hidden1"),
+      Dense(30,
+        activation="leaky_relu",
+        kernel_regularizer=L2(regulariser_strength),
+        name="hidden2"),
+      Dense(1, 
+        activation="exponential",
+        name="output")
+  ])
+
+  model.compile("adam", "mse")
+  model.fit(X_train_sc, y_train, epochs=4, verbose=0)
+  return model
+```
+::: columns
+::: column
+```{python}
+model = l2_model(0.0)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: column
+```{python}
+model = l2_model(1.0)
+weights = model.get_layer("hidden2").get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: 
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+``` 
+
+## Early-stopping regularisation
+
+> A very different way to regularize iterative learning algorithms such as gradient descent is to stop training as soon as the validation error reaches a minimum. This is called early stopping... It is such a simple and efficient regularization technique that Geoffrey Hinton called it a “beautiful free lunch”.
+
+> Alternatively, you can try building a model with slightly more layers and neurons than you actually need, then use early stopping and other regularization techniques to prevent it from overfitting too much. Vincent Vanhoucke, a scientist at Google, has dubbed this the “stretch pants” approach: instead of wasting time looking for pants that perfectly match your size, just use large stretch pants that will shrink down to the right size.
+
+::: footer
+Source: Géron (2019), Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow, 3rd Edition, Chapters 4 and 10.
+:::
+
+# Dropout
+
+## Dropout
+
+::: {.content-visible unless-format="revealjs"}
+Dropout is one of the most popular methods for reducing the risk of overfitting. Dropout is the act of randomly selecting a proportion of neurons and deactivating them during each training iteration. It is a regularization technique that aims to reduce overfitting and improve the generalization ability of the model. 
+:::
+
+![An example of neurons dropped during training.](dropout.png)
+
+::: footer
+Sources: Marcus Lautier (2022).
+:::
+
+## Dropout quote #1
+
+> It's surprising at first that this destructive technique works at all.
+Would a company perform better if its employees were told to toss a coin every morning to decide whether or not to go to work?
+Well, who knows; perhaps it would!
+The company would be forced to adapt its organization; it could not rely on any single person to work the coffee machine or perform any other critical tasks, so this expertise would have to be spread across several people.
+Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
+:::
+
+## Dropout quote #2
+
+> The company would become much more resilient.
+If one person quit, it wouldn't make much of a difference.
+It's unclear whether this idea would actually work for companies, but it certainly does for neural networks.
+Neurons trained with dropout cannot co-adapt with their neighboring neurons; they have to be as useful as possible on their own.
+They also cannot rely excessively on just a few input neurons; they must pay attention to each of their input neurons.
+They end up being less sensitive to slight changes in the inputs.
+In the end, you get a more robust network that generalizes better.
+
+::: footer
+Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
+:::
+
+## Code: Dropout 
+
+Dropout is just another layer in Keras.
+
+::: {.content-visible unless-format="revealjs"}
+The following code shows how we can apply a dropout to each hidden layer in the neural network. The dropout rate for each layer is 0.2. There is also an option called `seed` in the `Dropout` function, which can be used to ensure reproducibility. 
+:::
+
+```{python} 
+from keras.layers import Dropout
+
+random.seed(2); 
+
+model = Sequential([
+    Dense(30, activation="leaky_relu", name="hidden1"),
+    Dropout(0.2),
+    Dense(30, activation="leaky_relu", name="hidden2"),
+    Dropout(0.2),
+    Dense(1, activation="exponential", name="output")
+])
+
+model.compile("adam", "mse")
+model.fit(X_train_sc, y_train, epochs=4, verbose=0);
+```
+
+## Code: Dropout after training
+
+Making predictions is the same as any other model:
+
+::: {.content-visible unless-format="revealjs"}
+Dropout has no impact on model predictions because `Dropout` function is carried out only during the training stage. Once the model finishes its training (once the weights and biases are computed), all neurons together contribute to the predictions(no dropping out during the prediction stage). Therefore, predictions from the model will not change across different runs.
+:::
+
+::: columns
+::: column
+```{python}
+model.predict(X_train_sc.head(3),
+                  verbose=0)
+```
+:::
+::: column
+```{python}
+model.predict(X_train_sc.head(3),
+                  verbose=0)
+```
+:::
+:::
+
+We can make the model think it is still training:
+
+::: {.content-visible unless-format="revealjs"}
+By setting the `training=True`, we can let drop out happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_.
+:::
+
+::: columns
+::: column
+```{python}
+model(X_train_sc.head(3),
+    training=True).numpy()
+```
+:::
+::: column
+```{python}
+model(X_train_sc.head(3),
+    training=True).numpy()
+```
+:::
+:::
+
+## Dropout Limitation
+
+- Increased Training Time: Since dropout introduces noise into the training process, it can make the training process slower.
+- Sensitivity to Dropout Rates: the performance of dropout is highly dependent on the chosen dropout rate. 
+
+
+# Dead ReLU neurons {data-visibility="uncounted"}
+
+## My first ANN for California housing
+
+::: columns
+::: column
+
+<br>
+
+```{python}
+random.seed(123)
+
+model = Sequential([
+    Dense(30,
+      activation="relu",
+      name="hidden"),
+    Dense(1)
+])
+
+model.compile("adam", "mse")
+hist = model.fit(X_train, y_train, epochs=5, verbose=0)
+hist.history["loss"]
+```
+:::
+::: column
+```{python}
+#|echo: false
+set_square_figures()
+y_pred = model.predict(X_train, verbose=0)
+plt.scatter(y_pred, y_train)
+plt.xlabel("Predictions")
+plt.ylabel("True values")
+plt.title("Training set")
+add_diagonal_line()
+set_rectangular_figures()
+```
+:::
+:::
+
+## Find dead ReLU neurons 
+
+```{python}
+#| echo: false
+numpy.set_printoptions(threshold=10);
+```
+
+```{python}
+acts = model.get_layer("hidden")(X_train).numpy()
+acts[:3]
+```
+
+```{python}
+acts.mean(axis=0)
+```
+
+```{python}
+np.sum(acts.mean(axis=0) == 0)
+```
+
+```{python}
+#| echo: false
+numpy.set_printoptions(threshold=1000);
+```
+
+## Trying different seeds
+
+Create a function which counts the number of dead ReLU neurons in the first hidden layer for a given seed:
+```{python}
+def count_dead(seed):
+    random.seed(seed)
+    hidden = Dense(30, activation="relu")
+    acts = hidden(X_train).numpy()
+    return np.sum(acts.mean(axis=0) == 0)
+```
+
+Then we can try out different seeds:
+
+```{python}
+num_dead = [count_dead(seed) for seed in range(1_000)]
+np.median(num_dead)
+```
+
+## Look at distribution of dead ReLUs
+
+```{python}
+labels, counts = np.unique(num_dead, return_counts=True)
+plt.bar(labels, counts, align='center');
+```
+
+# Ensembles 
+
+## Deep Ensembles 
+
+Train $D$ neural networks with different random weights initialisations independently (can do it in parallel).
+
+The trained weights are $\boldsymbol{w}^{(1)}, ..., \boldsymbol{w}^{(D)}$.
+
+```{python}
+def build_model(seed):
+    random.seed(seed)
+    model = Sequential([
+        Dense(30, activation="leaky_relu"),
+        Dense(1, activation="exponential")
+    ])
+    model.compile("adam", "mse")
+
+    es = EarlyStopping(restore_best_weights=True, patience=5)
+    model.fit(X_train_sc, y_train, epochs=1_000,
+        callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)
+    return model
+```
+
+```{python}
+N = 10
+seeds = range(N)
+models = []
+for seed in seeds:
+    models.append(build_model(seed))
+```
+
+## Deep Ensembles II
+
+For a new instance $\boldsymbol{x}$, obtain $$\Big\{\big(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big],\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big]\big)\Big\}_{d=1}^{D},$$
+
+```{python}
+y_preds = []
+for model in models:
+    y_preds.append(model.predict(X_test_sc, verbose=0))
+
+y_preds = np.array(y_preds)
+y_preds
+```
+It's simple to implement and requires very little hyperparameter tuning.
 
 ## Package Versions {.appendix data-visibility="uncounted"}
 
