@@ -1639,11 +1639,17 @@ plt.bar(labels, counts, align='center');
 
 # Ensembles 
 
+## Ensembles
+
+![Combine many models to get better predictions.](ensemble.png)
+
+::: footer
+Source: Marcus Lautier (2022).
+:::
+
 ## Deep Ensembles 
 
-Train $D$ neural networks with different random weights initialisations independently (can do it in parallel).
-
-The trained weights are $\boldsymbol{w}^{(1)}, ..., \boldsymbol{w}^{(D)}$.
+Train $M$ neural networks with different random initial weights independently (even in parallel).
 
 ```{python}
 def build_model(seed):
@@ -1661,16 +1667,32 @@ def build_model(seed):
 ```
 
 ```{python}
-N = 10
-seeds = range(N)
+#| eval: false
+M = 3
+seeds = range(M)
 models = []
 for seed in seeds:
     models.append(build_model(seed))
 ```
 
+```{python}
+#| echo: false
+M = 3
+seeds = range(M)
+models = []
+for seed in seeds:
+    # Load the model if it already exists
+    if os.path.exists(f"model_{seed}.keras"):
+        model = keras.models.load_model(f"model_{seed}.keras")
+    else:
+        model = build_model(seed)
+        model.save(f"model_{seed}.keras")
+    models.append(model)
+```
+
 ## Deep Ensembles II
 
-For a new instance $\boldsymbol{x}$, obtain $$\Big\{\big(\mathbb{E}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big],\mathbb{V}\big[Y|\boldsymbol{x},\boldsymbol{w}^{(d)}\big]\big)\Big\}_{d=1}^{D},$$
+Say the trained weights by $\boldsymbol{w}^{(1)}, \ldots, \boldsymbol{w}^{(M)}$, then we get predictions $\bigl\{ \hat{y}(\boldsymbol{x}; \boldsymbol{w}^{(m)}) \bigr\}_{m=1}^{M}$
 
 ```{python}
 y_preds = []
@@ -1680,7 +1702,8 @@ for model in models:
 y_preds = np.array(y_preds)
 y_preds
 ```
-It's simple to implement and requires very little hyperparameter tuning.
+
+<!-- It's simple to implement and requires very little hyperparameter tuning. -->
 
 ## Package Versions {.appendix data-visibility="uncounted"}
 
@@ -1694,14 +1717,14 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 ::: columns
 ::: column
 - aleatoric and epistemic uncertainty
+- combined actuarial neural network
 - deep ensembles
-- CANN
-- GLM
+- dropout
 :::
 ::: column
-- MDN
+- generalised linear model
+- mixture density network
 - mixture distribution
-- posterior sampling
 - proper scoring rule
 :::
 :::
