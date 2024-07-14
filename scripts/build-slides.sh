@@ -10,7 +10,7 @@ quarto render index.qmd --no-execute-daemon
 (exit) && quarto render Tabular-Data/classification.qmd --no-execute-daemon
 (exit) && quarto render Computer-Vision/computer-vision.qmd --no-execute-daemon
 (exit) && quarto render Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
-(exit) && quarto render Advanced-Tabular-Data/advanced-tabular-data.qmd --no-execute-daemon
+(exit) && quarto render Advanced-Tabular-Data/entity-embedding.qmd --no-execute-daemon
 (exit) && quarto render Advanced-Tabular-Data/optimisation.qmd --no-execute-daemon
 (exit) && quarto render Distributional-Regression/distributional-regression.qmd --no-execute-daemon
 (exit) && quarto render Time-Series-And-Recurrent-Neural-Networks/time-series-and-rnns.qmd --no-execute-daemon
