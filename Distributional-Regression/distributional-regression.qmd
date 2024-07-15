@@ -53,7 +53,7 @@ def add_diagonal_line():
 
 import pandas as pandas
 
-pandas.options.display.max_rows = 6
+pandas.options.display.max_rows = 5
 
 import random
 
@@ -77,12 +77,7 @@ import numpy as np
 import numpy.random as rnd
 import pandas as pd
 
-from sklearn import set_config
-from sklearn.linear_model import LinearRegression
-set_config(transform_output="pandas")
-
 import keras
-import tensorflow as tf
 from keras.callbacks import EarlyStopping
 from keras.models import Sequential, Model
 from keras.layers import Input, Dense, Concatenate
@@ -92,11 +87,35 @@ from sklearn.model_selection import train_test_split
 from sklearn.compose import make_column_transformer
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OrdinalEncoder
+from sklearn.linear_model import LinearRegression
+from sklearn import set_config
+set_config(transform_output="pandas")
 
 import scipy.stats as stats
 import statsmodels.api as sm
 ```
 
+:::
+
+## Key idea
+
+::: columns
+::: column
+
+![An example of distributional forecasting over the All Ordinaries Index](Density_forecasting_2.jpeg)
+
+:::
+::: column
+
+- Earlier machine learning models focused on point estimates.
+- However, in many applications, we need to understand the distribution of the response variable.
+- Each prediction becomes a _distribution_ over the possible outcomes 
+
+:::
+:::
+
+::: footer
+Source: Tomasz Woźniak (2024), [LinkedIn Post](https://www.linkedin.com/posts/tomaszwwozniak_rstats-densityforecasting-activity-7171005952463134721-ZsHl?utm_source=share&utm_medium=member_desktop), accessed on July 15 2024.
 :::
 
 # Traditional Regression {visibility="uncounted"}
@@ -149,27 +168,27 @@ where $\hat{y}_i$ is the predicted value for the $i$th observation.
 #| code-fold: true
 # Generate sample data for linear regression
 np.random.seed(0)
-X = np.linspace(0, 10, 10)
-np.random.shuffle(X)
+X_toy = np.linspace(0, 10, 10)
+np.random.shuffle(X_toy)
 
 beta_0 = 2
 beta_1 = 3
-y = beta_0 + beta_1 * X + np.random.normal(scale=2, size=X.shape)
+y_toy = beta_0 + beta_1 * X_toy + np.random.normal(scale=2, size=X_toy.shape)
+sigma_toy = 2  # Assuming a standard deviation for the normal distribution
 
 # Fit a simple linear regression model
-coefficients = np.polyfit(X, y, 1)
-predicted_y = np.polyval(coefficients, X)
+coefficients = np.polyfit(X_toy, y_toy, 1)
+predicted_y = np.polyval(coefficients, X_toy)
 
 # Plot the data points and the fitted line
-plt.scatter(X, y, label='Data Points')
-plt.plot(X, predicted_y, color='red', label='Fitted Line')
+plt.scatter(X_toy, y_toy, label='Data Points')
+plt.plot(X_toy, predicted_y, color='red', label='Fitted Line')
 
 # Draw the normal distribution bell curve sideways at each data point
-for i in range(len(X)):
+for i in range(len(X_toy)):
     mu = predicted_y[i]
-    sigma = 2  # Assuming a standard deviation for the normal distribution
-    y_values = np.linspace(mu - 4*sigma, mu + 4*sigma, 100)
-    x_values = stats.norm.pdf(y_values, mu, sigma) + X[i]
+    y_values = np.linspace(mu - 4*sigma_toy, mu + 4*sigma_toy, 100)
+    x_values = stats.norm.pdf(y_values, mu, sigma_toy) + X_toy[i]
     plt.plot(x_values, y_values, color='blue', alpha=0.5)
 
 plt.xlabel('$x$')
@@ -203,21 +222,22 @@ Perform maximum likelihood estimation to find $\boldsymbol{\beta}$.
 
 ```{python}
 #| code-fold: true
-y_pred = np.polyval(coefficients, X[:4])
+y_pred = np.polyval(coefficients, X_toy[:4])
 
 fig, axes = plt.subplots(4, 1, figsize=(5.0, 3.0))
 
-x_min = y_pred[:4].min() - 4*sigma
-x_max = y_pred[:4].max() + 4*sigma
+x_min = y_pred[:4].min() - 4*sigma_toy
+x_max = y_pred[:4].max() + 4*sigma_toy
 x_grid = np.linspace(x_min, x_max, 100)
 
 # Plot each normal distribution with different means vertically
 for i, ax in enumerate(axes):
     mu = y_pred[i]
-    y_grid = stats.norm.pdf(x_grid, mu, sigma)
+    y_grid = stats.norm.pdf(x_grid, mu, sigma_toy)
     ax.plot(x_grid, y_grid)
     ax.set_ylabel(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
     ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
+    ax.plot(y_toy[i], 0, 'r|')
 
 plt.tight_layout();
 ```
@@ -302,9 +322,9 @@ $$
 \text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 $$
 
-The binary cross-entropy loss is identical:
+The binary cross-entropy loss is basically identical:
 $$
-\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = - \frac{1}{n} \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 $$
 
 ## Poisson regression
@@ -340,7 +360,7 @@ $$
 The Poisson loss is
 
 $$
-\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
+\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \frac{1}{n} \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
 $$
 
 ## Gamma regression
@@ -497,7 +517,7 @@ plot_forecasts(stock)
 ```
 
 ```{python}
-residuals = y_train - lr.predict(X_train)
+residuals = y_train.loc["2015":] - lr.predict(X_train.loc["2015":])
 sigma = np.std(residuals)
 ```
 
@@ -543,7 +563,7 @@ plot_forecasts(stock)
 ## Many noisy forecasts {visibility="uncounted"}
 
 ```{python}
-num_forecasts = 500
+num_forecasts = 300
 forecasts = []
 for i in range(num_forecasts):
     forecasts.append(noisy_autoregressive_forecast(lr, X_val, sigma) * 100)
@@ -599,6 +619,7 @@ set_square_figures()
 ::: columns
 ::: column
 ```{python}
+#| warning: true
 y_pred = lr.predict(X_train)
 residuals = y_train - y_pred
 residuals -= np.mean(residuals)
@@ -646,85 +667,57 @@ sm.ProbPlot(residuals).ppplot(line="45");
 set_rectangular_figures()
 ```
 
+## Residuals against time
+
+```{python}
+#| code-fold: true
+plt.plot(y_train.index, residuals)
+plt.xlabel("Date")
+plt.ylabel("Standardised Residuals")
+plt.tight_layout();
+```
+
+Heteroskedasticity!
+
 # GLMs and Neural Networks {visibility="uncounted"}
 
-## Code: Data
+## French motor claim sizes
+
+::: {.content-visible unless-format="revealjs"}
+As `freMTPL2sev` just has Policy ID & severity, we merge with `freMTPL2freq` which has Policy ID, # Claims, and other covariables.
+:::
 
 ``` {python}
-import pandas as pd
-sev_df = pd.read_csv('freMTPL2sev.csv')                                 #<1>
-freq_df = pd.read_csv('freMTPL2freq.csv')                               #<2>
-
-# Create a copy of freq dataframe without 'claimfreq' column
-freq_without_claimfreq = freq_df.drop(columns=['ClaimNb'])              #<3>
-
-# Merge severity dataframe with freq_without_claimfreq dataframe
-new_sev_df = pd.merge(sev_df, freq_without_claimfreq, on='IDpol', 
-                                                      how='left')       #<4>
-new_sev_df = new_sev_df.dropna()                                        #<5>
-new_sev_df = new_sev_df.drop("IDpol", axis=1)                           #<6>
-new_sev_df[:2]                                                          #<7>
+sev = pd.read_csv('freMTPL2sev.csv')
+cov = pd.read_csv('freMTPL2freq.csv').drop(columns=['ClaimNb'])
+sev = pd.merge(sev, cov, on='IDpol', how='left').drop(columns=["IDpol"]).dropna()  #<1>
+sev
 ```
-1. Imports `freMTPL2sev.csv` dataset
-2. Imports `freMTPL2freq.csv` dataset
-3. Drops `ClaimNb` column
-4. Merges the two datasets ,`sev_df` and `freq_without_claimfreq` by matching the `IDpol` column. Assigning `how='left'` ensures that all rows from the left dataset `sev_df` is considered, and only the matching columns from `freq_without_claimfreq` are selected
-5. Drops missing values or/and NAN values
-6. Drops the `IDpol` column from `new_sev_df`
-7. Retrieves first two rows of the dataset
+1. Merges the severity dataframe `sev` with the covariates in `covariates` by matching the `IDpol` column. Assigning `how='left'` ensures that all rows from the left dataset `sev` is considered, and only the matching columns from `covariates` are selected. Also drops the policy ID column and any missing values or/and NAN values.
 
-## Code: Preprocessing
+
+## Preprocessing
+
 ::: {.content-visible unless-format="revealjs"}
-Next we carry out some basic preprocessing
+Next we carry out some basic preprocessing.
+The column transformer first applies ordinal encoding to `Area` and `VehGas` variables, and applies standard scaling to all remaining numerical values.
+To simplify things, `VehBrand` and `Region` variables are dropped from the dataframe.
+The column transformer is then applied to both training and test sets.
 :::
 
 ```{python}
 X_train, X_test, y_train, y_test = train_test_split(
-  new_sev_df.drop("ClaimAmount", axis=1),
-  new_sev_df["ClaimAmount"],
-  random_state=2023)
-
-# Reset each index to start at 0 again.
-X_train = X_train.reset_index(drop=True)
-X_test = X_test.reset_index(drop=True)
-y_train = y_train.reset_index(drop=True)
-y_test = y_test.reset_index(drop=True)
-```
-
-## Code: Preprocessing
-
-::: {.content-visible unless-format="revealjs"}
-Next we define the column transfer. The column transfer first applies ordinal encoding to `VehBrand`, `Region`, `Area` and `VehGas` variables, and applies standard scaling to all remaining numerical values. Next we fit the defined column transfer to the training set. The fitted transformation is then applied on both training and test sets. (Note that the fitting is only carried out on the train set and the same fit is applied to both train, validation and test sets.)
-:::
-
-::: {.content-visible unless-format="revealjs"}
-Since this task does not apply entity embeddings, `VehBrand` and `Region` variables are dropped from the dataframe.
-:::
-
-```{python}
-ct = make_column_transformer(
-  (OrdinalEncoder(), ["Area", "VehGas"]),
-  ("drop", ["VehBrand", "Region"]),
-  remainder=StandardScaler(),
-  verbose_feature_names_out=False
-)
-
+  sev.drop("ClaimAmount", axis=1), sev["ClaimAmount"], random_state=2023)
+ct = make_column_transformer((OrdinalEncoder(), ["Area", "VehGas"]),
+    ("drop", ["VehBrand", "Region"]), remainder=StandardScaler())
 X_train = ct.fit_transform(X_train)
 X_test = ct.transform(X_test)
-```
-
-- $\texttt{VehGas=1}$ if the car gas is regular.
-- $\texttt{Area=0}$ represents the rural area, and $\texttt{Area=5}$ represents the urban center.
-
-## Histogram of the `ClaimAmount`
-
-::: {.content-visible unless-format="revealjs"}
-Plotting the empirical distribution of the target variable help us get an understanding of the inherent variability associated with the data.
-:::
-
-```{python}
 plt.hist(y_train[y_train < 5000], bins=30);
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Plotting the empirical distribution of the target variable `ClaimAmount` help us get an understanding of the inherent variability associated with the data.
+:::
 
 ::: {.content-visible unless-format="revealjs"}
 The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{CANN}$ for the neural network.
@@ -735,6 +728,55 @@ The following section illustrates how embedding a GLM in a neural network archit
 The idea of GLM is to find a linear combination of independent variables $\boldsymbol{x}$ and coefficients $\boldsymbol{\beta}$, apply a non-linear transformation ($g^{-1}$) to that linear combination and set it equal to conditional mean of the response variable $Y$ given an instance $\boldsymbol{x}$. The non-linear transformation provides added flexibility.
 :::
 
+## Doesn't prove that $Y | \boldsymbol{X} = \boldsymbol{x}$ is multimodal
+
+```{python}
+#| code-fold: true
+# Make some example where the distribution is multimodal because of a binary covariate which separates the means of the two distributions
+np.random.seed(1)
+
+fig, axes = plt.subplots(3, 1, figsize=(5.0, 3.0), sharex=True)
+
+x_min = 0
+x_max = y_train.max()
+x_grid = np.linspace(x_min, x_max, 100)
+
+# Simulate some data from an exponential distribution which has Pr(X < 1000) = 0.9
+n = 100
+p = 0.1
+lambda_ = -np.log(p) / 1000 
+mu = 1 / lambda_
+y_1 = np.random.exponential(scale=mu, size=n)
+
+# Pick a truncated normal distribution with a mean of 1100 and std of 250 (truncated to be positive)
+mu = 1100
+sigma = 100
+y_2 = stats.truncnorm.rvs((0 - mu) / sigma, (np.inf - mu) / sigma, loc=mu, scale=sigma, size=n)
+
+# Combine y_1 and y_2 for the final histogram
+y = np.concatenate([y_1, y_2])
+
+# Determine common bins
+bins = np.histogram_bin_edges(y, bins=30)
+
+
+# Plot each normal distribution with different means vertically
+for i, ax in enumerate(axes):
+    if i == 0:
+        ax.hist(y_1, bins=bins, density=True, color=colors[i+1])
+        ax.set_ylabel(f'$f(y | x = 1)$')
+
+    elif i == 1:
+        ax.hist(y_2, bins=bins, density=True, color=colors[i+1])
+        ax.set_ylabel(f'$f(y | x = 2)$')
+
+    else:
+        ax.hist(y, bins=bins, density=True)
+        ax.set_ylabel(f'$f(y)$')
+
+plt.tight_layout();
+```
+
 ## Gamma GLM
 
 Suppose a fitted gamma GLM model has
@@ -744,7 +786,7 @@ Suppose a fitted gamma GLM model has
 
 Then, it estimates the conditional mean of $Y$ given a new instance $\boldsymbol{x}=(1, x_1, x_2, x_3)$ as follows:
 $$
-    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
+    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle) = \exp\big(\beta_0 + \beta_1 x_1 + beta_2 x_2 + \beta_3 x_3 \big).
 $$
 
 A GLM can model any other exponential family distribution using an appropriate link function $g$.
@@ -766,8 +808,10 @@ $$
 
 Step 2. Estimate the dispersion parameter:
 $$
-    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
+    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{\bigl(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta})\bigr)^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
 $$ 
+
+(Here, $p$ is the number of coefficients in the model. If this $p$ doesn't include the intercept, then $p$ should be use $\frac{1}{n-(p+1)}$.)
 
 ## Code: Gamma GLM
 
@@ -799,9 +843,8 @@ gamma_glm.params
 # Dispersion Parameter
 mus = gamma_glm.predict(X_train_design)
 residuals = y_train - mus
-variance = mus**2
-dof = (len(y_train)-X_train.shape[1])
-phi_glm =  np.sum(residuals**2/variance)/dof
+dof = (len(y_train)-X_train_design.shape[1])
+phi_glm = np.sum(residuals**2/mus**2)/dof
 print(phi_glm)
 ```
 :::
@@ -823,74 +866,79 @@ Source: Ronald Richman (2022), Mind the Gap - Safely Incorporating Deep Learning
 
 ## CANN
 
-The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by Schelldorfer and Wüthrich (2019). We summarise the CANN approach as follows:
+The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by [Schelldorfer and Wüthrich (2019)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525). We summarise the CANN approach as follows:
 
 - Find the coefficients $\boldsymbol{\beta}$ of the GLM with a link function $g(\cdot)$.
 - Find the weights $\boldsymbol{w}_{\text{CANN}}$ of a neural network $\mathcal{M}_{\text{CANN}}:\mathbb{R}^{p}\to\mathbb{R}$.
 - Given a new instance $\boldsymbol{x}$, we have $$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).$$
 
+## Shifting the predicted distributions
+
+```{python}
+#| code-fold: true
+
+# Ensure reproducibility
+random.seed(1)
+
+# Make a 4x1 grid of plots
+fig, axes = plt.subplots(4, 1, figsize=(5.0, 3.0), sharex=True)
+
+# Define the x-axis
+x_min = 0
+x_max = 5000
+x_grid = np.linspace(x_min, x_max, 100)
+
+# Plot a few gamma distribution pdfs with different means.
+# Then plot gamma distributions with shifted means and the same dispersion parameter.
+glm_means = [1000, 3000, 2000, 4000]
+cann_means = [1500, 1400, 3000, 5000]
+for i, ax in enumerate(axes):
+    ax.plot(x_grid, stats.gamma.pdf(x_grid, a=2, scale=glm_means[i]/2), label=f'GLM')
+    ax.plot(x_grid, stats.gamma.pdf(x_grid, a=2, scale=cann_means[i]/2), label=f'CANN')
+    ax.set_ylabel(f'$f(y | x_{i+1})$')
+    if i == 0:
+        ax.legend(["GLM", "CANN"], loc="upper right", ncol=2)
+
+```
+
 ## Architecture
 
-![CANN approach.](CANN.png)
+![The CANN architecture.](cann-architecture.png)
+
+::: footer
+Source: Schelldorfer and Wüthrich (2019), [Nesting Classical Actuarial Models into Neural Networks](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525), SSRN, Figure 8.
+:::
 
 ## Code: Architecture
 
 ```{python}
-# Ensure reproducibility
-random.seed(1); tf.random.set_seed(1)                                   #<1>
+random.seed(1)
+inputs = Input(shape=X_train.shape[1:])
 
-# Pre-defined constants
-glm_weights = gamma_glm.params.iloc[1:].values                          #<2>
-glm_bias = gamma_glm.params.iloc[0]                                     #<3>
-
-# Define model inputs
-inputs = Input(shape=X_train.shape[1:])                                 #<4>
-
-# Non-trainable GLM linear part
-glm_logmu = Dense(1, activation='linear', trainable=False,
+# GLM part (won't be updated during training)
+glm_weights = gamma_glm.params.iloc[1:].values.reshape((-1, 1))
+glm_bias = gamma_glm.params.iloc[0]  
+glm_part = Dense(1, activation='linear', trainable=False,
                      kernel_initializer=Constant(glm_weights),
-                     bias_initializer=Constant(glm_bias))(inputs)       #<5>         
+                     bias_initializer=Constant(glm_bias))(inputs)       #<1>         
 
-# Neural network layers
-x = Dense(64, activation='relu')(inputs)                                #<6>
-x = Dense(64, activation='relu')(x)                                     #<7>
-cann_logmu = Dense(1, activation='linear')(x)                           #<8>
-```
-1. Sets the random seed for reproducibility
-2. Stores weights computed from GLM in `glm_weights`
-3. Stores bias computed from GLM in `glm_bias`
-4. Specifies the model input features
-5. Adds a `Dense` layer with just one neuron, to store the model output from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
-6. Adds another `Dense` layer 
-7. Adds another `Dense` layer 
-8. Adds the output layer with linear activation
+# Neural network part
+x = Dense(64, activation='leaky_relu')(inputs)
+nn_part = Dense(1, activation='linear')(x) 
 
-## Code: Loss Function
-
-```{python}
 # Combine GLM and CANN estimates
-cann = Model(inputs, Concatenate(axis=1)([cann_logmu, glm_logmu]))      #<1>
+mu = keras.ops.exp(glm_part + nn_part)                                #<2>
+cann = Model(inputs, mu)
 ```
-1. Since the output of the model is evaluated by combining the output from both branches, the model is constructed by concatenating outputs from `cann_logmu` and `glm_logmu`. Note that there are two predicted values, one predicted value from the `glm_logmu` component and the other coming from the `cann_logmu` component.
+1. Adds a `Dense` layer with just one neuron, to store the model output (before inverse link function) from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
+2. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
 
-We need to customise the loss function for CANN.
+Since this CANN predicts gamma distributions, we use the gamma NLL loss function.
 
 ```{python}
 def cann_negative_log_likelihood(y_true, y_pred):
-    # The new mean estimate
-    cann_logmu = y_pred[:, 0]                                       #<1>
-    glm_logmu = y_pred[:, 1]                                        #<2>
-    mu = tf.math.exp(cann_logmu + glm_logmu)                        #<3>
-
-    # Compute the negative log likelihood of the Gamma distribution
-    nll = tf.reduce_mean(cann_logmu + glm_logmu + y_true/mu)        #<4>
-    
-    return nll
+    return keras.ops.mean(keras.ops.log(y_pred) + y_true/y_pred)
 ```
-1. Stores the first column of the `y_pred` matrix as `cann_logmu` (the prediction from the CANN)
-2. Stores the second column of the `y_pred` matrix as `glm_logmu` (the prediction from the glm)
-3. Computes the exponential of the sum of them as `mu`
-4. Computes the negative log likelihood of a Gamma distribution where $\log(\mu)$ is now the sum `cann_logmu + glm_logmu`
 
 ## Code: Model Training
 
@@ -926,11 +974,10 @@ else:
 Find the dispersion parameter.
 
 ``` {python}
-mus = np.exp(np.sum(cann.predict(X_train, verbose=0), axis = 1))
+mus = cann.predict(X_train, verbose=0).flatten()
 residuals = y_train - mus
-variance = mus**2
-dof = (len(y_train)-X_train.shape[1])
-phi_cann = np.sum(residuals**2/variance) / dof
+dof = (len(y_train)-(X_train.shape[1] + 1))
+phi_cann = np.sum(residuals**2/mus**2) / dof
 print(phi_cann)
 ```
 
@@ -1011,7 +1058,7 @@ $$
         = ( &\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
              \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
             &\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
-            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*),\\ 
+            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*), \\ 
             &\beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
             \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
         ).
@@ -1033,6 +1080,7 @@ import tf_keras
 
 ::: footer
 Source: Tensorflow Probability GitHub, [Keras 3 breaks Tensorflow Probability upon import](https://github.com/tensorflow/probability/issues/1774#issuecomment-1841706103), issue #1774.
+:::
 
 ## Code: Architecture
 
@@ -1040,7 +1088,7 @@ The following code resembles the architecture of the architecture of the gamma M
 
 ```{python}
 # Ensure reproducibility
-random.seed(1); tf.random.set_seed(1)                                   #<1>
+random.seed(1);                                                                         #<1>
 
 inputs = tf_keras.layers.Input(shape=X_train.shape[1:])                                 #<2>
 
@@ -1048,19 +1096,18 @@ inputs = tf_keras.layers.Input(shape=X_train.shape[1:])                         
 x = tf_keras.layers.Dense(64, activation='relu')(inputs)                                #<3>
 x = tf_keras.layers.Dense(64, activation='relu')(x)
 
-pis = tf_keras.layers.Dense(2, activation='softmax')(x) # Mixing weights                 #<4>
+pis = tf_keras.layers.Dense(2, activation='softmax')(x) # Mixing weights                #<4>
 alphas = tf_keras.layers.Dense(2, activation='exponential')(x) # Shape parameters
 betas = tf_keras.layers.Dense(2, activation='exponential')(x) # Scale parameters
+out = tf_keras.layers.Concatenate(axis=1)([pis, alphas, betas]) # shape = (None, 6)     #<5>
 
-# `y_pred` will now have 6 columns
-gamma_mdn = tf_keras.Model(inputs, tf_keras.layers.Concatenate(axis=1)([pis, alphas, betas]))    #<5>
+gamma_mdn = tf_keras.Model(inputs, out)
 ```
 1. Sets the random seeds for reproducibility
 2. Defines the input layer with the number of neurons being equal to the number of input features
 3. Specifies the hidden layers of the neural network
 4. Specifies the neurons of the output layer. Here, `softmax` is used for $\pi$ values as they must sum up to 1. `exponential` activation is used for both $\alpha$'s and $\beta$'s as they must be non-negative.
-5. Defines the model by specifying the inputs and outputs
-
+5. Combines all of the outputs since Keras' loss function requires a single output (which will now have 6 columns).
 
 ## Loss Function
 
@@ -1068,7 +1115,7 @@ The negative log-likelihood loss function is given by
 
 $$
     \mathcal{L}(\mathcal{D}, \boldsymbol{w})
-    = - \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}) 
+    = - \frac{1}{n} \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}) 
 $$
 where the $f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})$ is defined by
 $$
@@ -1078,47 +1125,37 @@ $$
 \end{align*}
 $$
 
-## Code: Loss Function
+## Code: Loss & training 
 
-We employ functions from `tensorflow_probability` to code the loss function for the gamma MDN.
-The `MixtureSameFamily` function facilitates defining a mixture distribution all components from the same distribution but have different parametrization.
+`tensorflow_probability` to the rescue.
 
 ```{python}
 import tensorflow_probability as tfp                                        #<1>
 tfd = tfp.distributions                                                     #<2>
-K = 2 # number of mixture components                                        #<3>
 
-def gamma_mixture_nll(y_true, y_pred):                                      
-    K = y_pred.shape[1] // 3                                                #<4>
-    pis =  y_pred[:, :K]                                                    
+def gamma_mixture_nll(y_true, y_pred):   
+    K = y_pred.shape[1] // 3                                                #<3>
+    pis = y_pred[:, :K]                                                    
     alphas = y_pred[:, K:2*K]                                               
-    betas = y_pred[:, 2*K:3*K]                                              
-
-    # The mixture distribution is a MixtureSameFamily distribution
+    betas = y_pred[:, 2*K:3*K]
     mixture_distribution = tfd.MixtureSameFamily(
         mixture_distribution=tfd.Categorical(probs=pis),
-        components_distribution=tfd.Gamma(alphas, betas))                   #<5>
-
-    # The loss is the negative log-likelihood of the data
-    return -mixture_distribution.log_prob(y_true)                           #<6>
+        components_distribution=tfd.Gamma(alphas, betas))                   #<4>
+    return -tf_keras.backend.mean(mixture_distribution.log_prob(y_true))    #<5>
 ```
 1. Imports `tfp` class from `tensorflow_probability`
 2. Stores statistical distributions in the `tfp` class as `tfd`
-3. Specifies the number of components in the mixture model
 4. Extracts predicted values for all model components and stores them in separate matrices
 5. Specifies the mixture distribution using computed model components
 6. Use the fitted model to calculate negative log likelihood given the observed data
 
-## Code: Model Training
-
 ```{python}
 #| eval: false
-# Employ the loss function from previous slide
 gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)             #<1>
 
 hist = gamma_mdn.fit(X_train, y_train,
     epochs=100, 
-    callbacks=[EarlyStopping(patience=10)],  
+    callbacks=[tf_keras.callbacks.EarlyStopping(patience=10)],  
     verbose=0,
     batch_size=64, 
     validation_split=0.2)                                               #<2>
@@ -1132,7 +1169,7 @@ if not os.path.exists("gamma_mdn.keras"):
     gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)
     gamma_mdn.fit(X_train, y_train,
       epochs=100, 
-      callbacks=[EarlyStopping(patience=10)],  
+      callbacks=[tf_keras.callbacks.EarlyStopping(patience=10)],  
       verbose=0,
       batch_size=64, 
       validation_split=0.2)
@@ -1183,17 +1220,42 @@ Continuous Ranked Probability Score (CRPS)
     $$
     where $F$ is the cumulative distribution function.
 
+
+## Likelihoods
+
+```{python}
+#| code-fold: true
+y_pred = np.polyval(coefficients, X_toy[:4])
+
+fig, axes = plt.subplots(4, 1, figsize=(5.0, 3.0))
+
+x_min = y_pred[:4].min() - 4*sigma_toy
+x_max = y_pred[:4].max() + 4*sigma_toy
+x_grid = np.linspace(x_min, x_max, 100)
+
+# Plot each normal distribution with different means vertically
+for i, ax in enumerate(axes):
+    mu = y_pred[i]
+    y_grid = stats.norm.pdf(x_grid, mu, sigma_toy)
+    ax.plot(x_grid, y_grid)
+    ax.plot([y_toy[i], y_toy[i]], [0, stats.norm.pdf(y_toy[i], mu, sigma_toy)], color='red', linestyle='--')
+    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], mu, sigma_toy)], color='red', zorder=10)
+    ax.set_ylabel(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
+    ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
+    ax.set_ylim(0, 0.25)
+    
+plt.tight_layout();
+```
+
 ## Code: NLL
 
 ```{python}
-from scipy.stats import gamma
-
 def gamma_nll(mean, dispersion, y):
     # Calculate shape and scale parameters from mean and dispersion
     shape = 1 / dispersion; scale = mean * dispersion
 
     # Create a gamma distribution object
-    gamma_dist = gamma(a=shape, scale=scale)
+    gamma_dist = stats.gamma(a=shape, scale=scale)
     
     return -np.mean(gamma_dist.logpdf(y))
 
@@ -1203,7 +1265,7 @@ mus = gamma_glm.predict(X_test_design)
 nll_glm = gamma_nll(mus, phi_glm, y_test)
 
 # CANN
-mus = np.exp(np.sum(cann.predict(X_test, verbose=0), axis = 1))
+mus = cann.predict(X_test, verbose=0)
 nll_cann = gamma_nll(mus, phi_cann, y_test)
 
 # MDN
@@ -1333,24 +1395,29 @@ from keras.regularizers import L1, L2
 def l1_model(regulariser_strength=0.01):
   random.seed(123)
   model = Sequential([
-      Dense(30,
-        activation="leaky_relu",
-        name="hidden1"),
-      Dense(30,
-        activation="leaky_relu",
-        kernel_regularizer=L1(regulariser_strength),
-        name="hidden2"),
-      Dense(1, 
-        activation="exponential",
-        name="output")
+      Dense(30, activation="leaky_relu",
+        kernel_regularizer=L1(regulariser_strength)),
+      Dense(1, activation="exponential")
   ])
 
   model.compile("adam", "mse")
   model.fit(X_train_sc, y_train, epochs=4, verbose=0)
   return model
+
+def l2_model(regulariser_strength=0.01):
+  random.seed(123)
+  model = Sequential([
+      Dense(30, activation="leaky_relu",
+        kernel_regularizer=L2(regulariser_strength)),
+      Dense(1, activation="exponential")
+  ])
+
+  model.compile("adam", "mse")
+  model.fit(X_train_sc, y_train, epochs=10, verbose=0)
+  return model
 ```
 
-## Weights before & after $\ell_1$
+## Weights before & after $L^2$
 
 ```{python}
 #| echo: false
@@ -1360,50 +1427,8 @@ set_square_figures()
 ::: columns
 ::: column
 ```{python}
-model = l1_model(0.0)
-weights = model.get_layer("hidden2").get_weights()[0].flatten()
-print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
-plt.hist(weights, bins=100);
-```
-::: 
-::: column
-```{python}
-model = l1_model(1.0)
-weights = model.get_layer("hidden2").get_weights()[0].flatten()
-print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
-plt.hist(weights, bins=100);
-```
-::: 
-::: 
-
-## Weights before & after $\ell_2$
-
-```{python}
-#| echo: false
-def l2_model(regulariser_strength=0.01):
-  random.seed(123)
-  model = Sequential([
-      Dense(30,
-        activation="leaky_relu",
-        name="hidden1"),
-      Dense(30,
-        activation="leaky_relu",
-        kernel_regularizer=L2(regulariser_strength),
-        name="hidden2"),
-      Dense(1, 
-        activation="exponential",
-        name="output")
-  ])
-
-  model.compile("adam", "mse")
-  model.fit(X_train_sc, y_train, epochs=4, verbose=0)
-  return model
-```
-::: columns
-::: column
-```{python}
 model = l2_model(0.0)
-weights = model.get_layer("hidden2").get_weights()[0].flatten()
+weights = model.layers[0].get_weights()[0].flatten()
 print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
 plt.hist(weights, bins=100);
 ```
@@ -1411,12 +1436,34 @@ plt.hist(weights, bins=100);
 ::: column
 ```{python}
 model = l2_model(1.0)
-weights = model.get_layer("hidden2").get_weights()[0].flatten()
+weights = model.layers[0].get_weights()[0].flatten()
 print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
 plt.hist(weights, bins=100);
 ```
 ::: 
 ::: 
+
+## Weights before & after $L^1$
+
+::: columns
+::: column
+```{python}
+model = l1_model(0.0)
+weights = model.layers[0].get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: column
+```{python}
+model = l1_model(1.0)
+weights = model.layers[0].get_weights()[0].flatten()
+print(f"Number of weights almost 0: {np.sum(np.abs(weights) < 1e-5)}")
+plt.hist(weights, bins=100);
+```
+::: 
+::: 
+
 
 ```{python}
 #| echo: false
@@ -1487,11 +1534,11 @@ from keras.layers import Dropout
 random.seed(2); 
 
 model = Sequential([
-    Dense(30, activation="leaky_relu", name="hidden1"),
+    Dense(30, activation="leaky_relu"),
     Dropout(0.2),
-    Dense(30, activation="leaky_relu", name="hidden2"),
+    Dense(30, activation="leaky_relu"),
     Dropout(0.2),
-    Dense(1, activation="exponential", name="output")
+    Dense(1, activation="exponential")
 ])
 
 model.compile("adam", "mse")
@@ -1561,14 +1608,13 @@ model(X_train_sc.head(3),
 random.seed(123)
 
 model = Sequential([
-    Dense(30,
-      activation="relu",
-      name="hidden"),
+    Dense(30, activation="relu"),
     Dense(1)
 ])
 
 model.compile("adam", "mse")
-hist = model.fit(X_train, y_train, epochs=5, verbose=0)
+hist = model.fit(X_train, y_train,
+        epochs=5, verbose=0)
 hist.history["loss"]
 ```
 :::
@@ -1595,16 +1641,19 @@ numpy.set_printoptions(threshold=10);
 ```
 
 ```{python}
-acts = model.get_layer("hidden")(X_train).numpy()
+acts = model.layers[0](X_train).numpy()
+print(X_train.shape, acts.shape)
 acts[:3]
 ```
 
 ```{python}
-acts.mean(axis=0)
+dead = acts.mean(axis=0) == 0
+np.sum(dead)
 ```
 
 ```{python}
-np.sum(acts.mean(axis=0) == 0)
+idx = np.where(dead)[0][0]
+acts[:, idx-1:idx+2]
 ```
 
 ```{python}

@@ -427,6 +427,28 @@ Patrick Laub
 </div>
 
 </section>
+<section id="key-idea" class="slide level2">
+<h2>Key idea</h2>
+<div class="columns">
+<div class="column">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="Density_forecasting_2.jpeg"></p>
+<figcaption>An example of distributional forecasting over the All Ordinaries Index</figcaption>
+</figure>
+</div>
+</div><div class="column">
+<ul>
+<li>Earlier machine learning models focused on point estimates.</li>
+<li>However, in many applications, we need to understand the distribution of the response variable.</li>
+<li>Each prediction becomes a <em>distribution</em> over the possible outcomes</li>
+</ul>
+</div>
+</div>
+<div class="footer">
+<p>Source: Tomasz Woźniak (2024), <a href="https://www.linkedin.com/posts/tomaszwwozniak_rstats-densityforecasting-activity-7171005952463134721-ZsHl?utm_source=share&amp;utm_medium=member_desktop">LinkedIn Post</a>, accessed on July 15 2024.</p>
+</div>
+</section>
 <section>
 <section id="traditional-regression" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
 <h1>Traditional Regression</h1>
@@ -507,32 +529,32 @@ Patrick Laub
 </section>
 <section id="visualising-the-distribution-of-each-y" class="slide level2">
 <h2>Visualising the distribution of each <span class="math inline">Y</span></h2>
-<div id="09181594" class="cell" data-execution_count="3">
+<div id="f3d17970" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a></a><span class="co"># Generate sample data for linear regression</span></span>
 <span id="cb1-2"><a></a>np.random.seed(<span class="dv">0</span>)</span>
-<span id="cb1-3"><a></a>X <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">10</span>)</span>
-<span id="cb1-4"><a></a>np.random.shuffle(X)</span>
+<span id="cb1-3"><a></a>X_toy <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">10</span>)</span>
+<span id="cb1-4"><a></a>np.random.shuffle(X_toy)</span>
 <span id="cb1-5"><a></a></span>
 <span id="cb1-6"><a></a>beta_0 <span class="op">=</span> <span class="dv">2</span></span>
 <span id="cb1-7"><a></a>beta_1 <span class="op">=</span> <span class="dv">3</span></span>
-<span id="cb1-8"><a></a>y <span class="op">=</span> beta_0 <span class="op">+</span> beta_1 <span class="op">*</span> X <span class="op">+</span> np.random.normal(scale<span class="op">=</span><span class="dv">2</span>, size<span class="op">=</span>X.shape)</span>
-<span id="cb1-9"><a></a></span>
-<span id="cb1-10"><a></a><span class="co"># Fit a simple linear regression model</span></span>
-<span id="cb1-11"><a></a>coefficients <span class="op">=</span> np.polyfit(X, y, <span class="dv">1</span>)</span>
-<span id="cb1-12"><a></a>predicted_y <span class="op">=</span> np.polyval(coefficients, X)</span>
-<span id="cb1-13"><a></a></span>
-<span id="cb1-14"><a></a><span class="co"># Plot the data points and the fitted line</span></span>
-<span id="cb1-15"><a></a>plt.scatter(X, y, label<span class="op">=</span><span class="st">'Data Points'</span>)</span>
-<span id="cb1-16"><a></a>plt.plot(X, predicted_y, color<span class="op">=</span><span class="st">'red'</span>, label<span class="op">=</span><span class="st">'Fitted Line'</span>)</span>
-<span id="cb1-17"><a></a></span>
-<span id="cb1-18"><a></a><span class="co"># Draw the normal distribution bell curve sideways at each data point</span></span>
-<span id="cb1-19"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(X)):</span>
-<span id="cb1-20"><a></a>    mu <span class="op">=</span> predicted_y[i]</span>
-<span id="cb1-21"><a></a>    sigma <span class="op">=</span> <span class="dv">2</span>  <span class="co"># Assuming a standard deviation for the normal distribution</span></span>
-<span id="cb1-22"><a></a>    y_values <span class="op">=</span> np.linspace(mu <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma, mu <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma, <span class="dv">100</span>)</span>
-<span id="cb1-23"><a></a>    x_values <span class="op">=</span> stats.norm.pdf(y_values, mu, sigma) <span class="op">+</span> X[i]</span>
+<span id="cb1-8"><a></a>y_toy <span class="op">=</span> beta_0 <span class="op">+</span> beta_1 <span class="op">*</span> X_toy <span class="op">+</span> np.random.normal(scale<span class="op">=</span><span class="dv">2</span>, size<span class="op">=</span>X_toy.shape)</span>
+<span id="cb1-9"><a></a>sigma_toy <span class="op">=</span> <span class="dv">2</span>  <span class="co"># Assuming a standard deviation for the normal distribution</span></span>
+<span id="cb1-10"><a></a></span>
+<span id="cb1-11"><a></a><span class="co"># Fit a simple linear regression model</span></span>
+<span id="cb1-12"><a></a>coefficients <span class="op">=</span> np.polyfit(X_toy, y_toy, <span class="dv">1</span>)</span>
+<span id="cb1-13"><a></a>predicted_y <span class="op">=</span> np.polyval(coefficients, X_toy)</span>
+<span id="cb1-14"><a></a></span>
+<span id="cb1-15"><a></a><span class="co"># Plot the data points and the fitted line</span></span>
+<span id="cb1-16"><a></a>plt.scatter(X_toy, y_toy, label<span class="op">=</span><span class="st">'Data Points'</span>)</span>
+<span id="cb1-17"><a></a>plt.plot(X_toy, predicted_y, color<span class="op">=</span><span class="st">'red'</span>, label<span class="op">=</span><span class="st">'Fitted Line'</span>)</span>
+<span id="cb1-18"><a></a></span>
+<span id="cb1-19"><a></a><span class="co"># Draw the normal distribution bell curve sideways at each data point</span></span>
+<span id="cb1-20"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(X_toy)):</span>
+<span id="cb1-21"><a></a>    mu <span class="op">=</span> predicted_y[i]</span>
+<span id="cb1-22"><a></a>    y_values <span class="op">=</span> np.linspace(mu <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma_toy, mu <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma_toy, <span class="dv">100</span>)</span>
+<span id="cb1-23"><a></a>    x_values <span class="op">=</span> stats.norm.pdf(y_values, mu, sigma_toy) <span class="op">+</span> X_toy[i]</span>
 <span id="cb1-24"><a></a>    plt.plot(x_values, y_values, color<span class="op">=</span><span class="st">'blue'</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
 <span id="cb1-25"><a></a></span>
 <span id="cb1-26"><a></a>plt.xlabel(<span class="st">'$x$'</span>)</span>
@@ -558,26 +580,27 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\
 </section>
 <section id="the-predicted-distributions" class="slide level2">
 <h2>The predicted distributions</h2>
-<div id="d670cba5" class="cell" data-execution_count="4">
+<div id="16a8d116" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a></a>y_pred <span class="op">=</span> np.polyval(coefficients, X[:<span class="dv">4</span>])</span>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a></a>y_pred <span class="op">=</span> np.polyval(coefficients, X_toy[:<span class="dv">4</span>])</span>
 <span id="cb2-2"><a></a></span>
 <span id="cb2-3"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>))</span>
 <span id="cb2-4"><a></a></span>
-<span id="cb2-5"><a></a>x_min <span class="op">=</span> y_pred[:<span class="dv">4</span>].min() <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma</span>
-<span id="cb2-6"><a></a>x_max <span class="op">=</span> y_pred[:<span class="dv">4</span>].max() <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma</span>
+<span id="cb2-5"><a></a>x_min <span class="op">=</span> y_pred[:<span class="dv">4</span>].min() <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb2-6"><a></a>x_max <span class="op">=</span> y_pred[:<span class="dv">4</span>].max() <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
 <span id="cb2-7"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
 <span id="cb2-8"><a></a></span>
 <span id="cb2-9"><a></a><span class="co"># Plot each normal distribution with different means vertically</span></span>
 <span id="cb2-10"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
 <span id="cb2-11"><a></a>    mu <span class="op">=</span> y_pred[i]</span>
-<span id="cb2-12"><a></a>    y_grid <span class="op">=</span> stats.norm.pdf(x_grid, mu, sigma)</span>
+<span id="cb2-12"><a></a>    y_grid <span class="op">=</span> stats.norm.pdf(x_grid, mu, sigma_toy)</span>
 <span id="cb2-13"><a></a>    ax.plot(x_grid, y_grid)</span>
 <span id="cb2-14"><a></a>    ax.set_ylabel(<span class="ss">f'$f(y ; </span><span class="ch">\\</span><span class="ss">boldsymbol</span><span class="ch">{{</span><span class="ss">x</span><span class="ch">}}</span><span class="ss">_</span><span class="ch">{{</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ch">}}</span><span class="ss">)$'</span>)</span>
 <span id="cb2-15"><a></a>    ax.set_xticks([y_pred[i]], labels<span class="op">=</span>[<span class="vs">r'$\mu_{'</span> <span class="op">+</span> <span class="bu">str</span>(i<span class="op">+</span><span class="dv">1</span>) <span class="op">+</span> <span class="vs">r'}$'</span>])</span>
-<span id="cb2-16"><a></a></span>
-<span id="cb2-17"><a></a>plt.tight_layout()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb2-16"><a></a>    ax.plot(y_toy[i], <span class="dv">0</span>, <span class="st">'r|'</span>)</span>
+<span id="cb2-17"><a></a></span>
+<span id="cb2-18"><a></a>plt.tight_layout()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 
 </div>
@@ -649,8 +672,8 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i}
 <p><span class="math display">
 \text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 </span></p>
-<p>The binary cross-entropy loss is identical: <span class="math display">
-\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+<p>The binary cross-entropy loss is basically identical: <span class="math display">
+\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = - \frac{1}{n} \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 </span></p>
 </section>
 <section id="poisson-regression" class="slide level2">
@@ -677,7 +700,7 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
 </span></p>
 <p>The Poisson loss is</p>
 <p><span class="math display">
-\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
+\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \frac{1}{n} \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
 </span></p>
 </section>
 <section id="gamma-regression" class="slide level2">
@@ -777,7 +800,7 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </section>
 <section id="stock-price-forecasting" class="slide level2">
 <h2>Stock price forecasting</h2>
-<div id="164dd33a" class="cell" data-execution_count="5">
+<div id="415356e4" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a></a><span class="kw">def</span> lagged_timeseries(df, target, window<span class="op">=</span><span class="dv">30</span>):</span>
@@ -830,7 +853,7 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <img data-src="distributional-regression_files/figure-revealjs/cell-6-output-1.png" class="r-stretch"></section>
 <section id="noisy-auto-regressive-forecast" class="slide level2">
 <h2>Noisy auto-regressive forecast</h2>
-<div id="c333a2c4" class="cell" data-execution_count="6">
+<div id="3e539a29" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a></a><span class="kw">def</span> noisy_autoregressive_forecast(model, X_val, sigma, suppress<span class="op">=</span><span class="va">False</span>):</span>
 <span id="cb4-2"><a></a>    <span class="co">"""</span></span>
 <span id="cb4-3"><a></a><span class="co">    Generate a multi-step forecast using the given model.</span></span>
@@ -861,10 +884,10 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </section>
 <section id="original-forecast" class="slide level2">
 <h2>Original forecast</h2>
-<div id="c8761fe0" class="cell" data-execution_count="7">
+<div id="1ece93ed" class="cell" data-execution_count="7">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a></a>lr_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="29383217" class="cell" data-execution_count="8">
+<div id="cba87879" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a></a>stock.loc[lr_forecast.index, <span class="st">"AR Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_forecast</span>
@@ -879,18 +902,18 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </details>
 
 </div>
-<img data-src="distributional-regression_files/figure-revealjs/cell-9-output-1.png" class="r-stretch"><div id="bdb7265f" class="cell" data-execution_count="9">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> lr.predict(X_train)</span>
+<img data-src="distributional-regression_files/figure-revealjs/cell-9-output-1.png" class="r-stretch"><div id="99641bdf" class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a></a>residuals <span class="op">=</span> y_train.loc[<span class="st">"2015"</span>:] <span class="op">-</span> lr.predict(X_train.loc[<span class="st">"2015"</span>:])</span>
 <span id="cb7-2"><a></a>sigma <span class="op">=</span> np.std(residuals)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="with-noise" class="slide level2">
 <h2>With noise</h2>
-<div id="da3329bd" class="cell" data-execution_count="10">
+<div id="a57587f9" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a></a>np.random.seed(<span class="dv">1</span>)</span>
 <span id="cb8-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, sigma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="32b64558" class="cell" data-execution_count="11">
+<div id="bf33ab68" class="cell" data-execution_count="11">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a></a>stock.loc[lr_noisy_forecast.index, <span class="st">"AR Noisy Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_noisy_forecast</span>
@@ -901,11 +924,11 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <img data-src="distributional-regression_files/figure-revealjs/cell-12-output-1.png" class="r-stretch"></section>
 <section id="with-noise-1" class="slide level2" data-visibility="uncounted">
 <h2>With noise</h2>
-<div id="4171f0ff" class="cell" data-execution_count="12">
+<div id="0a6cba55" class="cell" data-execution_count="12">
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a>np.random.seed(<span class="dv">2</span>)</span>
 <span id="cb10-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, sigma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="fe443d31" class="cell" data-execution_count="13">
+<div id="1c960d84" class="cell" data-execution_count="13">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a></a>stock.loc[lr_noisy_forecast.index, <span class="st">"AR Noisy Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_noisy_forecast</span>
@@ -916,11 +939,11 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <img data-src="distributional-regression_files/figure-revealjs/cell-14-output-1.png" class="r-stretch"></section>
 <section id="with-noise-2" class="slide level2" data-visibility="uncounted">
 <h2>With noise</h2>
-<div id="30380de5" class="cell" data-execution_count="14">
+<div id="e007d100" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a></a>np.random.seed(<span class="dv">3</span>)</span>
 <span id="cb12-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_val, sigma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="44c63a52" class="cell" data-execution_count="15">
+<div id="c4e3b5a1" class="cell" data-execution_count="15">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a></a>stock.loc[lr_noisy_forecast.index, <span class="st">"AR Noisy Linear"</span>] <span class="op">=</span> <span class="dv">100</span> <span class="op">*</span> lr_noisy_forecast</span>
@@ -931,15 +954,15 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <img data-src="distributional-regression_files/figure-revealjs/cell-16-output-1.png" class="r-stretch"></section>
 <section id="many-noisy-forecasts" class="slide level2" data-visibility="uncounted">
 <h2>Many noisy forecasts</h2>
-<div id="7000ea55" class="cell" data-execution_count="16">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a></a>num_forecasts <span class="op">=</span> <span class="dv">500</span></span>
+<div id="3e0eef5c" class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a></a>num_forecasts <span class="op">=</span> <span class="dv">300</span></span>
 <span id="cb14-2"><a></a>forecasts <span class="op">=</span> []</span>
 <span id="cb14-3"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_forecasts):</span>
 <span id="cb14-4"><a></a>    forecasts.append(noisy_autoregressive_forecast(lr, X_val, sigma) <span class="op">*</span> <span class="dv">100</span>)</span>
 <span id="cb14-5"><a></a>noisy_forecasts <span class="op">=</span> pd.concat(forecasts, axis<span class="op">=</span><span class="dv">1</span>)</span>
 <span id="cb14-6"><a></a>noisy_forecasts.index <span class="op">=</span> X_val.index</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="dc52e94d" class="cell" data-execution_count="17">
+<div id="5e34e048" class="cell" data-execution_count="17">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a></a>noisy_forecasts.loc[<span class="st">"2018-12"</span>:<span class="st">"2019"</span>].plot(legend<span class="op">=</span><span class="va">False</span>, alpha<span class="op">=</span><span class="fl">0.4</span>)</span>
@@ -950,13 +973,13 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <img data-src="distributional-regression_files/figure-revealjs/cell-18-output-1.png" class="r-stretch"></section>
 <section id="prediction-intervals" class="slide level2">
 <h2>95% “prediction intervals”</h2>
-<div id="8d2e75a4" class="cell" data-execution_count="18">
+<div id="ab015c7b" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a></a><span class="co"># Calculate quantiles for the forecasts</span></span>
 <span id="cb16-2"><a></a>lower_quantile <span class="op">=</span> noisy_forecasts.quantile(<span class="fl">0.025</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
 <span id="cb16-3"><a></a>upper_quantile <span class="op">=</span> noisy_forecasts.quantile(<span class="fl">0.975</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
 <span id="cb16-4"><a></a>mean_forecast <span class="op">=</span> noisy_forecasts.mean(axis<span class="op">=</span><span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="eba54d79" class="cell" data-execution_count="19">
+<div id="c1815430" class="cell" data-execution_count="19">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a></a><span class="co"># Plot the mean forecast</span></span>
@@ -986,12 +1009,16 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <h2>Residuals</h2>
 <div class="columns">
 <div class="column">
-<div id="729e7313" class="cell" data-execution_count="21">
+<div id="26f05e64" class="cell" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a></a>y_pred <span class="op">=</span> lr.predict(X_train)</span>
 <span id="cb18-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> y_pred</span>
 <span id="cb18-3"><a></a>residuals <span class="op">-=</span> np.mean(residuals)</span>
 <span id="cb18-4"><a></a>residuals <span class="op">/=</span> np.std(residuals)</span>
 <span id="cb18-5"><a></a>stats.shapiro(residuals)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/home/plaub/miniconda3/envs/ai2024/lib/python3.11/site-packages/scipy/stats/_morestats.py:1882: UserWarning: p-value may not be accurate for N &gt; 5000.
+  warnings.warn("p-value may not be accurate for N &gt; 5000.")</code></pre>
+</div>
 <div class="cell-output cell-output-display" data-execution_count="21">
 <pre><code>ShapiroResult(statistic=0.9038059115409851, pvalue=0.0)</code></pre>
 </div>
@@ -1012,13 +1039,13 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </div>
 </div>
 </div><div class="column">
-<div id="619b5b5e" class="cell" data-execution_count="22">
+<div id="92f2f85f" class="cell" data-execution_count="22">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a></a>plt.hist(residuals, bins<span class="op">=</span><span class="dv">40</span>, density<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb20-2"><a></a>x <span class="op">=</span> np.linspace(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">100</span>)</span>
-<span id="cb20-3"><a></a>plt.xlim(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>)</span>
-<span id="cb20-4"><a></a>plt.plot(x, stats.norm.pdf(x, <span class="dv">0</span>, <span class="dv">1</span>))<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a></a>plt.hist(residuals, bins<span class="op">=</span><span class="dv">40</span>, density<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb21-2"><a></a>x <span class="op">=</span> np.linspace(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">100</span>)</span>
+<span id="cb21-3"><a></a>plt.xlim(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb21-4"><a></a>plt.plot(x, stats.norm.pdf(x, <span class="dv">0</span>, <span class="dv">1</span>))<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display">
 <div>
@@ -1035,10 +1062,10 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <h2>Q-Q plot and P-P plot</h2>
 <div class="columns">
 <div class="column">
-<div id="d55812f2" class="cell" data-execution_count="23">
+<div id="4eec953e" class="cell" data-execution_count="23">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a></a>sm.qqplot(residuals, line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a></a>sm.qqplot(residuals, line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display">
 <div>
@@ -1049,10 +1076,10 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </div>
 </div>
 </div><div class="column">
-<div id="7a74652d" class="cell" data-execution_count="24">
+<div id="cee41fb5" class="cell" data-execution_count="24">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a></a>sm.ProbPlot(residuals).ppplot(line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a></a>sm.ProbPlot(residuals).ppplot(line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-display">
 <div>
@@ -1064,6 +1091,20 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </div>
 </div>
 </div>
+</section>
+<section id="residuals-against-time" class="slide level2">
+<h2>Residuals against time</h2>
+<div id="2a66be25" class="cell" data-execution_count="26">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a></a>plt.plot(y_train.index, residuals)</span>
+<span id="cb24-2"><a></a>plt.xlabel(<span class="st">"Date"</span>)</span>
+<span id="cb24-3"><a></a>plt.ylabel(<span class="st">"Standardised Residuals"</span>)</span>
+<span id="cb24-4"><a></a>plt.tight_layout()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-27-output-1.png" class="r-stretch"><p>Heteroskedasticity!</p>
 </section></section>
 <section>
 <section id="glms-and-neural-networks" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
@@ -1109,23 +1150,14 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </ul>
 </div>
 </section>
-<section id="code-data" class="slide level2">
-<h2>Code: Data</h2>
-<div id="bd0946d6" class="cell" data-execution_count="26">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb23-2"><a></a>sev_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2sev.csv'</span>)</span>
-<span id="cb23-3"><a></a>freq_df <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2freq.csv'</span>)</span>
-<span id="cb23-4"><a></a></span>
-<span id="cb23-5"><a></a><span class="co"># Create a copy of freq dataframe without 'claimfreq' column</span></span>
-<span id="cb23-6"><a></a>freq_without_claimfreq <span class="op">=</span> freq_df.drop(columns<span class="op">=</span>[<span class="st">'ClaimNb'</span>])</span>
-<span id="cb23-7"><a></a></span>
-<span id="cb23-8"><a></a><span class="co"># Merge severity dataframe with freq_without_claimfreq dataframe</span></span>
-<span id="cb23-9"><a></a>new_sev_df <span class="op">=</span> pd.merge(sev_df, freq_without_claimfreq, on<span class="op">=</span><span class="st">'IDpol'</span>, </span>
-<span id="cb23-10"><a></a>                                                      how<span class="op">=</span><span class="st">'left'</span>)</span>
-<span id="cb23-11"><a></a>new_sev_df <span class="op">=</span> new_sev_df.dropna()</span>
-<span id="cb23-12"><a></a>new_sev_df <span class="op">=</span> new_sev_df.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb23-13"><a></a>new_sev_df[:<span class="dv">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="26">
+<section id="french-motor-claim-sizes" class="slide level2">
+<h2>French motor claim sizes</h2>
+<div id="ee261fc0" class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a></a>sev <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2sev.csv'</span>)</span>
+<span id="cb25-2"><a></a>cov <span class="op">=</span> pd.read_csv(<span class="st">'freMTPL2freq.csv'</span>).drop(columns<span class="op">=</span>[<span class="st">'ClaimNb'</span>])</span>
+<span id="cb25-3"><a></a>sev <span class="op">=</span> pd.merge(sev, cov, on<span class="op">=</span><span class="st">'IDpol'</span>, how<span class="op">=</span><span class="st">'left'</span>).drop(columns<span class="op">=</span>[<span class="st">"IDpol"</span>]).dropna()</span>
+<span id="cb25-4"><a></a>sev</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="27">
 <div>
 <div>
 <style scoped="">
@@ -1188,51 +1220,119 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <td>2354.0</td>
 <td>Ile-de-France</td>
 </tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="even">
+<td data-quarto-table-cell-role="th">26637</td>
+<td>767.55</td>
+<td>0.43</td>
+<td>6.0</td>
+<td>0.0</td>
+<td>67.0</td>
+<td>50.0</td>
+<td>B2</td>
+<td>Diesel</td>
+<td>C</td>
+<td>142.0</td>
+<td>Languedoc-Roussillon</td>
+</tr>
+<tr class="odd">
+<td data-quarto-table-cell-role="th">26638</td>
+<td>1500.00</td>
+<td>0.28</td>
+<td>7.0</td>
+<td>2.0</td>
+<td>36.0</td>
+<td>60.0</td>
+<td>B12</td>
+<td>Diesel</td>
+<td>D</td>
+<td>1732.0</td>
+<td>Rhone-Alpes</td>
+</tr>
 </tbody>
 </table>
 
+<p>26444 rows × 11 columns</p>
 </div>
 </div>
 </div>
 </div>
 </section>
-<section id="code-preprocessing" class="slide level2">
-<h2>Code: Preprocessing</h2>
-<div id="bf5b24b1" class="cell" data-execution_count="27">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
-<span id="cb24-2"><a></a>  new_sev_df.drop(<span class="st">"ClaimAmount"</span>, axis<span class="op">=</span><span class="dv">1</span>),</span>
-<span id="cb24-3"><a></a>  new_sev_df[<span class="st">"ClaimAmount"</span>],</span>
-<span id="cb24-4"><a></a>  random_state<span class="op">=</span><span class="dv">2023</span>)</span>
-<span id="cb24-5"><a></a></span>
-<span id="cb24-6"><a></a><span class="co"># Reset each index to start at 0 again.</span></span>
-<span id="cb24-7"><a></a>X_train <span class="op">=</span> X_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb24-8"><a></a>X_test <span class="op">=</span> X_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb24-9"><a></a>y_train <span class="op">=</span> y_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb24-10"><a></a>y_test <span class="op">=</span> y_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="preprocessing" class="slide level2">
+<h2>Preprocessing</h2>
+<div id="11fe9840" class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb26-2"><a></a>  sev.drop(<span class="st">"ClaimAmount"</span>, axis<span class="op">=</span><span class="dv">1</span>), sev[<span class="st">"ClaimAmount"</span>], random_state<span class="op">=</span><span class="dv">2023</span>)</span>
+<span id="cb26-3"><a></a>ct <span class="op">=</span> make_column_transformer((OrdinalEncoder(), [<span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<span id="cb26-4"><a></a>    (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]), remainder<span class="op">=</span>StandardScaler())</span>
+<span id="cb26-5"><a></a>X_train <span class="op">=</span> ct.fit_transform(X_train)</span>
+<span id="cb26-6"><a></a>X_test <span class="op">=</span> ct.transform(X_test)</span>
+<span id="cb26-7"><a></a>plt.hist(y_train[y_train <span class="op">&lt;</span> <span class="dv">5000</span>], bins<span class="op">=</span><span class="dv">30</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+
 </div>
-</section>
-<section id="code-preprocessing-1" class="slide level2">
-<h2>Code: Preprocessing</h2>
-<div id="f7cf083c" class="cell" data-execution_count="28">
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb25-2"><a></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
-<span id="cb25-3"><a></a>  (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
-<span id="cb25-4"><a></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb25-5"><a></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb25-6"><a></a>)</span>
-<span id="cb25-7"><a></a></span>
-<span id="cb25-8"><a></a>X_train <span class="op">=</span> ct.fit_transform(X_train)</span>
-<span id="cb25-9"><a></a>X_test <span class="op">=</span> ct.transform(X_test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<ul>
-<li><span class="math inline">\texttt{VehGas=1}</span> if the car gas is regular.</li>
-<li><span class="math inline">\texttt{Area=0}</span> represents the rural area, and <span class="math inline">\texttt{Area=5}</span> represents the urban center.</li>
-</ul>
-</section>
-<section id="histogram-of-the-claimamount" class="slide level2">
-<h2>Histogram of the <code>ClaimAmount</code></h2>
-<div id="98b1288d" class="cell" data-execution_count="29">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a></a>plt.hist(y_train[y_train <span class="op">&lt;</span> <span class="dv">5000</span>], bins<span class="op">=</span><span class="dv">30</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-29-output-1.png" class="r-stretch"></section>
+<section id="doesnt-prove-that-y-boldsymbolx-boldsymbolx-is-multimodal" class="slide level2">
+<h2>Doesn’t prove that <span class="math inline">Y | \boldsymbol{X} = \boldsymbol{x}</span> is multimodal</h2>
+<div id="a688c625" class="cell" data-execution_count="29">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a></a><span class="co"># Make some example where the distribution is multimodal because of a binary covariate which separates the means of the two distributions</span></span>
+<span id="cb27-2"><a></a>np.random.seed(<span class="dv">1</span>)</span>
+<span id="cb27-3"><a></a></span>
+<span id="cb27-4"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">3</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb27-5"><a></a></span>
+<span id="cb27-6"><a></a>x_min <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb27-7"><a></a>x_max <span class="op">=</span> y_train.max()</span>
+<span id="cb27-8"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb27-9"><a></a></span>
+<span id="cb27-10"><a></a><span class="co"># Simulate some data from an exponential distribution which has Pr(X &lt; 1000) = 0.9</span></span>
+<span id="cb27-11"><a></a>n <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb27-12"><a></a>p <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb27-13"><a></a>lambda_ <span class="op">=</span> <span class="op">-</span>np.log(p) <span class="op">/</span> <span class="dv">1000</span> </span>
+<span id="cb27-14"><a></a>mu <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> lambda_</span>
+<span id="cb27-15"><a></a>y_1 <span class="op">=</span> np.random.exponential(scale<span class="op">=</span>mu, size<span class="op">=</span>n)</span>
+<span id="cb27-16"><a></a></span>
+<span id="cb27-17"><a></a><span class="co"># Pick a truncated normal distribution with a mean of 1100 and std of 250 (truncated to be positive)</span></span>
+<span id="cb27-18"><a></a>mu <span class="op">=</span> <span class="dv">1100</span></span>
+<span id="cb27-19"><a></a>sigma <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb27-20"><a></a>y_2 <span class="op">=</span> stats.truncnorm.rvs((<span class="dv">0</span> <span class="op">-</span> mu) <span class="op">/</span> sigma, (np.inf <span class="op">-</span> mu) <span class="op">/</span> sigma, loc<span class="op">=</span>mu, scale<span class="op">=</span>sigma, size<span class="op">=</span>n)</span>
+<span id="cb27-21"><a></a></span>
+<span id="cb27-22"><a></a><span class="co"># Combine y_1 and y_2 for the final histogram</span></span>
+<span id="cb27-23"><a></a>y <span class="op">=</span> np.concatenate([y_1, y_2])</span>
+<span id="cb27-24"><a></a></span>
+<span id="cb27-25"><a></a><span class="co"># Determine common bins</span></span>
+<span id="cb27-26"><a></a>bins <span class="op">=</span> np.histogram_bin_edges(y, bins<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb27-27"><a></a></span>
+<span id="cb27-28"><a></a></span>
+<span id="cb27-29"><a></a><span class="co"># Plot each normal distribution with different means vertically</span></span>
+<span id="cb27-30"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb27-31"><a></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb27-32"><a></a>        ax.hist(y_1, bins<span class="op">=</span>bins, density<span class="op">=</span><span class="va">True</span>, color<span class="op">=</span>colors[i<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb27-33"><a></a>        ax.set_ylabel(<span class="ss">f'$f(y | x = 1)$'</span>)</span>
+<span id="cb27-34"><a></a></span>
+<span id="cb27-35"><a></a>    <span class="cf">elif</span> i <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb27-36"><a></a>        ax.hist(y_2, bins<span class="op">=</span>bins, density<span class="op">=</span><span class="va">True</span>, color<span class="op">=</span>colors[i<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb27-37"><a></a>        ax.set_ylabel(<span class="ss">f'$f(y | x = 2)$'</span>)</span>
+<span id="cb27-38"><a></a></span>
+<span id="cb27-39"><a></a>    <span class="cf">else</span>:</span>
+<span id="cb27-40"><a></a>        ax.hist(y, bins<span class="op">=</span>bins, density<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb27-41"><a></a>        ax.set_ylabel(<span class="ss">f'$f(y)$'</span>)</span>
+<span id="cb27-42"><a></a></span>
+<span id="cb27-43"><a></a>plt.tight_layout()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 
 </div>
 <img data-src="distributional-regression_files/figure-revealjs/cell-30-output-1.png" class="r-stretch"></section>
@@ -1244,7 +1344,7 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 <li>regression coefficients <span class="math inline">\boldsymbol{\beta}=(\beta_0, \beta_1, \beta_2, \beta_3)</span>.</li>
 </ul>
 <p>Then, it estimates the conditional mean of <span class="math inline">Y</span> given a new instance <span class="math inline">\boldsymbol{x}=(1, x_1, x_2, x_3)</span> as follows: <span class="math display">
-    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}]=g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle)=\exp\big(\beta_0+ \beta_1x_1+\beta_2x_2+\beta_3x_3\big).
+    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle) = \exp\big(\beta_0 + \beta_1 x_1 + beta_2 x_2 + \beta_3 x_3 \big).
 </span></p>
 <p>A GLM can model any other exponential family distribution using an appropriate link function <span class="math inline">g</span>.</p>
 </section>
@@ -1260,51 +1360,49 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
     \widehat{\boldsymbol{\beta}} = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
 </span></p>
 <p>Step 2. Estimate the dispersion parameter: <span class="math display">
-    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta} ))^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
+    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{\bigl(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta})\bigr)^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
 </span></p>
+<p>(Here, <span class="math inline">p</span> is the number of coefficients in the model. If this <span class="math inline">p</span> doesn’t include the intercept, then <span class="math inline">p</span> should be use <span class="math inline">\frac{1}{n-(p+1)}</span>.)</p>
 </section>
 <section id="code-gamma-glm" class="slide level2">
 <h2>Code: Gamma GLM</h2>
 <p>In Python, we can fit a gamma GLM as follows:</p>
-<div id="8ba802c6" class="cell" data-execution_count="30">
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
-<span id="cb27-2"><a></a></span>
-<span id="cb27-3"><a></a><span class="co"># Add a column of ones to include an intercept in the model</span></span>
-<span id="cb27-4"><a></a>X_train_design <span class="op">=</span> sm.add_constant(X_train)</span>
-<span id="cb27-5"><a></a></span>
-<span id="cb27-6"><a></a><span class="co"># Create a Gamma GLM with a log link function</span></span>
-<span id="cb27-7"><a></a>gamma_glm <span class="op">=</span> sm.GLM(y_train, X_train_design,                   </span>
-<span id="cb27-8"><a></a>            family<span class="op">=</span>sm.families.Gamma(sm.families.links.Log()))</span>
-<span id="cb27-9"><a></a></span>
-<span id="cb27-10"><a></a><span class="co"># Fit the model</span></span>
-<span id="cb27-11"><a></a>gamma_glm <span class="op">=</span> gamma_glm.fit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="91d202aa" class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb28-2"><a></a></span>
+<span id="cb28-3"><a></a><span class="co"># Add a column of ones to include an intercept in the model</span></span>
+<span id="cb28-4"><a></a>X_train_design <span class="op">=</span> sm.add_constant(X_train)</span>
+<span id="cb28-5"><a></a></span>
+<span id="cb28-6"><a></a><span class="co"># Create a Gamma GLM with a log link function</span></span>
+<span id="cb28-7"><a></a>gamma_glm <span class="op">=</span> sm.GLM(y_train, X_train_design,                   </span>
+<span id="cb28-8"><a></a>            family<span class="op">=</span>sm.families.Gamma(sm.families.links.Log()))</span>
+<span id="cb28-9"><a></a></span>
+<span id="cb28-10"><a></a><span class="co"># Fit the model</span></span>
+<span id="cb28-11"><a></a>gamma_glm <span class="op">=</span> gamma_glm.fit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="columns">
 <div class="column">
-<div id="8a6e0cb9" class="cell" data-execution_count="31">
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a></a>gamma_glm.params</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="d111f90e" class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a></a>gamma_glm.params</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="31">
-<pre><code>const         7.786576
-Area         -0.073226
-VehGas        0.082292
-                ...   
-DrivAge      -0.022147
-BonusMalus    0.157204
-Density       0.010539
+<pre><code>const                    7.786576
+ordinalencoder__Area    -0.073226
+                           ...   
+remainder__BonusMalus    0.157204
+remainder__Density       0.010539
 Length: 9, dtype: float64</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="164947d4" class="cell" data-execution_count="32">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a></a><span class="co"># Dispersion Parameter</span></span>
-<span id="cb30-2"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_train_design)</span>
-<span id="cb30-3"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
-<span id="cb30-4"><a></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
-<span id="cb30-5"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
-<span id="cb30-6"><a></a>phi_glm <span class="op">=</span>  np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance)<span class="op">/</span>dof</span>
-<span id="cb30-7"><a></a><span class="bu">print</span>(phi_glm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="d27288d7" class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a></a><span class="co"># Dispersion Parameter</span></span>
+<span id="cb31-2"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_train_design)</span>
+<span id="cb31-3"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
+<span id="cb31-4"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train_design.shape[<span class="dv">1</span>])</span>
+<span id="cb31-5"><a></a>phi_glm <span class="op">=</span> np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>mus<span class="op">**</span><span class="dv">2</span>)<span class="op">/</span>dof</span>
+<span id="cb31-6"><a></a><span class="bu">print</span>(phi_glm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>59.6306232357824</code></pre>
+<pre><code>59.63363123735805</code></pre>
 </div>
 </div>
 </div>
@@ -1363,82 +1461,97 @@ Length: 9, dtype: float64</code></pre>
 </section>
 <section id="cann" class="slide level2">
 <h2>CANN</h2>
-<p>The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by Schelldorfer and Wüthrich (2019). We summarise the CANN approach as follows:</p>
+<p>The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525">Schelldorfer and Wüthrich (2019)</a>. We summarise the CANN approach as follows:</p>
 <ul>
 <li>Find the coefficients <span class="math inline">\boldsymbol{\beta}</span> of the GLM with a link function <span class="math inline">g(\cdot)</span>.</li>
 <li>Find the weights <span class="math inline">\boldsymbol{w}_{\text{CANN}}</span> of a neural network <span class="math inline">\mathcal{M}_{\text{CANN}}:\mathbb{R}^{p}\to\mathbb{R}</span>.</li>
 <li>Given a new instance <span class="math inline">\boldsymbol{x}</span>, we have <span class="math display">\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).</span></li>
 </ul>
 </section>
+<section id="shifting-the-predicted-distributions" class="slide level2">
+<h2>Shifting the predicted distributions</h2>
+<div id="c0b81963" class="cell" data-execution_count="33">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a></a><span class="co"># Ensure reproducibility</span></span>
+<span id="cb33-2"><a></a>random.seed(<span class="dv">1</span>)</span>
+<span id="cb33-3"><a></a></span>
+<span id="cb33-4"><a></a><span class="co"># Make a 4x1 grid of plots</span></span>
+<span id="cb33-5"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb33-6"><a></a></span>
+<span id="cb33-7"><a></a><span class="co"># Define the x-axis</span></span>
+<span id="cb33-8"><a></a>x_min <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb33-9"><a></a>x_max <span class="op">=</span> <span class="dv">5000</span></span>
+<span id="cb33-10"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb33-11"><a></a></span>
+<span id="cb33-12"><a></a><span class="co"># Plot a few gamma distribution pdfs with different means.</span></span>
+<span id="cb33-13"><a></a><span class="co"># Then plot gamma distributions with shifted means and the same dispersion parameter.</span></span>
+<span id="cb33-14"><a></a>glm_means <span class="op">=</span> [<span class="dv">1000</span>, <span class="dv">3000</span>, <span class="dv">2000</span>, <span class="dv">4000</span>]</span>
+<span id="cb33-15"><a></a>cann_means <span class="op">=</span> [<span class="dv">1500</span>, <span class="dv">1400</span>, <span class="dv">3000</span>, <span class="dv">5000</span>]</span>
+<span id="cb33-16"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb33-17"><a></a>    ax.plot(x_grid, stats.gamma.pdf(x_grid, a<span class="op">=</span><span class="dv">2</span>, scale<span class="op">=</span>glm_means[i]<span class="op">/</span><span class="dv">2</span>), label<span class="op">=</span><span class="ss">f'GLM'</span>)</span>
+<span id="cb33-18"><a></a>    ax.plot(x_grid, stats.gamma.pdf(x_grid, a<span class="op">=</span><span class="dv">2</span>, scale<span class="op">=</span>cann_means[i]<span class="op">/</span><span class="dv">2</span>), label<span class="op">=</span><span class="ss">f'CANN'</span>)</span>
+<span id="cb33-19"><a></a>    ax.set_ylabel(<span class="ss">f'$f(y | x_</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">)$'</span>)</span>
+<span id="cb33-20"><a></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb33-21"><a></a>        ax.legend([<span class="st">"GLM"</span>, <span class="st">"CANN"</span>], loc<span class="op">=</span><span class="st">"upper right"</span>, ncol<span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-34-output-1.png" class="r-stretch"></section>
 <section id="architecture" class="slide level2">
 <h2>Architecture</h2>
 
-<img data-src="CANN.png" class="r-stretch quarto-figure-center"><p class="caption">CANN approach.</p></section>
-<section id="code-architecture" class="slide level2">
-<h2>Code: Architecture</h2>
-<div id="6c1299ad" class="cell" data-execution_count="33">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a></a><span class="co"># Ensure reproducibility</span></span>
-<span id="cb32-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
-<span id="cb32-3"><a></a></span>
-<span id="cb32-4"><a></a><span class="co"># Pre-defined constants</span></span>
-<span id="cb32-5"><a></a>glm_weights <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">1</span>:].values</span>
-<span id="cb32-6"><a></a>glm_bias <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">0</span>]</span>
-<span id="cb32-7"><a></a></span>
-<span id="cb32-8"><a></a><span class="co"># Define model inputs</span></span>
-<span id="cb32-9"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
-<span id="cb32-10"><a></a></span>
-<span id="cb32-11"><a></a><span class="co"># Non-trainable GLM linear part</span></span>
-<span id="cb32-12"><a></a>glm_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, trainable<span class="op">=</span><span class="va">False</span>,</span>
-<span id="cb32-13"><a></a>                     kernel_initializer<span class="op">=</span>Constant(glm_weights),</span>
-<span id="cb32-14"><a></a>                     bias_initializer<span class="op">=</span>Constant(glm_bias))(inputs)</span>
-<span id="cb32-15"><a></a></span>
-<span id="cb32-16"><a></a><span class="co"># Neural network layers</span></span>
-<span id="cb32-17"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
-<span id="cb32-18"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
-<span id="cb32-19"><a></a>cann_logmu <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>)(x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<img data-src="cann-architecture.png" class="r-stretch quarto-figure-center"><p class="caption">The CANN architecture.</p><div class="footer">
+<p>Source: Schelldorfer and Wüthrich (2019), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525">Nesting Classical Actuarial Models into Neural Networks</a>, SSRN, Figure 8.</p>
 </div>
 </section>
-<section id="code-loss-function" class="slide level2">
-<h2>Code: Loss Function</h2>
-<div id="76dc7ba3" class="cell" data-execution_count="34">
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a></a><span class="co"># Combine GLM and CANN estimates</span></span>
-<span id="cb33-2"><a></a>cann <span class="op">=</span> Model(inputs, Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([cann_logmu, glm_logmu]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="code-architecture" class="slide level2">
+<h2>Code: Architecture</h2>
+<div id="e107df4c" class="cell" data-execution_count="34">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a></a>random.seed(<span class="dv">1</span>)</span>
+<span id="cb34-2"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb34-3"><a></a></span>
+<span id="cb34-4"><a></a><span class="co"># GLM part (won't be updated during training)</span></span>
+<span id="cb34-5"><a></a>glm_weights <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">1</span>:].values.reshape((<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb34-6"><a></a>glm_bias <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">0</span>]  </span>
+<span id="cb34-7"><a></a>glm_part <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, trainable<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb34-8"><a></a>                     kernel_initializer<span class="op">=</span>Constant(glm_weights),</span>
+<span id="cb34-9"><a></a>                     bias_initializer<span class="op">=</span>Constant(glm_bias))(inputs)</span>
+<span id="cb34-10"><a></a></span>
+<span id="cb34-11"><a></a><span class="co"># Neural network part</span></span>
+<span id="cb34-12"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'leaky_relu'</span>)(inputs)</span>
+<span id="cb34-13"><a></a>nn_part <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>)(x) </span>
+<span id="cb34-14"><a></a></span>
+<span id="cb34-15"><a></a><span class="co"># Combine GLM and CANN estimates</span></span>
+<span id="cb34-16"><a></a>mu <span class="op">=</span> keras.ops.exp(glm_part <span class="op">+</span> nn_part)</span>
+<span id="cb34-17"><a></a>cann <span class="op">=</span> Model(inputs, mu)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>We need to customise the loss function for CANN.</p>
-<div id="5e852614" class="cell" data-execution_count="35">
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a></a><span class="kw">def</span> cann_negative_log_likelihood(y_true, y_pred):</span>
-<span id="cb34-2"><a></a>    <span class="co"># The new mean estimate</span></span>
-<span id="cb34-3"><a></a>    cann_logmu <span class="op">=</span> y_pred[:, <span class="dv">0</span>]</span>
-<span id="cb34-4"><a></a>    glm_logmu <span class="op">=</span> y_pred[:, <span class="dv">1</span>]</span>
-<span id="cb34-5"><a></a>    mu <span class="op">=</span> tf.math.exp(cann_logmu <span class="op">+</span> glm_logmu)</span>
-<span id="cb34-6"><a></a></span>
-<span id="cb34-7"><a></a>    <span class="co"># Compute the negative log likelihood of the Gamma distribution</span></span>
-<span id="cb34-8"><a></a>    nll <span class="op">=</span> tf.reduce_mean(cann_logmu <span class="op">+</span> glm_logmu <span class="op">+</span> y_true<span class="op">/</span>mu)</span>
-<span id="cb34-9"><a></a>    </span>
-<span id="cb34-10"><a></a>    <span class="cf">return</span> nll</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Since this CANN predicts gamma distributions, we use the gamma NLL loss function.</p>
+<div id="9a2e80cf" class="cell" data-execution_count="35">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a></a><span class="kw">def</span> cann_negative_log_likelihood(y_true, y_pred):</span>
+<span id="cb35-2"><a></a>    <span class="cf">return</span> keras.ops.mean(keras.ops.log(y_pred) <span class="op">+</span> y_true<span class="op">/</span>y_pred)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="code-model-training" class="slide level2">
 <h2>Code: Model Training</h2>
-<div id="c32a4105" class="cell" data-execution_count="36">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a></a>cann.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>cann_negative_log_likelihood)</span>
-<span id="cb35-2"><a></a>hist <span class="op">=</span> cann.fit(X_train, y_train,</span>
-<span id="cb35-3"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
-<span id="cb35-4"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
-<span id="cb35-5"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb35-6"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
-<span id="cb35-7"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="3d22e73d" class="cell" data-execution_count="36">
+<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a></a>cann.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>cann_negative_log_likelihood)</span>
+<span id="cb36-2"><a></a>hist <span class="op">=</span> cann.fit(X_train, y_train,</span>
+<span id="cb36-3"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
+<span id="cb36-4"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
+<span id="cb36-5"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb36-6"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<span id="cb36-7"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Find the dispersion parameter.</p>
-<div id="01aee541" class="cell" data-execution_count="38">
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a></a>mus <span class="op">=</span> np.exp(np.sum(cann.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
-<span id="cb36-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
-<span id="cb36-3"><a></a>variance <span class="op">=</span> mus<span class="op">**</span><span class="dv">2</span></span>
-<span id="cb36-4"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train.shape[<span class="dv">1</span>])</span>
-<span id="cb36-5"><a></a>phi_cann <span class="op">=</span> np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>variance) <span class="op">/</span> dof</span>
-<span id="cb36-6"><a></a><span class="bu">print</span>(phi_cann)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="7110bdd3" class="cell" data-execution_count="38">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a></a>mus <span class="op">=</span> cann.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>).flatten()</span>
+<span id="cb37-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
+<span id="cb37-3"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>(X_train.shape[<span class="dv">1</span>] <span class="op">+</span> <span class="dv">1</span>))</span>
+<span id="cb37-4"><a></a>phi_cann <span class="op">=</span> np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>mus<span class="op">**</span><span class="dv">2</span>) <span class="op">/</span> dof</span>
+<span id="cb37-5"><a></a><span class="bu">print</span>(phi_cann)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>0.0</code></pre>
+<pre><code>31.171623242378978</code></pre>
 </div>
 </div>
 </section></section>
@@ -1542,7 +1655,7 @@ Length: 9, dtype: float64</code></pre>
         = ( &amp;\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
              \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
             &amp;\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
-            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*),\\
+            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
             &amp;\beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
             \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
         ).
@@ -1555,31 +1668,33 @@ Length: 9, dtype: float64</code></pre>
 <img data-src="Gamma_MDN.png" class="r-stretch quarto-figure-center"><p class="caption">We demonstrate the structure of a gamma MDN that outputs the parameters for a gamma mixture with two components.</p></section>
 <section id="code-import-legacy-keras-for-now" class="slide level2">
 <h2>Code: Import “legacy” Keras (for now)</h2>
-<div id="7bc8b06c" class="cell" data-execution_count="39">
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a></a><span class="im">import</span> tf_keras</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="06dc668e" class="cell" data-execution_count="39">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a></a><span class="im">import</span> tf_keras</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><img data-src="keras_tfp_github_issue.png"> <img data-src="keras_tfp_github_issue_comment.png"></p>
-<p>::: footer Source: Tensorflow Probability GitHub, <a href="https://github.com/tensorflow/probability/issues/1774#issuecomment-1841706103">Keras 3 breaks Tensorflow Probability upon import</a>, issue #1774.</p>
+<div class="footer">
+<p>Source: Tensorflow Probability GitHub, <a href="https://github.com/tensorflow/probability/issues/1774#issuecomment-1841706103">Keras 3 breaks Tensorflow Probability upon import</a>, issue #1774.</p>
+</div>
 </section>
 <section id="code-architecture-1" class="slide level2">
 <h2>Code: Architecture</h2>
 <p>The following code resembles the architecture of the architecture of the gamma MDN from the previous slide.</p>
-<div id="693cb8b9" class="cell" data-execution_count="40">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a></a><span class="co"># Ensure reproducibility</span></span>
-<span id="cb39-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span> tf.random.set_seed(<span class="dv">1</span>)</span>
-<span id="cb39-3"><a></a></span>
-<span id="cb39-4"><a></a>inputs <span class="op">=</span> tf_keras.layers.Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
-<span id="cb39-5"><a></a></span>
-<span id="cb39-6"><a></a><span class="co"># Two hidden layers </span></span>
-<span id="cb39-7"><a></a>x <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
-<span id="cb39-8"><a></a>x <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
-<span id="cb39-9"><a></a></span>
-<span id="cb39-10"><a></a>pis <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'softmax'</span>)(x) <span class="co"># Mixing weights</span></span>
-<span id="cb39-11"><a></a>alphas <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co"># Shape parameters</span></span>
-<span id="cb39-12"><a></a>betas <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co"># Scale parameters</span></span>
-<span id="cb39-13"><a></a></span>
-<span id="cb39-14"><a></a><span class="co"># `y_pred` will now have 6 columns</span></span>
-<span id="cb39-15"><a></a>gamma_mdn <span class="op">=</span> tf_keras.Model(inputs, tf_keras.layers.Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([pis, alphas, betas]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="daed090d" class="cell" data-execution_count="40">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a></a><span class="co"># Ensure reproducibility</span></span>
+<span id="cb40-2"><a></a>random.seed(<span class="dv">1</span>)<span class="op">;</span></span>
+<span id="cb40-3"><a></a></span>
+<span id="cb40-4"><a></a>inputs <span class="op">=</span> tf_keras.layers.Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb40-5"><a></a></span>
+<span id="cb40-6"><a></a><span class="co"># Two hidden layers </span></span>
+<span id="cb40-7"><a></a>x <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(inputs)</span>
+<span id="cb40-8"><a></a>x <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'relu'</span>)(x)</span>
+<span id="cb40-9"><a></a></span>
+<span id="cb40-10"><a></a>pis <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'softmax'</span>)(x) <span class="co"># Mixing weights</span></span>
+<span id="cb40-11"><a></a>alphas <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co"># Shape parameters</span></span>
+<span id="cb40-12"><a></a>betas <span class="op">=</span> tf_keras.layers.Dense(<span class="dv">2</span>, activation<span class="op">=</span><span class="st">'exponential'</span>)(x) <span class="co"># Scale parameters</span></span>
+<span id="cb40-13"><a></a>out <span class="op">=</span> tf_keras.layers.Concatenate(axis<span class="op">=</span><span class="dv">1</span>)([pis, alphas, betas]) <span class="co"># shape = (None, 6)</span></span>
+<span id="cb40-14"><a></a></span>
+<span id="cb40-15"><a></a>gamma_mdn <span class="op">=</span> tf_keras.Model(inputs, out)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="loss-function" class="slide level2">
@@ -1587,7 +1702,7 @@ Length: 9, dtype: float64</code></pre>
 <p>The negative log-likelihood loss function is given by</p>
 <p><span class="math display">
     \mathcal{L}(\mathcal{D}, \boldsymbol{w})
-    = - \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})
+    = - \frac{1}{n} \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})
 </span> where the <span class="math inline">f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})</span> is defined by <span class="math display">
 \begin{align*}
     &amp;\pi_1(\boldsymbol{x};\boldsymbol{w})\cdot \frac{\beta_1(\boldsymbol{x};\boldsymbol{w})^{\alpha_1(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_1(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_1(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_1(\boldsymbol{x};\boldsymbol{w})-1} \\
@@ -1595,41 +1710,32 @@ Length: 9, dtype: float64</code></pre>
 \end{align*}
 </span></p>
 </section>
-<section id="code-loss-function-1" class="slide level2">
-<h2>Code: Loss Function</h2>
-<p>We employ functions from <code>tensorflow_probability</code> to code the loss function for the gamma MDN. The <code>MixtureSameFamily</code> function facilitates defining a mixture distribution all components from the same distribution but have different parametrization.</p>
-<div id="290a0e07" class="cell" data-execution_count="41">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
-<span id="cb40-2"><a></a>tfd <span class="op">=</span> tfp.distributions</span>
-<span id="cb40-3"><a></a>K <span class="op">=</span> <span class="dv">2</span> <span class="co"># number of mixture components</span></span>
-<span id="cb40-4"><a></a></span>
-<span id="cb40-5"><a></a><span class="kw">def</span> gamma_mixture_nll(y_true, y_pred):                                      </span>
-<span id="cb40-6"><a></a>    K <span class="op">=</span> y_pred.shape[<span class="dv">1</span>] <span class="op">//</span> <span class="dv">3</span></span>
-<span id="cb40-7"><a></a>    pis <span class="op">=</span>  y_pred[:, :K]                                                    </span>
-<span id="cb40-8"><a></a>    alphas <span class="op">=</span> y_pred[:, K:<span class="dv">2</span><span class="op">*</span>K]                                               </span>
-<span id="cb40-9"><a></a>    betas <span class="op">=</span> y_pred[:, <span class="dv">2</span><span class="op">*</span>K:<span class="dv">3</span><span class="op">*</span>K]                                              </span>
-<span id="cb40-10"><a></a></span>
-<span id="cb40-11"><a></a>    <span class="co"># The mixture distribution is a MixtureSameFamily distribution</span></span>
-<span id="cb40-12"><a></a>    mixture_distribution <span class="op">=</span> tfd.MixtureSameFamily(</span>
-<span id="cb40-13"><a></a>        mixture_distribution<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>pis),</span>
-<span id="cb40-14"><a></a>        components_distribution<span class="op">=</span>tfd.Gamma(alphas, betas))</span>
-<span id="cb40-15"><a></a></span>
-<span id="cb40-16"><a></a>    <span class="co"># The loss is the negative log-likelihood of the data</span></span>
-<span id="cb40-17"><a></a>    <span class="cf">return</span> <span class="op">-</span>mixture_distribution.log_prob(y_true)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
-<section id="code-model-training-1" class="slide level2">
-<h2>Code: Model Training</h2>
-<div id="535b3059" class="cell" data-execution_count="42">
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a></a><span class="co"># Employ the loss function from previous slide</span></span>
-<span id="cb41-2"><a></a>gamma_mdn.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>gamma_mixture_nll)</span>
+<section id="code-loss-training" class="slide level2">
+<h2>Code: Loss &amp; training</h2>
+<p><code>tensorflow_probability</code> to the rescue.</p>
+<div id="ef63fd9b" class="cell" data-execution_count="41">
+<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a></a><span class="im">import</span> tensorflow_probability <span class="im">as</span> tfp</span>
+<span id="cb41-2"><a></a>tfd <span class="op">=</span> tfp.distributions</span>
 <span id="cb41-3"><a></a></span>
-<span id="cb41-4"><a></a>hist <span class="op">=</span> gamma_mdn.fit(X_train, y_train,</span>
-<span id="cb41-5"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
-<span id="cb41-6"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
-<span id="cb41-7"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb41-8"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
-<span id="cb41-9"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb41-4"><a></a><span class="kw">def</span> gamma_mixture_nll(y_true, y_pred):   </span>
+<span id="cb41-5"><a></a>    K <span class="op">=</span> y_pred.shape[<span class="dv">1</span>] <span class="op">//</span> <span class="dv">3</span></span>
+<span id="cb41-6"><a></a>    pis <span class="op">=</span> y_pred[:, :K]                                                    </span>
+<span id="cb41-7"><a></a>    alphas <span class="op">=</span> y_pred[:, K:<span class="dv">2</span><span class="op">*</span>K]                                               </span>
+<span id="cb41-8"><a></a>    betas <span class="op">=</span> y_pred[:, <span class="dv">2</span><span class="op">*</span>K:<span class="dv">3</span><span class="op">*</span>K]</span>
+<span id="cb41-9"><a></a>    mixture_distribution <span class="op">=</span> tfd.MixtureSameFamily(</span>
+<span id="cb41-10"><a></a>        mixture_distribution<span class="op">=</span>tfd.Categorical(probs<span class="op">=</span>pis),</span>
+<span id="cb41-11"><a></a>        components_distribution<span class="op">=</span>tfd.Gamma(alphas, betas))</span>
+<span id="cb41-12"><a></a>    <span class="cf">return</span> <span class="op">-</span>tf_keras.backend.mean(mixture_distribution.log_prob(y_true))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="f60b2f10" class="cell" data-execution_count="42">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a></a>gamma_mdn.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>gamma_mixture_nll)</span>
+<span id="cb42-2"><a></a></span>
+<span id="cb42-3"><a></a>hist <span class="op">=</span> gamma_mdn.fit(X_train, y_train,</span>
+<span id="cb42-4"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
+<span id="cb42-5"><a></a>    callbacks<span class="op">=</span>[tf_keras.callbacks.EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
+<span id="cb42-6"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb42-7"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<span id="cb42-8"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section></section>
 <section>
@@ -1709,42 +1815,69 @@ S(G, G)\le S(F, G)
 </dd>
 </dl>
 </section>
+<section id="likelihoods" class="slide level2">
+<h2>Likelihoods</h2>
+<div id="bdbdf7db" class="cell" data-execution_count="44">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a></a>y_pred <span class="op">=</span> np.polyval(coefficients, X_toy[:<span class="dv">4</span>])</span>
+<span id="cb43-2"><a></a></span>
+<span id="cb43-3"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>))</span>
+<span id="cb43-4"><a></a></span>
+<span id="cb43-5"><a></a>x_min <span class="op">=</span> y_pred[:<span class="dv">4</span>].min() <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb43-6"><a></a>x_max <span class="op">=</span> y_pred[:<span class="dv">4</span>].max() <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb43-7"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb43-8"><a></a></span>
+<span id="cb43-9"><a></a><span class="co"># Plot each normal distribution with different means vertically</span></span>
+<span id="cb43-10"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb43-11"><a></a>    mu <span class="op">=</span> y_pred[i]</span>
+<span id="cb43-12"><a></a>    y_grid <span class="op">=</span> stats.norm.pdf(x_grid, mu, sigma_toy)</span>
+<span id="cb43-13"><a></a>    ax.plot(x_grid, y_grid)</span>
+<span id="cb43-14"><a></a>    ax.plot([y_toy[i], y_toy[i]], [<span class="dv">0</span>, stats.norm.pdf(y_toy[i], mu, sigma_toy)], color<span class="op">=</span><span class="st">'red'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>)</span>
+<span id="cb43-15"><a></a>    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], mu, sigma_toy)], color<span class="op">=</span><span class="st">'red'</span>, zorder<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb43-16"><a></a>    ax.set_ylabel(<span class="ss">f'$f(y ; </span><span class="ch">\\</span><span class="ss">boldsymbol</span><span class="ch">{{</span><span class="ss">x</span><span class="ch">}}</span><span class="ss">_</span><span class="ch">{{</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ch">}}</span><span class="ss">)$'</span>)</span>
+<span id="cb43-17"><a></a>    ax.set_xticks([y_pred[i]], labels<span class="op">=</span>[<span class="vs">r'$\mu_{'</span> <span class="op">+</span> <span class="bu">str</span>(i<span class="op">+</span><span class="dv">1</span>) <span class="op">+</span> <span class="vs">r'}$'</span>])</span>
+<span id="cb43-18"><a></a>    ax.set_ylim(<span class="dv">0</span>, <span class="fl">0.25</span>)</span>
+<span id="cb43-19"><a></a>    </span>
+<span id="cb43-20"><a></a>plt.tight_layout()<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+
+</div>
+<img data-src="distributional-regression_files/figure-revealjs/cell-45-output-1.png" class="r-stretch"></section>
 <section id="code-nll" class="slide level2">
 <h2>Code: NLL</h2>
-<div id="37cd69cf" class="cell" data-execution_count="44">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a></a><span class="im">from</span> scipy.stats <span class="im">import</span> gamma</span>
-<span id="cb42-2"><a></a></span>
-<span id="cb42-3"><a></a><span class="kw">def</span> gamma_nll(mean, dispersion, y):</span>
-<span id="cb42-4"><a></a>    <span class="co"># Calculate shape and scale parameters from mean and dispersion</span></span>
-<span id="cb42-5"><a></a>    shape <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> dispersion<span class="op">;</span> scale <span class="op">=</span> mean <span class="op">*</span> dispersion</span>
-<span id="cb42-6"><a></a></span>
-<span id="cb42-7"><a></a>    <span class="co"># Create a gamma distribution object</span></span>
-<span id="cb42-8"><a></a>    gamma_dist <span class="op">=</span> gamma(a<span class="op">=</span>shape, scale<span class="op">=</span>scale)</span>
-<span id="cb42-9"><a></a>    </span>
-<span id="cb42-10"><a></a>    <span class="cf">return</span> <span class="op">-</span>np.mean(gamma_dist.logpdf(y))</span>
-<span id="cb42-11"><a></a></span>
-<span id="cb42-12"><a></a><span class="co"># GLM</span></span>
-<span id="cb42-13"><a></a>X_test_design <span class="op">=</span> sm.add_constant(X_test)</span>
-<span id="cb42-14"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_test_design)</span>
-<span id="cb42-15"><a></a>nll_glm <span class="op">=</span> gamma_nll(mus, phi_glm, y_test)</span>
-<span id="cb42-16"><a></a></span>
-<span id="cb42-17"><a></a><span class="co"># CANN</span></span>
-<span id="cb42-18"><a></a>mus <span class="op">=</span> np.exp(np.sum(cann.predict(X_test, verbose<span class="op">=</span><span class="dv">0</span>), axis <span class="op">=</span> <span class="dv">1</span>))</span>
-<span id="cb42-19"><a></a>nll_cann <span class="op">=</span> gamma_nll(mus, phi_cann, y_test)</span>
-<span id="cb42-20"><a></a></span>
-<span id="cb42-21"><a></a><span class="co"># MDN</span></span>
-<span id="cb42-22"><a></a>nll_mdn <span class="op">=</span> gamma_mdn.evaluate(X_test, y_test, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="ba89b810" class="cell" data-execution_count="45">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a></a><span class="kw">def</span> gamma_nll(mean, dispersion, y):</span>
+<span id="cb44-2"><a></a>    <span class="co"># Calculate shape and scale parameters from mean and dispersion</span></span>
+<span id="cb44-3"><a></a>    shape <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> dispersion<span class="op">;</span> scale <span class="op">=</span> mean <span class="op">*</span> dispersion</span>
+<span id="cb44-4"><a></a></span>
+<span id="cb44-5"><a></a>    <span class="co"># Create a gamma distribution object</span></span>
+<span id="cb44-6"><a></a>    gamma_dist <span class="op">=</span> stats.gamma(a<span class="op">=</span>shape, scale<span class="op">=</span>scale)</span>
+<span id="cb44-7"><a></a>    </span>
+<span id="cb44-8"><a></a>    <span class="cf">return</span> <span class="op">-</span>np.mean(gamma_dist.logpdf(y))</span>
+<span id="cb44-9"><a></a></span>
+<span id="cb44-10"><a></a><span class="co"># GLM</span></span>
+<span id="cb44-11"><a></a>X_test_design <span class="op">=</span> sm.add_constant(X_test)</span>
+<span id="cb44-12"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_test_design)</span>
+<span id="cb44-13"><a></a>nll_glm <span class="op">=</span> gamma_nll(mus, phi_glm, y_test)</span>
+<span id="cb44-14"><a></a></span>
+<span id="cb44-15"><a></a><span class="co"># CANN</span></span>
+<span id="cb44-16"><a></a>mus <span class="op">=</span> cann.predict(X_test, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb44-17"><a></a>nll_cann <span class="op">=</span> gamma_nll(mus, phi_cann, y_test)</span>
+<span id="cb44-18"><a></a></span>
+<span id="cb44-19"><a></a><span class="co"># MDN</span></span>
+<span id="cb44-20"><a></a>nll_mdn <span class="op">=</span> gamma_mdn.evaluate(X_test, y_test, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="model-comparisons" class="slide level2">
 <h2>Model Comparisons</h2>
-<div id="e8b39f64" class="cell" data-execution_count="45">
-<div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a></a><span class="bu">print</span>(<span class="ss">f'GLM: </span><span class="sc">{</span>round(nll_glm, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
-<span id="cb43-2"><a></a><span class="bu">print</span>(<span class="ss">f'CANN: </span><span class="sc">{</span>round(nll_cann, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
-<span id="cb43-3"><a></a><span class="bu">print</span>(<span class="ss">f'MDN: </span><span class="sc">{</span>round(nll_mdn, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="3b38a8bb" class="cell" data-execution_count="46">
+<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a></a><span class="bu">print</span>(<span class="ss">f'GLM: </span><span class="sc">{</span>round(nll_glm, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb45-2"><a></a><span class="bu">print</span>(<span class="ss">f'CANN: </span><span class="sc">{</span>round(nll_cann, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb45-3"><a></a><span class="bu">print</span>(<span class="ss">f'MDN: </span><span class="sc">{</span>round(nll_mdn, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>GLM: 11.02
-CANN: nan
+CANN: 10.44
 MDN: 8.67</code></pre>
 </div>
 </div>
@@ -1900,74 +2033,62 @@ MDN: 8.67</code></pre>
 </section>
 <section id="regularisation-in-keras" class="slide level2">
 <h2>Regularisation in Keras</h2>
-<div id="70215876" class="cell" data-execution_count="46">
+<div id="1999eb8d" class="cell" data-execution_count="47">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_california_housing</span>
-<span id="cb45-2"><a></a>features, target <span class="op">=</span> fetch_california_housing(as_frame<span class="op">=</span><span class="va">True</span>, return_X_y<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb45-3"><a></a></span>
-<span id="cb45-4"><a></a>NUM_FEATURES <span class="op">=</span> <span class="bu">len</span>(features.columns)</span>
-<span id="cb45-5"><a></a></span>
-<span id="cb45-6"><a></a>X_main, X_test, y_main, y_test <span class="op">=</span> train_test_split(</span>
-<span id="cb45-7"><a></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
-<span id="cb45-8"><a></a>)</span>
-<span id="cb45-9"><a></a>X_train, X_val, y_train, y_val <span class="op">=</span> train_test_split(</span>
-<span id="cb45-10"><a></a>    X_main, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
-<span id="cb45-11"><a></a>)</span>
-<span id="cb45-12"><a></a></span>
-<span id="cb45-13"><a></a>scaler <span class="op">=</span> StandardScaler()</span>
-<span id="cb45-14"><a></a>X_train_sc <span class="op">=</span> scaler.fit_transform(X_train)</span>
-<span id="cb45-15"><a></a>X_val_sc <span class="op">=</span> scaler.transform(X_val)</span>
-<span id="cb45-16"><a></a>X_test_sc <span class="op">=</span> scaler.transform(X_test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_california_housing</span>
+<span id="cb47-2"><a></a>features, target <span class="op">=</span> fetch_california_housing(as_frame<span class="op">=</span><span class="va">True</span>, return_X_y<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb47-3"><a></a></span>
+<span id="cb47-4"><a></a>NUM_FEATURES <span class="op">=</span> <span class="bu">len</span>(features.columns)</span>
+<span id="cb47-5"><a></a></span>
+<span id="cb47-6"><a></a>X_main, X_test, y_main, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb47-7"><a></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb47-8"><a></a>)</span>
+<span id="cb47-9"><a></a>X_train, X_val, y_train, y_val <span class="op">=</span> train_test_split(</span>
+<span id="cb47-10"><a></a>    X_main, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb47-11"><a></a>)</span>
+<span id="cb47-12"><a></a></span>
+<span id="cb47-13"><a></a>scaler <span class="op">=</span> StandardScaler()</span>
+<span id="cb47-14"><a></a>X_train_sc <span class="op">=</span> scaler.fit_transform(X_train)</span>
+<span id="cb47-15"><a></a>X_val_sc <span class="op">=</span> scaler.transform(X_val)</span>
+<span id="cb47-16"><a></a>X_test_sc <span class="op">=</span> scaler.transform(X_test)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="b9ba6cd8" class="cell" data-execution_count="47">
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a></a><span class="im">from</span> keras.regularizers <span class="im">import</span> L1, L2</span>
-<span id="cb46-2"><a></a></span>
-<span id="cb46-3"><a></a><span class="kw">def</span> l1_model(regulariser_strength<span class="op">=</span><span class="fl">0.01</span>):</span>
-<span id="cb46-4"><a></a>  random.seed(<span class="dv">123</span>)</span>
-<span id="cb46-5"><a></a>  model <span class="op">=</span> Sequential([</span>
-<span id="cb46-6"><a></a>      Dense(<span class="dv">30</span>,</span>
-<span id="cb46-7"><a></a>        activation<span class="op">=</span><span class="st">"leaky_relu"</span>,</span>
-<span id="cb46-8"><a></a>        name<span class="op">=</span><span class="st">"hidden1"</span>),</span>
-<span id="cb46-9"><a></a>      Dense(<span class="dv">30</span>,</span>
-<span id="cb46-10"><a></a>        activation<span class="op">=</span><span class="st">"leaky_relu"</span>,</span>
-<span id="cb46-11"><a></a>        kernel_regularizer<span class="op">=</span>L1(regulariser_strength),</span>
-<span id="cb46-12"><a></a>        name<span class="op">=</span><span class="st">"hidden2"</span>),</span>
-<span id="cb46-13"><a></a>      Dense(<span class="dv">1</span>, </span>
-<span id="cb46-14"><a></a>        activation<span class="op">=</span><span class="st">"exponential"</span>,</span>
-<span id="cb46-15"><a></a>        name<span class="op">=</span><span class="st">"output"</span>)</span>
-<span id="cb46-16"><a></a>  ])</span>
-<span id="cb46-17"><a></a></span>
-<span id="cb46-18"><a></a>  model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb46-19"><a></a>  model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb46-20"><a></a>  <span class="cf">return</span> model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="4813ac14" class="cell" data-execution_count="48">
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a></a><span class="im">from</span> keras.regularizers <span class="im">import</span> L1, L2</span>
+<span id="cb48-2"><a></a></span>
+<span id="cb48-3"><a></a><span class="kw">def</span> l1_model(regulariser_strength<span class="op">=</span><span class="fl">0.01</span>):</span>
+<span id="cb48-4"><a></a>  random.seed(<span class="dv">123</span>)</span>
+<span id="cb48-5"><a></a>  model <span class="op">=</span> Sequential([</span>
+<span id="cb48-6"><a></a>      Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>,</span>
+<span id="cb48-7"><a></a>        kernel_regularizer<span class="op">=</span>L1(regulariser_strength)),</span>
+<span id="cb48-8"><a></a>      Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb48-9"><a></a>  ])</span>
+<span id="cb48-10"><a></a></span>
+<span id="cb48-11"><a></a>  model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb48-12"><a></a>  model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb48-13"><a></a>  <span class="cf">return</span> model</span>
+<span id="cb48-14"><a></a></span>
+<span id="cb48-15"><a></a><span class="kw">def</span> l2_model(regulariser_strength<span class="op">=</span><span class="fl">0.01</span>):</span>
+<span id="cb48-16"><a></a>  random.seed(<span class="dv">123</span>)</span>
+<span id="cb48-17"><a></a>  model <span class="op">=</span> Sequential([</span>
+<span id="cb48-18"><a></a>      Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>,</span>
+<span id="cb48-19"><a></a>        kernel_regularizer<span class="op">=</span>L2(regulariser_strength)),</span>
+<span id="cb48-20"><a></a>      Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb48-21"><a></a>  ])</span>
+<span id="cb48-22"><a></a></span>
+<span id="cb48-23"><a></a>  model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb48-24"><a></a>  model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">10</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb48-25"><a></a>  <span class="cf">return</span> model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
-<section id="weights-before-after-ell_1" class="slide level2">
-<h2>Weights before &amp; after <span class="math inline">\ell_1</span></h2>
+<section id="weights-before-after-l2" class="slide level2">
+<h2>Weights before &amp; after <span class="math inline">L^2</span></h2>
 <div class="columns">
 <div class="column">
-<div id="8650f1aa" class="cell" data-execution_count="49">
-<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a></a>model <span class="op">=</span> l1_model(<span class="fl">0.0</span>)</span>
-<span id="cb47-2"><a></a>weights <span class="op">=</span> model.get_layer(<span class="st">"hidden2"</span>).get_weights()[<span class="dv">0</span>].flatten()</span>
-<span id="cb47-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb47-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Number of weights almost 0: 0</code></pre>
-</div>
-<div class="cell-output cell-output-display">
-<div>
-<figure>
-<p><img data-src="distributional-regression_files/figure-revealjs/cell-50-output-2.png"></p>
-</figure>
-</div>
-</div>
-</div>
-</div><div class="column">
-<div id="bc1bc837" class="cell" data-execution_count="50">
-<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a></a>model <span class="op">=</span> l1_model(<span class="fl">1.0</span>)</span>
-<span id="cb49-2"><a></a>weights <span class="op">=</span> model.get_layer(<span class="st">"hidden2"</span>).get_weights()[<span class="dv">0</span>].flatten()</span>
+<div id="7ffbfed4" class="cell" data-execution_count="50">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a></a>model <span class="op">=</span> l2_model(<span class="fl">0.0</span>)</span>
+<span id="cb49-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
 <span id="cb49-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
 <span id="cb49-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1981,18 +2102,35 @@ MDN: 8.67</code></pre>
 </div>
 </div>
 </div>
+</div><div class="column">
+<div id="3363bad1" class="cell" data-execution_count="51">
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a></a>model <span class="op">=</span> l2_model(<span class="fl">1.0</span>)</span>
+<span id="cb51-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb51-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb51-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of weights almost 0: 0</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-52-output-2.png"></p>
+</figure>
+</div>
+</div>
+</div>
 </div>
 </div>
 </section>
-<section id="weights-before-after-ell_2" class="slide level2">
-<h2>Weights before &amp; after <span class="math inline">\ell_2</span></h2>
+<section id="weights-before-after-l1" class="slide level2">
+<h2>Weights before &amp; after <span class="math inline">L^1</span></h2>
 <div class="columns">
 <div class="column">
-<div id="150b2b53" class="cell" data-execution_count="52">
-<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a></a>model <span class="op">=</span> l2_model(<span class="fl">0.0</span>)</span>
-<span id="cb51-2"><a></a>weights <span class="op">=</span> model.get_layer(<span class="st">"hidden2"</span>).get_weights()[<span class="dv">0</span>].flatten()</span>
-<span id="cb51-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb51-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="732ed37e" class="cell" data-execution_count="52">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a></a>model <span class="op">=</span> l1_model(<span class="fl">0.0</span>)</span>
+<span id="cb53-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb53-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb53-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Number of weights almost 0: 0</code></pre>
 </div>
@@ -2005,13 +2143,13 @@ MDN: 8.67</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="1ec11a24" class="cell" data-execution_count="53">
-<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a></a>model <span class="op">=</span> l2_model(<span class="fl">1.0</span>)</span>
-<span id="cb53-2"><a></a>weights <span class="op">=</span> model.get_layer(<span class="st">"hidden2"</span>).get_weights()[<span class="dv">0</span>].flatten()</span>
-<span id="cb53-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb53-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="63f7e352" class="cell" data-execution_count="53">
+<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a></a>model <span class="op">=</span> l1_model(<span class="fl">1.0</span>)</span>
+<span id="cb55-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb55-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb55-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Number of weights almost 0: 0</code></pre>
+<pre><code>Number of weights almost 0: 36</code></pre>
 </div>
 <div class="cell-output cell-output-display">
 <div>
@@ -2108,21 +2246,21 @@ MDN: 8.67</code></pre>
 <section id="code-dropout" class="slide level2">
 <h2>Code: Dropout</h2>
 <p>Dropout is just another layer in Keras.</p>
-<div id="6248838c" class="cell" data-execution_count="55">
-<div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a></a><span class="im">from</span> keras.layers <span class="im">import</span> Dropout</span>
-<span id="cb55-2"><a></a></span>
-<span id="cb55-3"><a></a>random.seed(<span class="dv">2</span>)<span class="op">;</span> </span>
-<span id="cb55-4"><a></a></span>
-<span id="cb55-5"><a></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb55-6"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>),</span>
-<span id="cb55-7"><a></a>    Dropout(<span class="fl">0.2</span>),</span>
-<span id="cb55-8"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>),</span>
-<span id="cb55-9"><a></a>    Dropout(<span class="fl">0.2</span>),</span>
-<span id="cb55-10"><a></a>    Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"output"</span>)</span>
-<span id="cb55-11"><a></a>])</span>
-<span id="cb55-12"><a></a></span>
-<span id="cb55-13"><a></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb55-14"><a></a>model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="4e267c14" class="cell" data-execution_count="55">
+<div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a></a><span class="im">from</span> keras.layers <span class="im">import</span> Dropout</span>
+<span id="cb57-2"><a></a></span>
+<span id="cb57-3"><a></a>random.seed(<span class="dv">2</span>)<span class="op">;</span> </span>
+<span id="cb57-4"><a></a></span>
+<span id="cb57-5"><a></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb57-6"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb57-7"><a></a>    Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb57-8"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb57-9"><a></a>    Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb57-10"><a></a>    Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb57-11"><a></a>])</span>
+<span id="cb57-12"><a></a></span>
+<span id="cb57-13"><a></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb57-14"><a></a>model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="code-dropout-after-training" class="slide level2">
@@ -2130,9 +2268,9 @@ MDN: 8.67</code></pre>
 <p>Making predictions is the same as any other model:</p>
 <div class="columns">
 <div class="column">
-<div id="ccd66ef5" class="cell" data-execution_count="56">
-<div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a></a>model.predict(X_train_sc.head(<span class="dv">3</span>),</span>
-<span id="cb56-2"><a></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="ce472fb0" class="cell" data-execution_count="56">
+<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a></a>model.predict(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb58-2"><a></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="54">
 <pre><code>array([[1.0587903],
        [1.2814349],
@@ -2140,9 +2278,9 @@ MDN: 8.67</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="b3afacf0" class="cell" data-execution_count="57">
-<div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a></a>model.predict(X_train_sc.head(<span class="dv">3</span>),</span>
-<span id="cb58-2"><a></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="57b314cd" class="cell" data-execution_count="57">
+<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a></a>model.predict(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb60-2"><a></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="55">
 <pre><code>array([[1.0587903],
        [1.2814349],
@@ -2154,9 +2292,9 @@ MDN: 8.67</code></pre>
 <p>We can make the model think it is still training:</p>
 <div class="columns">
 <div class="column">
-<div id="8ebc9024" class="cell" data-execution_count="58">
-<div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a></a>model(X_train_sc.head(<span class="dv">3</span>),</span>
-<span id="cb60-2"><a></a>    training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="e6327385" class="cell" data-execution_count="58">
+<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a></a>model(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb62-2"><a></a>    training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="56">
 <pre><code>array([[1.082524  ],
        [0.74211466],
@@ -2164,9 +2302,9 @@ MDN: 8.67</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="6fc7adff" class="cell" data-execution_count="59">
-<div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a></a>model(X_train_sc.head(<span class="dv">3</span>),</span>
-<span id="cb62-2"><a></a>    training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="4f91ac6c" class="cell" data-execution_count="59">
+<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a></a>model(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb64-2"><a></a>    training<span class="op">=</span><span class="va">True</span>).numpy()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="57">
 <pre><code>array([[1.0132376],
        [1.2697867],
@@ -2232,19 +2370,18 @@ MDN: 8.67</code></pre>
 <div class="columns">
 <div class="column">
 <p><br></p>
-<div id="e3f12368" class="cell" data-execution_count="60">
-<div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a></a>random.seed(<span class="dv">123</span>)</span>
-<span id="cb64-2"><a></a></span>
-<span id="cb64-3"><a></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb64-4"><a></a>    Dense(<span class="dv">30</span>,</span>
-<span id="cb64-5"><a></a>      activation<span class="op">=</span><span class="st">"relu"</span>,</span>
-<span id="cb64-6"><a></a>      name<span class="op">=</span><span class="st">"hidden"</span>),</span>
-<span id="cb64-7"><a></a>    Dense(<span class="dv">1</span>)</span>
-<span id="cb64-8"><a></a>])</span>
-<span id="cb64-9"><a></a></span>
-<span id="cb64-10"><a></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb64-11"><a></a>hist <span class="op">=</span> model.fit(X_train, y_train, epochs<span class="op">=</span><span class="dv">5</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
-<span id="cb64-12"><a></a>hist.history[<span class="st">"loss"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="03ad5165" class="cell" data-execution_count="60">
+<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a></a>random.seed(<span class="dv">123</span>)</span>
+<span id="cb66-2"><a></a></span>
+<span id="cb66-3"><a></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb66-4"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"relu"</span>),</span>
+<span id="cb66-5"><a></a>    Dense(<span class="dv">1</span>)</span>
+<span id="cb66-6"><a></a>])</span>
+<span id="cb66-7"><a></a></span>
+<span id="cb66-8"><a></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb66-9"><a></a>hist <span class="op">=</span> model.fit(X_train, y_train,</span>
+<span id="cb66-10"><a></a>        epochs<span class="op">=</span><span class="dv">5</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb66-11"><a></a>hist.history[<span class="st">"loss"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="58">
 <pre><code>[25089.478515625,
  12.956829071044922,
@@ -2254,7 +2391,7 @@ MDN: 8.67</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="ff072cfb" class="cell" data-execution_count="61">
+<div id="611ce32c" class="cell" data-execution_count="61">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -2268,9 +2405,13 @@ MDN: 8.67</code></pre>
 </section>
 <section id="find-dead-relu-neurons" class="slide level2">
 <h2>Find dead ReLU neurons</h2>
-<div id="dea15eeb" class="cell" data-execution_count="63">
-<div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a></a>acts <span class="op">=</span> model.get_layer(<span class="st">"hidden"</span>)(X_train).numpy()</span>
-<span id="cb66-2"><a></a>acts[:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="177f1a54" class="cell" data-execution_count="63">
+<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a></a>acts <span class="op">=</span> model.layers[<span class="dv">0</span>](X_train).numpy()</span>
+<span id="cb68-2"><a></a><span class="bu">print</span>(X_train.shape, acts.shape)</span>
+<span id="cb68-3"><a></a>acts[:<span class="dv">3</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>(12384, 8) (12384, 30)</code></pre>
+</div>
 <div class="cell-output cell-output-display" data-execution_count="61">
 <pre><code>array([[261.458   , 502.33704 ,  93.64283 , ..., 537.54865 , 325.7366  ,
         398.99435 ],
@@ -2280,34 +2421,41 @@ MDN: 8.67</code></pre>
         411.61124 ]], dtype=float32)</code></pre>
 </div>
 </div>
-<div id="b0a4ccb0" class="cell" data-execution_count="64">
-<div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a></a>acts.mean(axis<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="8e65596b" class="cell" data-execution_count="64">
+<div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a></a>dead <span class="op">=</span> acts.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">==</span> <span class="dv">0</span></span>
+<span id="cb71-2"><a></a>np.sum(dead)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="62">
-<pre><code>array([219.19604, 434.435  ,  81.71622, ..., 457.9593 , 275.58286,
-       348.6399 ], dtype=float32)</code></pre>
-</div>
-</div>
-<div id="6ed5dca0" class="cell" data-execution_count="65">
-<div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a></a>np.sum(acts.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">==</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="63">
 <pre><code>7</code></pre>
+</div>
+</div>
+<div id="57d72a82" class="cell" data-execution_count="65">
+<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb73-1"><a></a>idx <span class="op">=</span> np.where(dead)[<span class="dv">0</span>][<span class="dv">0</span>]</span>
+<span id="cb73-2"><a></a>acts[:, idx<span class="op">-</span><span class="dv">1</span>:idx<span class="op">+</span><span class="dv">2</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="63">
+<pre><code>array([[ 0.      ,  0.      ,  0.      ],
+       [18.991873,  0.      ,  0.      ],
+       [ 0.      ,  0.      ,  0.      ],
+       ...,
+       [ 0.      ,  0.      ,  0.      ],
+       [ 0.      ,  0.      ,  0.      ],
+       [ 0.      ,  0.      ,  0.      ]], dtype=float32)</code></pre>
 </div>
 </div>
 </section>
 <section id="trying-different-seeds" class="slide level2">
 <h2>Trying different seeds</h2>
 <p>Create a function which counts the number of dead ReLU neurons in the first hidden layer for a given seed:</p>
-<div id="0b4a3027" class="cell" data-execution_count="67">
-<div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a></a><span class="kw">def</span> count_dead(seed):</span>
-<span id="cb72-2"><a></a>    random.seed(seed)</span>
-<span id="cb72-3"><a></a>    hidden <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"relu"</span>)</span>
-<span id="cb72-4"><a></a>    acts <span class="op">=</span> hidden(X_train).numpy()</span>
-<span id="cb72-5"><a></a>    <span class="cf">return</span> np.sum(acts.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">==</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="f9773866" class="cell" data-execution_count="67">
+<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a></a><span class="kw">def</span> count_dead(seed):</span>
+<span id="cb75-2"><a></a>    random.seed(seed)</span>
+<span id="cb75-3"><a></a>    hidden <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"relu"</span>)</span>
+<span id="cb75-4"><a></a>    acts <span class="op">=</span> hidden(X_train).numpy()</span>
+<span id="cb75-5"><a></a>    <span class="cf">return</span> np.sum(acts.mean(axis<span class="op">=</span><span class="dv">0</span>) <span class="op">==</span> <span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then we can try out different seeds:</p>
-<div id="e317995d" class="cell" data-execution_count="68">
-<div class="sourceCode cell-code" id="cb73"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb73-1"><a></a>num_dead <span class="op">=</span> [count_dead(seed) <span class="cf">for</span> seed <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1_000</span>)]</span>
-<span id="cb73-2"><a></a>np.median(num_dead)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="3c407665" class="cell" data-execution_count="68">
+<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb76-1"><a></a>num_dead <span class="op">=</span> [count_dead(seed) <span class="cf">for</span> seed <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">1_000</span>)]</span>
+<span id="cb76-2"><a></a>np.median(num_dead)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="66">
 <pre><code>5.0</code></pre>
 </div>
@@ -2315,9 +2463,9 @@ MDN: 8.67</code></pre>
 </section>
 <section id="look-at-distribution-of-dead-relus" class="slide level2">
 <h2>Look at distribution of dead ReLUs</h2>
-<div id="f441d9a9" class="cell" data-execution_count="69">
-<div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a></a>labels, counts <span class="op">=</span> np.unique(num_dead, return_counts<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb75-2"><a></a>plt.bar(labels, counts, align<span class="op">=</span><span class="st">'center'</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="ab474987" class="cell" data-execution_count="69">
+<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb78-1"><a></a>labels, counts <span class="op">=</span> np.unique(num_dead, return_counts<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb78-2"><a></a>plt.bar(labels, counts, align<span class="op">=</span><span class="st">'center'</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 </div>
 <img data-src="distributional-regression_files/figure-revealjs/cell-70-output-1.png" class="r-stretch"></section></section>
@@ -2375,38 +2523,38 @@ MDN: 8.67</code></pre>
 <section id="deep-ensembles" class="slide level2">
 <h2>Deep Ensembles</h2>
 <p>Train <span class="math inline">M</span> neural networks with different random initial weights independently (even in parallel).</p>
-<div id="1a358400" class="cell" data-execution_count="70">
-<div class="sourceCode cell-code" id="cb76"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb76-1"><a></a><span class="kw">def</span> build_model(seed):</span>
-<span id="cb76-2"><a></a>    random.seed(seed)</span>
-<span id="cb76-3"><a></a>    model <span class="op">=</span> Sequential([</span>
-<span id="cb76-4"><a></a>        Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
-<span id="cb76-5"><a></a>        Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
-<span id="cb76-6"><a></a>    ])</span>
-<span id="cb76-7"><a></a>    model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
-<span id="cb76-8"><a></a></span>
-<span id="cb76-9"><a></a>    es <span class="op">=</span> EarlyStopping(restore_best_weights<span class="op">=</span><span class="va">True</span>, patience<span class="op">=</span><span class="dv">5</span>)</span>
-<span id="cb76-10"><a></a>    model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">1_000</span>,</span>
-<span id="cb76-11"><a></a>        callbacks<span class="op">=</span>[es], validation_data<span class="op">=</span>(X_val_sc, y_val), verbose<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb76-12"><a></a>    <span class="cf">return</span> model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="530ae524" class="cell" data-execution_count="70">
+<div class="sourceCode cell-code" id="cb79"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a></a><span class="kw">def</span> build_model(seed):</span>
+<span id="cb79-2"><a></a>    random.seed(seed)</span>
+<span id="cb79-3"><a></a>    model <span class="op">=</span> Sequential([</span>
+<span id="cb79-4"><a></a>        Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb79-5"><a></a>        Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb79-6"><a></a>    ])</span>
+<span id="cb79-7"><a></a>    model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb79-8"><a></a></span>
+<span id="cb79-9"><a></a>    es <span class="op">=</span> EarlyStopping(restore_best_weights<span class="op">=</span><span class="va">True</span>, patience<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb79-10"><a></a>    model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">1_000</span>,</span>
+<span id="cb79-11"><a></a>        callbacks<span class="op">=</span>[es], validation_data<span class="op">=</span>(X_val_sc, y_val), verbose<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb79-12"><a></a>    <span class="cf">return</span> model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="1e47fd27" class="cell" data-execution_count="71">
-<div class="sourceCode cell-code" id="cb77"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a></a>M <span class="op">=</span> <span class="dv">3</span></span>
-<span id="cb77-2"><a></a>seeds <span class="op">=</span> <span class="bu">range</span>(M)</span>
-<span id="cb77-3"><a></a>models <span class="op">=</span> []</span>
-<span id="cb77-4"><a></a><span class="cf">for</span> seed <span class="kw">in</span> seeds:</span>
-<span id="cb77-5"><a></a>    models.append(build_model(seed))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="43fa847c" class="cell" data-execution_count="71">
+<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a></a>M <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb80-2"><a></a>seeds <span class="op">=</span> <span class="bu">range</span>(M)</span>
+<span id="cb80-3"><a></a>models <span class="op">=</span> []</span>
+<span id="cb80-4"><a></a><span class="cf">for</span> seed <span class="kw">in</span> seeds:</span>
+<span id="cb80-5"><a></a>    models.append(build_model(seed))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="deep-ensembles-ii" class="slide level2">
 <h2>Deep Ensembles II</h2>
 <p>Say the trained weights by <span class="math inline">\boldsymbol{w}^{(1)}, \ldots, \boldsymbol{w}^{(M)}</span>, then we get predictions <span class="math inline">\bigl\{ \hat{y}(\boldsymbol{x}; \boldsymbol{w}^{(m)}) \bigr\}_{m=1}^{M}</span></p>
-<div id="225183dd" class="cell" data-execution_count="73">
-<div class="sourceCode cell-code" id="cb78"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb78-1"><a></a>y_preds <span class="op">=</span> []</span>
-<span id="cb78-2"><a></a><span class="cf">for</span> model <span class="kw">in</span> models:</span>
-<span id="cb78-3"><a></a>    y_preds.append(model.predict(X_test_sc, verbose<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb78-4"><a></a></span>
-<span id="cb78-5"><a></a>y_preds <span class="op">=</span> np.array(y_preds)</span>
-<span id="cb78-6"><a></a>y_preds</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="bfd283e3" class="cell" data-execution_count="73">
+<div class="sourceCode cell-code" id="cb81"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a></a>y_preds <span class="op">=</span> []</span>
+<span id="cb81-2"><a></a><span class="cf">for</span> model <span class="kw">in</span> models:</span>
+<span id="cb81-3"><a></a>    y_preds.append(model.predict(X_test_sc, verbose<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb81-4"><a></a></span>
+<span id="cb81-5"><a></a>y_preds <span class="op">=</span> np.array(y_preds)</span>
+<span id="cb81-6"><a></a>y_preds</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="70">
 <pre><code>array([[[3.2801466 ],
         [0.76298356],
@@ -2436,9 +2584,9 @@ MDN: 8.67</code></pre>
 </section>
 <section id="package-versions" class="slide level2 appendix" data-visibility="uncounted">
 <h2>Package Versions</h2>
-<div id="150230c7" class="cell" data-execution_count="74">
-<div class="sourceCode cell-code" id="cb80"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
-<span id="cb80-2"><a></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tensorflow_probability,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div id="b0ddbeaf" class="cell" data-execution_count="74">
+<div class="sourceCode cell-code" id="cb83"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb83-1"><a></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb83-2"><a></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tensorflow_probability,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Python implementation: CPython
 Python version       : 3.11.9
