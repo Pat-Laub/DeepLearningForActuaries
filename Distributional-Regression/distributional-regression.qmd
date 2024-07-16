@@ -97,6 +97,71 @@ import statsmodels.api as sm
 
 :::
 
+# Introduction {visibility="uncounted"}
+
+## Neural networks and confidence
+
+Say we have a neural network that classifies ducks from rabbits.
+
+::: columns
+::: column
+![A duck in the training set](dalle2-duck.webp)
+:::
+::: column
+![A rabbit in this training set](dalle2-rabbit.webp)
+:::
+:::
+
+## New data can be different {.smaller}
+
+::: columns
+::: {.column .fragment}
+![Predict this is a duck](dalle2-duck2.webp)
+:::
+::: {.column width="7.5%"}
+:::
+::: {.column .fragment width="35%"}
+![Misclassify this as a rabbit](755230_poster.jpg)
+:::
+:::
+
+::: {.fragment}
+We could do better if we collected more images of ducks with rabbit ears.
+:::
+
+::: footer
+Source: Olga Telnova, [Cute Duck with Bunny Ears](https://www.posterlounge.co.uk/p/755230.html), Posterlounge, accessed on July 16 2024.
+:::
+
+## New data can be challenging {.smaller}
+
+::: columns
+::: {.column .fragment}
+![Predict this is a rabbit](dalle2-rabbit2.webp)
+:::
+::: {.column .fragment}
+![Predict this is a ???](duck-rabbit.png)
+:::
+:::
+
+::: {.fragment}
+This is inherently difficult, extra training data won't help.
+:::
+
+::: footer
+Source: [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Rabbit%E2%80%93duck_illusion#/media/File:Canard-lapin_retouch%C3%A9.jpg)
+:::
+
+## Classifiers give us a probability
+
+This is already a big step up compared to regression models.
+
+However, neural networks' "probabilities" can be overconfident.
+
+![We [already saw](https://pat-laub.github.io/DeepLearningForActuaries/Computer-Vision/computer-vision.html#confidence-of-predictions) a case of this.](example-of-overconfidence.png)
+
+See Guo et al. (2017), [On Calibration of Modern Neural Networks](https://arxiv.org/pdf/1706.04599).
+
 ## Key idea
 
 ::: columns
@@ -1193,16 +1258,21 @@ Proper scoring rules provide a summary measure for the performance of the probab
 
 Definition
 
-:   *The scoring rule* $S : \mathcal{F} \times \mathbb{R} \to \overline{\mathbb{R}}$ is proper relative to the class $\mathcal{F}$ if $$
-    S(G, G)\le S(F, G)
-    $$ for all $F,G\in \mathcal{F}$. It is strictly proper if equality holds only if $F = G$.
+:   A _scoring rule_ is the equivalent of a loss function for distributional regression.
 
-Examples:
+    Denote $S(F, y)$ to be the score given to the forecasted distribution $F$ and an observation $y \in \mathbb{R}$.
 
-- Logarithmic Score (NLL)
-- Continuous Ranked Probability Score (CRPS)
+Definition
 
-## Proper Scoring Rules
+:   A scoring rule is called _proper_ if
+    $$
+    \mathbb{E}_{Y \sim Q} S(Q, Y) \le \mathbb{E}_{Y \sim Q} S(F, Y)
+    $$
+    for all $F$ and $Q$ distributions.
+    
+    It is called _strictly proper_ if equality holds only if $F = Q$.
+
+## Example Proper Scoring Rules
 
 Logarithmic Score (NLL)
 
@@ -1218,16 +1288,20 @@ Continuous Ranked Probability Score (CRPS)
     $$
         \mathrm{crps}(F, y) = \int_{-\infty}^{\infty} (F(t) - {1}_{t\ge y})^2 \ \mathrm{d}t,
     $$
-    where $F$ is the cumulative distribution function.
+    where $F$ is the predicted c.d.f.
 
+::: footer
+See, e.g., Taggert (2023), [Estimation of CRPS for precipitation forecasts...](https://nla.gov.au/nla.obj-3160938615/view), BoM Research Report 079.
+:::
 
 ## Likelihoods
 
 ```{python}
 #| code-fold: true
 y_pred = np.polyval(coefficients, X_toy[:4])
-
-fig, axes = plt.subplots(4, 1, figsize=(5.0, 3.0))
+y_pred[2] *= 1.1
+sigma_preds = sigma_toy * np.array([1.0, 3.0, 0.5, 0.5])
+fig, axes = plt.subplots(1, 4, figsize=(5.0, 3.0), sharey=True)
 
 x_min = y_pred[:4].min() - 4*sigma_toy
 x_max = y_pred[:4].max() + 4*sigma_toy
@@ -1235,14 +1309,16 @@ x_grid = np.linspace(x_min, x_max, 100)
 
 # Plot each normal distribution with different means vertically
 for i, ax in enumerate(axes):
-    mu = y_pred[i]
-    y_grid = stats.norm.pdf(x_grid, mu, sigma_toy)
+    y_grid = stats.norm.pdf(x_grid, y_pred[i], sigma_preds[i])
     ax.plot(x_grid, y_grid)
-    ax.plot([y_toy[i], y_toy[i]], [0, stats.norm.pdf(y_toy[i], mu, sigma_toy)], color='red', linestyle='--')
-    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], mu, sigma_toy)], color='red', zorder=10)
-    ax.set_ylabel(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
+    ax.plot([y_toy[i], y_toy[i]], [0, stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color='red', linestyle='--')
+    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color='red', zorder=10)
+    ax.set_title(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
     ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
-    ax.set_ylim(0, 0.25)
+    # ax.set_ylim(0, 0.25)
+
+    # Turn off the y axes
+    ax.yaxis.set_visible(False)
     
 plt.tight_layout();
 ```
@@ -1594,10 +1670,9 @@ model(X_train_sc.head(3),
 - Increased Training Time: Since dropout introduces noise into the training process, it can make the training process slower.
 - Sensitivity to Dropout Rates: the performance of dropout is highly dependent on the chosen dropout rate. 
 
+## Accidental dropout ("dead neurons")
 
-# Dead ReLU neurons {data-visibility="uncounted"}
-
-## My first ANN for California housing
+My first ANN for California housing
 
 ::: columns
 ::: column
