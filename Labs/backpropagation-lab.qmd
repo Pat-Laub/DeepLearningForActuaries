@@ -94,7 +94,7 @@ where
 
 - $\hat{y}_1=a^{(H+1)}_1= \phi (z^{(H+1)}_1)$
 - $z^{(H+1)}_1 = \langle \boldsymbol{a}^{(H)},  \boldsymbol{w}_1^{(H+1)}  \rangle + b^{(H+1)}_1$.
-- $\langle \cdot, \cdot \rangle$ represents the vector product.
+- $\langle \cdot, \cdot \rangle$ represents the inner product.
 
 ## Gradients For the Hidden Layers
 
@@ -171,29 +171,25 @@ w2_1 = np.array([[2.0], [3.0]])
 
 Some synthetic data to work with:
 ```{python}
-# Set seed for reproducibility
+# Generate 10000 random observations of 3 numerical features
 np.random.seed(0)
+X = np.random.randn(10000, 3)
 
-# Generate 10000 observations of 3 numerical features
-X_data = pd.DataFrame(np.random.randn(10000, 3),
-                      columns=['x1', 'x2', 'x3'])
-X = np.array(X_data)
-
-# sigmoid activation function
+# Sigmoid activation function
 def sigmoid(z):
   return(1/(1+np.exp(-z)))
 
 # Hidden Layer 1
-z1_1 = X @ w1_1 #the first neuron before activation
-z1_2 = X @ w1_2 #the second neuron before activation
-a1_1 = sigmoid(z1_1) #the first neuron after activation
-a1_2 = sigmoid(z1_2) #the second neuron after activation
+z1_1 = X @ w1_1 # The first neuron before activation
+z1_2 = X @ w1_2 # The second neuron before activation
+a1_1 = sigmoid(z1_1) # The first neuron after activation
+a1_2 = sigmoid(z1_2) # The second neuron after activation
 
-#Output Layer
-z2_1 = np.concatenate((a1_1, a1_2), axis = 1) @ w2_1 #pre-activation of the ouput
-a2_1 = np.exp(z2_1) #output
+# Output Layer
+z2_1 = np.concatenate((a1_1, a1_2), axis = 1) @ w2_1 # Pre-activation of the ouput
+a2_1 = np.exp(z2_1) # Output
 
-#The actual values
+# The actual values
 y = a2_1
 ```
 
@@ -208,17 +204,17 @@ w2_1_hat = np.array([[1.0], [2.0]])
 losses = []
 num_iterations = 5000
 for _ in range(num_iterations):
-  ## Compute Forward Passes
+  # Compute Forward Passes
   # Hidden Layer 1
-  z1_1_hat = X @ w1_1_hat  # the first neuron before activation
-  z1_2_hat = X @ w1_2_hat  # the second neuron before activation
-  a1_1_hat = sigmoid(z1_1_hat) # the first neuron after activation
-  a1_2_hat = sigmoid(z1_2_hat) # the second neuron after activation
+  z1_1_hat = X @ w1_1_hat  # The first neuron before activation
+  z1_2_hat = X @ w1_2_hat  # The second neuron before activation
+  a1_1_hat = sigmoid(z1_1_hat) # The first neuron after activation
+  a1_2_hat = sigmoid(z1_2_hat) # The second neuron after activation
   a1_hat = np.concatenate((a1_1_hat, a1_2_hat), axis = 1)
 
   # Output Layer
-  z2_1_hat = a1_hat @ w2_1_hat # the output before activation
-  y_hat = np.exp(z2_1_hat).reshape(len(y), 1) # the ouput
+  z2_1_hat = a1_hat @ w2_1_hat # The output before activation
+  y_hat = np.exp(z2_1_hat).reshape(len(y), 1) # The ouput
 
   # Track the Losses
   loss = (y_hat - y)**2
@@ -236,6 +232,7 @@ for _ in range(num_iterations):
 
   # Learning Rate
   eta = 0.0005
+
   # Apply Batch Gradient Descent
   w2_1_hat -= eta * np.mean(d2_1_hat, axis = 0).reshape(2, 1)
   w1_1_hat -= eta * np.mean(d1_1_hat, axis = 0).reshape(3, 1)
