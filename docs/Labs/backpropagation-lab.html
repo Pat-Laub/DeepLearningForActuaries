@@ -584,7 +584,7 @@ window.Quarto = {
 <ul>
 <li><span class="math inline">\hat{y}_1=a^{(H+1)}_1= \phi (z^{(H+1)}_1)</span></li>
 <li><span class="math inline">z^{(H+1)}_1 = \langle \boldsymbol{a}^{(H)},  \boldsymbol{w}_1^{(H+1)}  \rangle + b^{(H+1)}_1</span>.</li>
-<li><span class="math inline">\langle \cdot, \cdot \rangle</span> represents the vector product.</li>
+<li><span class="math inline">\langle \cdot, \cdot \rangle</span> represents the inner product.</li>
 </ul>
 </section>
 <section id="gradients-for-the-hidden-layers" class="level3">
@@ -633,7 +633,7 @@ window.Quarto = {
 <section id="implementing-backpropagation-in-python" class="level2">
 <h2 class="anchored" data-anchor-id="implementing-backpropagation-in-python">Implementing Backpropagation in Python</h2>
 <p>See <code>Week_4_Lab_Notebook.ipynb</code> for more details. The required packages/functions are as follows:</p>
-<div id="33bf68ca" class="cell" data-execution_count="1">
+<div id="5720631f" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>os.environ[<span class="st">"CUDA_VISIBLE_DEVICES"</span>] <span class="op">=</span> <span class="st">""</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -648,41 +648,37 @@ window.Quarto = {
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.initializers <span class="im">import</span> Constant</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>True weights:</p>
-<div id="d796ae25" class="cell" data-execution_count="2">
+<div id="6ab2eae9" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>w1_1 <span class="op">=</span> np.array([[<span class="fl">0.25</span>], [<span class="fl">0.5</span>], [<span class="fl">0.75</span>]])</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>w1_2 <span class="op">=</span> np.array([[<span class="fl">0.75</span>], [<span class="fl">0.5</span>], [<span class="fl">0.25</span>]])</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>w2_1 <span class="op">=</span> np.array([[<span class="fl">2.0</span>], [<span class="fl">3.0</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Some synthetic data to work with:</p>
-<div id="ca152fed" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set seed for reproducibility</span></span>
+<div id="d90aa5a0" class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate 10000 random observations of 3 numerical features</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>np.random.seed(<span class="dv">0</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate 10000 observations of 3 numerical features</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>X_data <span class="op">=</span> pd.DataFrame(np.random.randn(<span class="dv">10000</span>, <span class="dv">3</span>),</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                      columns<span class="op">=</span>[<span class="st">'x1'</span>, <span class="st">'x2'</span>, <span class="st">'x3'</span>])</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.array(X_data)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.random.randn(<span class="dv">10000</span>, <span class="dv">3</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Sigmoid activation function</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sigmoid(z):</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span>(<span class="dv">1</span><span class="op">/</span>(<span class="dv">1</span><span class="op">+</span>np.exp(<span class="op">-</span>z)))</span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># sigmoid activation function</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> sigmoid(z):</span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="cf">return</span>(<span class="dv">1</span><span class="op">/</span>(<span class="dv">1</span><span class="op">+</span>np.exp(<span class="op">-</span>z)))</span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Hidden Layer 1</span></span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>z1_1 <span class="op">=</span> X <span class="op">@</span> w1_1 <span class="co">#the first neuron before activation</span></span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>z1_2 <span class="op">=</span> X <span class="op">@</span> w1_2 <span class="co">#the second neuron before activation</span></span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>a1_1 <span class="op">=</span> sigmoid(z1_1) <span class="co">#the first neuron after activation</span></span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>a1_2 <span class="op">=</span> sigmoid(z1_2) <span class="co">#the second neuron after activation</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Hidden Layer 1</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>z1_1 <span class="op">=</span> X <span class="op">@</span> w1_1 <span class="co"># The first neuron before activation</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>z1_2 <span class="op">=</span> X <span class="op">@</span> w1_2 <span class="co"># The second neuron before activation</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>a1_1 <span class="op">=</span> sigmoid(z1_1) <span class="co"># The first neuron after activation</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>a1_2 <span class="op">=</span> sigmoid(z1_2) <span class="co"># The second neuron after activation</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Output Layer</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>z2_1 <span class="op">=</span> np.concatenate((a1_1, a1_2), axis <span class="op">=</span> <span class="dv">1</span>) <span class="op">@</span> w2_1 <span class="co"># Pre-activation of the ouput</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>a2_1 <span class="op">=</span> np.exp(z2_1) <span class="co"># Output</span></span>
 <span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co">#Output Layer</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>z2_1 <span class="op">=</span> np.concatenate((a1_1, a1_2), axis <span class="op">=</span> <span class="dv">1</span>) <span class="op">@</span> w2_1 <span class="co">#pre-activation of the ouput</span></span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>a2_1 <span class="op">=</span> np.exp(z2_1) <span class="co">#output</span></span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co">#The actual values</span></span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> a2_1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co"># The actual values</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> a2_1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="from-scratch" class="level3">
 <h3 class="anchored" data-anchor-id="from-scratch">From Scratch</h3>
-<div id="d74c4e0e" class="cell" data-execution_count="4">
+<div id="ae4e86a7" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Initialised weights</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>w1_1_hat <span class="op">=</span> np.array([[<span class="fl">0.2</span>], [<span class="fl">0.6</span>], [<span class="fl">1.0</span>]])</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>w1_2_hat <span class="op">=</span> np.array([[<span class="fl">0.4</span>], [<span class="fl">0.8</span>], [<span class="fl">1.2</span>]])</span>
@@ -691,17 +687,17 @@ window.Quarto = {
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>losses <span class="op">=</span> []</span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>num_iterations <span class="op">=</span> <span class="dv">5000</span></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> _ <span class="kw">in</span> <span class="bu">range</span>(num_iterations):</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="co">## Compute Forward Passes</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Compute Forward Passes</span></span>
 <span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Hidden Layer 1</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  z1_1_hat <span class="op">=</span> X <span class="op">@</span> w1_1_hat  <span class="co"># the first neuron before activation</span></span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  z1_2_hat <span class="op">=</span> X <span class="op">@</span> w1_2_hat  <span class="co"># the second neuron before activation</span></span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  a1_1_hat <span class="op">=</span> sigmoid(z1_1_hat) <span class="co"># the first neuron after activation</span></span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  a1_2_hat <span class="op">=</span> sigmoid(z1_2_hat) <span class="co"># the second neuron after activation</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>  z1_1_hat <span class="op">=</span> X <span class="op">@</span> w1_1_hat  <span class="co"># The first neuron before activation</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  z1_2_hat <span class="op">=</span> X <span class="op">@</span> w1_2_hat  <span class="co"># The second neuron before activation</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  a1_1_hat <span class="op">=</span> sigmoid(z1_1_hat) <span class="co"># The first neuron after activation</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  a1_2_hat <span class="op">=</span> sigmoid(z1_2_hat) <span class="co"># The second neuron after activation</span></span>
 <span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  a1_hat <span class="op">=</span> np.concatenate((a1_1_hat, a1_2_hat), axis <span class="op">=</span> <span class="dv">1</span>)</span>
 <span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Output Layer</span></span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  z2_1_hat <span class="op">=</span> a1_hat <span class="op">@</span> w2_1_hat <span class="co"># the output before activation</span></span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  y_hat <span class="op">=</span> np.exp(z2_1_hat).reshape(<span class="bu">len</span>(y), <span class="dv">1</span>) <span class="co"># the ouput</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  z2_1_hat <span class="op">=</span> a1_hat <span class="op">@</span> w2_1_hat <span class="co"># The output before activation</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  y_hat <span class="op">=</span> np.exp(z2_1_hat).reshape(<span class="bu">len</span>(y), <span class="dv">1</span>) <span class="co"># The ouput</span></span>
 <span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Track the Losses</span></span>
 <span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  loss <span class="op">=</span> (y_hat <span class="op">-</span> y)<span class="op">**</span><span class="dv">2</span></span>
@@ -719,14 +715,15 @@ window.Quarto = {
 <span id="cb4-34"><a href="#cb4-34" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-35"><a href="#cb4-35" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Learning Rate</span></span>
 <span id="cb4-36"><a href="#cb4-36" aria-hidden="true" tabindex="-1"></a>  eta <span class="op">=</span> <span class="fl">0.0005</span></span>
-<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Apply Batch Gradient Descent</span></span>
-<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>  w2_1_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d2_1_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">2</span>, <span class="dv">1</span>)</span>
-<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  w1_1_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d1_1_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">3</span>, <span class="dv">1</span>)</span>
-<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  w1_2_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d1_2_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">3</span>, <span class="dv">1</span>)</span>
-<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w1_1_hat)</span>
-<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w1_2_hat)</span>
-<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w2_1_hat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-37"><a href="#cb4-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-38"><a href="#cb4-38" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Apply Batch Gradient Descent</span></span>
+<span id="cb4-39"><a href="#cb4-39" aria-hidden="true" tabindex="-1"></a>  w2_1_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d2_1_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">2</span>, <span class="dv">1</span>)</span>
+<span id="cb4-40"><a href="#cb4-40" aria-hidden="true" tabindex="-1"></a>  w1_1_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d1_1_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">3</span>, <span class="dv">1</span>)</span>
+<span id="cb4-41"><a href="#cb4-41" aria-hidden="true" tabindex="-1"></a>  w1_2_hat <span class="op">-=</span> eta <span class="op">*</span> np.mean(d1_2_hat, axis <span class="op">=</span> <span class="dv">0</span>).reshape(<span class="dv">3</span>, <span class="dv">1</span>)</span>
+<span id="cb4-42"><a href="#cb4-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-43"><a href="#cb4-43" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w1_1_hat)</span>
+<span id="cb4-44"><a href="#cb4-44" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w1_2_hat)</span>
+<span id="cb4-45"><a href="#cb4-45" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(w2_1_hat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[0.24985576]
  [0.5000211 ]
@@ -741,7 +738,7 @@ window.Quarto = {
 </section>
 <section id="from-keras" class="level3">
 <h3 class="anchored" data-anchor-id="from-keras">From Keras</h3>
-<div id="6c84c98c" class="cell" data-execution_count="5">
+<div id="9f29e384" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># An initialiser for the weights in the neural network </span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>init1 <span class="op">=</span> Constant([[<span class="fl">0.2</span>, <span class="fl">0.4</span>], [<span class="fl">0.6</span>, <span class="fl">0.8</span>], [<span class="fl">1.0</span>, <span class="fl">1.2</span>]])</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>init2 <span class="op">=</span> Constant([[<span class="fl">1.0</span>, <span class="fl">2.0</span>]])</span>
@@ -766,10 +763,10 @@ window.Quarto = {
 <span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Print out the weights</span></span>
 <span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(model.get_weights())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[array([[0.30257472, 0.805481  ],
-       [0.493334  , 0.5067072 ],
-       [0.684252  , 0.20761952]], dtype=float32), array([[2.5133715, 2.5152786],
-       [2.486748 , 2.4848888]], dtype=float32)]</code></pre>
+<pre><code>[array([[0.3025748 , 0.80548114],
+       [0.49333417, 0.5067073 ],
+       [0.6842524 , 0.2076197 ]], dtype=float32), array([[2.5133712, 2.5152776],
+       [2.4867477, 2.4848893]], dtype=float32)]</code></pre>
 </div>
 </div>
 
