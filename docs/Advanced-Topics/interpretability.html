@@ -490,20 +490,15 @@ window.Quarto = {
   <ul>
   <li><a href="#interpretability" id="toc-interpretability" class="nav-link active" data-scroll-target="#interpretability">Interpretability</a>
   <ul class="collapse">
-  <li><a href="#interpretability-and-trust" id="toc-interpretability-and-trust" class="nav-link" data-scroll-target="#interpretability-and-trust">Interpretability and Trust</a></li>
   <li><a href="#interpretability-1" id="toc-interpretability-1" class="nav-link" data-scroll-target="#interpretability-1">Interpretability</a></li>
-  </ul></li>
-  <li><a href="#aspects-of-interpretability" id="toc-aspects-of-interpretability" class="nav-link" data-scroll-target="#aspects-of-interpretability">Aspects of Interpretability</a>
-  <ul class="collapse">
-  <li><a href="#first-dimension-of-interpretability" id="toc-first-dimension-of-interpretability" class="nav-link" data-scroll-target="#first-dimension-of-interpretability">First Dimension of Interpretability</a></li>
-  <li><a href="#second-dimension-of-interpretability" id="toc-second-dimension-of-interpretability" class="nav-link" data-scroll-target="#second-dimension-of-interpretability">Second Dimension of Interpretability</a></li>
+  <li><a href="#husky-vs.-wolf" id="toc-husky-vs.-wolf" class="nav-link" data-scroll-target="#husky-vs.-wolf">Husky vs.&nbsp;Wolf</a></li>
+  <li><a href="#aspects-of-interpretability" id="toc-aspects-of-interpretability" class="nav-link" data-scroll-target="#aspects-of-interpretability">Aspects of Interpretability</a></li>
   </ul></li>
   <li><a href="#inherent-interpretability" id="toc-inherent-interpretability" class="nav-link" data-scroll-target="#inherent-interpretability">Inherent Interpretability</a>
   <ul class="collapse">
   <li><a href="#trees-are-interpretable" id="toc-trees-are-interpretable" class="nav-link" data-scroll-target="#trees-are-interpretable">Trees are interpretable!</a></li>
   <li><a href="#trees-are-interpretable-1" id="toc-trees-are-interpretable-1" class="nav-link" data-scroll-target="#trees-are-interpretable-1">Trees are interpretable?</a></li>
-  <li><a href="#linear-models" id="toc-linear-models" class="nav-link" data-scroll-target="#linear-models">Linear models</a></li>
-  <li><a href="#localglmnet" id="toc-localglmnet" class="nav-link" data-scroll-target="#localglmnet">LocalGLMNet</a></li>
+  <li><a href="#linear-models-localglmnet" id="toc-linear-models-localglmnet" class="nav-link" data-scroll-target="#linear-models-localglmnet">Linear models &amp; LocalGLMNet</a></li>
   </ul></li>
   <li><a href="#post-hoc-interpretability" id="toc-post-hoc-interpretability" class="nav-link" data-scroll-target="#post-hoc-interpretability">Post-hoc Interpretability</a>
   <ul class="collapse">
@@ -516,6 +511,7 @@ window.Quarto = {
   <li><a href="#explaining-to-bob" id="toc-explaining-to-bob" class="nav-link" data-scroll-target="#explaining-to-bob">“Explaining” to Bob</a></li>
   <li><a href="#shap-values" id="toc-shap-values" class="nav-link" data-scroll-target="#shap-values">SHAP Values</a></li>
   <li><a href="#grad-cam" id="toc-grad-cam" class="nav-link" data-scroll-target="#grad-cam">Grad-CAM</a></li>
+  <li><a href="#criticism" id="toc-criticism" class="nav-link" data-scroll-target="#criticism">Criticism</a></li>
   </ul></li>
   <li><a href="#illustrative-example" id="toc-illustrative-example" class="nav-link" data-scroll-target="#illustrative-example">Illustrative Example</a>
   <ul class="collapse">
@@ -575,7 +571,7 @@ window.Quarto = {
 <section id="acknowledgments" class="level4">
 <h4 class="anchored" data-anchor-id="acknowledgments">Acknowledgments</h4>
 <p>Thanks to Eric Dong for making the original version of these slides.</p>
-<div id="790f095c" class="cell" data-execution_count="2">
+<div id="ccd0775a" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Show the package imports</summary>
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
@@ -601,16 +597,6 @@ window.Quarto = {
 <section id="interpretability" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="interpretability">Interpretability</h2>
 <p>Interpretability on a high-level refers to understanding how a model works. Understanding how a model works is very important for decision making. Traditional statistical methods like linear regression and generalized linear regressions are inherently interpretable because we can see and understand how different variables impact the model predictions collectively and individually. In contrast, deep learning algorithms do not readily provide insights into how variables contributed to the predictions. They are composed of multiple layers of interconnected nodes that learn different representations of data. Hence, it is not clear how inputs directly contributed to the outputs. This makes neural networks less interpretable. This is not very desirable, especially in situations which demand making explanations. As such, there is active discussion going on about how we can make less interpretable models more interpretable so that we start trusting these models more.</p>
-<section id="interpretability-and-trust" class="level3">
-<h3 class="anchored" data-anchor-id="interpretability-and-trust">Interpretability and Trust</h3>
-<p>Suppose a neural network informs us to increase the premium for Bob.</p>
-<ul>
-<li>Why are we getting such a conclusion from the neural network, and should we trust it?</li>
-<li>How can we explain our pricing scheme to Bob and the regulators?</li>
-<li>Should we be concerned with moral hazards, discrimination, unfairness, and ethical affairs?</li>
-</ul>
-<p>We need to trust the model to employ it! With interpretability, we can trust it!</p>
-</section>
 <section id="interpretability-1" class="level3">
 <h3 class="anchored" data-anchor-id="interpretability-1">Interpretability</h3>
 <dl>
@@ -620,40 +606,53 @@ window.Quarto = {
 </dd>
 </dl>
 <p>Interpretability of black-box models can be crucial to ascertaining trust.</p>
+<blockquote class="blockquote">
+<p>Interpretability is about transparency, about understanding exactly why and how the model is generating predictions, and therefore, it is important to observe the inner mechanics of the algorithm considered. This leads to interpreting the model’s parameters and features used to determine the given output. Explainability is about explaining the behavior of the model in human terms.</p>
+</blockquote>
+<div class="footer">
+<p>Source: Charpentier (2024), <a href="https://link.springer.com/book/10.1007/978-3-031-49783-4"><em>Insurance, Biases, Discrimination and Fairness</em></a>, Springer.</p>
+</div>
 </section>
+<section id="husky-vs.-wolf" class="level3">
+<h3 class="anchored" data-anchor-id="husky-vs.-wolf">Husky vs.&nbsp;Wolf</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="husky.jpg" class="img-fluid figure-img"></p>
+<figcaption>A well-known anecdote in the explainability literature.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Ribeiro et al.&nbsp;(2016), <em>“Why should I trust you?” Explaining the predictions of any classifier</em>, 22nd ACM SIGKDD conference.</p>
+</div>
 </section>
-<section id="aspects-of-interpretability" class="level2" data-visibility="uncounted">
-<h2 data-visibility="uncounted" class="anchored" data-anchor-id="aspects-of-interpretability">Aspects of Interpretability</h2>
-<section id="first-dimension-of-interpretability" class="level3">
-<h3 class="anchored" data-anchor-id="first-dimension-of-interpretability">First Dimension of Interpretability</h3>
+<section id="aspects-of-interpretability" class="level3">
+<h3 class="anchored" data-anchor-id="aspects-of-interpretability">Aspects of Interpretability</h3>
 <dl>
 <dt>Inherent Interpretability</dt>
 <dd>
-<p><em>The model is interpretable by design.</em></p>
+<p>The model is interpretable by design.</p>
 </dd>
 </dl>
 <p>Models with inherent interpretability generally have a simple model architecture where the relationships between inputs and outputs are straightforward. This makes it easy to understand and comprehend model’s inner workings and its predictions. As a result, decision making processes convenient. Examples for models with inherent interpretability include linear regression models, generalized linear regression models and decision trees.</p>
 <dl>
 <dt>Post-hoc Interpretability</dt>
 <dd>
-<p><em>The model is not interpretable by design, but we can use other methods to explain the model.</em></p>
+<p>The model is not interpretable by design, but we can use other methods to explain the model.</p>
 </dd>
 </dl>
 <p>Post-hoc interpretability refers to applying various techniques to understand how the model makes its predictions after the model is trained. Post-hoc interpretability is useful for understanding predictions coming from complex models (less interpretable models) such as neural networks, random forests and gradient boosting trees.</p>
-</section>
-<section id="second-dimension-of-interpretability" class="level3">
-<h3 class="anchored" data-anchor-id="second-dimension-of-interpretability">Second Dimension of Interpretability</h3>
-<p>Global Interpretability:</p>
-<ul>
-<li><em>The ability to understand how the model works.</em></li>
-<li>Example: how each feature impacts the overall mean prediction.</li>
-</ul>
+<p><br></p>
+<dl>
+<dt>Global Interpretability</dt>
+<dd>
+<p>The ability to understand how the model works.</p>
+</dd>
+<dt>Local Interpretability</dt>
+<dd>
+<p>The ability to interpret/understand each prediction.</p>
+</dd>
+</dl>
 <p>Global Interpretability focuses on understanding the model’s decision-making process as a whole. Global interpretability takes in to account the entire dataset. These techniques will try to look at general patterns related how input data drives the output in general. Examples for techniques include global feature importance method and permutation importance methods.</p>
-<p>Local Interpretability:</p>
-<ul>
-<li><em>The ability to interpret/understand each prediction.</em></li>
-<li>Example: how Bob’s mean prediction has increased the most.</li>
-</ul>
 <p>Local Interpretability focuses on understanding the model’s decision-making for a specific input observation. These techniques will try to look at how different input features contributed to the output.</p>
 </section>
 </section>
@@ -682,8 +681,8 @@ window.Quarto = {
 </figure>
 </div>
 </section>
-<section id="linear-models" class="level3">
-<h3 class="anchored" data-anchor-id="linear-models">Linear models</h3>
+<section id="linear-models-localglmnet" class="level3">
+<h3 class="anchored" data-anchor-id="linear-models-localglmnet">Linear models &amp; LocalGLMNet</h3>
 <p>A GLM has the form</p>
 <p><span class="math display">
 \hat{y} = g^{-1}\bigl( \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p \bigr)
@@ -691,15 +690,16 @@ window.Quarto = {
 <p>where <span class="math inline">\beta_0, \dots, \beta_p</span> are the model parameters.</p>
 <p>Global &amp; local interpretations are easy to obtain.</p>
 <p>The above GLM representation provides a clear interpretation of how a marginal change in a variable <span class="math inline">x</span> can contribute to a change in the mean of the output. This makes GLM inherently interpretable.</p>
-</section>
-<section id="localglmnet" class="level3">
-<h3 class="anchored" data-anchor-id="localglmnet">LocalGLMNet</h3>
-<p>Imagine: <span class="math display">
+<p><br></p>
+<p><strong>LocalGLMNet</strong> extends this to a neural network.</p>
+<p><span class="math display">
 \hat{y_i} = g^{-1}\bigl( \beta_0(\boldsymbol{x}_i) + \beta_1(\boldsymbol{x}_i) x_{i1} + \dots + \beta_p(\boldsymbol{x}_i) x_{ip} \bigr)
 </span></p>
-<p>A GLM with local parameters <span class="math inline">\beta_0(\boldsymbol{x}_i), \dots, \beta_p(\boldsymbol{x}_i)</span> for each observation <span class="math inline">\boldsymbol{x}_i</span>.</p>
-<p>The local parameters are the output of a neural network.</p>
+<p>A GLM with local parameters <span class="math inline">\beta_0(\boldsymbol{x}_i), \dots, \beta_p(\boldsymbol{x}_i)</span> for each observation <span class="math inline">\boldsymbol{x}_i</span>. The local parameters are the output of a neural network.</p>
 <p>Here, <span class="math inline">\beta_p</span>’s are the neurons from the output layer. First, we define a Feed Foward Neural Network using an input layer, several hidden layers and an output layer. The number of neurons in the output layer must be equal to the number of inputs. Thereafter, we define a skip connection from the input layer directly to the output layer, and merge them using scaler multiplication. Thereafter, the neural network returns the coefficients of the GLM fitted for each individual. We then train the model with the <em>response</em> variable.</p>
+<div class="footer">
+<p>Source: Richman and Wüthrich (2023), <em>LocalGLMnet: interpretable deep learning for tabular data</em>, Scandinavian Actuarial Journal (2023.1), pp.&nbsp;71-95.</p>
+</div>
 </section>
 </section>
 <section id="post-hoc-interpretability" class="level2" data-visibility="uncounted">
@@ -720,13 +720,15 @@ window.Quarto = {
 <p><span class="math display"> i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} </span></p></li>
 </ul></li>
 </ul>
+<p>Originally proposed by Breiman (2001), <em>Random forests</em>, Machine learning (45), pp.&nbsp;5-32.</p>
+<p>Extended by Fisher et al.&nbsp;(2019), <em>All models are wrong, but many are useful: Learning a variable’s importance by studying an entire class of prediction models simultaneously</em>, Journal of Machine Learning Research (20.177), pp.&nbsp;1-81.</p>
 <div class="footer">
 <p>Source: scikit-learn documentation, <a href="https://scikit-learn.org/stable/modules/permutation_importance.html">permutation_importance function</a>.</p>
 </div>
 </section>
 <section id="permutation-importance-1" class="level3" data-visibility="uncounted">
 <h3 data-visibility="uncounted" class="anchored" data-anchor-id="permutation-importance-1">Permutation importance</h3>
-<div id="73087e2a" class="cell" data-execution_count="3">
+<div id="663d7816" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> permutation_test(model, X, y, num_reps<span class="op">=</span><span class="dv">1</span>, seed<span class="op">=</span><span class="dv">42</span>):</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Run the permutation test for variable importance.</span></span>
@@ -832,8 +834,21 @@ window.Quarto = {
 </div>
 </div>
 </div>
+<p>See, e.g., <a href="https://keras.io/examples/vision/grad_cam/">Keras tutorial</a>.</p>
 <div class="footer">
 <p>See Chollet (2021), Deep Learning with Python, Section 9.4.3.</p>
+</div>
+</section>
+<section id="criticism" class="level3">
+<h3 class="anchored" data-anchor-id="criticism">Criticism</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="saliency-criticism.jpg" class="img-fluid figure-img"></p>
+<figcaption>Multiple conflicting explanations.</figcaption>
+</figure>
+</div>
+<div class="footer">
+<p>Source: Rudin (2019), <a href="https://arxiv.org/pdf/1811.10154.pdf">Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead</a>, Nature Machine Intelligence.</p>
 </div>
 </section>
 </section>
@@ -841,7 +856,7 @@ window.Quarto = {
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="illustrative-example">Illustrative Example</h2>
 <section id="first-attempt-at-nlp-task" class="level3">
 <h3 class="anchored" data-anchor-id="first-attempt-at-nlp-task">First attempt at NLP task</h3>
-<div id="3e54bd8d" class="cell" data-execution_count="4">
+<div id="2cde1b59" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df_raw <span class="op">=</span> pd.read_parquet(<span class="st">"../Natural-Language-Processing/NHTSA_NMVCCS_extract.parquet.gzip"</span>)</span>
@@ -860,7 +875,7 @@ window.Quarto = {
 </div>
 <div class="columns">
 <div class="column">
-<div id="78d9b4a4" class="cell" data-execution_count="5">
+<div id="2f5a1aa1" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df_raw[<span class="st">"SUMMARY_EN"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="5">
 <pre><code>0       V1, a 2000 Pontiac Montana minivan, made a lef...
@@ -874,7 +889,7 @@ Name: SUMMARY_EN, Length: 6949, dtype: object</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div id="b0ad92e4" class="cell" data-execution_count="6">
+<div id="5e674192" class="cell" data-execution_count="6">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>df_raw[<span class="st">"NUM_VEHICLES"</span>].value_counts()<span class="op">\</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  .sort_index()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="6">
@@ -894,7 +909,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="bag-of-words-for-the-top-1000-words" class="level3">
 <h3 class="anchored" data-anchor-id="bag-of-words-for-the-top-1000-words">Bag of words for the top 1,000 words</h3>
-<div id="3291b7d3" class="cell" data-execution_count="7">
+<div id="4da09459" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> vectorise_dataset(X, vect, txt_col<span class="op">=</span><span class="st">"SUMMARY_EN"</span>, dataframe<span class="op">=</span><span class="va">False</span>):</span>
@@ -910,7 +925,7 @@ Name: count, dtype: int64</code></pre>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> pd.concat([X_vects_df, X_other], axis<span class="op">=</span><span class="dv">1</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="85780a87" class="cell" data-execution_count="8">
+<div id="791f491a" class="cell" data-execution_count="8">
 <div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>vect <span class="op">=</span> CountVectorizer(max_features<span class="op">=</span><span class="dv">1_000</span>, stop_words<span class="op">=</span><span class="st">"english"</span>)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>vect.fit(X_train[<span class="st">"SUMMARY_EN"</span>])</span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1083,7 +1098,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="trained-a-basic-neural-network-on-that" class="level3">
 <h3 class="anchored" data-anchor-id="trained-a-basic-neural-network-on-that">Trained a basic neural network on that</h3>
-<div id="85835b18" class="cell" data-execution_count="9">
+<div id="303ee947" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> build_model(num_features, num_cats):</span>
@@ -1102,18 +1117,18 @@ Name: count, dtype: int64</code></pre>
 <span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> model</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="3301aedd" class="cell" data-execution_count="10">
+<div id="6aa028c4" class="cell" data-execution_count="10">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>num_features <span class="op">=</span> X_train_bow.shape[<span class="dv">1</span>]</span>
 <span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>num_cats <span class="op">=</span> df_raw[<span class="st">"NUM_VEHICLES"</span>].nunique()</span>
 <span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> build_model(num_features, num_cats)</span>
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">1</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>, monitor<span class="op">=</span><span class="st">"val_accuracy"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="d66e3f5f" class="cell" data-execution_count="11">
+<div id="0fa57ef3" class="cell" data-execution_count="11">
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>model.fit(X_train_bow, y_train, epochs<span class="op">=</span><span class="dv">10</span>,</span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[es], validation_data<span class="op">=</span>(X_val_bow, y_val), verbose<span class="op">=</span><span class="dv">0</span>)</span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>model.summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="c59e4c0d" class="cell" data-execution_count="12">
+<div id="f05fb614" class="cell" data-execution_count="12">
 <div class="cell-output cell-output-display">
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "sequential"</span>
 </pre>
@@ -1145,13 +1160,13 @@ Name: count, dtype: int64</code></pre>
 </pre>
 </div>
 </div>
-<div id="59b6e88d" class="cell" data-execution_count="13">
+<div id="841a68da" class="cell" data-execution_count="13">
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_train_bow, y_train, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="12">
 <pre><code>[0.004478050395846367, 1.0, 1.0]</code></pre>
 </div>
 </div>
-<div id="32b996f3" class="cell" data-execution_count="14">
+<div id="9b4c10d3" class="cell" data-execution_count="14">
 <div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val_bow, y_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="13">
 <pre><code>[8.163677215576172, 0.9784172773361206, 0.9985611438751221]</code></pre>
@@ -1181,7 +1196,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="find-important-inputs" class="level3">
 <h3 class="anchored" data-anchor-id="find-important-inputs">Find important inputs</h3>
-<div id="38743759" class="cell" data-execution_count="15">
+<div id="b39891be" class="cell" data-execution_count="15">
 <div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> permutation_test(model, X, y, num_reps<span class="op">=</span><span class="dv">1</span>, seed<span class="op">=</span><span class="dv">42</span>):</span>
 <span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">"""</span></span>
 <span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co">    Run the permutation test for variable importance.</span></span>
@@ -1206,7 +1221,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="run-the-permutation-test" class="level3">
 <h3 class="anchored" data-anchor-id="run-the-permutation-test">Run the permutation test</h3>
-<div id="a6fa2502" class="cell" data-execution_count="16">
+<div id="b5d35cf3" class="cell" data-execution_count="16">
 <div class="sourceCode cell-code" id="annotated-cell-11"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-11" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-11-1" class="code-annotation-target"><a href="#annotated-cell-11-1" aria-hidden="true" tabindex="-1"></a>all_perm_scores <span class="op">=</span> permutation_test(model, X_val_bow, y_val)</span>
 <span id="annotated-cell-11-2"><a href="#annotated-cell-11-2" aria-hidden="true" tabindex="-1"></a>all_perm_scores</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-annotation">
@@ -1230,7 +1245,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="plot-the-permutated-accuracies" class="level3">
 <h3 class="anchored" data-anchor-id="plot-the-permutated-accuracies">Plot the permutated accuracies</h3>
-<div id="d8f1309d" class="cell" data-execution_count="17">
+<div id="e55456dd" class="cell" data-execution_count="17">
 <div class="sourceCode cell-code" id="annotated-cell-12"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-12-1" class="code-annotation-target"><a href="#annotated-cell-12-1" aria-hidden="true" tabindex="-1"></a>perm_scores <span class="op">=</span> all_perm_scores[:,<span class="dv">1</span>]</span>
 <span id="annotated-cell-12-2"><a href="#annotated-cell-12-2" aria-hidden="true" tabindex="-1"></a>plt.plot(perm_scores)</span>
 <span id="annotated-cell-12-3"><a href="#annotated-cell-12-3" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Input index"</span>)</span>
@@ -1255,7 +1270,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="find-the-most-significant-inputs" class="level3">
 <h3 class="anchored" data-anchor-id="find-the-most-significant-inputs">Find the most significant inputs</h3>
-<div id="55b32f81" class="cell" data-execution_count="18">
+<div id="3586ba93" class="cell" data-execution_count="18">
 <div class="sourceCode cell-code" id="annotated-cell-13"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-13-1" class="code-annotation-target"><a href="#annotated-cell-13-1" aria-hidden="true" tabindex="-1"></a>vocab <span class="op">=</span> vect.get_feature_names_out()</span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-13-2" class="code-annotation-target"><a href="#annotated-cell-13-2" aria-hidden="true" tabindex="-1"></a>input_cols <span class="op">=</span> <span class="bu">list</span>(vocab) <span class="op">+</span> weather_cols</span>
 <span id="annotated-cell-13-3"><a href="#annotated-cell-13-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1295,7 +1310,7 @@ Name: count, dtype: int64</code></pre>
 <section id="how-about-a-simple-decision-tree" class="level3">
 <h3 class="anchored" data-anchor-id="how-about-a-simple-decision-tree">How about a simple decision tree?</h3>
 <p>We can try building a simpler model using only the most important features. Here, we chose a classification decision tree.</p>
-<div id="ea86fdb7" class="cell" data-execution_count="19">
+<div id="b91b23c1" class="cell" data-execution_count="19">
 <div class="sourceCode cell-code" id="annotated-cell-14"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-14" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-14-1" class="code-annotation-target"><a href="#annotated-cell-14-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> tree</span>
 <span id="annotated-cell-14-2"><a href="#annotated-cell-14-2" aria-hidden="true" tabindex="-1"></a></span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-14" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-14-3" class="code-annotation-target"><a href="#annotated-cell-14-3" aria-hidden="true" tabindex="-1"></a>clf <span class="op">=</span> tree.DecisionTreeClassifier(random_state<span class="op">=</span><span class="dv">0</span>, max_leaf_nodes<span class="op">=</span><span class="dv">3</span>)</span>
@@ -1317,7 +1332,7 @@ Name: count, dtype: int64</code></pre>
 </dl>
 </div>
 </div>
-<div id="0ac3aa11" class="cell" data-execution_count="20">
+<div id="1c54ec25" class="cell" data-execution_count="20">
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(clf.score(X_train_bow[:, best_input_inds], y_train))</span>
 <span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(clf.score(X_val_bow[:, best_input_inds], y_val))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1329,10 +1344,10 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="decision-tree" class="level3">
 <h3 class="anchored" data-anchor-id="decision-tree">Decision tree</h3>
-<div id="92e411ca" class="cell" data-execution_count="21">
+<div id="815d273c" class="cell" data-execution_count="21">
 <div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>tree.plot_tree(clf, feature_names<span class="op">=</span>best_inputs, filled<span class="op">=</span><span class="va">True</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="046f9d75" class="cell" data-execution_count="22">
+<div id="acaf41b0" class="cell" data-execution_count="22">
 <div class="cell-output cell-output-display" data-execution_count="20">
 <div>
 <figure class="figure">
@@ -1341,7 +1356,7 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<div id="e86a33a0" class="cell" data-execution_count="23">
+<div id="059b0de9" class="cell" data-execution_count="23">
 <div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.where(clf.feature_importances_ <span class="op">&gt;</span> <span class="dv">0</span>)[<span class="dv">0</span>])</span>
 <span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>[best_inputs[ind] <span class="cf">for</span> ind <span class="kw">in</span> np.where(clf.feature_importances_ <span class="op">&gt;</span> <span class="dv">0</span>)[<span class="dv">0</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1357,7 +1372,7 @@ Name: count, dtype: int64</code></pre>
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="illustrative-example-fixed">Illustrative Example (Fixed)</h2>
 <section id="this-is-why-we-replace-v1-v2-v3" class="level3">
 <h3 class="anchored" data-anchor-id="this-is-why-we-replace-v1-v2-v3">This is why we replace “v1”, “v2”, “v3”</h3>
-<div id="ba994e32" class="cell" data-execution_count="24">
+<div id="818e98cd" class="cell" data-execution_count="24">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Go through every summary and find the words "V1", "V2" and "V3".</span></span>
@@ -1388,7 +1403,7 @@ Name: count, dtype: int64</code></pre>
 </details>
 </div>
 <p>There was a slide in the NLP deck titled “Just ignore this for now…” That was going through each summary and replacing the words “V1”, “V2”, “V3” with random numbers. This was done to see if the model was overfitting to these words.</p>
-<div id="30b48c6a" class="cell" data-execution_count="25">
+<div id="def8f247" class="cell" data-execution_count="25">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> df[[<span class="st">"SUMMARY_EN"</span>] <span class="op">+</span> weather_cols]</span>
@@ -1408,18 +1423,18 @@ Name: count, dtype: int64</code></pre>
 <span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a>    monitor<span class="op">=</span><span class="st">"val_accuracy"</span>, verbose<span class="op">=</span><span class="dv">2</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<div id="08c8f895" class="cell" data-execution_count="26">
+<div id="bccfde02" class="cell" data-execution_count="26">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>model.fit(X_train_bow, y_train, epochs<span class="op">=</span><span class="dv">10</span>,</span>
 <span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[es], validation_data<span class="op">=</span>(X_val_bow, y_val), verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Retraining on the fixed dataset gives us a more realistic (lower) accuracy.</p>
-<div id="20b26199" class="cell" data-execution_count="28">
+<div id="bea98e9c" class="cell" data-execution_count="28">
 <div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_train_bow, y_train, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="25">
 <pre><code>[0.07491350173950195, 0.986567497253418, 0.9997601509094238]</code></pre>
 </div>
 </div>
-<div id="9a089c1c" class="cell" data-execution_count="29">
+<div id="8441db09" class="cell" data-execution_count="29">
 <div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>model.evaluate(X_val_bow, y_val, verbose<span class="op">=</span><span class="dv">0</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-display" data-execution_count="26">
 <pre><code>[2.865464925765991, 0.9446043372154236, 0.9956834316253662]</code></pre>
@@ -1428,7 +1443,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="permutation-importance-accuracy-plot" class="level3">
 <h3 class="anchored" data-anchor-id="permutation-importance-accuracy-plot">Permutation importance accuracy plot</h3>
-<div id="ab8d52f7" class="cell" data-execution_count="30">
+<div id="7d1688a3" class="cell" data-execution_count="30">
 <div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>perm_scores <span class="op">=</span> permutation_test(model, X_val_bow, y_val)[:,<span class="dv">1</span>]</span>
 <span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>plt.plot(perm_scores)</span>
 <span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Input index"</span>)<span class="op">;</span> plt.ylabel(<span class="st">"Accuracy when shuffled"</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
@@ -1443,7 +1458,7 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="find-the-most-significant-inputs-1" class="level3">
 <h3 class="anchored" data-anchor-id="find-the-most-significant-inputs-1">Find the most significant inputs</h3>
-<div id="70674c7c" class="cell" data-execution_count="31">
+<div id="5c4dad0a" class="cell" data-execution_count="31">
 <div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>vocab <span class="op">=</span> vect.get_feature_names_out()</span>
 <span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>input_cols <span class="op">=</span> <span class="bu">list</span>(vocab) <span class="op">+</span> weather_cols</span>
 <span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -1458,11 +1473,11 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="how-about-a-simple-decision-tree-1" class="level3">
 <h3 class="anchored" data-anchor-id="how-about-a-simple-decision-tree-1">How about a simple decision tree?</h3>
-<div id="9f823ba5" class="cell" data-execution_count="32">
+<div id="beddf5f0" class="cell" data-execution_count="32">
 <div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>clf <span class="op">=</span> tree.DecisionTreeClassifier(random_state<span class="op">=</span><span class="dv">0</span>, max_leaf_nodes<span class="op">=</span><span class="dv">3</span>)</span>
 <span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>clf.fit(X_train_bow[:, best_input_inds], y_train)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div id="7410680c" class="cell" data-execution_count="33">
+<div id="20db3643" class="cell" data-execution_count="33">
 <div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(clf.score(X_train_bow[:, best_input_inds], y_train))</span>
 <span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(clf.score(X_val_bow[:, best_input_inds], y_val))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1473,11 +1488,11 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="decision-tree-1" class="level3">
 <h3 class="anchored" data-anchor-id="decision-tree-1">Decision tree</h3>
-<div id="c3ff35e1" class="cell" data-execution_count="34">
+<div id="750fa1fe" class="cell" data-execution_count="34">
 <div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>tree.plot_tree(clf, feature_names<span class="op">=</span>best_inputs, filled<span class="op">=</span><span class="va">True</span>)<span class="op">;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The tree shows how, the model would check for the word <em>v3</em>, and decides the prediction as <em>3+</em>. This is not very meaningful, because having <em>v3</em> in the input is a direct indication of the number of vehicles.</p>
-<div id="ceda614a" class="cell" data-execution_count="35">
+<div id="b38de73a" class="cell" data-execution_count="35">
 <div class="cell-output cell-output-display" data-execution_count="31">
 <div>
 <figure class="figure">
@@ -1486,7 +1501,7 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<div id="92e93c26" class="cell" data-execution_count="36">
+<div id="121e2007" class="cell" data-execution_count="36">
 <div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(np.where(clf.feature_importances_ <span class="op">&gt;</span> <span class="dv">0</span>)[<span class="dv">0</span>])</span>
 <span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>[best_inputs[ind] <span class="cf">for</span> ind <span class="kw">in</span> np.where(clf.feature_importances_ <span class="op">&gt;</span> <span class="dv">0</span>)[<span class="dv">0</span>]]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
@@ -1503,7 +1518,7 @@ Name: count, dtype: int64</code></pre>
 
 <div id="quarto-appendix" class="default"><section id="package-versions" class="level3 appendix" data-visibility="uncounted"><h2 class="anchored quarto-appendix-heading">Package Versions</h2><div class="quarto-appendix-contents">
 
-<div id="5c156595" class="cell" data-execution_count="37">
+<div id="7e3c643b" class="cell" data-execution_count="37">
 <div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
 <span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tf_keras"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
