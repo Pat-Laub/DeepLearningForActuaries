@@ -105,6 +105,7 @@ from sklearn.model_selection import train_test_split
 Interpretability on a high-level refers to understanding how a model works. Understanding how a model works is very important for decision making. Traditional statistical methods like linear regression and generalized linear regressions are inherently interpretable because we can see and understand how different variables impact the model predictions collectively and individually. In contrast, deep learning algorithms do not readily provide insights into how variables contributed to the predictions. They are composed of multiple layers of interconnected nodes that learn different representations of data. Hence, it is not clear how inputs directly contributed to the outputs. This makes neural networks less interpretable. This is not very desirable, especially in situations which demand making explanations. As such, there is active discussion going on about how we can make less interpretable models more interpretable so that we start trusting these models more.
 :::
 
+<!--
 ## Interpretability and Trust
 
 Suppose a neural network informs us to increase the premium for Bob.
@@ -114,6 +115,7 @@ Suppose a neural network informs us to increase the premium for Bob.
 -   Should we be concerned with moral hazards, discrimination, unfairness, and ethical affairs?
 
 We need to trust the model to employ it! With interpretability, we can trust it!
+-->
 
 ## Interpretability
 
@@ -123,13 +125,25 @@ Interpretability Definition
 
 Interpretability of black-box models can be crucial to ascertaining trust.
 
-# Aspects of Interpretability {visibility="uncounted"}
+> Interpretability is about transparency, about understanding exactly why and how the model is generating predictions, and therefore, it is important to observe the inner mechanics of the algorithm considered. This leads to interpreting the model’s parameters and features used to determine the given output. Explainability is about explaining the behavior of the model in human terms.
 
-## First Dimension of Interpretability
+::: footer
+Source: Charpentier (2024), [_Insurance, Biases, Discrimination and Fairness_](https://link.springer.com/book/10.1007/978-3-031-49783-4), Springer.
+:::
+
+## Husky vs. Wolf
+
+![A well-known anecdote in the explainability literature.](husky.jpg)
+
+::: footer
+Ribeiro et al. (2016), _"Why should I trust you?" Explaining the predictions of any classifier_, 22nd ACM SIGKDD conference.
+:::
+
+## Aspects of Interpretability
 
 Inherent Interpretability
 
-:   *The model is interpretable by design.*
+: The model is interpretable by design.
 
 ::: {.content-visible unless-format="revealjs"}
 Models with inherent interpretability generally have a simple model architecture where the relationships between inputs and outputs are straightforward. This makes it easy to understand and comprehend model's inner workings and its predictions. As a result, decision making processes convenient. Examples for models with inherent interpretability include linear regression models, generalized linear regression models and decision trees. 
@@ -137,30 +151,25 @@ Models with inherent interpretability generally have a simple model architecture
 
 Post-hoc Interpretability
 
-:   *The model is not interpretable by design, but we can use other methods to explain the model.*
+: The model is not interpretable by design, but we can use other methods to explain the model.
 
 ::: {.content-visible unless-format="revealjs"}
 Post-hoc interpretability refers to applying various techniques to understand how the model makes its predictions after the model is trained. Post-hoc interpretability is useful for understanding predictions coming from complex models (less interpretable models) such as neural networks, random forests and gradient boosting trees. 
 :::
 
-## Second Dimension of Interpretability
+<br>
 
-Global Interpretability:
+Global Interpretability
 
--   *The ability to understand how the model works.*
--   Example: how each feature impacts the overall mean prediction.
+: The ability to understand how the model works.
+
+Local Interpretability
+
+: The ability to interpret/understand each prediction.
 
 ::: {.content-visible unless-format="revealjs"}
 Global Interpretability focuses on understanding the model's decision-making process as a whole. Global interpretability takes in to account the entire dataset. These techniques will try to look at general patterns related how input data drives the output in general. Examples for techniques include global feature importance method and permutation importance methods.
-:::
 
-
-Local Interpretability:
-
--   *The ability to interpret/understand each prediction.*
--   Example: how Bob's mean prediction has increased the most.
-
-::: {.content-visible unless-format="revealjs"}
 Local Interpretability focuses on understanding the model's decision-making for a specific input observation. These techniques will try to look at how different input features contributed to the output. 
 :::
 
@@ -182,7 +191,7 @@ Rudin (2019), [Stop explaining black box machine learning models for high stakes
 
 ![Full train pricing](opal-train-pricing-full-tree.png)
 
-## Linear models
+## Linear models & LocalGLMNet
 
 A GLM has the form
 
@@ -198,20 +207,23 @@ Global & local interpretations are easy to obtain.
 The above GLM representation provides a clear interpretation of how a marginal change in a variable $x$ can contribute to a change in the mean of the output. This makes GLM inherently interpretable.
 :::
 
+<br>
 
-## LocalGLMNet 
+**LocalGLMNet** extends this to a neural network.
 
-Imagine:
 $$
 \hat{y_i} = g^{-1}\bigl( \beta_0(\boldsymbol{x}_i) + \beta_1(\boldsymbol{x}_i) x_{i1} + \dots + \beta_p(\boldsymbol{x}_i) x_{ip} \bigr)
 $$
 
 A GLM with local parameters $\beta_0(\boldsymbol{x}_i), \dots, \beta_p(\boldsymbol{x}_i)$ for each observation $\boldsymbol{x}_i$.
-
 The local parameters are the output of a neural network.
 
 ::: {.content-visible unless-format="revealjs"}
 Here, $\beta_p$'s are the neurons from the output layer. First, we define a Feed Foward Neural Network using an input layer, several hidden layers and an output layer.  The number of neurons in the output layer must be equal to the number of inputs. Thereafter, we define a skip connection from the input layer directly to the output layer, and merge them using scaler multiplication. Thereafter, the neural network returns the coefficients of the GLM fitted for each individual. We then train the model with the _response_ variable. 
+:::
+
+::: footer
+Source: Richman and Wüthrich (2023), _LocalGLMnet: interpretable deep learning for tabular data_, Scandinavian Actuarial Journal (2023.1), pp. 71-95.
 :::
 
 # Post-hoc Interpretability {visibility="uncounted"}
@@ -234,6 +246,10 @@ Here, $\beta_p$'s are the neurons from the output layer. First, we define a Feed
   - Compute importance $i_j$ for feature $f_j$ defined as:
 
     $$ i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} $$
+
+Originally proposed by Breiman (2001), _Random forests_, Machine learning (45), pp. 5-32.
+
+Extended by Fisher et al. (2019), _All models are wrong, but many are useful: Learning a variable's importance by studying an entire class of prediction models simultaneously_, Journal of Machine Learning Research (20.177), pp. 1-81.
 
 ::: footer
 Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
@@ -347,8 +363,18 @@ Reference: Lundberg & Lee (2017), [A Unified Approach to Interpreting Model Pred
 :::
 :::
 
+See, e.g., [Keras tutorial](https://keras.io/examples/vision/grad_cam/).
+
 ::: footer
 See Chollet (2021), Deep Learning with Python, Section 9.4.3.
+:::
+
+## Criticism
+
+![Multiple conflicting explanations.](saliency-criticism.jpg)
+
+::: footer
+Source: Rudin (2019), [Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead](https://arxiv.org/pdf/1811.10154.pdf), Nature Machine Intelligence.
 :::
 
 {{< include _permutation-nlp-example.qmd >}}
