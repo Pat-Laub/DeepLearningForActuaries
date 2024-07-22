@@ -1,0 +1,547 @@
+# Autoencoders {visibility="uncounted"}
+
+## Autoencoder
+
+An autoencoder takes a data/image, maps it to a latent space via an encoder module, then decodes it back to an output with the same dimensions via a decoder module.
+
+::: {.content-visible unless-format="revealjs"}
+They are useful in learning latent representations of the data.
+:::
+
+![Schematic of an autoencoder.](autoencoder.png)
+
+::: footer
+Source: Marcus Lautier (2022).
+:::
+
+## Autoencoder II
+
+- An autoencoder is trained by using the same image as both the input and the target, meaning an autoencoder learns to reconstruct the original inputs. Therefore it's _not supervised learning_, but _self-supervised learning_.
+- If we impose constraints on the encoders to be low-dimensional and sparse, _the input data will be compressed_ into fewer bits of information. 
+- Latent space is a place that stores low-dimensional representation of data. It can be used for _data compression_, where data is compressed to a point in a latent space.
+- An image can be compressed into a latent representation, which can then be reconstructed back to a _slightly different image_. 
+
+::: {.notes}
+For image editing, an image can be projected onto a latent space and moved inside the latent space in a meaningful way (which means we modify its latent representation), before being mapped back to the image space. This will edit the image and allow us to generate images that have never been seen before.
+:::
+
+## Example: Hand-written characters
+
+```{python}
+#| code-fold: true
+#| code-summary: Loading the Mandarin hand-written character dataset
+#| output: false
+
+# Download the dataset if it hasn't already been downloaded.
+from pathlib import Path
+if not Path("mandarin-split").exists():
+    if not Path("mandarin").exists():
+        !wget https://laub.au/data/mandarin.zip
+        !unzip mandarin.zip
+    
+    import splitfolders
+    splitfolders.ratio("mandarin", output="mandarin-split",
+        seed=1337, ratio=(5/7, 1/7, 1/7))
+
+from keras.utils import image_dataset_from_directory
+
+data_dir = "mandarin-split"
+batch_size = 32
+img_height = 80
+img_width = 80
+img_size = (img_height, img_width)
+
+train_ds = image_dataset_from_directory(
+    data_dir + "/train",
+    image_size=img_size,
+    batch_size=batch_size,
+    shuffle=False,
+    color_mode="grayscale")
+
+val_ds = image_dataset_from_directory(
+    data_dir + "/val",
+    image_size=img_size,
+    batch_size=batch_size,
+    shuffle=False,
+    color_mode="grayscale")
+
+test_ds = image_dataset_from_directory(
+    data_dir + "/test",
+    image_size=img_size,
+    batch_size=batch_size,
+    shuffle=False,
+    color_mode="grayscale")
+
+X_train = np.concatenate(list(train_ds.map(lambda x, y: x))) / 255.0
+y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
+
+X_val = np.concatenate(list(val_ds.map(lambda x, y: x))) / 255.0
+y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
+
+X_test = np.concatenate(list(test_ds.map(lambda x, y: x))) / 255.0
+y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
+```
+
+<!-- 
+Later, try this on CASIA dataset:
+
+# data_dir = "CASIA-Dataset"                          #<2>
+# batch_size = 32                                     #<3>
+# img_height = 80                                     #<4>
+# img_width = 80                                      #<5>
+# img_size = (img_height, img_width)                  #<6>
+
+# train_ds = image_dataset_from_directory(            #<7>
+#     "../Computer-Vision/CASIA-Dataset/Train",
+#     image_size=img_size,
+#     batch_size=batch_size,
+#     shuffle=False,
+#     color_mode='grayscale')
+    
+# test_ds = image_dataset_from_directory(             #<8>
+#     "../Computer-Vision/CASIA-Dataset/Test",
+#     image_size=img_size,
+#     batch_size=batch_size,
+#     shuffle=False,
+#     color_mode='grayscale')
+
+# # NB: Need shuffle=False earlier for these X & y to line up.
+# X_train_val = np.concatenate(list(train_ds.map(lambda x, y: x))) / 255.0
+# y_train_val = np.concatenate(list(train_ds.map(lambda x, y: y)))
+
+# # Randomly split into train and val sets
+# from sklearn.model_selection import train_test_split
+# X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, test_size=0.2, random_state=42)
+
+# X_test = np.concatenate(list(test_ds.map(lambda x, y: x))) / 255.0
+# y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
+-->
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_train[0], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_train[80], cmap="gray");
+```
+:::
+:::
+
+
+## A compression game
+
+::: {.content-visible unless-format="revealjs"}
+Encoding is the overall process of compressing an input with containing data in a high dimensional space to a low dimension space. Compressing is the action of identifying necessary information in the data (versus redundant data) and representing the input in a more concise form. The following slides show two different ways of representing the same data. The second representation is more concise (and smarter) than the first.
+:::
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_train[42], cmap="gray");
+print(img_width * img_height)
+```
+:::
+::: column
+
+::: {.fragment}
+
+> _A 4 with a curly foot, a flat line goes across the middle of the 4, two feet come off the bottom._
+
+96 characters
+
+:::
+
+::: {.fragment}
+
+> _A Dōng character, rotated counterclockwise 15 degrees._
+
+54 characters
+
+:::
+
+:::
+:::
+
+
+## Make a basic autoencoder
+::: {.content-visible unless-format="revealjs"}
+The following code is an example of constructing a basic autoencoder. The high-level idea here is to take an image, compress the information of the image from 6400 pixels to 400 pixels (encoding stage) and decode it back to the original image size (decoding stage). Note that we train the neural network keeping the input and the output the same. 
+:::
+
+
+```{python}
+num_hidden_layer = 400
+print(f"Compress from {img_height * img_width} pixels to {num_hidden_layer} latent variables.")
+```
+
+```{python}
+random.seed(123)                                                                #<1>
+
+model = keras.models.Sequential([
+    layers.Input((img_height, img_width, 1)),
+    layers.Flatten(),                                                           #<3>
+    layers.Dense(num_hidden_layer, "relu"),                                     #<4>
+    layers.Dense(img_height*img_width, "sigmoid"),                              #<5>
+    layers.Reshape((img_height, img_width, 1)),                                 #<6>
+])
+
+model.compile("adam", "binary_crossentropy")                                                    #<8>
+epochs = 1_000                                                                  #<9>
+es = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)      #<10>
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);                              #<11>
+```
+
+1. Sets the random seed for reproducibility
+3. Reshapes the 2D input into a 1D representation
+4. Condenses the information from 6400 variables to 400 latent variables (the encoding stage ends here)
+5. Convers the condensed representation from 400 to 6400 again. Note that the sigmoid activation is used to ensure output is between [0,1]
+6. Reshapes the 1D representation to a 2D array
+8. Compiles the model with the loss function and the optimizer
+9. Specifies the number of epochs to run the algorithm
+10. Specifies the early stopping criteria. Here, the early stopping activates after 5 iterations with no improvement in the validation loss
+11. Fits the model specifying the train set, validation set, the number of epochs to run, and the early stopping criteria.
+
+## The model
+
+```{python}
+model.summary()
+```
+
+```{python}
+model.evaluate(X_val, X_val, verbose=0)
+```
+
+## Some recovered image
+
+```{python}
+#| warning: false
+X_val_rec = model(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The recovered image is not as sharp as the original image, however, we can see that the high-level representation of the original picture is reconstrcuted. 
+:::
+
+## Try downscaling the images a bit first (2x)
+
+::: columns
+::: column
+```{python}
+#| code-fold: true
+# Plot an original image
+plt.imshow(X_train[0], cmap="gray");
+```
+:::
+::: column
+```{python}
+#| code-fold: true
+# Put an image through the MaxPooling2D layer and plot the result
+downscale = keras.models.Sequential([
+    layers.Input((img_height, img_width, 1)),
+    layers.MaxPooling2D(2),
+])
+plt.imshow(downscale(X_train[[0]])[0], cmap="gray");
+```
+:::
+:::
+
+```{python}
+#| code-fold: true
+random.seed(123)
+
+model = keras.models.Sequential([
+    layers.Input((img_height, img_width, 1)),
+    layers.MaxPooling2D(2),
+    layers.Flatten(),
+    layers.Dense(num_hidden_layer, "relu"),
+    layers.Dense(img_height*img_width, "sigmoid"),
+    layers.Reshape((img_height, img_width, 1)),
+])
+
+model.compile("adam", "binary_crossentropy")
+es = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);
+```
+
+```{python}
+model.evaluate(X_val, X_val, verbose=0)
+```
+
+## Some recovered image
+
+```{python}
+#| warning: false
+X_val_rec = model(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+
+## Invert the images
+
+::: {.content-visible unless-format="revealjs"}
+Another way to attempt the autoencoder would be to invert the colours of the image. Following example shows, how the colours in the images are swapped. The areas which were previously in white are now in black and vice versa. The motivation behind inverting the colours is to make the input more suited for the `relu` activation. `relu` returns _zeros_, and zero corresponds to the black colour. If the image has more black colour, there is a chance the neural network might train more efficiently. Hence we try inverting the colours as a preprocessing before we pass it through the encoding stage. 
+:::
+
+::: columns
+::: column
+```{python}
+plt.imshow(1 - X_train[0], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(1 - X_train[42], cmap="gray");
+```
+:::
+:::
+
+---
+
+::: {.content-visible unless-format="revealjs"}
+Following code shows how the same code as before is implemented, but with an additional step for inverting the pixel values of the data before parsing it through the encoding step.
+:::
+
+
+```{python}
+random.seed(123)
+
+model = keras.models.Sequential([
+    layers.Input((img_height, img_width, 1)),
+    layers.Lambda(lambda x: 1 - x),                                         #<1>
+    layers.Flatten(),
+    layers.Dense(num_hidden_layer, "relu"),
+    layers.Dense(img_height*img_width, "sigmoid"),
+    layers.Lambda(lambda x: 1 - x),                                         #<2>
+    layers.Reshape((img_height, img_width, 1)),
+])
+
+model.compile("adam", "binary_crossentropy")
+es = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);
+```
+1. Inverts the colours by mapping the function with `x: 1-x` 
+2. Reverses the inversion to make sure the same input image is reconstructed
+
+---
+
+```{python}
+model.summary()
+```
+
+```{python}
+model.evaluate(X_val, X_val, verbose=0)
+```
+
+## Some recovered image
+
+```{python}
+#| warning: false
+X_val_rec = model(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+::: {.content-visible unless-format="revealjs"}
+The recovered image is not too different to the image from the previous example.
+:::
+
+## CNN-enhanced encoder
+
+::: {.content-visible unless-format="revealjs"}
+To further improve the process, we can try neural networks specialized for image processing. Here we use a Convolutional Neural Network lith convolutional and pooling layers. The following example shows how we first specify the encoder, and then the decoder. The two architectures are combined at the final stage.
+:::
+
+```{python}
+random.seed(123)                                                            #<1>
+encoder = keras.models.Sequential([                                         #<2>
+    layers.Input((img_height, img_width, 1)),
+    layers.Lambda(lambda x: 1 - x),                                         #<4>
+    layers.Conv2D(16, 3, padding="same", activation="relu"),                #<5>
+    layers.MaxPooling2D(),                                                  #<6>
+    layers.Conv2D(32, 3, padding="same", activation="relu"),
+    layers.MaxPooling2D(),
+    layers.Conv2D(64, 3, padding="same", activation="relu"),
+    layers.MaxPooling2D(),
+    layers.Flatten(),
+    layers.Dense(num_hidden_layer, "relu")
+])
+```
+1. Sets the random seed for reproducibility
+2. Starts specifying the encoder 
+3. Rescales the image pixel values to range between [0,1]
+4. Inverts the colours of the image
+5. Applies a 2D convolutional layer with 16 filters, each of size 3 $\times$ 3, and having the `same` padding. `same` padding ensures that the output from the layer has the same heigh and width as the input
+6. Performs max-pooling to reduce the dimension of the feature space
+
+---
+
+```{python}
+decoder = keras.models.Sequential([
+    keras.Input(shape=(num_hidden_layer,)),
+    layers.Dense(6400),
+    layers.Reshape((20, 20, 16)),
+    layers.Conv2D(256, 3, padding="same", activation="relu"),
+    layers.UpSampling2D(),
+    layers.Conv2D(128, 3, padding="same", activation="relu"),
+    layers.UpSampling2D(),   
+    layers.Conv2D(64, 3, padding="same", activation="relu"),                 
+    layers.Conv2D(1, 1, padding="same", activation="relu"),
+    layers.Lambda(lambda x: 1 - x),
+])
+model = keras.models.Sequential([encoder, decoder])
+model.compile("adam", "binary_crossentropy")
+es = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
+model.fit(X_train, X_train, epochs=epochs, verbose=0,
+    validation_data=(X_val, X_val), callbacks=es);
+```
+
+---
+
+```{python}
+encoder.summary()
+```
+
+---
+
+```{python}
+decoder.summary()
+```
+
+```{python}
+model.evaluate(X_val, X_val, verbose=0)
+```
+
+## Some recovered image
+
+```{python}
+#| warning: false
+X_val_rec = model(X_val)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_val[42], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_val_rec[42], cmap="gray");
+```
+:::
+:::
+
+## Some recovered image {visibility="uncounted"}
+
+```{python}
+#| warning: false
+X_test_rec = model(X_test)
+```
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_test[0], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_test_rec[0], cmap="gray");
+```
+:::
+:::
+
+## Some recovered image {visibility="uncounted"}
+
+::: columns
+::: column
+```{python}
+plt.imshow(X_test[1], cmap="gray");
+```
+:::
+::: column
+```{python}
+plt.imshow(X_test_rec[1], cmap="gray");
+```
+:::
+:::
+
+## Latent space vs word embedding {.smaller}
+
+- We revisit the concept of word embedding, where words in the vocabulary are mapped into vector representations. Words with similar meaning should lie close to one another in the word-embedding space.
+- Latent space contains low-dimensional representation of data. Data/Images that are similar should lie close in the latent space.
+- There are pre-trained word-embedding spaces such as those for English-language movie review, German-language legal documents, etc. Semantic relationships between words differ for different tasks. Similarly, the structure of latent spaces for different data sets (humans faces, animals, etc) are different.
+
+## Latent space vs word embedding
+
+- Given a latent space of representations, or an embedding space, certain directions in the space may encode interesting axes of variation in the original data. 
+- A **concept vector** is a direction of variation in the data. For example there may be a smile vector such that if $z$ is the latent representation of a face, then $z+s$ is the representation of the same face, smiling. We can generate an image of the person smiling from this latent representation. 
+
+## Intentionally add noise to inputs
+
+::: columns
+::: column
+```{python}
+mask = rnd.random(size=X_train.shape[1:]) < 0.5
+plt.imshow(mask * (1 - X_train[0]), cmap="gray");
+```
+:::
+::: column
+```{python}
+mask = rnd.random(size=X_train.shape[1:]) < 0.5
+plt.imshow(mask * (1 - X_train[42]) * mask, cmap="gray");
+```
+:::
+:::
+
+## Denoising autoencoder
+
+Can be used to do [feature engineering for supervised learning problems](https://www.kaggle.com/c/porto-seguro-safe-driver-prediction/discussion/44629)
+
+> It is also possible to include input variables as outputs to infer missing values or just help the model “understand” the features – in fact the winning solution of a claims prediction Kaggle competition heavily used denoising autoencoders together with model stacking and ensembling – read more here.
+
+Jacky Poon
+
+::: footer
+Source: Poon (2021), [_Multitasking Risk Pricing Using Deep Learning_](https://actuariesinstitute.github.io/cookbook/docs/multitasking_risk_pricing.html), Actuaries' Analytical Cookbook.
+:::
