@@ -10,5 +10,4 @@ quarto render Time-Series-And-Recurrent-Neural-Networks/time-series-and-rnns.qmd
 quarto render Generative-Networks/generative-networks.qmd --no-execute-daemon
 quarto render Generative-Networks/gans.qmd --no-execute-daemon
 quarto render Advanced-Topics/interpretability.qmd --no-execute-daemon
-quarto render Advanced-Topics/exam-revision.qmd --no-execute-daemon
 quarto render index.qmd --no-execute-daemon
