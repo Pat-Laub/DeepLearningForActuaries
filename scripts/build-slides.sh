@@ -17,7 +17,6 @@ quarto render index.qmd --no-execute-daemon
 (exit) && quarto render Generative-Networks/generative-networks.qmd --no-execute-daemon
 (exit) && quarto render Generative-Networks/gans.qmd --no-execute-daemon
 (exit) && quarto render Advanced-Topics/interpretability.qmd --no-execute-daemon
-(exit) && quarto render Advanced-Topics/next-steps.qmd --no-execute-daemon
 (exit) && quarto render Labs/python-lab.qmd --no-execute-daemon
 (exit) && quarto render Labs/python-for-data-science-lab.qmd --no-execute-daemon
 (exit) && quarto render Labs/matplotlib-lab.qmd --no-execute-daemon
