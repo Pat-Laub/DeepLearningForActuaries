@@ -5,8 +5,10 @@ import shlex
 
 def decktape(file, output, args=None, docker=False, version='', open=False):
     if args is None:
-        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox']
-    args = [shlex.quote(arg) for arg in args + [file, output]]  # Ensuring arguments are safely quoted
+        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false']
+    
+    args = args + [file, output]
+    # args = [shlex.quote(arg) for arg in args]  # Ensuring arguments are safely quoted
     
     if docker:
         # If Docker is used, this part of the code would be uncommented and adapted
@@ -14,7 +16,10 @@ def decktape(file, output, args=None, docker=False, version='', open=False):
         #            f'astefanutti/decktape{(":" + version) if version else ""}', *args]
         pass
     else:
-        command = ['decktape', *args]
+        if os.name == 'nt':  # Windows
+            command = ['decktape.cmd', 'reveal', *args]
+        else:
+            command = ['decktape', 'reveal', *args]
     
     try:
         subprocess.run(command, check=True)

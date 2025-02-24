@@ -6,7 +6,7 @@ for file in os.getenv("QUARTO_PROJECT_OUTPUT_FILES", "").split("\n"):
     # If the file is a HTML file and contains both "require.js" and "pyscript.js"
     # then remove the script tags for "require.js".
     if file.endswith(".html"):
-        with open(file, "r") as f:
+        with open(file, "r", encoding="utf-8", errors="replace") as f:
             contents = f.read()
         
         if "require.js" in contents and "pyscript.js" in contents:
