@@ -5,7 +5,7 @@ import shlex
 
 def decktape(file, output, args=None, docker=False, version='', open=False):
     if args is None:
-        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720']
+        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox']
     args = [shlex.quote(arg) for arg in args + [file, output]]  # Ensuring arguments are safely quoted
     
     if docker:
