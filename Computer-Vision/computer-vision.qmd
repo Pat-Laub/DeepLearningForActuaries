@@ -76,6 +76,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from PIL import Image
 
 import keras
 from keras.models import Sequential
@@ -761,55 +762,63 @@ The distribution of dimensions are pretty similar between training and test sets
 
 ## Keras image dataset loading
 
+Normally we'd used [`keras.utils.image_dataset_from_directory`](https://keras.io/api/data_loading/image/) but the Chinese characters breaks it on Windows.
+I made an image loading function just for this demo.
+
 ```{python}
-#| warning: false
-from keras.utils import image_dataset_from_directory #<1>
+#| code-fold: true
+def preprocess_image(img_path, img_height=80, img_width=60):
+    """
+    Loads and preprocesses an image:
+    - Converts to grayscale
+    - Resizes to (img_height, img_width) using anti-aliasing
+    - Returns a NumPy array normalized to [0,1]
+    """
+    img = Image.open(img_path).convert("L")  # Open image and convert to grayscale
+    img = img.resize((img_width, img_height), Image.LANCZOS)  # Resize with anti-aliasing
+    return np.array(img, dtype=np.float32)
 
-data_dir = "CASIA-Dataset"                          #<2>
-batch_size = 32                                     #<3>
-img_height = 80                                     #<4>
-img_width = 60                                      #<5>
-img_size = (img_height, img_width)                  #<6>
+def load_images_from_directory(directory, img_height=80, img_width=60):
+    """
+    Loads images and labels from a directory where each subfolder represents a class.
+    
+    Returns:
+        X (numpy array): Image data of shape (num_samples, img_height, img_width, 1).
+        y (numpy array): Labels as integer indices.
+        class_names (list): List of class names in sorted order.
+    """
+    directory = Path(directory)  # Ensure it's a Path object
+    class_names = sorted([d.name for d in directory.iterdir() if d.is_dir()])  # Sorted UTF-8 class names
+    class_name_to_index = {name: i for i, name in enumerate(class_names)}
 
-train_ds = image_dataset_from_directory(            #<7>
-    data_dir + "/Train",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
+    image_paths, labels = [], []
+    
+    for class_name in class_names:
+        class_dir = directory / class_name
+        for img_path in sorted(class_dir.glob("*.png")):
+            image_paths.append(img_path)
+            labels.append(class_name_to_index[class_name])
 
-test_ds = image_dataset_from_directory(             #<8>
-    data_dir + "/Test",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
+    # Load and preprocess images
+    X = np.array([preprocess_image(img, img_height, img_width) for img in image_paths])
+    X = X[..., np.newaxis]  # Add channel dimension
+    y = np.array(labels, dtype=np.int32)
+
+    return X, y, class_names
 ```
-1. Imports `image_dataset_from_directory` class from `keras.utils` library
-2. Specifies the name of the folder
-3. Specifies the number of images to be trained at the same time
-4. Specifies the height of the image 
-5. Specifies the width of the image
-6. Specifies the image size
-7. Creates a data object to store the train (and validation) set. Note that `color_mode='grayscale'` command tells the computer to bring in the images in greyscale instead of the RGB scale.
-8. Creates a data object to store the test set.
-
-## Convert to numpy arrays
 
 ```{python}
-class_names = train_ds.class_names
-print(class_names)
-```
+data_dir = Path("CASIA-Dataset")
+img_height, img_width = 80, 60  # Target image size
 
-```{python}
-# NB: Need shuffle=False earlier for these X & y to line up.
-X_main = np.concatenate(list(train_ds.map(lambda x, y: x)))
-y_main = np.concatenate(list(train_ds.map(lambda x, y: y)))
+# Load 'training' and test datasets
+X_main, y_main, class_names = load_images_from_directory(data_dir / "Train", img_height, img_width)
+X_test, y_test, _ = load_images_from_directory(data_dir / "Test", img_height, img_width)
 
-X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
-y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
-
-X_main.shape, y_main.shape, X_test.shape, y_test.shape
+# Verify dataset shape
+print(f"Train: X={X_main.shape}, y={y_main.shape}")
+print(f"Test: X={X_test.shape}, y={y_test.shape}")
+print("Class Names:", class_names)
 ```
 
 ## Some setup
@@ -977,7 +986,7 @@ print(model.evaluate(X_val, y_val, verbose=0))
 ```
 
 ```{python}
-loss_value, accuracy, top5_accuracy = model.evaluate(X_test, y_test, verbose=0)
+loss_value, accuracy, top5_accuracy = model.evaluate(X_val, y_val, verbose=0)
 print(f"Validation Loss: {loss_value:.4f}")
 print(f"Validation Accuracy: {accuracy:.4f}")
 print(f"Validation Top 5 Accuracy: {top5_accuracy:.4f}")
@@ -1079,9 +1088,9 @@ print(model.evaluate(X_val, y_val, verbose=0))
 
 ```{python}
 loss_value, accuracy, top5_accuracy = model.evaluate(X_test, y_test, verbose=0)
-print(f"Validation Loss: {loss_value:.4f}")
-print(f"Validation Accuracy: {accuracy:.4f}")
-print(f"Validation Top 5 Accuracy: {top5_accuracy:.4f}")
+print(f"Test Loss: {loss_value:.4f}")
+print(f"Test Accuracy: {accuracy:.4f}")
+print(f"Test Top 5 Accuracy: {top5_accuracy:.4f}")
 ```
 
 ## Make a prediction
@@ -1187,18 +1196,11 @@ plt.hist(confidence_when_wrong);
 ## Evaluate on the new test set
 
 ```{python}
-pat_ds = image_dataset_from_directory(
-    "mandarin",
-    image_size=img_size,
-    batch_size=batch_size,
-    shuffle=False,
-    color_mode='grayscale')
+X_pat, y_pat, pat_class_names = load_images_from_directory(Path("mandarin"), img_height, img_width)
 
-X_pat = np.concatenate(list(pat_ds.map(lambda x, y: x)))
-y_pat = np.concatenate(list(pat_ds.map(lambda x, y: y)))
+assert pat_class_names == class_names, "Class names do not match!"
 
-assert pat_ds.class_names == class_names
-X_pat.shape, y_pat.shape
+print(f"Mandarin: X={X_pat.shape}, y={y_pat.shape}")
 ```
 
 ```{python}
