@@ -22,6 +22,8 @@ quarto install extension andrie/reveal-auto-agenda
 
 This is to automatically generate the `agenda' slides inside the reveal.js slides (cf. [that extension's docs](https://github.com/andrie/reveal-auto-agenda#readme)).
 
+Other dependences include having GraphViz installed.
+
 To generate the entire website and slides for the whole project, just run
 
 ```shell
