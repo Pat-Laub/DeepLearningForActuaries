@@ -6,7 +6,7 @@ quarto render index.qmd --no-execute-daemon
 (exit) && quarto render Artificial-Intelligence/python.qmd --no-execute-daemon
 (exit) && quarto render Tabular-Data/deep-learning-keras.qmd --no-execute-daemon
 (exit) && quarto render Tabular-Data/project.qmd --no-execute-daemon
-(exit) && quarto render Tabular-Data/categorical-variables.qmd --no-execute-daemon
+(exit) && quarto render Tabular-Data/preprocessing.qmd --no-execute-daemon
 (exit) && quarto render Tabular-Data/classification.qmd --no-execute-daemon
 (exit) && quarto render Computer-Vision/computer-vision.qmd --no-execute-daemon
 (exit) && quarto render Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon

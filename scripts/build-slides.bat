@@ -4,7 +4,7 @@ quarto render Artificial-Intelligence/artificial-intelligence.qmd --no-execute-d
 quarto render Artificial-Intelligence/python.qmd --no-execute-daemon
 quarto render Tabular-Data/deep-learning-keras.qmd --no-execute-daemon
 quarto render Tabular-Data/project.qmd --no-execute-daemon
-quarto render Tabular-Data/categorical-variables.qmd --no-execute-daemon
+quarto render Tabular-Data/preprocessing.qmd --no-execute-daemon
 quarto render Tabular-Data/classification.qmd --no-execute-daemon
 quarto render Computer-Vision/computer-vision.qmd --no-execute-daemon
 quarto render Natural-Language-Processing/natural-language-processing.qmd --no-execute-daemon
