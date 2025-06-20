@@ -106,7 +106,7 @@ Every dataset needs to be transformed in various ways before it can be fed into 
 
 ![Preprocessing refers to the transformations of the raw data before input to the network](preprocessing.png)
 
-Some steps are spectific to neural networks (e.g. standardising continuous variables), others are necessary for every model (e.g. encoding categorical variables, handling missing data).
+Some steps are specific to neural networks (e.g. standardising continuous variables), others are necessary for every model (e.g. encoding categorical variables, handling missing data).
 
 # Example 1: Continuous Variables
 
@@ -154,7 +154,7 @@ print(f"Number of duplicated rows between train and test: {len(train_test_overla
 print(f"Number of duplicated rows between val and test: {len(val_test_overlap)}")
 ```
 
-A earlier check is to check that there are no duplicate rows in the dataset.
+An earlier check is to check that there are no duplicate rows in the dataset.
 
 ```{python}
 features.duplicated().sum()
@@ -173,7 +173,7 @@ X_test = scaler.transform(X_test_raw)
 X_train
 ```
 
-That is because the neural network expects continous inputs to be normalised to help with the training procedure.
+That is because the neural network expects continuous inputs to be normalised to help with the training procedure.
 
 ::: {.content-visible unless-format="revealjs"}
 Basically, the initial starting point for the network are random weights and biases that assume a (roughly) standard normal kind of input, to keep the inner neuron values from overflowing or underflowing.
@@ -275,15 +275,15 @@ imp = SimpleImputer()                       #<3>
 
 X_train = imp.fit_transform(X_train_raw)    #<4>
 X_val = imp.transform(X_val_raw)            #<5>
-X_test = imp.transform(X_test_raw)          #<76>
+X_test = imp.transform(X_test_raw)          #<6>
 ```
 ::: {.content-visible unless-format="revealjs"}
 1. Imports `set_config` function from `sklearn`.
-2. Sets the configuration to transofrm the output back to pandas.
+2. Tells sklearn that any transformed data should stay as pandas dataframes.
 3. Defines the `SimpleImputer`. This function helps in dealing with missing values. Default is set to `mean`, meaning that, missing values in each column will be replaced with the column mean.
 4. Finds the means of training set columns, and replaces train set missing values by those means.
-6. Replace missing values in the validation set by the means of the training set columns.
-7. Replace missing values in the test set by the means of the training set columns.
+5. Replace missing values in the validation set by the means of the _training set_ columns.
+6. Replace missing values in the test set by the means of the _training set_ columns.
 :::
 
 <br><br><br>
@@ -321,7 +321,7 @@ freq.info()
 ```
 ::: {.content-visible unless-format="revealjs"}
 1. Checks if the dataset does not already exist within the current directory. 
-2. Download the dataset from sklean. The `fetch_openml` function allows the user to bring in the datasets available in the OpenML platform. Every dataset has a unique ID, hence, can be fetched by providing the ID. `data_id` of the French motor dataset is 41214.
+2. Download the dataset from sklearn. The `fetch_openml` function allows the user to bring in the datasets available in the OpenML platform. Every dataset has a unique ID, hence, can be fetched by providing the ID. `data_id` of the French motor dataset is 41214.
 3. Save it as a CSV file, so we don't need to redownload it (slow!) next time.
 4. If it already exists, then read the dataset from the CSV file.
 :::
@@ -380,7 +380,7 @@ X_test_raw = X_test_raw.reset_index(drop=True)
 X_train_raw
 ```
 ::: {.content-visible unless-format="revealjs"}
-1. Splits the dataset in to train and test sets. By setting the `random_state` to a specific number, we ensure the consistency in the train-test split. `freq.drop("ClaimNb", axis=1)` removes the "ClaimNb" column.
+1. Splits the dataset into train and test sets. By setting the `random_state` to a specific number, we ensure the consistency in the train-test split. `freq.drop("ClaimNb", axis=1)` removes the "ClaimNb" column.
 2. Resets the index of train set, and drops the previous index column. Since the index column will get shuffled during the train-test split, we may want to reset the index to start from 0 again. 
 :::
 
@@ -468,7 +468,7 @@ enc.fit(X_train_raw[["Area"]])                                 #<3>
 enc.categories_                                                #<4>
 ```
 ::: {.content-visible unless-format="revealjs"}
-`OrdinalEncoder` can assign numerical values to each category of the ordinal variable. The nice thing about `OrdinalEncoder` is that it can preserve the information about ordinal relationships in the data. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` method. The following lines of code shows how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
+`OrdinalEncoder` can assign numerical values to each category of the ordinal variable. The nice thing about `OrdinalEncoder` is that it can preserve the information about ordinal relationships in the data. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` method. The following lines of code show how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
 
 1. Imports the `OrdinalEncoder` from `sklearn.preprocessing` library
 2. Create an `OrdinalEncoder` object named `enc`
@@ -558,9 +558,8 @@ pandas.options.display.max_rows = 3
 from sklearn.compose import make_column_transformer         #<1>
 
 ct = make_column_transformer(                               #<2>
-  (OneHotEncoder(sparse_output=False, drop="first"), ["VehGas", "VehBrand", "Region"]),
-  (OrdinalEncoder(), ["Area"]),                             #<3>
-  ("drop", ["VehBrand", "Region"]),                         #<4>
+  (OneHotEncoder(sparse_output=False, drop="first"), ["VehGas", "VehBrand", "Region"]), #<3>
+  (OrdinalEncoder(), ["Area"]),                             #<4>
   remainder=StandardScaler()                                #<5>
 )
 
@@ -569,10 +568,10 @@ X_train = ct.fit_transform(X_train_raw)                     #<6>
 ::: {.content-visible unless-format="revealjs"}
 1. Imports the `make_column_transformer` class that can carry out data preparation selectively
 2. Starts defining the column transformer object 
-3. Selects the ordinal columns and apply ordinal encoding 
-4. Drops the nominal columns
-5. Applies `StandardScaler` transformation to the remaining numerical columns
-6. Fits and transforms the train set using the defined column transformer object
+3. Apply dummy encoding to the nominal categorical columns
+4. Apply ordinal encoding to the ordinal categorical column
+5. Standardise the remaining columns (which are all numerical)
+6. Fits and transforms the train set using this new column transformer
 :::
 
 ::: columns
@@ -680,7 +679,7 @@ print(" < ".join(enc_right.categories_[0]))
 X_train_raw = X_train_raw.drop("Area_In_Words", axis=1)
 ```
 
-# Example 3: Continous and Categorical Variables and Missing Values
+# Example 3: Continuous and Categorical Variables and Missing Values
 
 ## Stroke prediction dataset {.smaller}
 
@@ -702,7 +701,7 @@ data.head()
 4) `hypertension`: 0 or 1 if the patient has hypertension
 5) `heart_disease`: 0 or 1 if the patient has any heart disease
 6) `ever_married`: "No" or "Yes"
-7) `work_type`: "children", "Govt_jov", "Never_worked", "Private" or "Self-employed"
+7) `work_type`: "children", "Govt_job", "Never_worked", "Private" or "Self-employed"
 :::
 ::: column
 8) `Residence_type`: "Rural" or "Urban"
@@ -882,7 +881,7 @@ It has to go through the **exact same** preprocessing steps.
 ```{python}
 import joblib
 joblib.dump(ct, PROCESSED_DATA_DIR / "preprocessor.pkl")
-preprocesor = joblib.load(PROCESSED_DATA_DIR / "preprocessor.pkl")
+preprocessor = joblib.load(PROCESSED_DATA_DIR / "preprocessor.pkl")
 ```
 
 ```{python}
@@ -900,7 +899,7 @@ ct.transform(new_data)
 ```
 
 ```{python}
-preprocesor.transform(new_data)
+preprocessor.transform(new_data)
 ```
 
 ## Glossary {.appendix data-visibility="uncounted"}
