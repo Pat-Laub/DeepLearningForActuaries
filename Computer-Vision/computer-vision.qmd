@@ -1093,23 +1093,29 @@ print(f"Test Top 5 Accuracy: {top5_accuracy:.4f}")
 
 ```{python}
 #| error: true
+#| output: false
 model.predict(X_test[0], verbose=0);
 ```
 
-<!--
-```python
+```{python}
 #| echo: false
-warn = """WARNING:tensorflow:Model was constructed with shape (None, 80, 80, 1) for input KerasTensor(type_spec=TensorSpec(shape=(None, 80, 80, 1), dtype=tf.float32, name='rescaling_input'), name='rescaling_input', description="created by layer 'rescaling_input'"), but it was called on an input with incompatible shape (None, 80, 1, 1)."""
+warn = """ValueError                                Traceback (most recent call last)
+Cell In[51], line 1
+----> 1 model.predict(X_test[0], verbose=0);
+ValueError: Exception encountered when calling MaxPooling2D.call().
+Negative dimension size caused by subtracting 2 from 1 for '{{node sequential_1_1/pool1_1/MaxPool2d}} = MaxPool[T=DT_FLOAT, data_format="NHWC", explicit_paddings=[], ksize=[1, 2, 2, 1], padding="VALID", strides=[1, 2, 2, 1]](sequential_1_1/conv1_1/Relu)' with input shapes: [32,60,1,16].
+Arguments received by MaxPooling2D.call():
+  • inputs=tf.Tensor(shape=(32, 60, 1, 16), dtype=float32)
+"""
 print(warn)
 ```
--->
 
 ```{python}
-X_val[0].shape, X_val[0][np.newaxis, :].shape, X_val[[0]].shape
+X_test[0].shape, X_test[0][np.newaxis, :].shape, X_test[[0]].shape
 ```
 
 ```{python}
-model.predict(X_val[[0]], verbose=0)
+model.predict(X_test[[0]], verbose=0)
 ```
 
 ## Predict on the test set II
@@ -1559,6 +1565,30 @@ Source: Aurélien Géron (2018), _Hands-On Machine Learning with Scikit-Learn, K
 {{< include _imagenet-examples.qmd >}}
 
 :::
+
+
+## Transfer learned model
+
+```{python}
+#| output: false
+import tf_keras as keras
+model_file = "converted_keras/keras_model.h5"
+model = keras.models.load_model(model_file)
+```
+
+```{python}
+model.layers[0].layers[0].layers
+```
+
+```{python}
+len(model.layers[0].layers[0].layers)
+```
+
+## The original pretrained model
+
+<div style="overflow:auto; height: 90%">
+<img src="mobilenet-model.png">
+</div>
 
 ## Transfer learning
 
