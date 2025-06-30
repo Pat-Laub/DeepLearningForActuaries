@@ -673,15 +673,15 @@ except:
     !pip install spacy
 
 try:
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.load("en_core_web_trf")
 except:
-    !python -m spacy download en_core_web_sm
+    !python -m spacy download en_core_web_trf
 ```
 
 ```{python}
 import spacy                                                                #<1>
 
-nlp = spacy.load("en_core_web_sm")                                          #<2>
+nlp = spacy.load("en_core_web_trf")                                          #<2>
 doc = nlp("Apple is looking at buying U.K. startup for $1 billion")         #<3>
 for token in doc:
     print(token.text, token.pos_, token.dep_, token.lemma_)                 #<4>      
@@ -690,6 +690,46 @@ for token in doc:
 2. Loads the model and stores it as `nlp`
 3. Applies `nlp` model to the given string for processing. Processing involves tokenization, part-of-speech application, dependency application etc. 
 4. Returns information about each token(word) in the line. `token.text` returns each word in the string, `token.pos_` returns the part-of-speech; the grammatical category of the word,  and `token.dep_` which provides information about the syntactic relationship of the word to the rest of the words in the string. 
+
+## Dependency visualiser
+
+```{python}
+#| code-fold: true
+# I needed to monkey-patch this to get displacy to work..
+import IPython
+import IPython.display
+IPython.core.display.display = IPython.display.display
+```
+
+```{python}
+from spacy import displacy
+doc = nlp(df["SUMMARY_EN"].iloc[1])
+displacy.render(doc, style="dep")
+```
+
+<!-- 
+## Dependency visualiser II
+
+```python
+doc = nlp(df["SUMMARY_EN"].iloc[2])
+displacy.render(doc, style="dep")
+``` -->
+
+
+## Entity recognition
+
+```{python}
+doc = nlp(df["SUMMARY_EN"].iloc[1])
+displacy.render(doc, style="ent")
+```
+
+<!-- 
+## Entity recognition II
+
+```python
+doc = nlp(df["SUMMARY_EN"].iloc[2])
+displacy.render(doc, style="ent")
+``` -->
 
 ## Stemming
 
@@ -740,17 +780,7 @@ consultant -> consult
 ::: column
 **Lemmatized**
 
->  ['I', 'will', 'be', 'back', '.']
-
-::: {.fragment}
-I'll be back (Terminator)
-:::
-
-> ['here', 'be', 'look', 'at', 'you', ',', 'kid', '.']
-
-::: {.fragment}
-"Here's looking at you, kid." (Casablanca)
-:::
+Here's looking at you, kid. -> here be look at you , kid .
 
 :::
 :::
