@@ -89,11 +89,65 @@ _In-class demo_
 
 ## Gradient descent pitfalls
 
-![Potential problems with gradient descent.](Geron-mls2_0406.png)
+```{python}
+#| echo: false
+def gradient_descent_plot():
+    # Custom function with exact control
+    def f(x):
+        # Global min at x=5 (value=-5), local min at x=-2.15 (value=1.47)
+        # Flat plateau between x=1.5 and x=2.5
+        return np.piecewise(x, [
+            x < 1.5,
+            (x >= 1.5) & (x <= 2.5),
+            x > 2.5
+        ], [
+            lambda x: 0.3*(x+1)**4 - 0.8*(x+1)**2 + 2,  # Left curve (local min)
+            lambda x: 1.5,                                # Flat plateau
+            lambda x: 0.2*(x-5)**4 + 0.1*(x-5)**2 - 5    # Right curve (global min)
+        ])
 
-::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 4-6.
-:::
+    x = np.linspace(-3, 8, 1000)
+    y = f(x)
+
+    # # Verify minima
+    # from scipy.optimize import minimize
+    # global_min = minimize(f, 4).x[0]
+    # local_min = minimize(f, -2).x[0]
+    global_min = 5
+    local_min = -2.15
+
+    # Plot
+    plt.figure(figsize=(8, 5))
+    plt.plot(x, y, linewidth=2)
+
+    # Critical points
+    plt.scatter(global_min, f(global_min), c='lime', s=200, 
+                label=f"Global minimum", 
+                marker='*', edgecolor='black')
+    plt.scatter(local_min, f(local_min), c='red', s=150,
+                label=f"Local minimum", 
+                marker='X', edgecolor='black')
+
+    # Plateau (perfectly flat)
+    plateau_mask = (x >= 1.5) & (x <= 2.5)
+    plt.fill_between(x[plateau_mask], y[plateau_mask], 
+                    color='orange', alpha=0.2, label="Plateau")
+
+    plt.xlabel("Parameter (θ)")
+    plt.ylabel("Loss") 
+
+    plt.legend(
+        loc='upper center',           # Anchor point
+        bbox_to_anchor=(0.5, -0.25),  # Position below (y=-0.25 places it under the axes)
+        frameon=False,                 # Cleaner look without border
+        ncol=3,                        # Number of columns (3 items in 1 row)
+        fontsize=9                     # Adjust font size if needed
+    )
+
+    plt.tight_layout(rect=[0, 0.15, 1, 1])  # Make room for legend (bottom margin=0.15)
+
+gradient_descent_plot()
+```
 
 ## Go over all the training data
 
@@ -155,7 +209,13 @@ Why?
 
 :::
 ::: column
-![Example of jumping from local minima.](Geron-mls2_0406.png)
+
+```{python}
+#| echo: false
+gradient_descent_plot()
+```
+
+Noisy gradient means we might jump out of a local minimum.
 :::
 :::
 
