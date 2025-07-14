@@ -87,12 +87,10 @@ set_config(transform_output="pandas")
 
 # Entity Embedding {visibility="uncounted"}
 
-## Continuing on the French motor dataset example
-
-Download the dataset if we don't have it already.
+## Revisit the French motor dataset
 
 ```{python}
-#| output-location: slide
+#| code-fold: true
 from pathlib import Path                                      #<1>
 from sklearn.datasets import fetch_openml                     #<2>
 
@@ -109,27 +107,24 @@ freq
 Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
 :::
 
-
 ## Data dictionary {.smaller}
 
-::: columns
-::: column
-- `IDpol`: policy number (unique identifier)
-- `ClaimNb`: number of claims on the given policy
-- `Exposure`: total exposure in yearly units
-- `Area`: area code (categorical, ordinal)
-- `VehPower`: power of the car (categorical, ordinal)
-- `VehAge`: age of the car in years
-- `DrivAge`: age of the (most common) driver in years
-:::
-::: column
-- `BonusMalus`: bonus-malus level between 50 and 230 (with reference level 100)
-- `VehBrand`: car brand (categorical, nominal)
-- `VehGas`: diesel or regular fuel car (binary)
-- `Density`: density of inhabitants per km^2^ in the city of the living place of the driver
-- `Region`: regions in France (prior to 2016)
-:::
-:::
+
+| Variable | Description | Preprocessing |
+|:---:|:------:|:---:|
+`IDpol` | Policy number (unique identifier)  | Dropped
+`ClaimNb` | Number of claims on the given policy | **Target**
+`Exposure`* | Total exposure in yearly units | Normalised
+`Area` | Area code (ordinal) | Ordinal Encode
+`VehPower` | Power of the car (ordinal encoded) | Normalised
+`VehAge` | Age of the car in years |  Normalised
+`DrivAge` |  Age of the (most common) driver in years | Normalised
+`BonusMalus` | Bonus--malus level between 50 and 230 (with reference level 100) |  Normalised
+`VehBrand`* | Car brand (nominal) | One-hot
+`VehGas` | Diesel or regular fuel car (binary) | One-hot
+`Density` | Density of inhabitants per km^2^ in the city of the living place of the driver | Normalised
+`Region`* | Regions in France (prior to 2016) | One-hot
+
 
 ::: footer
 Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
@@ -159,6 +154,7 @@ Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\mathbf{x}_i)).
 $$
 :::
 
+<!-- 
 ## Where are things defined?
 
 In Keras, string options are used for convenience to reference specific functions or settings.
@@ -167,7 +163,7 @@ In Keras, string options are used for convenience to reference specific function
 Meaning that setting `activation="relu"` (with in strings) is same as setting `activation=relu` after bringing in the `relu` function from `keras.activations`. 
 :::
 
-```{python}
+```python
 model = Sequential([
     Dense(30, activation="relu"),
     Dense(1, activation="exponential")
@@ -176,7 +172,7 @@ model = Sequential([
 
 is the same as
 
-```{python}
+```python
 from keras.activations import relu, exponential
 
 model = Sequential([
@@ -185,7 +181,7 @@ model = Sequential([
 ])
 ```
 
-```{python}
+```python
 #| warning: false
 x = [-1.0, 0.0, 1.0]
 print(relu(x))
@@ -199,13 +195,13 @@ We can see how `relu` function gives out _x_ when _x_  is non-negative, and give
 
 When we run
 
-```{python}
+```python
 model.compile(optimizer="adam", loss="poisson")
 ```
 
 it is equivalent to
 
-```{python}
+```python
 from keras.losses import poisson
 from keras.optimizers import Adam
 
@@ -220,7 +216,7 @@ Why do this manually? To adjust the object:
 ::: {.content-visible unless-format="revealjs"}
 One of the main reasons why we would want to bring in the functions from the libraries (as opposed to using strings) is because it allows us to control the hyper-parameters of the object. For instance, in the example below, we can see how we set the `learning_rate` to a specific value. `learning_rate` is an important hyper-parameter in neural network training because it controls the pace at which weights of the neural networks are updated. Too small learning rates can result in slower learning, hence, longer training time. Too large learning rates lead to large steps in weights updates, hence, might miss the optimal solution.
 :::
-```{python}
+```python
 optimizer = Adam(learning_rate=0.01)
 model.compile(optimizer=optimizer, loss="poisson")
 ```
@@ -229,69 +225,73 @@ or to get help.
 
 ## Keras' "poisson" loss
 
-```{python}
+```python
 help(keras.losses.poisson)
 ```
 ::: {.content-visible unless-format="revealjs"}
 Using the help function in this case provides information about the Poisson loss function in the `keras.losses library`. It shows that how `poisson` loss is calculated, by taking two inputs, (i) actual values and (ii) predicted values.
 :::
+-->
 
-## Subsample and split
-
-```{python}
-freq = freq.drop("IDpol", axis=1).head(25_000)                          #<1>
-
-X_train, X_test, y_train, y_test = train_test_split(                    #<2>
-  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=2023)     #<2>
-
-# Reset each index to start at 0 again.
-X_train = X_train.reset_index(drop=True)                                #<3>
-X_test = X_test.reset_index(drop=True)                                  #<3>
-```
 
 ## What values do we see in the data?
 
+```{python}
+#| code-fold: true
+freq = freq.drop("IDpol", axis=1).head(25_000)                          #<1>
+
+X_train, X_test, y_train, y_test = train_test_split(                    #<2>
+  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=36861)    #<2>
+
+# Reset each index to start at 0 again.
+X_train_raw = X_train.reset_index(drop=True)                            #<3>
+X_test_raw = X_test.reset_index(drop=True)                              #<3>
+```
+
+
 ::: {layout-ncol=2 layout-nrow=2}
 ```{python}
-X_train["Area"].value_counts()
+X_train_raw["Area"].value_counts()
 ```
 
 ```{python}
-X_train["VehBrand"].value_counts()
+X_train_raw["VehBrand"].value_counts()
 ```
 
 ```{python}
-X_train["VehGas"].value_counts()
+X_train_raw["VehGas"].value_counts()
 ```
 
 ```{python}
-X_train["Region"].value_counts()
+X_train_raw["Region"].value_counts()
 ```
 :::
 
-## Preprocess ordinal & continuous
+## How we preprocessed last time
+
 
 ```{python}
 from sklearn.compose import make_column_transformer
 
 ct = make_column_transformer(
-  (OrdinalEncoder(), ["Area", "VehGas"]),
-  ("drop", ["VehBrand", "Region"]),
+  (OneHotEncoder(sparse_output=False, drop="first"), ["VehGas", "VehBrand", "Region"]),
+  (OrdinalEncoder(), ["Area"]),
   remainder=StandardScaler(),
   verbose_feature_names_out=False
 )
-X_train_ct = ct.fit_transform(X_train)
+X_train = ct.fit_transform(X_train_raw)
 ```
+
 
 ::: columns
 ::: column
 ```{python}
-X_train.head(3)
+X_train_raw.head(3)
 ```
 :::
 ::: column
 ```{python}
-X_train_ct.head(3)
+X_train.head(3)
 ```
 :::
 :::
@@ -309,10 +309,10 @@ Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Clai
 ## One-hot encoding
 
 ```{python}
-oe = OneHotEncoder(sparse_output=False)
-X_train_oh = oe.fit_transform(X_train[["Region"]])
-X_test_oh = oe.transform(X_test[["Region"]])
-print(list(X_train["Region"][:5]))
+oh = OneHotEncoder(sparse_output=False)
+X_train_oh = oh.fit_transform(X_train_raw[["Region"]])
+X_test_oh = oh.transform(X_test_raw[["Region"]])
+print(list(X_train_raw["Region"][:5]))
 X_train_oh.head()
 ```
 ::: {.content-visible unless-format="revealjs"}
@@ -322,7 +322,7 @@ One hot encoding is a way to assign numerical values to nominal variables. One h
 ## Train on one-hot inputs
 
 ```{python}
-num_regions = len(oe.categories_[0])                            #<1>
+num_regions = len(oh.categories_[0])                            #<1>
 
 random.seed(12)
 model = Sequential([                                            #<2> 
@@ -344,23 +344,25 @@ The above code shows how we can train a neural network using only the one-hot en
 Steps 3-6 is similar to what we saw during training with ordinal encoded variables.
 :::
 
-## Consider the first layer {.smaller}
+## Make a fake batch of data
 
+::: columns
+::: column
 ```{python}
-every_category = pd.DataFrame(np.eye(num_regions), columns=oe.categories_[0])
-every_category.head(3)
+X = np.eye(num_regions)
+pd.DataFrame(X, columns=oh.categories_[0])
 ```
 
-```{python}
-# Put this through the first layer of the model
-X = every_category.to_numpy()                       #<1>
-model.layers[0](X)                                  #<2>
-```
-::: {.content-visible unless-format="revealjs"}
-We can extract each layer separately from a trained neural network and observe its output given a specific input. 
-1. Converts the dataframe to a numpy array
-2. Takes out the first layer and feeds in the numpy array _X_. This returns an array with 2 columns
 :::
+::: column
+
+```{python}
+model.layers[0](X)
+```
+
+:::
+:::
+
 ## The first layer
 
 ```{python}
@@ -396,7 +398,7 @@ The above codes manually compute and returns the same answers as before.
 ::: columns
 ::: column
 ```{python}
-display(list(oe.categories_[0]))
+display(list(oh.categories_[0]))
 ```
 :::
 ::: column
@@ -406,25 +408,28 @@ W + b
 :::
 :::
 
+<!--
 ::: {.content-visible unless-format="revealjs"}
 The above outputs show that the neural network thinks the best way to represent "R11" for this particular problem is using the vector [-0.2, -0.12]. 
 :::
+-->
+
 ## Turn the region into an index
 
 ```{python}
 oe = OrdinalEncoder()
-X_train_reg = oe.fit_transform(X_train[["Region"]])
-X_test_reg = oe.transform(X_test[["Region"]])
+X_train_reg = oe.fit_transform(X_train_raw[["Region"]])
+X_test_reg = oe.transform(X_test_raw[["Region"]])
 
 for i, reg in enumerate(oe.categories_[0][:3]):
   print(f"The Region value {reg} gets turned into {i}.")
 ```
 
-## Embedding
+## Use an Embedding layer
 
 ```{python}
 from keras.layers import Embedding
-num_regions = len(np.unique(X_train[["Region"]]))
+num_regions = X_train_raw["Region"].nunique()
 
 random.seed(12)
 model = Sequential([
@@ -435,7 +440,6 @@ model = Sequential([
 model.compile(optimizer="adam", loss="poisson")
 ```
 
-## Fitting that model
 
 ```{python}
 es = EarlyStopping(verbose=True)
@@ -463,7 +467,7 @@ model.layers[0].get_weights()[0]
 ::: column
 
 ```{python}
-X_train["Region"].head(4)
+X_train_raw["Region"].head(4)
 ```
 
 ```{python}
@@ -586,7 +590,7 @@ hist.history["val_loss"][-1]
 :::
 :::
 
-See [one-length tuples](https://pat-laub.github.io/DeepLearningMaterials/2023/Lecture-1-Artificial-Intelligence/python.html#/one-length-tuples).
+See [one-length tuples](https://pat-laub.github.io/DeepLearningForActuaries/Artificial-Intelligence/python.html#/one-length-tuples).
 
 ::: {.content-visible unless-format="revealjs"}
 The above code shows how to construct the same neural network using sequential models and Keras functional API. There are some differences in the construction. In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer. `model = Model(inputs, out)` function specifies the input and output of the model. This manner of specifying the inputs and outputs of the model allow the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
@@ -671,15 +675,15 @@ Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning
 Transform the categorical variables to integers:
 
 ```{python}
-num_brands, num_regions = X_train.nunique()[["VehBrand", "Region"]]         #<1>
+num_brands, num_regions = X_train_raw[["VehBrand", "Region"]].nunique()         #<1>
 
 ct = make_column_transformer(
   (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),             #<2>
   remainder=StandardScaler(),                                               #<3>
   verbose_feature_names_out=False                                           #<4>
 )
-X_train_ct = ct.fit_transform(X_train)                                      #<5>
-X_test_ct = ct.transform(X_test)                                            #<6>
+X_train = ct.fit_transform(X_train_raw)                                     #<5>
+X_test = ct.transform(X_test_raw)                                           #<6>
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -694,10 +698,10 @@ X_test_ct = ct.transform(X_test)                                            #<6>
 Split the brand and region data apart from the rest:
 
 ```{python}
-X_train_brand = X_train_ct["VehBrand"]; X_test_brand = X_test_ct["VehBrand"]
-X_train_region = X_train_ct["Region"]; X_test_region = X_test_ct["Region"]
-X_train_rest = X_train_ct.drop(["VehBrand", "Region"], axis=1)
-X_test_rest = X_test_ct.drop(["VehBrand", "Region"], axis=1)
+X_train_brand = X_train["VehBrand"]; X_test_brand = X_test["VehBrand"]
+X_train_region = X_train["Region"]; X_test_region = X_test["Region"]
+X_train_rest = X_train.drop(["VehBrand", "Region"], axis=1)
+X_test_rest = X_test.drop(["VehBrand", "Region"], axis=1)
 ```
 
 ## Organise the inputs
@@ -797,8 +801,8 @@ ct = make_column_transformer(                                           #<1>
   remainder=StandardScaler(),                                           #<4>
   verbose_feature_names_out=False                                       #<5>
 )
-X_train_ct = ct.fit_transform(X_train)                                  #<6>
-X_test_ct = ct.transform(X_test)                                        #<7>
+X_train = ct.fit_transform(X_train_raw)                                  #<6>
+X_test = ct.transform(X_test_raw)                                        #<7>
 ```
 ::: {.content-visible unless-format="revealjs"}
 1. Starts defining the column transformer 
@@ -813,9 +817,9 @@ X_test_ct = ct.transform(X_test)                                        #<7>
 Split exposure apart from the rest:
 
 ```{python}
-X_train_exp = X_train_ct["Exposure"]; X_test_exp = X_test_ct["Exposure"]    #<1>
-X_train_rest = X_train_ct.drop("Exposure", axis=1)                          #<2>
-X_test_rest = X_test_ct.drop("Exposure", axis=1)                            #<3>
+X_train_exp = X_train["Exposure"]; X_test_exp = X_test["Exposure"]    #<1>
+X_train_rest = X_train.drop("Exposure", axis=1)                          #<2>
+X_test_rest = X_test.drop("Exposure", axis=1)                            #<3>
 ```
 
 ::: {.content-visible unless-format="revealjs"}
