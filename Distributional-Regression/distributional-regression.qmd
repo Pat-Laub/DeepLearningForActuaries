@@ -535,7 +535,7 @@ for i, ax in enumerate(axes):
     ax.plot(x_grid, y_grid)
     ax.set_ylabel(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
     ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
-    ax.plot(y_toy[i], 0, 'r|')
+    ax.plot(y_toy[i], 0, 'rx', clip_on=False)
 
 plt.tight_layout();
 ```
@@ -733,36 +733,52 @@ _ = stocks.pop("ASX200")
 stock = stocks[["CBA"]]
 stock = stock.ffill()
 
-df_lags = lagged_timeseries(stock, "CBA", 40)
+# Compute daily log returns
+stock_log = np.log(stock / stock.shift(1)).dropna()
+
+# Helper functions for converting log returns to prices
+def log_to_price(log_returns, initial_price):
+    cumulative_log_returns = log_returns.cumsum()
+    return initial_price * np.exp(cumulative_log_returns)
+
+def get_last_price(stock_df, cutoff_date):
+    last_known_date = stock_df.loc[:cutoff_date].index[-1]
+    return stock_df.loc[last_known_date, "CBA"]
+
+# Create lagged features from log returns
+df_lags = lagged_timeseries(stock_log, "CBA", 40)
 
 # Split the data in time
-X_train = df_lags.loc[:"2018"]
-X_val = df_lags.loc["2019"]
-X_test = df_lags.loc["2020":]
+X_train = df_lags.loc[:"2024"]
+X_test = df_lags.loc["2025":]
 
 # Remove any with NAs and split into X and y
 X_train = X_train.dropna()
-X_val = X_val.dropna()
 X_test = X_test.dropna()
 
 y_train = X_train.pop("T")
-y_val = X_val.pop("T")
 y_test = X_test.pop("T")
-
-X_train = X_train / 100
-X_val = X_val / 100
-X_test = X_test / 100
-y_train = y_train / 100
-y_val = y_val / 100
-y_test = y_test / 100
 
 lr = LinearRegression()
 lr.fit(X_train, y_train);
-
-stocks.plot()
-plt.ylabel("Stock Price")
-plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
 ```
+
+::: columns
+::: {.column width=50%}
+```{python}
+#| code-fold: true
+stocks.plot();
+```
+:::
+::: {.column width=50%}
+```{python}
+#| code-fold: true
+stock_log.plot()
+plt.ylabel("Daily Log Return")
+plt.title("CBA Daily Log Returns");
+```
+:::
+:::
 
 ## Noisy auto-regressive forecast
 
@@ -798,17 +814,19 @@ def noisy_autoregressive_forecast(model, X_val, sigma, suppress=False):
 ## Original forecast
 
 ```{python}
-lr_forecast = noisy_autoregressive_forecast(lr, X_val, 0)
+lr_forecast = noisy_autoregressive_forecast(lr, X_test, 0)
+last_price = get_last_price(stock, cutoff_date="2024-12")
+price_forecast = log_to_price(lr_forecast, last_price)
 ```
 
 ```{python}
 #| code-fold: true
-stock.loc[lr_forecast.index, "AR Linear"] = 100 * lr_forecast
+stock.loc[price_forecast.index, "AR Log-Return"] = price_forecast
 
 def plot_forecasts(stock):
-    stock.loc["2018-12":"2019"].plot()
-    plt.axvline("2019", color="black", linestyle="--")
-    plt.ylabel("Stock Price")
+    stock.loc["2024-12":"2025"].plot()
+    plt.axvline("2025", color="black", linestyle="--")
+    plt.ylabel("Stock Price ($)")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
 plot_forecasts(stock)
@@ -823,12 +841,13 @@ sigma = np.std(residuals)
 
 ```{python}
 np.random.seed(1)
-lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_val, sigma)
+lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_test, sigma)
+price_noisy = log_to_price(lr_noisy_forecast, last_price)
 ```
 
 ```{python}
 #| code-fold: true
-stock.loc[lr_noisy_forecast.index, "AR Noisy Linear"] = 100 * lr_noisy_forecast
+stock.loc[price_noisy.index, "AR Noisy Log-Return"] = price_noisy
 plot_forecasts(stock)
 ```
 
@@ -836,12 +855,13 @@ plot_forecasts(stock)
 
 ```{python}
 np.random.seed(2)
-lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_val, sigma)
+lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_test, sigma)
+price_noisy = log_to_price(lr_noisy_forecast, last_price)
 ```
 
 ```{python}
 #| code-fold: true
-stock.loc[lr_noisy_forecast.index, "AR Noisy Linear"] = 100 * lr_noisy_forecast
+stock.loc[price_noisy.index, "AR Noisy Log-Return"] = price_noisy
 plot_forecasts(stock)
 ```
 
@@ -849,12 +869,13 @@ plot_forecasts(stock)
 
 ```{python}
 np.random.seed(3)
-lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_val, sigma)
+lr_noisy_forecast = noisy_autoregressive_forecast(lr, X_test, sigma)
+price_noisy = log_to_price(lr_noisy_forecast, last_price)
 ```
 
 ```{python}
 #| code-fold: true
-stock.loc[lr_noisy_forecast.index, "AR Noisy Linear"] = 100 * lr_noisy_forecast
+stock.loc[price_noisy.index, "AR Noisy Log-Return"] = price_noisy
 plot_forecasts(stock)
 ```
 
@@ -864,14 +885,16 @@ plot_forecasts(stock)
 num_forecasts = 300
 forecasts = []
 for i in range(num_forecasts):
-    forecasts.append(noisy_autoregressive_forecast(lr, X_val, sigma) * 100)
+    log_sim = noisy_autoregressive_forecast(lr, X_test, sigma)
+    price_sim = log_to_price(log_sim, last_price)
+    forecasts.append(price_sim)
 noisy_forecasts = pd.concat(forecasts, axis=1)
-noisy_forecasts.index = X_val.index
+noisy_forecasts.index = X_test.index
 ```
 
 ```{python}
 #| code-fold: true
-noisy_forecasts.loc["2018-12":"2019"].plot(legend=False, alpha=0.4)
+noisy_forecasts.loc["2024-12":"2025"].plot(legend=False, alpha=0.4)
 plt.ylabel("Stock Price");
 ```
 
@@ -889,7 +912,7 @@ mean_forecast = noisy_forecasts.mean(axis=1)
 # Plot the mean forecast
 plt.figure(figsize=(8, 3))
 
-plt.plot(stock.loc["2018-12":"2019"].index, stock.loc["2018-12":"2019"]["CBA"], label="CBA")
+plt.plot(stock.loc["2024-12":"2025"].index, stock.loc["2024-12":"2025"]["CBA"], label="CBA")
 
 plt.plot(mean_forecast, label="Mean")
 
@@ -900,7 +923,7 @@ plt.fill_between(mean_forecast.index,
                  color="grey", alpha=0.2)
 
 # Plot settings
-plt.axvline(pd.Timestamp("2019-01-01"), color="black", linestyle="--")
+plt.axvline(pd.Timestamp("2025-01-01"), color="black", linestyle="--")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.xlabel("Date")
 plt.ylabel("Stock Price")
@@ -925,15 +948,11 @@ residuals /= np.std(residuals)
 stats.shapiro(residuals)
 ```
 
-::: {.callout-note .fragment}
-Probably should model the log-returns instead of the stock prices.
-:::
-
 :::
 ::: column
 ```{python}
 #| code-fold: true
-plt.hist(residuals, bins=40, density=True)
+plt.hist(residuals, bins=60, density=True)
 x = np.linspace(-3, 3, 100)
 plt.xlim(-3, 3)
 plt.plot(x, stats.norm.pdf(x, 0, 1));
@@ -976,6 +995,75 @@ plt.tight_layout();
 ```
 
 Heteroskedasticity!
+
+## Retrain on less data
+
+
+```{python}
+#| code-fold: true
+# Drop 2008-2009 and also 2020-2021
+mask = ~((y_train.index.year >= 2008) & (y_train.index.year <= 2009)) & ~((y_train.index.year >= 2020) & (y_train.index.year <= 2021))
+X2 = X_train.loc[mask]
+y2 = y_train.loc[mask]
+
+lr2 = LinearRegression()
+lr2.fit(X2, y2)
+
+res2 = y2 - lr2.predict(X2)
+res2 = (res2 - np.mean(res2)) / np.std(res2)
+
+plt.plot(y2.index, res2)
+plt.xlabel("Date")
+plt.ylabel("Standardised Residuals")
+plt.tight_layout();
+```
+
+Refit the model without these crisis years.
+
+## Residual diagnostics {visibility="uncounted"}
+
+```{python}
+stats.shapiro(res2)
+```
+
+::: columns
+
+::: {.column width="33%"}
+```{python}
+#| echo: false
+set_square_figures()
+```
+
+```{python}
+#| code-fold: true
+plt.hist(res2, bins=60, density=True)
+x = np.linspace(-3, 3, 100)
+plt.xlim(-3, 3)
+plt.plot(x, stats.norm.pdf(x, 0, 1));
+```
+:::
+
+::: {.column width="33%"}
+```{python}
+#| code-fold: true
+sm.qqplot(res2, line="45");
+```
+:::
+
+::: {.column width="33%"}
+```{python}
+#| code-fold: true
+sm.ProbPlot(res2).ppplot(line="45");
+```
+:::
+
+:::
+
+```{python}
+#| echo: false
+set_rectangular_figures()
+```
+
 
 # GLMs and Neural Networks {visibility="uncounted"}
 
@@ -1581,7 +1669,7 @@ nll_cann = gamma_nll(mus, phi_cann, y_test)
 nll_mdn = gamma_mdn.evaluate(X_test, y_test, verbose=0)
 ```
 
-## Model Comparisons
+<!-- ## Model Comparisons -->
 
 ```{python}
 print(f'GLM: {round(nll_glm, 2)}')
@@ -1590,7 +1678,7 @@ print(f'MDN: {round(nll_mdn, 2)}')
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The above results show that MDN provides the lowest value for the Logarithmic Score (NLL). Low values for NLL indicate better calibration. One possible reason for the better performance of the MDN model (compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
+The above results show that MDN provides the lowest value for the Logarithmic Score (NLL). Low values for NLL indicate better fits. One possible reason for the better performance of the MDN model (compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
 :::
 
 
