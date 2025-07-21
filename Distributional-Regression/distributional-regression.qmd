@@ -2,14 +2,6 @@
 title: Distributional Regression
 ---
 
-::: {.content-visible unless-format="revealjs"}
-
-### Acknowledgments
-
-Thanks to Eric Dong for making the original version of these slides.
-
-:::
-
 ```{python}
 #| echo: false
 #| warning: false
@@ -100,68 +92,297 @@ import statsmodels.api as sm
 
 # Introduction {visibility="uncounted"}
 
-## Neural networks and confidence
+## Why actuaries avoid neural networks
 
-Say we have a neural network that classifies ducks from rabbits.
+They're not _inherently interpretable_, so just we have to look at inputs and outputs from the black box.
+
+::: fragment
+Neural network models typically just output a prediction without any sense of its _confidence_.
+:::
+
+::: fragment
+Therefore we cannot _trust_ the neural network models, which is a **dealbreaker**.
+:::
+
+::: fragment
+Now let's focus on actuarial problems.
+:::
+
+## Car insurance
+
+Claim size prediction
 
 ::: columns
-::: column
-![A duck in the training set](dalle2-duck.webp)
+::: {.column width=5%}
 :::
-::: column
-![A rabbit in this training set](dalle2-rabbit.webp)
+::: {.column width=60%}
+
+| 👤 **Age** | 🚗 **Age** |  🏎️ **Type** |
+|------------|-----------|------------------|
+| 25         | 3         | 🚙 Sedan         |
+| 40         | 5         | 🚐 SUV           |
+| 19         | 1         | 🏎️ Sports Car    |
+| 60         | 10        | 🚘 Hatchback     | 
+
 :::
+::: {.column width=10%}
+
+<br>
+<br>
+
+::: {.fragment}
+
+$$\longrightarrow$$
+
 :::
 
-## New data can be different {.smaller}
 
-::: columns
-::: {.column .fragment}
-![Predict this is a duck](dalle2-duck2.webp)
 :::
-::: {.column width="7.5%"}
+::: {.column width=20%}
+
+::: {.fragment}
+
+| **Cost** |
+|-------------------|
+| 💵 $1,200          |
+| 💵 $2,500          |
+| 💵 $3,800          |
+| 💵 $800            |
+
 :::
-::: {.column .fragment width="35%"}
-![Misclassify this as a rabbit](755230_poster.jpg)
+
 :::
 :::
 
 ::: {.fragment}
-We could do better if we collected more images of ducks with rabbit ears.
+What's wrong? Not enough rows? Not enough columns?
 :::
 
-::: footer
-Source: Olga Telnova, [Cute Duck with Bunny Ears](https://www.posterlounge.co.uk/p/755230.html), Posterlounge, accessed on July 16 2024.
-:::
+```{python}
+#| code-fold: true
+data = [
+    (25, 3, "🚙", 1200),  # (Driver Age, Car Age, Type of Car, Repair Cost)
+    (40, 5, "🚐", 2500),
+    (19, 1, "🏎️", 3800),
+    (60, 10, "🚘", 800)
+]
 
-## New data can be challenging {.smaller}
+x = np.linspace(0, 5000, 1000)
+
+def draw_gamma_distribution(mean, shape, color, customer_id):
+  scale = mean / shape
+  plt.plot(x, stats.gamma.pdf(x, a=shape, scale=scale), label=f"Customer {customer_id+1}", color=color)
+  plt.title(f"Predicted Claim Size Distribution")
+  plt.xlabel("Claim size")
+  plt.ylabel("Density")
+```
+
+
+
+## Distributional regression
+
+Customer 1 = (25, 3, 🚙)
+```{python}
+#| code-fold: true
+draw_gamma_distribution(1200, 2, colors[0], 0)
+```
+
+## Distributional regression {data-visibility=uncounted}
+
+Customer 2 = (40, 5, 🚐)
+```{python}
+#| code-fold: true
+draw_gamma_distribution(2500, 2, colors[1], 1)
+```
+
+## Distributional regression {data-visibility=uncounted}
+
+Customer 3 = (19, 1, 🏎️)
+```{python}
+#| code-fold: true
+draw_gamma_distribution(3800, 2, colors[2], 2)
+```
+
+## Distributional regression {data-visibility=uncounted}
+
+Customer 4 = (60, 10, 🚘)
+```{python}
+#| code-fold: true
+draw_gamma_distribution(800, 2, colors[3], 3)
+```
+
+## Distributional regression {data-visibility=uncounted}
+
+All customers
+
+```{python}
+#| code-fold: true
+# Plot all on the same graph
+plt.figure()
+for i, (age, car_age, car_type, cost) in enumerate(data):
+  mean = cost
+  shape = 2  # Example shape parameter for the gamma distribution
+  scale = mean / shape  # Scale parameter to achieve the correct mean
+
+  plt.plot(x, stats.gamma.pdf(x, a=shape, scale=scale), label=f"Customer {i+1}", color=colors[i])
+
+plt.title(f"Predicted Claim Size Distribution")
+plt.xlabel("Claim size")
+plt.ylabel("Density")
+plt.legend()
+```
+
+## Traditional vs distributional regression
+
+Traditional:
+
+<br>
 
 ::: columns
-::: {.column .fragment}
-![Predict this is a rabbit](dalle2-rabbit2.webp)
+
+::: {.column width="33%"}
+| 👤 | 🚗 | 🏎️ |
+|:---------:|:-------------:|:-----------:|
+| 35        | 12       | Sport       |
 :::
-::: {.column .fragment}
-![Predict this is a ???](duck-rabbit.png)
+
+::: {.column width="33%"}
+<div style="display:flex; align-items:center; justify-content:center;">
+  <span style="font-size:2em; line-height:1;">→</span>
+  <div style="
+      border:2px solid black;
+      padding:0.5em 1em;
+      margin:0 0.5em;
+      font-weight:bold;
+      white-space:nowrap;
+    ">
+    Model
+  </div>
+  <span style="font-size:2em; line-height:1;">→</span>
+</div>
 :::
+
+::: {.column width="33%"}
+$1582.48$
 :::
+
+:::
+
+<br>
+
+Distributional:
+
+<br>
+
+::: columns
+
+::: {.column width="33%"}
+| 👤 | 🚗 | 🏎️ |
+|:---------:|:-------------:|:-----------:|
+| 35        | 12       | Sport       |
+:::
+
+::: {.column width="33%"}
+<div style="display:flex; align-items:center; justify-content:center;">
+  <span style="font-size:2em; line-height:1;">→</span>
+  <div style="
+      border:2px solid black;
+      padding:0.5em 1em;
+      margin:0 0.5em;
+      font-weight:bold;
+      white-space:nowrap;
+    ">
+    Model
+  </div>
+  <span style="font-size:2em; line-height:1;">→</span>
+</div>
+:::
+
+::: {.column width="33%"}
+
+<!-- $\displaystyle \mathcal{N}\bigl(1582.48,\;\sigma^2\bigr)$ -->
+
+```{python}
+#| code-fold: true
+draw_gamma_distribution(1582.48, 2, "black", 4) 
+```
+:::
+
+:::
+
+## Baseline: a generalised linear model
+
+A gamma GLM with a log link function:
+
+$$
+\begin{aligned}
+Y | \mathbf{X} &\sim \mathrm{Gamma}(\ldots, \ldots) \\
+\mathbb{E}[Y | \mathbf{X}] &= \exp\Bigl\{ \beta_0 + \beta_1 \cdot \text{Age} + \beta_2 \cdot \text{Car Age} + \beta_3 \cdot \text{Type} \Bigr\}
+\end{aligned}
+$$
+
+A simple model, easy to train and interpret, but...
 
 ::: {.fragment}
-This is inherently difficult, extra training data won't help.
+
+::: {.callout-important}
+# GLMs can be
+
+1. Bad at _regression_
+2. Bad at _distributional_ regression
 :::
 
-::: footer
-Source: [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:Rabbit%E2%80%93duck_illusion#/media/File:Canard-lapin_retouch%C3%A9.jpg)
 :::
 
-## Classifiers give us a probability
+## Example 1: Non-monotonicity
 
-This is already a big step up compared to regression models.
 
-However, neural networks' "probabilities" can be overconfident.
+```{python}
+#| code-fold: true
+ages = np.linspace(18, 80, 200)  # Driver ages from 18 to 80
+claim_sizes = 1000 * (1 - np.exp(-((ages - 35) / 20)**2)) 
 
-![We [already saw](https://pat-laub.github.io/DeepLearningForActuaries/Computer-Vision/computer-vision.html#confidence-of-predictions) a case of this.](example-of-overconfidence.png)
+# Create the updated plot
+# plt.figure(figsize=(8, 6))
+plt.plot(ages, claim_sizes, linewidth=2)
+plt.title("Effect of Driver Age on Claim Sizes")
+plt.xlabel("Driver Age")
+plt.ylabel("Claim Size Effect ($)")
+# plt.grid(alpha=0.3)
+# plt.axvline(35, color='gray', linestyle='--', label='New Middle Age Peak')
+# plt.legend(fontsize=10)
+plt.show()
+```
 
-See Guo et al. (2017), [On Calibration of Modern Neural Networks](https://arxiv.org/pdf/1706.04599).
+GLMs cannot (easily) do this $\longrightarrow$ Use a neural network
+
+## Example 2: Multi-modality
+
+```{python}
+#| code-fold: true
+x = np.linspace(0, 20*500, 500)  # Range restricted to positive real numbers
+
+# Adjust the components to ensure a bimodal mixture
+pdf1 = stats.lognorm.pdf(x, s=0.3, scale=np.exp(1)*500)  # Sharper log-normal distribution
+pdf2 = stats.gamma.pdf(x, a=10, scale=0.8*500)  # Narrower gamma distribution
+mixture_pdf = 0.3 * pdf1 + 0.7 * pdf2  # Equal weights to emphasize bimodality
+
+# Create the updated plot
+plt.figure();
+plt.plot(x, pdf1, label='Parent driving', linestyle='--', color='blue')
+plt.plot(x, pdf2, label='Kid driving', linestyle='--', color='green')
+plt.plot(x, mixture_pdf, label='Mixture Distribution', color='red', linewidth=2)
+plt.title("Claim Size Distribution")
+plt.legend()
+plt.xlabel("Claim Size")
+plt.ylabel("Density")
+
+# Turn off the y axis
+# plt.gca().axes.get_yaxis().set_visible(False)
+
+None
+```
+
 
 ## Key idea
 
@@ -183,6 +404,17 @@ See Guo et al. (2017), [On Calibration of Modern Neural Networks](https://arxiv.
 ::: footer
 Source: Tomasz Woźniak (2024), [LinkedIn Post](https://www.linkedin.com/posts/tomaszwwozniak_rstats-densityforecasting-activity-7171005952463134721-ZsHl?utm_source=share&utm_medium=member_desktop), accessed on July 15 2024.
 :::
+
+## We will focus on regression not classification
+
+Classifiers already give us a probability, which is a big step up compared to regression models.
+
+However, neural networks' "probabilities" can be overconfident.
+
+![We [already saw](https://pat-laub.github.io/DeepLearningForActuaries/Computer-Vision/computer-vision.html#confidence-of-predictions) a case of this.](example-of-overconfidence.png)
+
+See Guo et al. (2017), [On Calibration of Modern Neural Networks](https://arxiv.org/pdf/1706.04599).
+
 
 # Traditional Regression {visibility="uncounted"}
 
@@ -431,12 +663,12 @@ $$
 
 ## Gamma regression
 
-A gamma distribution with mean $\mu$ and dispersion $\phi$ has p.d.f.
+A Gamma distribution with mean $\mu$ and dispersion $\phi$ has p.d.f.
 $$
 f(y; \mu, \phi) = \frac{(\mu \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y^{\frac{1}{\phi} - 1} \mathrm{e}^{-\frac{y}{\mu \phi}}
 $$
 
-Our model is $Y|\boldsymbol{X}=\boldsymbol{x}$ is gamma distributed with a dispersion of $\phi$ and a mean of
+Our model is $Y|\boldsymbol{X}=\boldsymbol{x}$ is Gamma distributed with a dispersion of $\phi$ and a mean of
 $\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)$.
 
 The likelihood function is
@@ -750,7 +982,7 @@ Heteroskedasticity!
 ## French motor claim sizes
 
 ::: {.content-visible unless-format="revealjs"}
-As `freMTPL2sev` just has Policy ID & severity, we merge with `freMTPL2freq` which has Policy ID, # Claims, and other covariables.
+As `freMTPL2sev` just has Policy ID & severity, we merge with `freMTPL2freq` which has Policy ID, # Claims, and other covariates.
 :::
 
 ``` {python}
@@ -759,7 +991,7 @@ cov = pd.read_csv('freMTPL2freq.csv').drop(columns=['ClaimNb'])
 sev = pd.merge(sev, cov, on='IDpol', how='left').drop(columns=["IDpol"]).dropna()  #<1>
 sev
 ```
-1. Merges the severity dataframe `sev` with the covariates in `covariates` by matching the `IDpol` column. Assigning `how='left'` ensures that all rows from the left dataset `sev` is considered, and only the matching columns from `covariates` are selected. Also drops the policy ID column and any missing values or/and NAN values.
+1. Merges the severity dataframe `sev` with the covariates in `cov` by matching the `IDpol` column. Assigning `how='left'` ensures that all rows from the left dataset `sev` is considered, and only the matching columns from `cov` are selected. Also drops the policy ID column and any rows with missing values.
 
 
 ## Preprocessing
@@ -786,7 +1018,7 @@ Plotting the empirical distribution of the target variable `ClaimAmount` help us
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{CANN}$ for the neural network.
+The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{\text{CANN}}$ for the neural network.
 <!--The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.-->
 :::
 
@@ -845,21 +1077,21 @@ plt.tight_layout();
 
 ## Gamma GLM
 
-Suppose a fitted gamma GLM model has
+Suppose a fitted Gamma GLM model has
 
 - a log link function $g(x)=\log(x)$ and
 - regression coefficients $\boldsymbol{\beta}=(\beta_0, \beta_1, \beta_2, \beta_3)$.
 
 Then, it estimates the conditional mean of $Y$ given a new instance $\boldsymbol{x}=(1, x_1, x_2, x_3)$ as follows:
 $$
-    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle) = \exp\big(\beta_0 + \beta_1 x_1 + beta_2 x_2 + \beta_3 x_3 \big).
+    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle) = \exp\big(\beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3 \big).
 $$
 
 A GLM can model any other exponential family distribution using an appropriate link function $g$.
 
 ## Gamma GLM loss
 
-If $Y|\boldsymbol{X}=\boldsymbol{x}$ is a gamma r.v. with mean $\mu(\boldsymbol{x}; \boldsymbol{\beta})$ and dispersion parameter $\phi$, we can minimise the negative log-likelihood (NLL)
+If $Y|\boldsymbol{X}=\boldsymbol{x}$ is a Gamma r.v. with mean $\mu(\boldsymbol{x}; \boldsymbol{\beta})$ and dispersion parameter $\phi$, we can minimise the negative log-likelihood (NLL)
 $$
     \text{NLL} \propto \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
 $$
@@ -877,11 +1109,11 @@ $$
     \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{\bigl(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta})\bigr)^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
 $$ 
 
-(Here, $p$ is the number of coefficients in the model. If this $p$ doesn't include the intercept, then $p$ should be use $\frac{1}{n-(p+1)}$.)
+(Here, $p$ is the number of coefficients in the model. If this $p$ doesn't include the intercept, then the scaling should be $\frac{1}{n-(p+1)}$.)
 
 ## Code: Gamma GLM
 
-In Python, we can fit a gamma GLM as follows:
+In Python, we can fit a Gamma GLM as follows:
 
 
 ```{python}
@@ -925,7 +1157,7 @@ The above example of fitting a Gamma distribution assumes a constant dispersion,
 ![Combining GLM & ANN.](richman-glm-and-ann.png)
 
 ::: footer
-Source: Ronald Richman (2022), Mind the Gap - Safely Incorporating Deep Learning Models into the Actuarial Toolkit, IFoA seminar, Slide 14.
+Source: Ronald Richman (2022), _Mind the Gap --- Safely Incorporating Deep Learning Models into the Actuarial Toolkit_, IFoA seminar, Slide 14.
 :::
 
 # Combined Actuarial Neural Network {visibility="uncounted"}
@@ -954,8 +1186,8 @@ x_min = 0
 x_max = 5000
 x_grid = np.linspace(x_min, x_max, 100)
 
-# Plot a few gamma distribution pdfs with different means.
-# Then plot gamma distributions with shifted means and the same dispersion parameter.
+# Plot a few Gamma distribution pdfs with different means.
+# Then plot Gamma distributions with shifted means and the same dispersion parameter.
 glm_means = [1000, 3000, 2000, 4000]
 cann_means = [1500, 1400, 3000, 5000]
 for i, ax in enumerate(axes):
@@ -999,7 +1231,7 @@ cann = Model(inputs, mu)
 1. Adds a `Dense` layer with just one neuron, to store the model output (before inverse link function) from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
 2. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
 
-Since this CANN predicts gamma distributions, we use the gamma NLL loss function.
+Since this CANN predicts Gamma distributions, we use the Gamma NLL loss function.
 
 ```{python}
 def cann_negative_log_likelihood(y_true, y_pred):
@@ -1052,7 +1284,7 @@ print(phi_cann)
 ## Mixture Distribution
 
 ::: {.content-visible unless-format="revealjs"}
-One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multi modal. In such situations, assuming a mixture distribution is more intuitive.    
+One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multimodal. In such situations, assuming a mixture distribution is more intuitive.    
 :::
 
 Given a finite set of resulting random variables $(Y_1, \ldots, Y_{K})$, one can generate a multinomial random variable $Y\sim \text{Multinomial}(1, \boldsymbol{\pi})$. Meanwhile, $Y$ can be regarded as a mixture of $Y_1, \ldots, Y_{K}$, i.e.,
@@ -1073,7 +1305,7 @@ The random variable $Y|\boldsymbol{X}$, which mixes $Y_k|\boldsymbol{X}$'s with 
 $$
     f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) f_{k}(y|\boldsymbol{x}),
 $$
-and the cumulative density function
+and the cumulative distribution function
 $$
     F_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) F_{k}(y|\boldsymbol{x}).
 $$
@@ -1133,7 +1365,7 @@ $$
 
 ## Architecture
 
-![We demonstrate the structure of a gamma MDN that outputs the parameters for a gamma mixture with two components.](Gamma_MDN.png)
+![We demonstrate the structure of a Gamma MDN that outputs the parameters for a Gamma mixture with two components.](Gamma_MDN.png)
 
 ## Code: Import "legacy" Keras (for now)
 
@@ -1150,7 +1382,7 @@ Source: Tensorflow Probability GitHub, [Keras 3 breaks Tensorflow Probability up
 
 ## Code: Architecture
 
-The following code resembles the architecture of the architecture of the gamma MDN from the previous slide.
+The following code implements the gamma MDN from the previous slide.
 
 ```{python}
 # Ensure reproducibility
@@ -1292,7 +1524,7 @@ Continuous Ranked Probability Score (CRPS)
     where $F$ is the predicted c.d.f.
 
 ::: footer
-See, e.g., Taggert (2023), [Estimation of CRPS for precipitation forecasts...](https://nla.gov.au/nla.obj-3160938615/view), BoM Research Report 079.
+See, e.g., Taggart (2023), [Estimation of CRPS for precipitation forecasts...](https://nla.gov.au/nla.obj-3160938615/view), BoM Research Report 079.
 :::
 
 ## Likelihoods
@@ -1373,9 +1605,10 @@ Identifying and quantifying different sources of uncertainty that could exist in
 
 There are two major categories of uncertainty in statistical or machine learning:
 
-- Aleatoric uncertainty
-- Epistemic uncertainty
+- Aleatoric uncertainty: the inherent variability associated with the data generating process.
+- Epistemic uncertainty: the lack of knowledge, limited data information, parameter errors and model errors.
 
+<!--
 Since there is no consensus on the definitions of aleatoric and epistemic uncertainty, we provide the most acknowledged definitions in the following slides.
 
 ## Aleatoric Uncertainty
@@ -1403,6 +1636,7 @@ Quantitative Definition
 :   $$\text{Epi}(Y|\boldsymbol{X}=\boldsymbol{x}) = \text{Uncertainty}(Y|\boldsymbol{X}=\boldsymbol{x}) - \text{Ale}(Y|\boldsymbol{X}=\boldsymbol{x}),$$
 
 i.e., the total uncertainty subtracting the aleatoric uncertainty $\mathbb{V}[Y|\boldsymbol{X}=\boldsymbol{x}]$ would be the epistemic uncertainty.
+-->
 
 ## Sources of uncertainty
 
@@ -1421,7 +1655,7 @@ Noisy data, inconsistent data, data with missing values or data with missing imp
 3. Model error $\rightarrow$ epistemic uncertainty.
 4. Data uncertainty $\rightarrow$ epistemic uncertainty.
 
-# Avoiding Overfitting {visibility="uncounted"}
+<!-- # Avoiding Overfitting {visibility="uncounted"} -->
 
 ## Traditional regularisation
 
@@ -1647,10 +1881,6 @@ model.predict(X_train_sc.head(3),
 
 We can make the model think it is still training:
 
-::: {.content-visible unless-format="revealjs"}
-By setting the `training=True`, we can let drop out happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_.
-:::
-
 ::: columns
 ::: column
 ```{python}
@@ -1665,6 +1895,8 @@ model(X_train_sc.head(3),
 ```
 :::
 :::
+
+By setting the `training=True`, we can let dropout happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_.
 
 ## Dropout Limitation
 
