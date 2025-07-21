@@ -303,8 +303,11 @@ Distributional:
 <!-- $\displaystyle \mathcal{N}\bigl(1582.48,\;\sigma^2\bigr)$ -->
 
 ```{python}
-#| code-fold: true
+#| echo: false
+#| fig-cap: ""
+#| style: "margin-top: -1.5em;"
 draw_gamma_distribution(1582.48, 2, "black", 4) 
+plt.axvline(1582.48, color="black", linestyle="--", label="Mean");
 ```
 :::
 
@@ -436,7 +439,7 @@ $$\mathbf{X} = \begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vd
 - $n$ is the number of observations, $p$ is the number of features,
 - the true coefficients are $\boldsymbol{\beta} = (\beta_0, \beta_1, \ldots, \beta_p)$,
 - $\beta_0$ is the intercept, $\beta_1, \ldots, \beta_p$ are the coefficients,
-- $\widehat{\boldsymbol{\beta}}$ is the estimated coefficient vector,
+- $\boldsymbol{\beta}^*$ is the estimated coefficient vector,
 - $\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})$ is the feature vector for the $i$th observation,
 - $y_i$ is the response variable for the $i$th observation,
 - $\hat{y}_i$ is the predicted value for the $i$th observation,
@@ -553,7 +556,7 @@ As $\sigma^2$ is fixed, minimising NLL is equivalent to minimising MSE:
 
 $$
 \begin{aligned}
-\widehat{\boldsymbol{\beta}}
+\boldsymbol{\beta}^*
 &= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{NLL}(\boldsymbol{\beta}) \\
 &= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 \\
 &= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{1}{n} \sum_{i=1}^n \Bigl( y_i - \hat{y}_i(\boldsymbol{x}_i; \boldsymbol{\beta}) \Bigr)^2 \\
@@ -1189,7 +1192,7 @@ i.e., we ignore the dispersion parameter $\phi$ while estimating the regression 
 
 Step 1. Use the advanced second derivative iterative method to find the regression coefficients:
 $$
-    \widehat{\boldsymbol{\beta}} = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
+    \boldsymbol{\beta}^* = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
 $$
 
 Step 2. Estimate the dispersion parameter:
@@ -1254,9 +1257,16 @@ Source: Ronald Richman (2022), _Mind the Gap --- Safely Incorporating Deep Learn
 
 The Combined Actuarial Neural Network is a novel actuarial neural network architecture proposed by [Schelldorfer and Wüthrich (2019)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525). We summarise the CANN approach as follows:
 
-- Find the coefficients $\boldsymbol{\beta}$ of the GLM with a link function $g(\cdot)$.
-- Find the weights $\boldsymbol{w}_{\text{CANN}}$ of a neural network $\mathcal{M}_{\text{CANN}}:\mathbb{R}^{p}\to\mathbb{R}$.
-- Given a new instance $\boldsymbol{x}$, we have $$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \mathcal{M}_{\text{CANN}}(\boldsymbol{x};\boldsymbol{w}_{\text{CANN}})\Big).$$
+- Find coefficients $\boldsymbol{\beta}$ of the GLM with a link function $g(\cdot)$.
+- Find weights $\boldsymbol{w} = (\boldsymbol{w}^{(1)}, \dots, \boldsymbol{w}^{(K+1)})$ of a neural network $s:\mathbb{R}^{p}\to\mathbb{R}$.
+- Given a new instance $\boldsymbol{x}$, we have
+
+
+$$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + s(\boldsymbol{x};\boldsymbol{w})\Big).$$
+
+If just a sequential dense network, then
+
+$$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \Big\langle \boldsymbol{w}^{(K+1)}, \bigl( \boldsymbol{z}^{(K)} \circ \dots \circ \boldsymbol{z}^{(1)}\bigr)(\boldsymbol{x}) \Big\rangle \Big).$$
 
 ## Shifting the predicted distributions
 
@@ -1400,13 +1410,14 @@ $$
 
 ## Mixture Density Network
 
-A mixture density network (MDN) $\mathcal{M}_{\boldsymbol{w}^*}$ outputs each distribution component's mixing weights and parameters of $Y$ given the input features $\boldsymbol{x}$, i.e.,
+A mixture density network (MDN) $\text{MDN}(\boldsymbol{x})$ outputs each distribution component's mixing weights and parameters of $Y$ given the input features $\boldsymbol{x}$, i.e.,
 $$
-    \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
+    \text{MDN}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
 $$
-where $\boldsymbol{w}^*$ is the networks' weights found by minimising the following negative log-likelihood loss function 
+where $\boldsymbol{w}^*$ is the networks' weights found by minimising the following negative log-likelihood loss function, i.e.,
 $$
-    \mathcal{L}(\mathcal{D}, \boldsymbol{\theta})= - \sum_{i=1}^{n} \log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}^*),
+    \boldsymbol{w}^* = \underset{\boldsymbol{w}}{\text{arg\,min}} \
+    \mathcal{L}(\mathcal{D}, \boldsymbol{w})= - \sum_{i=1}^{n} \log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}),
 $$
 where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{n}$ is the training dataset.
 
@@ -1437,10 +1448,10 @@ The aim is to find the optimum weights
 $$
     \boldsymbol{w}^* = \underset{w}{\text{arg\,min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
 $$
-for the Gamma mixture density network $\mathcal{M}_{\boldsymbol{w}^*}$ that outputs the mixing weights, shapes and scales of $Y$ given the input features $\boldsymbol{x}$, i.e.,
+for the Gamma mixture density network $\text{MDN}(\boldsymbol{x})$ that outputs the mixing weights, shapes and scales of $Y$ given the input features $\boldsymbol{x}$, i.e.,
 $$
     \begin{align*}
-        \mathcal{M}_{\boldsymbol{w}^*}(\boldsymbol{x})
+        \text{MDN}(\boldsymbol{x})
         = ( &\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
              \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
             &\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
