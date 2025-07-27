@@ -277,14 +277,14 @@ X_train = imp.fit_transform(X_train_raw)    #<4>
 X_val = imp.transform(X_val_raw)            #<5>
 X_test = imp.transform(X_test_raw)          #<6>
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Imports `set_config` function from `sklearn`.
 2. Tells sklearn that any transformed data should stay as pandas dataframes.
 3. Defines the `SimpleImputer`. This function helps in dealing with missing values. Default is set to `mean`, meaning that, missing values in each column will be replaced with the column mean.
 4. Finds the means of training set columns, and replaces train set missing values by those means.
 5. Replace missing values in the validation set by the means of the _training set_ columns.
 6. Replace missing values in the test set by the means of the _training set_ columns.
-:::
+
 
 <br><br><br>
 
@@ -319,12 +319,12 @@ else:
     freq = pd.read_csv("french-motor.csv")                    #<4>
 freq.info()
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Checks if the dataset does not already exist within the current directory. 
 2. Download the dataset from sklearn. The `fetch_openml` function allows the user to bring in the datasets available in the OpenML platform. Every dataset has a unique ID, hence, can be fetched by providing the ID. `data_id` of the French motor dataset is 41214.
 3. Save it as a CSV file, so we don't need to redownload it (slow!) next time.
 4. If it already exists, then read the dataset from the CSV file.
-:::
+
 
 ## The data
 
@@ -379,10 +379,10 @@ X_train_raw = X_train_raw.reset_index(drop=True)                                
 X_test_raw = X_test_raw.reset_index(drop=True)
 X_train_raw
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Splits the dataset into train and test sets. By setting the `random_state` to a specific number, we ensure the consistency in the train-test split. `freq.drop("ClaimNb", axis=1)` removes the "ClaimNb" column.
 2. Resets the index of train set, and drops the previous index column. Since the index column will get shuffled during the train-test split, we may want to reset the index to start from 0 again. 
-:::
+
 
 ## What values do we see in the data?
 
@@ -461,20 +461,21 @@ However if you want to reuse the same `X_train` data for a (generalised) linear 
 
 These are categorical variables which have a natural order to them.
 
+::: {.content-visible unless-format="revealjs"}
+`OrdinalEncoder` can assign numerical values to each category of the ordinal variable. The nice thing about `OrdinalEncoder` is that it can preserve the information about ordinal relationships in the data. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` method. The following lines of code show how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
+:::
+
 ```{python}
 from sklearn.preprocessing import OrdinalEncoder               #<1>
 enc = OrdinalEncoder()                                         #<2>
 enc.fit(X_train_raw[["Area"]])                                 #<3>
 enc.categories_                                                #<4>
 ```
-::: {.content-visible unless-format="revealjs"}
-`OrdinalEncoder` can assign numerical values to each category of the ordinal variable. The nice thing about `OrdinalEncoder` is that it can preserve the information about ordinal relationships in the data. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` method. The following lines of code show how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
 
 1. Imports the `OrdinalEncoder` from `sklearn.preprocessing` library
 2. Create an `OrdinalEncoder` object named `enc`
 3. Selects the two columns with ordinal variables from `X_train` and fits the ordinal encoder
 4. Gives out the number of unique categories in each ordinal variable
-:::
 
 ```{python}
 for i, area in enumerate(enc.categories_[0]):
@@ -493,6 +494,7 @@ print(" = ".join(f"{r} - {l}" for l, r in zip(enc.categories_[0][:-1], enc.categ
 ::: {.content-visible unless-format="revealjs"}
 Note that fitting an ordinal encoder (`enc.fit`) only establishes the mapping between numerical values and ordinal variable levels. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` function. Following lines of code shows how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
 :::
+
 ```{python}
 X_train = enc.transform(X_train_raw[["Area"]])
 X_test = enc.transform(X_test_raw[["Area"]])
@@ -535,14 +537,13 @@ hist = model.fit(X_train, y_train, epochs=100, verbose=0,   #<5>
     validation_split=0.2, callbacks=[es])
 hist.history["val_loss"][-1]                                    #<6>
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Sets the random state for reproducibility
 2. Constructs a neural network with 1 `Dense` layer, 1 neuron and an exponential activation function
 3. Compiles the model by defining the optimizer and loss function
 4. Defines the early stopping object (Note that the early stopping object only works if we have a validation set. If we do not define a validation set, there will be no validation loss, hence, no metric to compare the training loss with.)
 5. Fits the model only with the encoded columns as input data. The command `validation_split=0.2` tells the neural network to treat the last 20% of input data as the validation set. This is an alternative way of defining the validation set. 
 6. Returns the validation loss at the final epoch of training
-:::
 
 <br> -->
 
@@ -565,14 +566,14 @@ ct = make_column_transformer(                               #<2>
 
 X_train = ct.fit_transform(X_train_raw)                     #<6>
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Imports the `make_column_transformer` class that can carry out data preparation selectively
 2. Starts defining the column transformer object 
 3. Apply dummy encoding to the nominal categorical columns
 4. Apply ordinal encoding to the ordinal categorical column
 5. Standardise the remaining columns (which are all numerical)
 6. Fits and transforms the train set using this new column transformer
-:::
+
 
 ::: columns
 ::: column
@@ -618,6 +619,7 @@ X_train
 ```
 :::
 :::
+
 ::: {.content-visible unless-format="revealjs"}
 An important thing to notice here is that, the order of columns have changed. They are rearranged according to the order in which we specify the transformations inside the column transformer. 
 :::
@@ -803,14 +805,12 @@ for name, X in zip(("train", "val", "test"), (X_train, X_val, X_test)):        #
     print(f"The {name} set has shape {X.shape} & with {num_na} NAs.")
 ```
 
-::: {.content-visible unless-format="revealjs"}
 1. Imports `make_pipeline` class from `sklearn.pipeline` library. `make_pipeline` is used to streamline the data pre processing. In the above example, `make_pipeline` is used to first treat for missing values and then scale numerical values
 2. Stores categorical variables in `nom_vars`
 3. Specifies the one-hot encoding for all categorical variables. We set the `sparse_output=False`, to return a dense array rather than a sparse matrix. `handle_unknown` specifies how the neural network should handle unseen categories. By setting `handle_unknown="ignore"`, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it will interrupt the model's operation after deployment
 4. Passes through `hypertension` and `heart_disease` without any pre processing
 5. Makes a pipeline that first applies `SimpleImputer()` to replace missing values with the mean and then applies `StandardScaler()` to scale the numerical values 
 6. Prints out the missing values to ensure the `SimpleImputer()` has worked
-:::
 
 ## Handling unseen categories
 
@@ -830,6 +830,7 @@ X_val_raw["gender"].value_counts()
 ::: {.content-visible unless-format="revealjs"}
 Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below.
 :::
+
 ::: columns
 ::: column
 ```{python}

@@ -91,14 +91,14 @@ set_config(transform_output="pandas")
 
 ```{python}
 #| code-fold: true
-from pathlib import Path                                      #<1>
-from sklearn.datasets import fetch_openml                     #<2>
+from pathlib import Path
+from sklearn.datasets import fetch_openml
 
-if not Path("french-motor.csv").exists():                     #<3>
-    freq = fetch_openml(data_id=41214, as_frame=True).frame   #<4>
-    freq.to_csv("french-motor.csv", index=False)              #<5>
+if not Path("french-motor.csv").exists():
+    freq = fetch_openml(data_id=41214, as_frame=True).frame
+    freq.to_csv("french-motor.csv", index=False)
 else:
-    freq = pd.read_csv("french-motor.csv")                    #<6>
+    freq = pd.read_csv("french-motor.csv")
 
 freq
 ```
@@ -238,14 +238,14 @@ Using the help function in this case provides information about the Poisson loss
 
 ```{python}
 #| code-fold: true
-freq = freq.drop("IDpol", axis=1).head(25_000)                          #<1>
+freq = freq.drop("IDpol", axis=1).head(25_000)
 
-X_train, X_test, y_train, y_test = train_test_split(                    #<2>
-  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=36861)    #<2>
+X_train, X_test, y_train, y_test = train_test_split(
+  freq.drop("ClaimNb", axis=1), freq["ClaimNb"], random_state=36861)
 
 # Reset each index to start at 0 again.
-X_train_raw = X_train.reset_index(drop=True)                            #<3>
-X_test_raw = X_test.reset_index(drop=True)                              #<3>
+X_train_raw = X_train.reset_index(drop=True)
+X_test_raw = X_test.reset_index(drop=True)
 ```
 
 
@@ -321,6 +321,10 @@ One hot encoding is a way to assign numerical values to nominal variables. One h
 
 ## Train on one-hot inputs
 
+::: {.content-visible unless-format="revealjs"}
+For the sake of explaining entity embeddings, we will train a neural network just on one categorical variable which is one-hot encoded.
+:::
+
 ```{python}
 num_regions = len(oh.categories_[0])                            #<1>
 
@@ -337,12 +341,11 @@ hist = model.fit(X_train_oh, y_train, epochs=100, verbose=0,   #<5>
     validation_split=0.2, callbacks=[es])                       
 hist.history["val_loss"][-1]                                   #<6> 
 ```
-::: {.content-visible unless-format="revealjs"}
-The above code shows how we can train a neural network using only the one-hot encoded variables.  The example is similar to the case of training neural networks for ordinal encoding. 
+
 1. Computes the number of unique categories in the encoded column and store it in `num_regions`
 2. Constructs the neural network. This time, it is a neural network with 1 hidden layer and 1 output layer. `Dense(2, input_dim=num_regions)` takes in an input matrix of with columns = `num_regions` and transofrmas it down to an output with 2 neurons
-Steps 3-6 is similar to what we saw during training with ordinal encoded variables.
-:::
+3. Steps 3-6 are similar to what we saw during training with ordinal encoded variables
+
 
 ## Make a fake batch of data
 
@@ -365,17 +368,19 @@ model.layers[0](X)
 
 ## The first layer
 
+::: {.content-visible unless-format="revealjs"}
+We can also extract the layer, get its wieghts and compute manually. 
+:::
+
 ```{python}
 layer = model.layers[0]                     #<1>
 W, b = layer.get_weights()                  #<2>
 X.shape, W.shape, b.shape                   #<3>
 ```
-::: {.content-visible unless-format="revealjs"}
-We can also extract the layer, get its wieghts and compute manually. 
+
 1. Extracts the layer
 2. Gets the weights and biases and stores the weights in _W_ and biases in _b_
 3. Returns the shapes of the matrices
-:::
 
 ::: columns
 ::: column
@@ -393,6 +398,7 @@ W + b
 ::: {.content-visible unless-format="revealjs"}
 The above codes manually compute and returns the same answers as before.
 :::
+
 ## Just a look-up operation
 
 ::: columns
@@ -483,6 +489,7 @@ keras.ops.convert_to_numpy(enc_tensor).squeeze()
 :::
 :::
 
+<!--
 ::: {.content-visible unless-format="revealjs"}
 
 1. Returns the weights of the Embedding layer. The function `model.layers[0].get_weights()[0]` returns a 22 $\times$ 2 weights matrix with optimal representations for each category. Here 22 corresponds to the number of unique categories, and 2 corresponds to the size of the lower dimensional space using which we represent each category. 
@@ -492,13 +499,12 @@ keras.ops.convert_to_numpy(enc_tensor).squeeze()
 We can observe how the last code returns a numpy array with representations corresponding to R24, R93, R11 and R42. 
 
 :::
+-->
 
 ## The learned embeddings
 
 ::: {.content-visible unless-format="revealjs"}
-
 If we only have two-dimensional embeddings we can plot them.
-
 :::
 
 ```{python}
@@ -675,7 +681,7 @@ Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning
 Transform the categorical variables to integers:
 
 ```{python}
-num_brands, num_regions = X_train_raw[["VehBrand", "Region"]].nunique()         #<1>
+num_brands, num_regions = X_train_raw[["VehBrand", "Region"]].nunique()     #<1>
 
 ct = make_column_transformer(
   (OrdinalEncoder(), ["VehBrand", "Region", "Area", "VehGas"]),             #<2>
@@ -686,14 +692,13 @@ X_train = ct.fit_transform(X_train_raw)                                     #<5>
 X_test = ct.transform(X_test_raw)                                           #<6>
 ```
 
-::: {.content-visible unless-format="revealjs"}
 1. Stores separately the number of unique categorical in the nominal variables, as would require these values later for entity embedding
-2. Contructs columns transformer by first ordinally encoding all categorical variables. Ordinal variables are ordinal encoded because it is the sensible thing. Nominal variables are ordinal encoded as an intermediate step before passing through an entity embedding layer 
+2. Contructs columns transformer by first ordinally encoding _all_ categorical variables (ordinal and nominal). Nominal variables are ordinal encoded here just as an intermediate step before this is the required input format for entity embedding layers
+   
 3. Applies standard scaling to all other numerical variables
-4. `verbose_feature_names_out=False` stops unnecessarily printing out the outputs of the process
+4. Choose the simpler style of column names for the transformed dataframes
 5. Fits the column transformer to the train set and transforms it
 6. Transforms the test set using the column transformer fitted using the train set
-:::
 
 Split the brand and region data apart from the rest:
 
@@ -732,14 +737,13 @@ region_ee = Reshape(target_shape=(2,))(region_ee)                               
 x = Concatenate(name="combined")([veh_brand_ee, region_ee, other_inputs])       #<6>
 ```
 
-::: {.content-visible unless-format="revealjs"}
 1. Imports `Reshape` class from `keras.layers` library
 2. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimensions we want the input to be summarised in to)
 3. Reshapes the output to match the format required at the model building step
 4. Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension
 5. Reshapes the output to match the format required at the model building step
 6. Combines the entity embedded matrices and other inputs together
-:::
+
 ## Complete the model and fit it
 
 Feed the combined embeddings & continuous inputs to some normal dense layers.
@@ -756,10 +760,10 @@ hist = model.fit((X_train_brand, X_train_region, X_train_rest),           #<2>
     callbacks=[EarlyStopping(patience=5)], validation_split=0.2)
 np.min(hist.history["val_loss"])
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Model building stage requires all inputs to be passed in together
 2. Passes in the three sets of data, since the format defined at the model building stage requires 3 data sets
-:::
+
 ## Plotting this model
 
 ```{python}
@@ -807,29 +811,24 @@ ct = make_column_transformer(                                           #<1>
 X_train = ct.fit_transform(X_train_raw)                                  #<6>
 X_test = ct.transform(X_test_raw)                                        #<7>
 ```
-::: {.content-visible unless-format="revealjs"}
+
 1. Starts defining the column transformer 
 2. Lets `Exposure` passthrough the neural network as it is without peprocessing
 3. Drops the categorical variables (for the ease of implementation)
 4. Scales the remaining variables
-5. Avoids printing unnecessary outputs
+5. Choose the simpler style of column names for the transformed dataframes
 6. Fits and transforms the train set
 7. Only transforms the test set
-:::
+
 
 Split exposure apart from the rest:
 
 ```{python}
-X_train_exp = X_train["Exposure"]; X_test_exp = X_test["Exposure"]    #<1>
-X_train_rest = X_train.drop("Exposure", axis=1)                          #<2>
-X_test_rest = X_test.drop("Exposure", axis=1)                            #<3>
+X_train_exp = X_train["Exposure"]
+X_test_exp = X_test["Exposure"]
+X_train_rest = X_train.drop("Exposure", axis=1)
+X_test_rest = X_test.drop("Exposure", axis=1)
 ```
-
-::: {.content-visible unless-format="revealjs"}
-1. Takes out `Exposure` seperately
-2. Drops `Exposure` from train set
-3. Drops `Exposure` from test set
-:::
 
 Organise the inputs:
 
