@@ -1,0 +1,126 @@
+
+## Naive location
+
+```{python}
+plt.scatter(train_raw['long'], train_raw['lat'], c=train_raw['nclaims'], cmap='viridis', s=1)
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.title('Claims by Location')
+plt.colorbar(label='Number of Claims')
+plt.show()
+```
+
+## Naive location II {visibility="uncounted"}
+
+```{python}
+plt.figure(figsize=(10, 5))
+plt.scatter(train_raw['long'], train_raw['lat'], c=train_raw['nclaims'], cmap='viridis', s=1)
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.title('Claims by Location')
+plt.colorbar(label='Number of Claims')
+plt.show()
+```
+
+## Naive location III {visibility="uncounted"}
+
+```{python}
+plt.figure(figsize=(5, 10))
+plt.scatter(train_raw['long'], train_raw['lat'], c=train_raw['nclaims'], cmap='viridis', s=1)
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.title('Claims by Location')
+plt.colorbar(label='Number of Claims')
+plt.show()
+```
+
+## Map setup {.smaller visibility="uncounted"}
+
+```{python}
+import geopandas as gpd
+from shapely.geometry import Point
+
+def create_geodataframe(df, lon='long', lat='lat'):
+    """Create a GeoDataFrame from a DataFrame with longitude and latitude columns."""
+    geometry = [Point(xy) for xy in zip(df[lon], df[lat])]
+    return gpd.GeoDataFrame(df.copy(), geometry=geometry, crs="EPSG:4326")
+```
+
+```{python}
+gdf = create_geodataframe(train_raw)
+gdf
+```
+
+## First map {visibility="uncounted"}
+
+```{python}
+#| code-fold: true
+def plot_claims(gdf: gpd.GeoDataFrame):
+    """
+    Plot claims on a map, optionally with a basemap.
+    """
+    gdf_proj = gdf.to_crs(epsg=3857)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    gdf_proj.plot(
+        ax=ax,
+        column='nclaims',
+        cmap='OrRd',
+        markersize=8,
+        edgecolor='grey',
+        linewidth=0.5,
+        alpha=0.8,
+        legend=True
+    )
+    ax.set_axis_off()
+    plt.tight_layout()
+```
+
+```{python}
+plot_claims(gdf)
+plt.title("Number of Claims By Location");
+```
+
+## Add a basemap {visibility="uncounted"}
+
+```{python}
+import contextily as ctx
+plot_claims(gdf)
+ctx.add_basemap(plt.gca(), source=ctx.providers.CartoDB.Positron)
+plt.title("Number of Claims By Location");
+```
+
+## Jittered plot {visibility="uncounted"}
+
+```{python}
+#| code-fold: true
+def jitter_coordinates(df: pd.DataFrame, amount: float = 0.05) -> pd.DataFrame:
+    """
+    Apply random jitter to longitude and latitude columns.
+    """
+    np.random.seed(51283)
+    df = df.copy()
+    df['long_jitter'] = df['long'] + np.random.uniform(-amount, amount, size=len(df))
+    df['lat_jitter'] = df['lat'] +np.random.uniform(-amount, amount, size=len(df))
+    return df
+
+
+df_jit = jitter_coordinates(train_raw)
+gdf_jit = create_geodataframe(df_jit, lon='long_jitter', lat='lat_jitter')
+```
+
+```{python}
+plot_claims(gdf_jit)
+ctx.add_basemap(plt.gca(), source=ctx.providers.CartoDB.Positron)
+plt.title("Jittered Claims Locations");
+```
+
+## Average claims plot {visibility="uncounted"}
+
+```{python}
+#| code-fold: true
+avg = train_raw.groupby(['lat', 'long'])['nclaims'].mean().reset_index()
+gdf_avg = create_geodataframe(avg)
+plot_claims(gdf_avg)
+ctx.add_basemap(plt.gca(), source=ctx.providers.CartoDB.Positron)
+plt.title("Average Claims per Location");
+```

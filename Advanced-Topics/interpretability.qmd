@@ -1,14 +1,8 @@
 ---
 title: Interpretability
+bibliography: ../library.bib
 ---
 
-::: {.content-visible unless-format="revealjs"}
-
-### Acknowledgments
-
-Thanks to Eric Dong for making the original version of these slides.
-
-:::
 
 ```{python}
 #| echo: false
@@ -72,6 +66,7 @@ keras.utils.set_random_seed(1)
 ```{python}
 #| code-fold: true
 #| code-summary: Show the package imports
+import json
 import random
 from pathlib import Path
 
@@ -89,49 +84,43 @@ from keras.callbacks import EarlyStopping
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split 
+from sklearn.preprocessing import OrdinalEncoder, StandardScaler, OneHotEncoder
+from sklearn.compose import make_column_transformer
+
+from keras.models import Model
+from keras.layers import Dense, Input
+
+from sklearn import set_config
+set_config(transform_output="pandas")
 ```
 
 :::
 
-# Interpretability {visibility="uncounted"}
+# Introduction
 
-::: {.content-visible unless-format="revealjs"}
-Interpretability on a high-level refers to understanding how a model works. Understanding how a model works is very important for decision making. Traditional statistical methods like linear regression and generalized linear regressions are inherently interpretable because we can see and understand how different variables impact the model predictions collectively and individually. In contrast, deep learning algorithms do not readily provide insights into how variables contributed to the predictions. They are composed of multiple layers of interconnected nodes that learn different representations of data. Hence, it is not clear how inputs directly contributed to the outputs. This makes neural networks less interpretable. This is not very desirable, especially in situations which demand making explanations. As such, there is active discussion going on about how we can make less interpretable models more interpretable so that we start trusting these models more.
-:::
+## Definitions
 
-<!--
-## Interpretability and Trust
+> "Surprisingly enough, although the concept of interpretability is increasingly widespread, there is no general consensus on both the definition and the measurement of the interpretability of a model." [@delcaillau2022]
 
-Suppose a neural network informs us to increase the premium for Bob.
+> "**Definition** Interpret means _to explain or to present in understandable terms_.
+> In the context of ML systems, we define interpretability as _the ability to explain or to present in understandable terms to a human_." [@doshi2017]
 
--   Why are we getting such a conclusion from the neural network, and should we trust it?
--   How can we explain our pricing scheme to Bob and the regulators?
--   Should we be concerned with moral hazards, discrimination, unfairness, and ethical affairs?
-
-We need to trust the model to employ it! With interpretability, we can trust it!
--->
-
+<!-- 
 ## Interpretability
 
 Interpretability Definition
 
 :   *Interpretability refers to the ease with which one can understand and comprehend the model's algorithm and predictions.*
 
-Interpretability of black-box models can be crucial to ascertaining trust.
+Interpretability of black-box models can be crucial to ascertaining trust. -->
 
-> Interpretability is about transparency, about understanding exactly why and how the model is generating predictions, and therefore, it is important to observe the inner mechanics of the algorithm considered. This leads to interpreting the model’s parameters and features used to determine the given output. Explainability is about explaining the behavior of the model in human terms.
+## A distinction between interpretability and explainability
 
-::: footer
-Source: Charpentier (2024), [_Insurance, Biases, Discrimination and Fairness_](https://link.springer.com/book/10.1007/978-3-031-49783-4), Springer.
-:::
+> "Interpretability is about transparency, about understanding exactly why and how the model is generating predictions, and therefore, it is important to observe the inner mechanics of the algorithm considered. This leads to interpreting the model’s parameters and features used to determine the given output. Explainability is about explaining the behavior of the model in human terms." [@charpentier2024insurance]
 
 ## Husky vs. Wolf
 
-![A well-known anecdote in the explainability literature.](husky.jpg)
-
-::: footer
-Ribeiro et al. (2016), _"Why should I trust you?" Explaining the predictions of any classifier_, 22nd ACM SIGKDD conference.
-:::
+![A well-known anecdote in the explainability literature [@ribeiro2016].](husky.jpg)
 
 ## Aspects of Interpretability
 
@@ -143,12 +132,12 @@ Inherent Interpretability
 Models with inherent interpretability generally have a simple model architecture where the relationships between inputs and outputs are straightforward. This makes it easy to understand and comprehend model's inner workings and its predictions. As a result, decision making processes convenient. Examples for models with inherent interpretability include linear regression models, generalized linear regression models and decision trees. 
 :::
 
-Post-hoc Interpretability
+Post-hoc Explanations
 
 : The model is not interpretable by design, but we can use other methods to explain the model.
 
 ::: {.content-visible unless-format="revealjs"}
-Post-hoc interpretability refers to applying various techniques to understand how the model makes its predictions after the model is trained. Post-hoc interpretability is useful for understanding predictions coming from complex models (less interpretable models) such as neural networks, random forests and gradient boosting trees. 
+Post-hoc explanations refers to applying various techniques to understand how the model makes its predictions after the model is trained. Post-hoc explanations is useful for understanding predictions coming from complex models (less interpretable models) such as neural networks, random forests and gradient boosting trees. 
 :::
 
 <br>
@@ -167,23 +156,907 @@ Global Interpretability focuses on understanding the model's decision-making pro
 Local Interpretability focuses on understanding the model's decision-making for a specific input observation. These techniques will try to look at how different input features contributed to the output. 
 :::
 
-# Inherent Interpretability {visibility="uncounted"}
 
----
+<!-- # Inherent Interpretability {visibility="uncounted"} -->
 
-![](stop-explaining-black-box.png)
+## What is inherent interpretability?
 
-::: footer
-Rudin (2019), [Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead](https://arxiv.org/pdf/1811.10154.pdf), Nature Machine Intelligence.
+::: columns
+::: {.column width="70%"}
+
+> "Interpretability by design is decided on the level of the machine learning algorithm. If you want a machine learning algorithm that produces interpretable models, the algorithm has to constrain the search of models to those that are interpretable. The simplest example is linear regression: When you use ordinary least squares to fit/train a linear regression model, you are using an algorithm that will produce ... models that are linear in the input features. Models that are interpretable by design are also called **intrinsically** or **inherently** interpretable models." [@molnar2020interpretable]
+
+:::
+::: {.column width="30%"}
+
+<br><br>
+
+![Christoph Molnar](molnar.jpg)
+
+:::
 :::
 
-## Trees are interpretable!
+## Examples of interpretable models
+
+::: columns
+::: {.column width="40%"}
+
+<br>
+<br>
+<br>
+
+- Linear regression
+- Generalised linear models
+- Decision trees
+- Decision rules
+
+:::
+::: {.column width="60%"}
+
+```{mermaid}
+%%| echo: false
+graph TD
+  A{vpdmax8 < 27}
+  A -->|true| B{pcpn8 ≥ 37}
+  A -->|false| C{vpdmax6 < 29}
+
+  B -->|true| D{tmax9 ≥ 21}
+  B -->|false| E{tmax6 ≥ 26}
+
+  D -->|true| F[11]
+  D -->|false| G[118]
+
+  E -->|true| H[60]
+  E -->|false| I[133]
+
+  C -->|true| J{tmax7 ≥ 31}
+  C -->|false| M{tmax7 < 31}
+
+  J -->|true| K[81]
+  J -->|false| L[131]
+
+  M -->|true| N[82]
+  M -->|false| O[186]
+```
+
+E.g. decision tree for payouts of index insurance [@chen2024managing].
+
+<!-- ::: footer
+Source: Jinggong Zhang (2023), Integrated Design for Index Insurance, IME Presentation
+::: -->
+
+:::
+:::
+
+## Better trees
+
+> "The optimization over the node parameters (exact for axis-aligned trees, approximate for oblique
+trees) assumes the rest of the tree (structure and parameters) is fixed. The greedy nature of the
+algorithm means that once a node is optimized, it its fixed forever." [@carreira2018alternating]
+
+Non-greedy search can improve the accuracy of the tree, without sacrificing interpretability.
+
+
+## Some processes don't fit the tree structure
+
+::: columns
+::: {.column width="50%"}
 
 ![Train prices](opal-train-pricing-tree.png)
 
-## Trees are interpretable?
+:::
+::: {.column width="50%"}
 
 ![Full train pricing](opal-train-pricing-full-tree.png)
+
+:::
+:::
+
+## Decision rules
+
+::: columns
+:::: {.column width="50%"}
+
+Make predictions using if-then statements related to the inputs.
+
+> "Decision rules can be **as expressive as decision trees, while being more compact**. Decision trees often also suffer from replicated sub-trees, that is, when the splits in a left and a right child node have the same structure." [@molnar2020interpretable]
+
+:::
+::: {.column width="50%"}
+```python
+def rail_cost(peak_hours, distance):
+  if peak_hours:
+      if distance <= 10:
+        cost = 3.79
+      elif distance <= 20:
+        cost = 4.71
+      elif distance <= 35:
+        cost = 5.42
+      elif distance <= 65:
+        cost = 7.24
+      else:
+        cost = 9.31
+  else:
+      if distance <= 10:
+        cost = 2.65
+      elif distance <= 20:
+        cost = 3.29
+      elif distance <= 35:
+        cost = 3.79
+      elif distance <= 65:
+        cost = 5.06
+      else:
+        cost = 6.51
+  return cost
+```
+
+:::
+:::
+
+## Scoring rules
+
+![Example from @rudin2019.](scoring-rules-recidivism.png)
+
+## When to choose inherent interpretability?
+
+![@rudin2019](stop-explaining-black-box.png)
+
+---
+
+::: {.callout-note title="Article 22 GDPR – Automated individual decision-making, including profiling"}
+1. The data subject shall have the right **not** to be subject to a decision based solely on automated processing, including profiling, which produces legal effects concerning him or her or similarly significantly affects him or her.
+
+2. Paragraph 1 shall not apply if the decision:  
+   a) is necessary for entering into, or performance of, a contract between the data subject and a data controller;  
+   b) is authorised by Union or Member State law to which the controller is subject and which also lays down suitable measures to safeguard the data subject’s rights and freedoms and legitimate interests; or  
+   c) is based on the data subject’s explicit consent.
+
+3. In the cases referred to in points (a) and (c) of paragraph 2, the data controller shall implement suitable measures to safeguard the data subject’s rights and freedoms and legitimate interests, at least the right to obtain human intervention on the part of the controller, to express his or her point of view and to contest the decision.
+
+4. Decisions referred to in paragraph 2 shall not be based on special categories of personal data referred to in Article 9(1), unless point (a) or (g) of Article 9(2) applies and suitable measures to safeguard the data subject’s rights and freedoms and legitimate interests are in place.
+:::
+
+
+## Adversarial examples
+
+::: {.content-visible unless-format="revealjs"}
+An adversarial attack refers to a small carefully created modifications to the input data that aims to trick the model in to making wrong predictions while keeping the `y_true` same. The goal is to identify instances where subtle modifications in the input data (which are not instantaneously recognized) can lead to erroneous model predictions.
+:::
+
+![A demonstration of fast adversarial example generation applied to GoogLeNet on ImageNet. By adding an imperceptibly small vector whose elements are equal to the sign of the elements of the gradient of the cost function with respect to the input, we can change GoogLeNet’s classification of the image.](adversarial-example.png)
+
+::: footer
+Source: Goodfellow et al. (2015), [Explaining and Harnessing Adversarial Examples](https://arxiv.org/pdf/1412.6572.pdf), ICLR.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above example shows how a small perturbation to the image of a panda led to the model predicting the image as a gibbon with high confidence. This indicates that there may be certain patterns in the data which are not clearly seen by the human eye, but the model is relying on them to make predictions. Identifying these sensitivities/vulnerabilities are important to understand how a model is making its predictions.
+:::
+
+## Adversarial stickers
+
+![Adversarial stickers.](the-verge-adversarial_patch_.0.gif)
+
+::: footer
+Source: The Verge (2018), [These stickers make computer vision software hallucinate things that aren’t there](https://www.theverge.com/2018/1/3/16844842/ai-computer-vision-trick-adversarial-patches-google).
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above graphical illustration shows how adding a metal component changes the model predictions from _Banana_ to _toaster_ with high confidence.
+:::
+
+## Adversarial text
+
+::: {.content-visible unless-format="revealjs"}
+Adversarial attacks on text generation models help users get an understanding of the inner workings NLP models. This includes identifying input patterns that are critical to model predictions, and assessing performance of NLP models for robustness. 
+:::
+
+
+"[TextAttack](https://github.com/QData/TextAttack) 🐙 is a Python framework for adversarial attacks, data augmentation, and model training in NLP"
+
+![Demo](https://jxmo.io/files/textattack.gif){width=80%}
+
+
+{{< include _permutation-nlp-example.qmd >}}
+
+# Belgian Motor Dataset
+
+## beMTPL97 dataset
+
+```{python}
+data = pd.read_csv('data/raw/beMTPL97.csv')
+data
+```
+
+## Frequency and severity variables
+
+| **Variable** | **Description** |
+|---|------------------|
+| `id`         | A numeric for the policy number. |
+| `expo`       | A numeric for the exposure to risk. |
+| `claim`      | A factor indicating the occurrence of claims. |
+| `nclaims`    | A numeric for the claims number. |
+| `amount`     | A numeric for the aggregate claims amount. |
+| `average`    | A numeric for the average claims amount. |
+| ...   | ... |
+
+
+## Exposure & frequency
+
+```{python}
+data["expo"].plot(kind='hist', title='Exposure Distribution')
+```
+
+```{python}
+data["nclaims"].value_counts()
+```
+
+## Focus on claims frequency
+
+```{python}
+claims = data.drop(columns = ["id", "claim", "amount", "average"])
+claims
+```
+
+## Remaining variables {.smaller}
+
+::: columns
+::: {.column width="50%"}
+
+Numerical variables:
+
+| **Variable** | **Description** |
+|---|------------------|
+| `expo`       | exposure to risk. |
+| `ageph`      | policyholder's age. |
+| `bm`         | An integer for the level on the former Belgian bonus-malus scale (0 to 22; higher = worse claims history). |
+| `power`      | vehicle's horsepower in kilowatts. |
+| `agec`       | vehicle's age in years. |
+| `long`       | longitude of the policyholder's municipality center. |
+| `lat`        | latitude of the policyholder's municipality center. |
+
+
+Target is `nclaims`.
+
+
+:::
+::: {.column width="50%"}
+
+Categorical variables:
+
+| **Variable** | **Description** |
+|---|------------------|
+| `coverage`   | insurance coverage level: `"TPL"` (third party liability), `"TPL+"` (TPL + limited material damage), `"TPL++"` (TPL + comprehensive material damage). |
+| `sex`        | policyholder's gender: `"female"`, `"male"`. |
+| `bm`         | level on the former Belgian bonus-malus scale (0 to 22; higher = worse claims history). |
+| `fuel`       | vehicle's fuel type: `"gasoline"` or `"diesel"`. |
+| `use`        | vehicle's use: `"private"` or `"work"`. |
+| `fleet`      | vehicle is part of a fleet (`1` = yes, `0` = no). |
+
+<!-- | `postcode`   | postal code of the policyholder. | -->
+
+:::
+:::
+
+## Data description {.smaller}
+
+```{python}
+claims[["expo", "nclaims", "ageph", "bm", "power", "agec", "long", "lat"]].describe()
+```
+
+<!--
+## Postcode is redundant {.smaller}
+
+::: columns
+::: {.column width="50%"}
+```{python}
+latlong_postcodes = claims[["lat", "long", "postcode"]].drop_duplicates()
+latlong_postcodes
+```
+:::
+::: {.column width="50%"}
+
+```{python}
+latlong_num_postcodes = latlong_postcodes.groupby(['lat', 'long']).aggregate({'postcode': 'count'})
+latlong_num_postcodes
+```
+
+```{python}
+latlong_num_postcodes.min(), latlong_num_postcodes.max()
+```
+
+:::
+:::
+
+-->
+
+## Split
+
+```{python}
+postcode = claims.pop("postcode")
+
+train_raw, test_raw = train_test_split(claims, test_size=0.2, random_state=2000, stratify=postcode)
+
+X_train_raw = train_raw.drop(columns='nclaims')
+X_test_raw = test_raw.drop(columns='nclaims')
+y_train_raw = train_raw['nclaims']
+y_test_raw = test_raw['nclaims']
+
+num_vars = ['expo', 'ageph', 'bm', 'power', 'agec', 'lat', 'long']
+cat_vars = ['coverage', 'sex', 'fuel', 'use', 'fleet']
+```
+
+{{< include _belgian-maps.qmd >}}
+
+# Interpreting Inherently Interpretable Models
+
+## Fitting using statsmodels
+
+```{python}
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+formula = "nclaims ~ expo + ageph + bm + power + agec + lat + long " + \
+    " + C(coverage) + C(sex) + C(fuel) + C(use) + C(fleet)"
+
+glm_model = smf.glm(
+    formula=formula,
+    data=train_raw,
+    family=sm.families.Poisson()
+).fit()
+```
+
+::: {.callout-note}
+## Question
+What do you expect to be the relationship between `ageph` and `nclaims`?
+:::
+
+```{python}
+X_train_first = X_train_raw.iloc[0:1].copy()
+X_train_first
+```
+
+## Summary {.smaller data-visibility="uncounted"}
+
+```{python}
+glm_model.summary().tables[0]
+```
+
+## Summary {.smaller data-visibility="uncounted"}
+
+```{python}
+glm_model.summary().tables[1]
+```
+
+## Plotting the GLM predictions
+
+```{python}
+ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
+y_pred_batch = []
+for ageph in ageph_range:
+    X_train_first['ageph'] = ageph
+    y_pred_batch.append(glm_model.predict(X_train_first))
+```
+
+```{python}
+#| code-fold: true
+plt.plot(ageph_range, y_pred_batch, 'r')
+
+real_age = X_train_raw['ageph'].iloc[0:1].item()
+orig_prediction = glm_model.predict(X_train_raw.iloc[0:1]).item()
+plt.plot(real_age, orig_prediction, 'o', color='r', markersize=5)
+
+plt.xlabel('Age of Policyholder')
+plt.ylabel('Predicted Number of Claims')
+plt.title('GLM Predictions for Varying Age of Policyholder #1');
+```
+
+## Plotting the GLM predictions II {data-visibility="uncounted"}
+
+Zoom out to ages between 0 & 1,000.
+
+```{python}
+#| code-fold: true
+ageph_range = np.linspace(0, 1000, 100)
+
+X_train_first = X_train_raw.iloc[0:1].copy()
+y_pred_batch = []
+for ageph in ageph_range:
+    X_train_first['ageph'] = ageph
+    y_pred_ageph = glm_model.predict(X_train_first)
+    y_pred_batch.append(y_pred_ageph)
+
+plt.plot(ageph_range, y_pred_batch, 'r')
+plt.plot(real_age, orig_prediction, 'o', markersize=5, color='r')
+
+plt.xlabel('Age of Policyholder')
+plt.ylabel('Predicted Number of Claims')
+plt.title('GLM Predictions for Varying Age of Policyholder #1');
+```
+
+This is a [_ceteris paribus_ plot](https://christophm.github.io/interpretable-ml-book/ceteris-paribus.html), showing how the model's prediction changes as we vary the value of `ageph`, while keeping all other features constant at their values for the first training observation.
+
+## What if we look at multiple policyholders?
+
+```{python}
+#| code-fold: true
+ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
+
+# Just overlay the plots for the first 10 training observations
+for i in range(5):
+    X_train_first = X_train_raw.iloc[i:i+1].copy()
+    y_pred_batch = []
+
+    real_age = X_train_first['ageph'].item()
+    orig_prediction = glm_model.predict(X_train_first).item()
+
+    for ageph in ageph_range:
+        X_train_first['ageph'] = ageph
+        y_pred_ageph = glm_model.predict(X_train_first)
+        y_pred_batch.append(y_pred_ageph)
+
+    res = plt.plot(ageph_range, y_pred_batch, label=f'Policyholder {i+1}')
+    plt.plot(real_age, orig_prediction, 'o', markersize=5, color=res[0].get_color())
+
+plt.xlabel('Age of Policyholder')
+plt.ylabel('Predicted Number of Claims')
+plt.title('GLM Predictions for Varying Age of Policyholders')
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1);
+```
+
+## Logarithmic scale
+
+```{python}
+#| code-fold: true
+ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
+
+# Just overlay the plots for the first 10 training observations
+for i in range(5):
+    X_train_first = X_train_raw.iloc[i:i+1].copy()
+    log_y_pred_batch = []
+
+    real_age = X_train_first['ageph'].item()
+    orig_prediction = np.log(glm_model.predict(X_train_first).item())
+
+
+    for ageph in ageph_range:
+        X_train_first['ageph'] = ageph
+        y_pred_ageph = glm_model.predict(X_train_first)
+        log_y_pred_batch.append(np.log(y_pred_ageph))
+
+    res = plt.plot(ageph_range, log_y_pred_batch, label=f'Policyholder {i+1}')
+    plt.plot(real_age, orig_prediction, 'o', markersize=5, color=res[0].get_color())
+
+plt.xlabel('Age of Policyholder')
+plt.ylabel('Log-Predicted Num. Claims')
+plt.title('GLM Log-Predictions for Varying Age of Policyholders')
+plt.legend(loc='upper left', bbox_to_anchor=(1, 1), ncol=1);
+```
+
+## Do it for `ageph` and `agec`
+
+```{python}
+#| code-fold: true
+import plotly.graph_objects as go
+
+# Create ranges
+ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
+agec_range = np.linspace(train_raw['agec'].min(), train_raw['agec'].max(), 100)
+
+# Create grid
+ageph_grid, agec_grid = np.meshgrid(ageph_range, agec_range)
+ageph_flat = ageph_grid.ravel()
+agec_flat = agec_grid.ravel()
+
+# Get the first training observation as a dictionary
+base_row = X_train_raw.iloc[0].to_dict()
+
+# Create a DataFrame with repeated base_row and overwrite ageph/agec
+df_batch = pd.DataFrame([base_row] * len(ageph_flat))
+df_batch['ageph'] = ageph_flat
+df_batch['agec'] = agec_flat
+
+# Predict all at once
+y_pred_flat = glm_model.predict(df_batch)
+
+# Reshape predictions into 2D grid
+Z = y_pred_flat.values.reshape(agec_grid.shape)  # shape = (100, 100)
+
+# Plot
+fig = go.Figure(data=[
+    go.Surface(x=agec_grid, y=ageph_grid, z=Z, colorscale='Viridis')
+])
+
+fig.update_layout(
+    title='GLM-predicted Number of Claims',
+    scene=dict(
+        xaxis_title='agec',
+        yaxis_title='ageph',
+        zaxis_title='Predicted Response'
+    ),
+    width=800,          # Wider figure
+    height=500,         # Taller figure
+    margin=dict(l=0, r=0, t=50, b=50),  # Reduce whitespace cropping
+)
+```
+
+## Generalised Additive Models (GAMs)
+
+Transform a GLM's inputs nonlinearly, i.e.,
+
+$$
+  \hat{y}_i = g^{-1}\bigl( \beta_0 + f_1(x_{i,1}) + f_2(x_{i,2}) + ... + f_p(x_{i,p}) \bigr)
+$$
+
+The $f_j$ are typically polynomials, step functions, or splines. 
+
+```{python}
+ct = make_column_transformer(
+    ("passthrough", num_vars),
+    (OrdinalEncoder(), cat_vars),
+    verbose_feature_names_out = False
+)
+X_train_gam = ct.fit_transform(X_train_raw)
+X_test_gam = ct.transform(X_test_raw)
+y_train_gam = y_train_raw
+y_test_gam = y_test_raw
+```
+
+```{python}
+#| code-fold: true
+# Need to monkey patch to get pygam working currently
+import scipy.sparse
+
+def to_array(self):
+    return self.toarray()
+
+scipy.sparse.spmatrix.A = property(to_array)
+```
+
+```{python}
+from pygam import PoissonGAM, s, f
+formula = s(0) + s(1) + s(2) + s(3) + s(4) + s(5) + s(6) + \
+    f(7) + f(8) + f(9) + f(10) + f(11)
+gam_model = PoissonGAM(formula).fit(X_train_gam, y_train_gam)
+```
+
+## Ceteris paribus plot for `ageph`
+
+```{python}
+#| code-fold: true
+# Define range of ageph values
+ageph_range = np.linspace(X_train_gam['ageph'].min(), X_train_gam['ageph'].max(), 100)
+
+# Start with a copy of the first encoded training row
+X_first = X_train_gam.iloc[0:1].copy()
+# Set the dtype of 'ageph' to float
+X_first.loc[:, 'ageph'] = X_first.loc[:, 'ageph'].astype(float)
+gam_preds = []
+
+real_age = X_first['ageph'].item()
+orig_prediction = gam_model.predict(X_first).item()
+
+for ageph in ageph_range:
+    X_first.loc[:, 'ageph'] = ageph
+    y_pred = gam_model.predict(X_first)[0]
+    gam_preds.append(y_pred)
+
+plt.plot(ageph_range, gam_preds, label='GAM', color='red')
+
+# Add original GLM prediction for reference
+plt.plot(real_age, orig_prediction, 'o', color='red', markersize=5)
+
+plt.xlabel('Age of Policyholder')
+plt.ylabel('Predicted Number of Claims')
+plt.title('GAM Predictions for Varying Age')
+plt.legend();
+```
+
+<!--
+## Continuous variables
+
+```python
+cts = [term.feature for term in gam_model.terms if term.info['term_type'] == 'spline_term']
+for i, name in zip(cts, num_vars):
+    XX = gam_model.generate_X_grid(term=i)
+    pdep, confi = gam_model.partial_dependence(term=i, X=XX, width=0.95)
+    plt.figure()
+    plt.plot(XX[:, i], pdep)
+    plt.plot(XX[:, i], confi, c='r', ls='--')
+    plt.title(name)
+    plt.show()
+```
+
+## Categorical variables
+
+```python
+dsc = [term.feature for term in gam_model.terms if term.info['term_type'] == 'factor_term']
+for i, name in zip(dsc, cat_vars):
+    XX = gam_model.generate_X_grid(term=i)
+    pdep, confi = gam_model.partial_dependence(term=i, X=XX, width=0.95)
+    plt.figure()
+    plt.plot(XX[:, i], pdep)
+    plt.plot(XX[:, i], confi, c='r', ls='--')
+    plt.title(name)
+    plt.show()
+```
+-->
+
+## GAM bivariate effects for `ageph` and `agec`
+
+```{python}
+#| code-fold: true
+import plotly.graph_objects as go
+
+# Create ranges
+ageph_range = np.linspace(X_train_gam['ageph'].min(), X_train_gam['ageph'].max(), 100)
+agec_range = np.linspace(X_train_gam['agec'].min(), X_train_gam['agec'].max(), 100)
+
+# Create grid
+ageph_grid, agec_grid = np.meshgrid(ageph_range, agec_range)
+ageph_flat = ageph_grid.ravel()
+agec_flat = agec_grid.ravel()
+
+# Get the first training observation as a dictionary
+base_row = X_train_gam.iloc[0].to_dict()
+
+# Create a DataFrame with repeated base_row and overwrite ageph/agec
+df_batch = pd.DataFrame([base_row] * len(ageph_flat))
+df_batch['ageph'] = ageph_flat
+df_batch['agec'] = agec_flat
+
+# Predict all at once
+y_pred_flat = gam_model.predict(df_batch)
+
+# Reshape predictions into 2D grid
+Z = y_pred_flat.reshape(agec_grid.shape)  # shape = (100, 100)
+
+# Plot
+fig = go.Figure(data=[
+    go.Surface(x=agec_grid, y=ageph_grid, z=Z, colorscale='Viridis')
+])
+
+fig.update_layout(
+    title='GLM-predicted Number of Claims',
+    scene=dict(
+        xaxis_title='agec',
+        yaxis_title='ageph',
+        zaxis_title='Predicted Response'
+    ),
+    width=800,          # Wider figure
+    height=500,         # Taller figure
+    margin=dict(l=0, r=0, t=50, b=50),  # Reduce whitespace cropping
+)
+```
+
+# Explaining a Neural Network with Partial Dependence Plots {visibility="uncounted"}
+
+## Build a neural network
+
+```{python}
+from keras.models import Sequential
+from keras.layers import Dense, Input
+from keras.callbacks import EarlyStopping
+
+ct = make_column_transformer(
+    (StandardScaler(), num_vars),
+    (OneHotEncoder(drop="first", sparse_output=False), cat_vars),
+    verbose_feature_names_out=False
+)
+ct.fit(X_train_raw)
+
+X_train_nn = ct.transform(X_train_raw)
+X_test_nn = ct.transform(X_test_raw)
+y_train_nn = y_train_raw.values
+y_test_nn = y_test_raw.values
+
+
+random.seed(123)
+
+nn_model = Sequential(
+    [
+        Input(shape=(X_train_nn.shape[1],)),
+        Dense(128, activation="relu"),
+        Dense(128, activation="relu"),
+        Dense(128, activation="relu"),
+        Dense(1,  activation="exponential")
+    ]
+)
+
+nn_model.compile(
+    optimizer="adam",
+    loss="poisson",
+    metrics=["mae"]
+)
+
+if not Path("nn_model_belgian.keras").exists():
+    hist = nn_model.fit(X_train_nn, y_train_nn,
+        epochs=25,
+        batch_size=64,
+        verbose=0,
+    )
+    nn_model.save("nn_model_belgian.keras")
+
+    history = hist.history
+    with open("nn_model_belgian_history.json", "w") as json_file:
+        json.dump(history, json_file)
+    
+else:
+    nn_model = keras.models.load_model("nn_model_belgian.keras")
+
+    with open("nn_model_belgian_history.json", "r") as json_file:
+        history = json.load(json_file)    
+```
+
+## Train loss {data-visibility="uncounted"}
+
+```{python}
+plt.plot(history['loss'])
+```
+
+## Metrics {data-visibility="uncounted"}
+
+```{python}
+from sklearn.metrics import mean_poisson_deviance, mean_absolute_error
+
+# Evaluate the neural network model
+y_pred_nn = nn_model.predict(X_test_nn, verbose=0, batch_size=X_test_nn.shape[0]).flatten()
+print(f"NN mean Poisson deviance  : {mean_poisson_deviance(y_test_nn, y_pred_nn):.4f}")
+print(f"NN MAE                    : {mean_absolute_error(y_test_nn, y_pred_nn):.4f}")
+
+# Compare to the GAM
+y_pred_gam = gam_model.predict(X_test_gam).ravel()
+print(f"GAM mean Poisson deviance : {mean_poisson_deviance(y_test_gam, y_pred_gam):.4f}")
+print(f"GAM MAE                   : {mean_absolute_error(y_test_gam, y_pred_gam):.4f}")
+
+## Compare to the GLM
+y_pred_glm = glm_model.predict(X_test_raw).values.ravel()
+print(f"GLM mean Poisson deviance : {mean_poisson_deviance(y_test_raw, y_pred_glm):.4f}")
+print(f"GLM MAE                   : {mean_absolute_error(y_test_raw, y_pred_glm):.4f}")
+```
+
+## PDP: Training data {.smaller}
+
+Partial dependence plots start by looking at the training data.
+
+```{python}
+X_train_raw
+```
+
+```{python}
+nn_model.predict(ct.transform(X_train_raw), verbose=0).mean()
+```
+
+## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
+
+```{python}
+X_train_pd = X_train_raw.copy()
+X_train_pd['ageph'] = 18
+X_train_pd
+```
+
+```{python}
+nn_model.predict(ct.transform(X_train_pd), verbose=0).mean()
+```
+
+## PDP: Alternate Reality II {.smaller data-visibility="uncounted"}
+
+```{python}
+X_train_pd = X_train_raw.copy()
+X_train_pd['ageph'] = 90
+X_train_pd
+```
+
+```{python}
+nn_model.predict(ct.transform(X_train_pd), verbose=0).mean()
+```
+
+## Partial dependence plots
+
+```{python}
+# Make partial dependence plot for ageph by hand
+ageph_range = np.linspace(X_train_raw['ageph'].min(), X_train_raw['ageph'].max(), 100)
+y_preds = []
+X_train_pd = X_train_raw.copy()
+
+for age in ageph_range:
+    X_train_pd['ageph'] = age
+    X_train_pd_ct = ct.transform(X_train_pd)
+    y_pred_batch = nn_model.predict(X_train_pd_ct, verbose=0, batch_size=X_train_pd_ct.shape[0])
+    y_preds.append(y_pred_batch.mean())
+```
+
+```{python}
+#| code-fold: true
+plt.plot(ageph_range, y_preds, label='PDP for ageph')
+plt.xlabel('Age of Policyholder')
+plt.ylabel('Predicted Number of Claims')
+plt.title('Partial Dependence Plot for Age of Policyholder');
+```
+
+## sklearn
+
+```{python}
+from keras.wrappers import SKLearnRegressor
+from sklearn.pipeline import Pipeline
+
+def build_nn(X, y):
+    n_features = X.shape[1]
+    
+    random.seed(123)
+
+    model = Sequential(
+        [
+            Input(shape=(n_features,)),
+            Dense(128, activation="relu"),
+            Dense(128, activation="relu"),
+            Dense(128, activation="relu"),
+            Dense(1,  activation="exponential")
+        ]
+    )
+
+    model.compile(loss="poisson", optimizer="adam")
+    return model
+
+ct = make_column_transformer(
+    (StandardScaler(), num_vars),
+    (OneHotEncoder(drop="first", sparse_output=False), cat_vars),
+    verbose_feature_names_out=False
+)
+keras_reg = SKLearnRegressor(build_nn)
+pipeline = Pipeline([
+    ("preprocess", ct),
+    ("regressor",  keras_reg)
+])
+pipeline.fit(X_train_raw, y_train_raw, regressor__verbose=0);
+```
+
+## PDP
+
+```{python}
+#| eval: false
+from sklearn.inspection import PartialDependenceDisplay
+
+PartialDependenceDisplay.from_estimator(
+    pipeline,
+    X_train_raw,
+    features=[(0,)],
+    feature_names=X_train_raw.columns,
+    grid_resolution=5
+)
+```
+
+```{python}
+#| echo: false
+#| output: false
+from sklearn.inspection import PartialDependenceDisplay
+
+disp = PartialDependenceDisplay.from_estimator(
+    pipeline,
+    X_train_raw,
+    features=[(0,)],
+    feature_names=X_train_raw.columns,
+    grid_resolution=5
+);
+```
+
+```{python}
+#| echo: false
+disp.plot()
+```
+
+# Other Post-hoc Explanations
+
+## Globally vs. Locally Faithful
+
+Globally Faithful
+
+:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model across the entire input space.*
+
+Locally Faithful
+
+:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model for a specific instance.*
+
 
 ## Linear models & LocalGLMNet
 
@@ -203,7 +1076,7 @@ The above GLM representation provides a clear interpretation of how a marginal c
 
 <br>
 
-**LocalGLMNet** extends this to a neural network.
+**LocalGLMNet** extends this to a neural network [@richman2023a].
 
 $$
 \hat{y_i} = g^{-1}\bigl( \beta_0(\boldsymbol{x}_i) + \beta_1(\boldsymbol{x}_i) x_{i1} + \dots + \beta_p(\boldsymbol{x}_i) x_{ip} \bigr)
@@ -215,12 +1088,6 @@ The local parameters are the output of a neural network.
 ::: {.content-visible unless-format="revealjs"}
 Here, $\beta_p$'s are the neurons from the output layer. First, we define a Feed Foward Neural Network using an input layer, several hidden layers and an output layer.  The number of neurons in the output layer must be equal to the number of inputs. Thereafter, we define a skip connection from the input layer directly to the output layer, and merge them using scaler multiplication. Thereafter, the neural network returns the coefficients of the GLM fitted for each individual. We then train the model with the _response_ variable. 
 :::
-
-::: footer
-Source: Richman and Wüthrich (2023), _LocalGLMnet: interpretable deep learning for tabular data_, Scandinavian Actuarial Journal (2023.1), pp. 71-95.
-:::
-
-# Post-hoc Interpretability {visibility="uncounted"}
 
 ## Permutation importance {.smaller}
 
@@ -275,6 +1142,15 @@ def permutation_test(model, X, y, num_reps=1, seed=42):
 ```
 
 
+## Example
+
+```{python}
+scores = permutation_test(nn_model, X_train_nn.values, y_train_nn)
+plt.plot(scores[:,0], label='Loss')
+plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
+```
+
+
 ## LIME
 
 *Local Interpretable Model-agnostic Explanations* employs an interpretable surrogate model to explain locally how the black-box model makes predictions for individual instances.
@@ -285,17 +1161,6 @@ E.g. a black-box model predicts Bob's premium as the highest among all policyhol
 See ["Why Should I Trust You?": Explaining the Predictions of Any Classifier](https://youtu.be/hUnRCxnydCc).
 :::
 
-## Globally vs. Locally Faithful
-
-Globally Faithful
-
-:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model across the entire input space.*
-
-Locally Faithful
-
-:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model for a specific instance.*
-
-LIME aims to construct an interpretable model that mimics the black-box model's behaviour in a *locally faithful* manner.
 
 ## LIME Algorithm
 
@@ -365,13 +1230,21 @@ See Chollet (2021), Deep Learning with Python, Section 9.4.3.
 
 ## Criticism
 
-![Multiple conflicting explanations.](saliency-criticism.jpg)
+> "Rather than trying to create models that are inherently interpretable,
+there has been a recent explosion of work on ‘explainable ML’,
+where a second (post hoc) model is created to explain the first black
+box model. This is problematic. Explanations are often not reliable,
+and can be misleading, as we discuss below. If we instead use models
+that are inherently interpretable, they provide their own explanations,
+which are faithful to what the model actually computes." [@rudin2019]
 
-::: footer
-Source: Rudin (2019), [Stop explaining black box machine learning models for high stakes decisions and use interpretable models instead](https://arxiv.org/pdf/1811.10154.pdf), Nature Machine Intelligence.
-:::
+## Criticism II
 
-{{< include _permutation-nlp-example.qmd >}}
+![Multiple conflicting explanations [@rudin2019]](saliency-criticism.jpg)
+
+## Conclusion
+
+!["Figure 20.2: Explainability techniques allow strengthening the feedback extracted from a model. A, data and domain knowledge allow building the model. B, predictions are obtained from the model. C, by analyzing the predictions, we learn more about the model. D, better understanding of the model allows better understanding of the data and, sometimes, broadens domain knowledge." @Biecek2021](knowledgeExtraction.png)
 
 ## Package Versions {.appendix data-visibility="uncounted"}
 
@@ -390,3 +1263,5 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - permutation importance
 - post-hoc interpretability
 - SHAP values
+
+## References {.appendix data-visibility="uncounted"}
