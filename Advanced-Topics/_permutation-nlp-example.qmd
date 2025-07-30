@@ -153,9 +153,12 @@ Taken directly from scikit-learn documentation:
 Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
 :::
 
+<!--
 ## Find important inputs
+-->
 
 ```{python}
+#| code-fold: true
 def permutation_test(model, X, y, num_reps=1, seed=42):
     """
     Run the permutation test for variable importance.
@@ -182,18 +185,19 @@ def permutation_test(model, X, y, num_reps=1, seed=42):
 
 ```{python}
 all_perm_scores = permutation_test(model, X_val_bow, y_val) #<1>
-all_perm_scores
 ```
 1. The `permutation_test`, aims to evaluate the model's performance on different sets of unseen data. The idea here is to shuffle the order of the _val_ set, and compare the `model` performance.
 
-## Plot the permutated accuracies
+<!-- ## Plot the permutated accuracies -->
 
 ```{python}
+#| code-fold: true
 perm_scores = all_perm_scores[:,1]                                #<1>
 plt.plot(perm_scores)
 plt.xlabel("Input index")
 plt.ylabel("Accuracy when shuffled");
 ```
+
 1. `[:,1]` part will extract the accuracy of the output from the model evaluation and store is as a vector. 
 
 ::: {.content-visible unless-format="revealjs"}
@@ -203,6 +207,7 @@ The above method on a high-level says that, if we corrupt the information contai
 ## Find the most significant inputs
 
 ```{python}
+#| code-fold: true
 vocab = vect.get_feature_names_out()                            #<1>
 input_cols = list(vocab) + weather_cols                         #<2>
 
@@ -349,6 +354,7 @@ model.evaluate(X_val_bow, y_val, verbose=0)
 ## Permutation importance accuracy plot
 
 ```{python}
+#| code-fold: true
 perm_scores = permutation_test(model, X_val_bow, y_val)[:,1]
 plt.plot(perm_scores)
 plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
@@ -364,44 +370,4 @@ best_input_inds = np.argsort(perm_scores)[:100]
 best_inputs = [input_cols[idx] for idx in best_input_inds]
 
 print(best_inputs)
-```
-
-## How about a simple decision tree?
-
-```{python}
-clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)
-clf.fit(X_train_bow[:, best_input_inds], y_train);
-```
-
-```{python}
-print(clf.score(X_train_bow[:, best_input_inds], y_train))
-print(clf.score(X_val_bow[:, best_input_inds], y_val))
-```
-
-## Decision tree 
-
-```{python}
-#| eval: false
-tree.plot_tree(clf, feature_names=best_inputs, filled=True);
-```
-::: {.content-visible unless-format="revealjs"}
-The tree shows how, the model would check for the word _v3_, and decides the prediction as _3+_. This is not very meaningful, because having _v3_ in the input is a direct indication of the number of vehicles. 
-:::
-
-
-```{python}
-#| echo: false
-dot_data = tree.export_graphviz(clf, out_file=None, 
-            feature_names=best_inputs,  
-            class_names=["1", "2", "3+"],
-            rounded=True,  
-            filled=True
-)  
-graph = graphviz.Source(dot_data)  
-graph 
-```
-
-```{python}
-print(np.where(clf.feature_importances_ > 0)[0])
-[best_inputs[ind] for ind in np.where(clf.feature_importances_ > 0)[0]]
 ```

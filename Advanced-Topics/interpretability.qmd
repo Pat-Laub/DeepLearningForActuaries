@@ -204,7 +204,9 @@ Adversarial attacks on text generation models help users get an understanding of
 :::
 :::
 
-<!-- # Inherent Interpretability {visibility="uncounted"} -->
+{{< include _permutation-nlp-example.qmd >}}
+
+# Inherently Interpretable Models {visibility="uncounted"}
 
 ## What is inherent interpretability?
 
@@ -374,7 +376,186 @@ def rail_cost(peak_hours, distance):
 4. Decisions referred to in paragraph 2 shall not be based on special categories of personal data referred to in Article 9(1), unless point (a) or (g) of Article 9(2) applies and suitable measures to safeguard the data subject’s rights and freedoms and legitimate interests are in place.
 :::
 
-{{< include _permutation-nlp-example.qmd >}}
+
+<!-- 
+## Globally vs. Locally Faithful
+
+Globally Faithful
+
+:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model across the entire input space.*
+
+Locally Faithful
+
+:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model for a specific instance.* -->
+
+
+## Linear models & LocalGLMNet
+
+A GLM has the form
+
+$$
+\hat{y} = g^{-1}\bigl( \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p \bigr)
+$$
+
+where $\beta_0, \dots, \beta_p$ are the model parameters.
+
+Global & local interpretations are easy to obtain.
+
+::: {.content-visible unless-format="revealjs"}
+The above GLM representation provides a clear interpretation of how a marginal change in a variable $x$ can contribute to a change in the mean of the output. This makes GLM inherently interpretable.
+:::
+
+<br>
+
+**LocalGLMNet** extends this to a neural network [@richman2023a].
+
+$$
+\hat{y_i} = g^{-1}\bigl( \beta_0(\boldsymbol{x}_i) + \beta_1(\boldsymbol{x}_i) x_{i1} + \dots + \beta_p(\boldsymbol{x}_i) x_{ip} \bigr)
+$$
+
+A GLM with local parameters $\beta_0(\boldsymbol{x}_i), \dots, \beta_p(\boldsymbol{x}_i)$ for each observation $\boldsymbol{x}_i$.
+The local parameters are the output of a neural network.
+
+::: {.content-visible unless-format="revealjs"}
+Here, $\beta_p$'s are the neurons from the output layer. First, we define a Feed Foward Neural Network using an input layer, several hidden layers and an output layer.  The number of neurons in the output layer must be equal to the number of inputs. Thereafter, we define a skip connection from the input layer directly to the output layer, and merge them using scaler multiplication. Thereafter, the neural network returns the coefficients of the GLM fitted for each individual. We then train the model with the _response_ variable. 
+:::
+
+## Neural Additive Models (NAMs)
+
+![Each covariate (or select interactions) receive their own subnetwork, which contribute additively.](anam_architecture.png)
+
+
+# Post-hoc Explanations
+
+## One variable's effect on the prediction
+
+![Various plots showing the effect of one variable on the prediction; from [@molnar2020interpretable, Section 12]](cp-ice-pdp.jpg)
+
+## The different plots
+
+A [_Ceteris Paribus_ plot](https://christophm.github.io/interpretable-ml-book/ceteris-paribus.html) shows how the model's prediction changes as we vary the value of _one covariate/input_ while keeping _all other features constant_ at their original values for some observation.
+
+An [Individual Conditional Expectation (ICE)](https://christophm.github.io/interpretable-ml-book/ice.html) plot is the same thing as a ceteris paribus plot, but for _each observation_ in the dataset.
+
+A [Partial Dependence Plot (PDP)](https://christophm.github.io/interpretable-ml-book/pdp.html) shows how the model's prediction changes as we vary the value of _one covariate/input_ while averaging over all other features in the dataset.
+
+## Useful for Hyperparameter Tuning
+
+![Partial dependence plots for hyperparameter tuning](drn_full_hp.png)
+
+## Permutation importance {.smaller}
+
+- Inputs: fitted model $m$, tabular dataset $D$.
+- Compute the reference score $s$ of the model $m$ on data
+  $D$ (for instance the accuracy for a classifier or the $R^2$ for
+  a regressor).
+- For each feature $j$ (column of $D$):
+
+  - For each repetition $k$ in ${1, \dots, K}$:
+
+    - Randomly shuffle column $j$ of dataset $D$ to generate a
+      corrupted version of the data named $\tilde{D}_{k,j}$.
+    - Compute the score $s_{k,j}$ of model $m$ on corrupted data
+      $\tilde{D}_{k,j}$.
+
+  - Compute importance $i_j$ for feature $f_j$ defined as:
+
+    $$ i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} $$
+
+Originally proposed by @breiman2001random, extended by @fisher2019all.
+
+::: footer
+Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
+:::
+
+## Permutation importance {data-visibility="uncounted"}
+
+```{python}
+def permutation_test(model, X, y, num_reps=1, seed=42):
+    """
+    Run the permutation test for variable importance.
+    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
+    """
+    rnd.seed(seed)
+    scores = []    
+
+    for j in range(X.shape[1]):
+        original_column = np.copy(X[:, j])
+        col_scores = []
+
+        for r in range(num_reps):
+            rnd.shuffle(X[:,j])
+            col_scores.append(model.evaluate(X, y, verbose=0))
+
+        scores.append(np.mean(col_scores, axis=0))
+        X[:,j] = original_column
+    
+    return np.array(scores)
+```
+
+## LIME
+
+*Local Interpretable Model-agnostic Explanations* employs an interpretable surrogate model to explain locally how the black-box model makes predictions for individual instances.
+
+E.g. a black-box model predicts Bob's premium as the highest among all policyholders. LIME uses an interpretable model (a linear regression) to explain how Bob's features influence the black-box model's prediction.
+
+::: footer
+See ["Why Should I Trust You?": Explaining the Predictions of Any Classifier](https://youtu.be/hUnRCxnydCc).
+:::
+
+
+## LIME Algorithm
+
+Suppose we want to explain the instance $\boldsymbol{x}_{\text{Bob}}=(1, 2, 0.5)$.
+
+1.  Generate perturbed examples of $\boldsymbol{x}_{\text{Bob}}$ and use the trained gamma MDN $f$ to make predictions:
+    $$
+    \begin{align*}
+      \boldsymbol{x}^{'(1)}_{\text{Bob}} &= (1.1, 1.9, 0.6), \quad f\big(\boldsymbol{x}^{'(1)}_{\text{Bob}}\big)=34000 \\
+      \boldsymbol{x}^{'(2)}_{\text{Bob}} &= (0.8, 2.1, 0.4), \quad f\big(\boldsymbol{x}^{'(2)}_{\text{Bob}}\big)=31000 \\
+      &\vdots \quad \quad \quad \quad\quad \quad\quad \quad\quad \quad \quad \vdots
+    \end{align*}$$
+    We can then construct a dataset of $N_{\text{Examples}}$ perturbed examples: $\mathcal{D}_{\text{LIME}} = \big(\big\{\boldsymbol{x}^{'(i)}_{\text{Bob}},f\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\big\}\big)_{i=0}^{N_{\text{Examples}}}$.
+
+## LIME Algorithm
+
+2.  Fit an interpretable model $g$, i.e., a linear regression using $\mathcal{D}_{\text{LIME}}$ and the following loss function: $$\mathcal{L}_{\text{LIME}}(f,g,\pi_{\boldsymbol{x}_{\text{Bob}}})=\sum_{i=1}^{N_{\text{Examples}}}\pi_{\boldsymbol{x}_{\text{Bob}}}\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\cdot \bigg(f\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)-g\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\bigg)^2,$$ where $\pi_{\boldsymbol{x}_{\text{Bob}}}\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)$ represents the distance from the perturbed example $\boldsymbol{x}^{'(i)}_{\text{Bob}}$ to the instance to be explained $\boldsymbol{x}_{\text{Bob}}$.
+
+## "Explaining" to Bob {.smaller}
+
+::: columns
+::: {.column width="60%"}
+![](LIME_Bob.png)
+:::
+::: {.column width="40%"}
+The bold [red]{style="color:red;"} cross is the instance being explained. LIME samples instances ([grey]{style="color:gray;"} nodes), gets predictions using $f$ (gamma MDN) and weighs them by the proximity to the instance being explained (represented here by size). The dashed line $g$ is the learned local explanation.
+
+> "Again the approximation must be imperfect, otherwise one would throw out the black box and instead use the explanation as an inherently interpretable model." [@rudin2022interpretable]
+
+:::
+:::
+
+## SHAP Values
+
+The SHapley Additive exPlanations (SHAP) value helps to quantify the contribution of each feature to the prediction for a specific instance [@lundberg2017unified].
+
+The SHAP value for the $j$th feature is defined as
+$$\begin{align*}
+\text{SHAP}^{(j)}(\boldsymbol{x}) &=
+\sum_{U\subset \{1, ..., p\} \backslash \{j\}} \frac{1}{p}
+\binom{p-1}{|U|}^{-1} 
+\big(\mathbb{E}[Y| \boldsymbol{x}^{(U\cup \{j\})}] - \mathbb{E}[Y|\boldsymbol{x}^{(U)}]\big),
+\end{align*}
+$$
+where $p$ is the number of features. A positive SHAP value indicates that the variable increases the prediction value.
+
+## SHAP waterfall plot
+
+![SHAP waterfall plot](example_notebooks_overviews_An_introduction_to_explainable_AI_with_Shapley_values_17_0.png)
+
+::: footer
+Source: `shap` package documentation, [_An introduction to explainable AI with Shapley values_](https://shap.readthedocs.io/en/stable/example_notebooks/overviews/An%20introduction%20to%20explainable%20AI%20with%20Shapley%20values.html)
+:::
 
 # Belgian Motor Dataset
 
@@ -382,9 +563,24 @@ def rail_cost(peak_hours, distance):
 
 ```{python}
 data = pd.read_csv('data/raw/beMTPL97.csv')
-data
+claims = data.drop(columns = ["id", "claim", "amount", "average"])
+claims.shape
 ```
 
+```{python}
+postcode = claims.pop("postcode")
+train_raw, test_raw = train_test_split(claims, test_size=0.2, random_state=2000, stratify=postcode)
+
+X_train_raw = train_raw.drop(columns='nclaims')
+X_test_raw = test_raw.drop(columns='nclaims')
+y_train_raw = train_raw['nclaims']
+y_test_raw = test_raw['nclaims']
+
+num_vars = ['expo', 'ageph', 'bm', 'power', 'agec', 'lat', 'long']
+cat_vars = ['coverage', 'sex', 'fuel', 'use', 'fleet']
+```
+
+<!-- 
 ## Frequency and severity variables
 
 | **Variable** | **Description** |
@@ -396,26 +592,9 @@ data
 | `amount`     | A numeric for the aggregate claims amount. |
 | `average`    | A numeric for the average claims amount. |
 | ...   | ... |
+ -->
 
-
-## Exposure & frequency
-
-```{python}
-data["expo"].plot(kind='hist', title='Exposure Distribution')
-```
-
-```{python}
-data["nclaims"].value_counts()
-```
-
-## Focus on claims frequency
-
-```{python}
-claims = data.drop(columns = ["id", "claim", "amount", "average"])
-claims
-```
-
-## Remaining variables {.smaller}
+## Covariates {.smaller}
 
 ::: columns
 ::: {.column width="50%"}
@@ -455,57 +634,61 @@ Categorical variables:
 :::
 :::
 
+## Exposure & frequency
+
+```{python}
+claims["expo"].plot(kind='hist', title='Exposure Distribution')
+```
+
+```{python}
+claims["nclaims"].value_counts()
+```
+
+<!--
 ## Data description {.smaller}
 
 ```{python}
 claims[["expo", "nclaims", "ageph", "bm", "power", "agec", "long", "lat"]].describe()
 ```
-
-<!--
-## Postcode is redundant {.smaller}
-
-::: columns
-::: {.column width="50%"}
-```{python}
-latlong_postcodes = claims[["lat", "long", "postcode"]].drop_duplicates()
-latlong_postcodes
-```
-:::
-::: {.column width="50%"}
-
-```{python}
-latlong_num_postcodes = latlong_postcodes.groupby(['lat', 'long']).aggregate({'postcode': 'count'})
-latlong_num_postcodes
-```
-
-```{python}
-latlong_num_postcodes.min(), latlong_num_postcodes.max()
-```
-
-:::
-:::
-
 -->
 
-## Split
+<!-- {{ include _belgian-maps.qmd }} -->
+
+## Map of claims
 
 ```{python}
-postcode = claims.pop("postcode")
+#| code-fold: true
+import geopandas as gpd
+import contextily as ctx
+from shapely.geometry import Point
 
-train_raw, test_raw = train_test_split(claims, test_size=0.2, random_state=2000, stratify=postcode)
+# Compute average claims per location
+avg = train_raw.groupby(['lat', 'long'], as_index=False)['nclaims'].mean()
 
-X_train_raw = train_raw.drop(columns='nclaims')
-X_test_raw = test_raw.drop(columns='nclaims')
-y_train_raw = train_raw['nclaims']
-y_test_raw = test_raw['nclaims']
+# Build GeoDataFrame in Web Mercator
+gdf = gpd.GeoDataFrame(
+    avg,
+    geometry=[Point(xy) for xy in zip(avg.long, avg.lat)],
+    crs="EPSG:4326"
+).to_crs(epsg=3857)
 
-num_vars = ['expo', 'ageph', 'bm', 'power', 'agec', 'lat', 'long']
-cat_vars = ['coverage', 'sex', 'fuel', 'use', 'fleet']
+# Plot
+ax = gdf.plot(
+    column='nclaims',
+    cmap='OrRd',
+    markersize=8,
+    edgecolor='grey',
+    linewidth=0.5,
+    alpha=0.8,
+    legend=True,
+    figsize=(10, 5)
+)
+ctx.add_basemap(ax, source=ctx.providers.CartoDB.Positron)
+ax.set_axis_off()
+plt.title("Average Claims per Location")
+plt.show()
 ```
 
-{{< include _belgian-maps.qmd >}}
-
-# Interpreting Inherently Interpretable Models
 
 ## Fitting using statsmodels
 
@@ -545,10 +728,12 @@ glm_model.summary().tables[0]
 glm_model.summary().tables[1]
 ```
 
-## Plotting the GLM predictions
+# Interpreting Inherently Interpretable Models
+
+## GLM Ceteris Paribus Plots
 
 ```{python}
-ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
+ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 20)
 y_pred_batch = []
 for ageph in ageph_range:
     X_train_first['ageph'] = ageph
@@ -568,13 +753,13 @@ plt.ylabel('Predicted Number of Claims')
 plt.title('GLM Predictions for Varying Age of Policyholder #1');
 ```
 
-## Plotting the GLM predictions II {data-visibility="uncounted"}
+## Zoomed out {data-visibility="uncounted"}
 
-Zoom out to ages between 0 & 1,000.
+We can see the trend if we zoom out to ages between 0 & 1,000.
 
 ```{python}
 #| code-fold: true
-ageph_range = np.linspace(0, 1000, 100)
+ageph_range = np.linspace(0, 1000, 20)
 
 X_train_first = X_train_raw.iloc[0:1].copy()
 y_pred_batch = []
@@ -591,13 +776,11 @@ plt.ylabel('Predicted Number of Claims')
 plt.title('GLM Predictions for Varying Age of Policyholder #1');
 ```
 
-This is a [_ceteris paribus_ plot](https://christophm.github.io/interpretable-ml-book/ceteris-paribus.html), showing how the model's prediction changes as we vary the value of `ageph`, while keeping all other features constant at their values for the first training observation.
-
 ## What if we look at multiple policyholders?
 
 ```{python}
 #| code-fold: true
-ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
+ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 20)
 
 # Just overlay the plots for the first 10 training observations
 for i in range(5):
@@ -731,10 +914,32 @@ scipy.sparse.spmatrix.A = property(to_array)
 ```
 
 ```{python}
+#| eval: false
 from pygam import PoissonGAM, s, f
 formula = s(0) + s(1) + s(2) + s(3) + s(4) + s(5) + s(6) + \
     f(7) + f(8) + f(9) + f(10) + f(11)
 gam_model = PoissonGAM(formula).fit(X_train_gam, y_train_gam)
+```
+
+```{python}
+#| echo: false
+#| output: false
+from pygam import PoissonGAM, s, f
+import pickle 
+
+filename = 'gam.pkl'
+
+if Path(filename).exists():
+  with open(filename, 'rb') as f:
+    gam_model = pickle.load(f)
+
+else:
+  formula = s(0) + s(1) + s(2) + s(3) + s(4) + s(5) + s(6) + \
+      f(7) + f(8) + f(9) + f(10) + f(11)
+  gam_model = PoissonGAM(formula).fit(X_train_gam, y_train_gam)
+
+  with open(filename, 'wb') as f:
+      pickle.dump(gam_model, f)
 ```
 
 ## Ceteris paribus plot for `ageph`
@@ -846,448 +1051,9 @@ fig.update_layout(
 )
 ```
 
-# Explaining a Neural Network with Partial Dependence Plots {visibility="uncounted"}
+{{< include _belgian-nn-pdp.qmd >}}
 
-## Build a neural network
-
-::: columns
-::: column
-
-```{python}
-ct = make_column_transformer(
-    (StandardScaler(), num_vars),
-    (OneHotEncoder(drop="first", sparse_output=False), cat_vars),
-    verbose_feature_names_out=False
-)
-ct.fit(X_train_raw)
-
-X_train_nn = ct.transform(X_train_raw)
-X_test_nn = ct.transform(X_test_raw)
-y_train_nn = y_train_raw.values
-y_test_nn = y_test_raw.values
-
-
-random.seed(123)
-
-nn_model = Sequential(
-    [
-        Input(shape=(X_train_nn.shape[1],)),
-        Dense(128, activation="relu"),
-        Dense(128, activation="relu"),
-        Dense(128, activation="relu"),
-        Dense(1, activation="exponential")
-    ]
-)
-```
-
-:::
-
-::: column
-
-```{python}
-#| eval: false
-nn_model.compile(
-    optimizer="adam",
-    loss="poisson",
-    metrics=["mae"]
-)
-
-history = nn_model.fit(X_train_nn, y_train_nn,
-    epochs=25, batch_size=64, verbose=0,
-)
-```
-
-```{python}
-#| echo: false
-if not Path("nn_model_belgian.keras").exists():
-    nn_model.compile(
-        optimizer="adam",
-        loss="poisson",
-        metrics=["mae"]
-    )
-    history = nn_model.fit(X_train_nn, y_train_nn,
-        epochs=25,
-        batch_size=64,
-        verbose=0,
-    )
-    nn_model.save("nn_model_belgian.keras")
-
-    history = history.history
-    with open("nn_model_belgian_history.json", "w") as json_file:
-        json.dump(history, json_file)
-    
-else:
-    nn_model = keras.models.load_model("nn_model_belgian.keras")
-
-    with open("nn_model_belgian_history.json", "r") as json_file:
-        history = json.load(json_file)    
-```
-
-```{python}
-#| code-fold: true
-plt.plot(history['loss'])
-```
-
-:::
-:::
-
-## Metrics {data-visibility="uncounted"}
-
-```{python}
-from sklearn.metrics import mean_poisson_deviance, mean_absolute_error
-
-# Evaluate the neural network model
-y_pred_nn = nn_model.predict(X_test_nn, verbose=0, batch_size=X_test_nn.shape[0]).flatten()
-print(f"NN mean Poisson deviance  : {mean_poisson_deviance(y_test_nn, y_pred_nn):.4f}")
-print(f"NN MAE                    : {mean_absolute_error(y_test_nn, y_pred_nn):.4f}")
-
-# Compare to the GAM
-y_pred_gam = gam_model.predict(X_test_gam).ravel()
-print(f"GAM mean Poisson deviance : {mean_poisson_deviance(y_test_gam, y_pred_gam):.4f}")
-print(f"GAM MAE                   : {mean_absolute_error(y_test_gam, y_pred_gam):.4f}")
-
-## Compare to the GLM
-y_pred_glm = glm_model.predict(X_test_raw).values.ravel()
-print(f"GLM mean Poisson deviance : {mean_poisson_deviance(y_test_raw, y_pred_glm):.4f}")
-print(f"GLM MAE                   : {mean_absolute_error(y_test_raw, y_pred_glm):.4f}")
-```
-
-## PDP: Training data {.smaller}
-
-Partial dependence plots start by looking at the training data.
-
-```{python}
-X_train_raw
-```
-
-```{python}
-nn_model.predict(ct.transform(X_train_raw), verbose=0).mean()
-```
-
-## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
-
-```{python}
-X_train_pd = X_train_raw.copy()
-X_train_pd['ageph'] = 18
-X_train_pd
-```
-
-```{python}
-nn_model.predict(ct.transform(X_train_pd), verbose=0).mean()
-```
-
-## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
-
-```{python}
-X_train_pd = X_train_raw.copy()
-X_train_pd['ageph'] = 19
-X_train_pd
-```
-
-```{python}
-nn_model.predict(ct.transform(X_train_pd), verbose=0).mean()
-```
-
-
-## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
-
-```{python}
-X_train_pd = X_train_raw.copy()
-X_train_pd['ageph'] = 90
-X_train_pd
-```
-
-```{python}
-nn_model.predict(ct.transform(X_train_pd), verbose=0).mean()
-```
-
-::: fragment
-::: {.callout-note}
-## Question
-
-What could go wrong?
-:::
-:::
-
-
-## Partial dependence plots
-
-```{python}
-# Make partial dependence plot for ageph by hand
-ageph_range = np.linspace(X_train_raw['ageph'].min(), X_train_raw['ageph'].max(), 100)
-y_preds = []
-X_train_pd = X_train_raw.copy()
-
-for age in ageph_range:
-    X_train_pd['ageph'] = age
-    X_train_pd_ct = ct.transform(X_train_pd)
-    y_pred_batch = nn_model.predict(X_train_pd_ct, verbose=0, batch_size=X_train_pd_ct.shape[0])
-    y_preds.append(y_pred_batch.mean())
-```
-
-```{python}
-#| code-fold: true
-plt.plot(ageph_range, y_preds, label='PDP for ageph')
-plt.xlabel('Age of Policyholder')
-plt.ylabel('Predicted Number of Claims')
-plt.title('Partial Dependence Plot for Age of Policyholder');
-```
-
-## Need to trick scikit-learn a little
-
-```{python}
-class SklearnModel:
-    _estimator_type = "regressor"
-    
-    def __init__(self, ct, model, batch_size=1000):
-        # Add the trailing underscores so sklearn knows we're 'fitted'
-        self.ct_ = ct
-        self.model_ = model
-        self.batch_size = batch_size
-
-    def predict(self, X):
-        X_trans = self.ct_.transform(X)
-        preds = self.model_.predict(
-            X_trans,
-            verbose=0,
-            batch_size=self.batch_size
-        )
-        return preds
-
-    def fit(self, X=None, y=None): ...
-
-nn_model_skl = SklearnModel(ct, nn_model)
-```
-
-## PDP
-
-```{python}
-from sklearn.inspection import PartialDependenceDisplay
-
-PartialDependenceDisplay.from_estimator(
-    nn_model_skl,
-    X_train_raw,
-    features=[0],
-    feature_names=X_train_raw.columns,
-)
-```
-
-## PDP II
-
-```{python}
-#| code-fold: true
-cols = X_train_raw.columns.to_list() 
-inds = [cols.index(col) for col in ["ageph", "agec", "expo"]]
-PartialDependenceDisplay.from_estimator(
-    nn_model_skl,
-    X_train_raw,
-    features=inds,
-    feature_names=X_train_raw.columns,
-)
-```
-
-## PDP III
-
-```{python}
-#| code-fold: true
-cols = X_train_raw.columns.to_list() 
-inds = [cols.index(col) for col in ["bm", "lat", "long"]]
-PartialDependenceDisplay.from_estimator(
-    nn_model_skl,
-    X_train_raw,
-    features=inds,
-    feature_names=X_train_raw.columns,
-)
-```
-
-## Bivariate
-
-```{python}
-#| eval: false
-cols = X_train_raw.columns.to_list() 
-inds = [cols.index(col) for col in ["ageph", "agec"]]
-
-disp = PartialDependenceDisplay.from_estimator(
-    nn_model_skl,
-    X_train_raw,
-    features=[tuple(inds)],
-    feature_names=X_train_raw.columns,
-)
-```
-
-![](pdp_ageph_agec.png)
-
-<!-- plt.subplots_adjust(hspace=0.3)  -->
-
-## PDP for Hyperparameter Tuning
-
-![Partial dependence plots for hyperparameter tuning](drn_full_hp.png)
-
-# Other Post-hoc Explanations
-
-## Globally vs. Locally Faithful
-
-Globally Faithful
-
-:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model across the entire input space.*
-
-Locally Faithful
-
-:   *The interpretable model's explanations accurately reflect the behaviour of the black-box model for a specific instance.*
-
-
-## Linear models & LocalGLMNet
-
-A GLM has the form
-
-$$
-\hat{y} = g^{-1}\bigl( \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p \bigr)
-$$
-
-where $\beta_0, \dots, \beta_p$ are the model parameters.
-
-Global & local interpretations are easy to obtain.
-
-::: {.content-visible unless-format="revealjs"}
-The above GLM representation provides a clear interpretation of how a marginal change in a variable $x$ can contribute to a change in the mean of the output. This makes GLM inherently interpretable.
-:::
-
-<br>
-
-**LocalGLMNet** extends this to a neural network [@richman2023a].
-
-$$
-\hat{y_i} = g^{-1}\bigl( \beta_0(\boldsymbol{x}_i) + \beta_1(\boldsymbol{x}_i) x_{i1} + \dots + \beta_p(\boldsymbol{x}_i) x_{ip} \bigr)
-$$
-
-A GLM with local parameters $\beta_0(\boldsymbol{x}_i), \dots, \beta_p(\boldsymbol{x}_i)$ for each observation $\boldsymbol{x}_i$.
-The local parameters are the output of a neural network.
-
-::: {.content-visible unless-format="revealjs"}
-Here, $\beta_p$'s are the neurons from the output layer. First, we define a Feed Foward Neural Network using an input layer, several hidden layers and an output layer.  The number of neurons in the output layer must be equal to the number of inputs. Thereafter, we define a skip connection from the input layer directly to the output layer, and merge them using scaler multiplication. Thereafter, the neural network returns the coefficients of the GLM fitted for each individual. We then train the model with the _response_ variable. 
-:::
-
-## Neural Additive Models (NAMs)
-
-![Each covariate (or select interactions) receive their own subnetwork, which contribute additively.](anam_architecture.png)
-
-## Permutation importance {.smaller}
-
-- Inputs: fitted model $m$, tabular dataset $D$.
-- Compute the reference score $s$ of the model $m$ on data
-  $D$ (for instance the accuracy for a classifier or the $R^2$ for
-  a regressor).
-- For each feature $j$ (column of $D$):
-
-  - For each repetition $k$ in ${1, \dots, K}$:
-
-    - Randomly shuffle column $j$ of dataset $D$ to generate a
-      corrupted version of the data named $\tilde{D}_{k,j}$.
-    - Compute the score $s_{k,j}$ of model $m$ on corrupted data
-      $\tilde{D}_{k,j}$.
-
-  - Compute importance $i_j$ for feature $f_j$ defined as:
-
-    $$ i_j = s - \frac{1}{K} \sum_{k=1}^{K} s_{k,j} $$
-
-Originally proposed by @breiman2001random, extended by @fisher2019all.
-
-::: footer
-Source: scikit-learn documentation, [permutation_importance function](https://scikit-learn.org/stable/modules/permutation_importance.html).
-:::
-
-## Permutation importance {data-visibility="uncounted"}
-
-```{python}
-def permutation_test(model, X, y, num_reps=1, seed=42):
-    """
-    Run the permutation test for variable importance.
-    Returns matrix of shape (X.shape[1], len(model.evaluate(X, y))).
-    """
-    rnd.seed(seed)
-    scores = []    
-
-    for j in range(X.shape[1]):
-        original_column = np.copy(X[:, j])
-        col_scores = []
-
-        for r in range(num_reps):
-            rnd.shuffle(X[:,j])
-            col_scores.append(model.evaluate(X, y, verbose=0))
-
-        scores.append(np.mean(col_scores, axis=0))
-        X[:,j] = original_column
-    
-    return np.array(scores)
-```
-
-
-## Example
-
-```{python}
-scores = permutation_test(nn_model, X_train_nn.values, y_train_nn)
-plt.plot(scores[:,0], label='Loss')
-plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
-```
-
-
-## LIME
-
-*Local Interpretable Model-agnostic Explanations* employs an interpretable surrogate model to explain locally how the black-box model makes predictions for individual instances.
-
-E.g. a black-box model predicts Bob's premium as the highest among all policyholders. LIME uses an interpretable model (a linear regression) to explain how Bob's features influence the black-box model's prediction.
-
-::: footer
-See ["Why Should I Trust You?": Explaining the Predictions of Any Classifier](https://youtu.be/hUnRCxnydCc).
-:::
-
-
-## LIME Algorithm
-
-Suppose we want to explain the instance $\boldsymbol{x}_{\text{Bob}}=(1, 2, 0.5)$.
-
-1.  Generate perturbed examples of $\boldsymbol{x}_{\text{Bob}}$ and use the trained gamma MDN $f$ to make predictions:
-    $$
-    \begin{align*}
-      \boldsymbol{x}^{'(1)}_{\text{Bob}} &= (1.1, 1.9, 0.6), \quad f\big(\boldsymbol{x}^{'(1)}_{\text{Bob}}\big)=34000 \\
-      \boldsymbol{x}^{'(2)}_{\text{Bob}} &= (0.8, 2.1, 0.4), \quad f\big(\boldsymbol{x}^{'(2)}_{\text{Bob}}\big)=31000 \\
-      &\vdots \quad \quad \quad \quad\quad \quad\quad \quad\quad \quad \quad \vdots
-    \end{align*}$$
-    We can then construct a dataset of $N_{\text{Examples}}$ perturbed examples: $\mathcal{D}_{\text{LIME}} = \big(\big\{\boldsymbol{x}^{'(i)}_{\text{Bob}},f\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\big\}\big)_{i=0}^{N_{\text{Examples}}}$.
-
-## LIME Algorithm
-
-2.  Fit an interpretable model $g$, i.e., a linear regression using $\mathcal{D}_{\text{LIME}}$ and the following loss function: $$\mathcal{L}_{\text{LIME}}(f,g,\pi_{\boldsymbol{x}_{\text{Bob}}})=\sum_{i=1}^{N_{\text{Examples}}}\pi_{\boldsymbol{x}_{\text{Bob}}}\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\cdot \bigg(f\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)-g\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\bigg)^2,$$ where $\pi_{\boldsymbol{x}_{\text{Bob}}}\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)$ represents the distance from the perturbed example $\boldsymbol{x}^{'(i)}_{\text{Bob}}$ to the instance to be explained $\boldsymbol{x}_{\text{Bob}}$.
-
-## "Explaining" to Bob {.smaller}
-
-::: columns
-::: {.column width="60%"}
-![](LIME_Bob.png)
-:::
-::: {.column width="40%"}
-The bold [red]{style="color:red;"} cross is the instance being explained. LIME samples instances ([grey]{style="color:gray;"} nodes), gets predictions using $f$ (gamma MDN) and weighs them by the proximity to the instance being explained (represented here by size). The dashed line $g$ is the learned local explanation.
-
-> "Again the approximation must be imperfect, otherwise one would throw out the black box and instead use the explanation as an inherently interpretable model." [@rudin2022interpretable]
-
-:::
-:::
-
-## SHAP Values
-
-The SHapley Additive exPlanations (SHAP) value helps to quantify the contribution of each feature to the prediction for a specific instance [@lundberg2017unified].
-
-The SHAP value for the $j$th feature is defined as
-$$\begin{align*}
-\text{SHAP}^{(j)}(\boldsymbol{x}) &=
-\sum_{U\subset \{1, ..., p\} \backslash \{j\}} \frac{1}{p}
-\binom{p-1}{|U|}^{-1} 
-\big(\mathbb{E}[Y| \boldsymbol{x}^{(U\cup \{j\})}] - \mathbb{E}[Y|\boldsymbol{x}^{(U)}]\big),
-\end{align*}
-$$
-where $p$ is the number of features. A positive SHAP value indicates that the variable increases the prediction value.
-
-<!-- # Explaining Specific Models {visibility="uncounted"} -->
+# Explaining Specific Models {visibility="uncounted"}
 
 ## Grad-CAM
 
@@ -1327,8 +1093,9 @@ which are faithful to what the model actually computes." [@rudin2019]
 ## Package Versions {.appendix data-visibility="uncounted"}
 
 ```{python}
+#| code-fold: true
 from watermark import watermark
-print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tf_keras"))
+print(watermark(python=True, packages="contextily,geopandas,keras,matplotlib,numpy,pandas,plotly,pygam,seaborn,scipy,shapely,sklearn,statsmodels,torch,tensorflow,tf_keras"))
 ```
 
 ## Glossary {.appendix data-visibility="uncounted"}
