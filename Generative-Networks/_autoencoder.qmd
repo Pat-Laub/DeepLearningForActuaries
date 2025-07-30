@@ -178,32 +178,28 @@ print(f"Compress from {img_height * img_width} pixels to {num_hidden_layer} late
 ```
 
 ```{python}
-random.seed(123)                                                                #<1>
+random.seed(123)
 
 model = keras.models.Sequential([
     layers.Input((img_height, img_width, 1)),
-    layers.Flatten(),                                                           #<3>
-    layers.Dense(num_hidden_layer, "relu"),                                     #<4>
-    layers.Dense(img_height*img_width, "sigmoid"),                              #<5>
-    layers.Reshape((img_height, img_width, 1)),                                 #<6>
+    layers.Flatten(),                                                           #<1>
+    layers.Dense(num_hidden_layer, "relu"),                                     #<2>
+    layers.Dense(img_height*img_width, "sigmoid"),                              #<3>
+    layers.Reshape((img_height, img_width, 1)),                                 #<4>
 ])
 
-model.compile("adam", "binary_crossentropy")                                                    #<8>
-epochs = 1_000                                                                  #<9>
-es = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)      #<10>
-model.fit(X_train, X_train, epochs=epochs, verbose=0,
-    validation_data=(X_val, X_val), callbacks=es);                              #<11>
+model.compile("adam", "binary_crossentropy")
+epochs = 1_000
+es = keras.callbacks.EarlyStopping(patience=15, restore_best_weights=True)
+model.fit(X_train, X_train, epochs=epochs, verbose=0,                           #<5>
+    validation_data=(X_val, X_val), callbacks=es);                              
 ```
 
-1. Sets the random seed for reproducibility
-3. Reshapes the 2D input into a 1D representation
-4. Condenses the information from 6400 variables to 400 latent variables (the encoding stage ends here)
-5. Convers the condensed representation from 400 to 6400 again. Note that the sigmoid activation is used to ensure output is between [0,1]
-6. Reshapes the 1D representation to a 2D array
-8. Compiles the model with the loss function and the optimizer
-9. Specifies the number of epochs to run the algorithm
-10. Specifies the early stopping criteria. Here, the early stopping activates after 5 iterations with no improvement in the validation loss
-11. Fits the model specifying the train set, validation set, the number of epochs to run, and the early stopping criteria.
+1. Flattens the monochrome image inputs into simple long vectors
+2. Condenses the information from 6400 variables to 400 latent variables (the encoding stage ends here)
+3. Converts the condensed representation from 400 to 6400 again. Note that the sigmoid activation is used to ensure output is between [0,1]
+4. Converts the vector back into the original image shape (the decoding stage ends here)
+5. Notice that the input is the same as the target, as we are trying to compress and reconstruct the original image.
 
 ## The model
 
