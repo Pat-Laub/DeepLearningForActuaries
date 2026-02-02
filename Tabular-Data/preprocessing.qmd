@@ -196,6 +196,7 @@ We'll touch on this in a couple of slides.
 
 ::: {.panel-tabset}
 
+
 ### `fit`
 
 ```{python}
@@ -230,7 +231,7 @@ print(X_val.std(axis=0))
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-It is important to make sure that the scaler is fitted using only the data from the train set.
+Notice that wehn using `fit_transform`, this function is only used on the training set. Then, for the validation and test sets, the function `transform` is called, *not* `fit_transform`. It is important to make sure that the scaler is fitted using only the data from the train set, to avoid information leakage.
 :::
 
 <!-- 
@@ -353,6 +354,10 @@ freq
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+Our target variable is the number of claims, `ClaimNb`.
+:::
+
 ::: footer
 Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
 :::
@@ -369,6 +374,10 @@ The NN takes $\mathbf{x}_i$ & predicts $\mathbb{E} Y_i$.
 ```{python}
 freq = freq.drop("IDpol", axis=1)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+While `IDpol` is a useful tool for checking duplicates, we remove it before beginning the modelling process.
+:::
 
 ## Split the data
 
@@ -405,12 +414,19 @@ X_train_raw["Region"].value_counts()
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-`data["column_name"].value_counts()` function provides counts of each category for a categorical variable. In this dataset, variables `Area` and `VehGas` are assumed to have natural orderings whereas `VehBrand` and `Region` are not considered to have such natural orderings. Therefore, the two sets of categorical variables will have to be treated differently.
+`data["column_name"].value_counts()` function provides counts of each category for a categorical variable. In this dataset, variables `Area` and `VehGas` are assumed to have natural orderings (*ordinal categorical variables*) whereas `VehBrand` and `Region` are not considered to have such natural orderings (*nominal categorical variables*). Therefore, the two sets of categorical variables will have to be treated differently.
 :::
 
 ## Nominal categorical variables {.smaller}
 
 These are categorical variables which you cannot order in a 'default' sensible way.
+
+::: {.content-visible unless-format="revealjs"}
+There are two options for dealing with a nominal categorical variable:
+
+* One-hot encoding: one column for each category (taking the value 1 if true, 0 if false). Using this method, one of the columns is redundant.
+* Dummy encoding: drop the first of the one-hot encoding categories.
+:::
 
 ```{python}
 from sklearn.preprocessing import OneHotEncoder
@@ -553,7 +569,7 @@ hist.history["val_loss"][-1]                                    #<6>
 pandas.options.display.max_rows = 3
 ```
 
-## Transform each column in one hit
+## Transform all columns in one hit I
 
 ```{python}
 from sklearn.compose import make_column_transformer         #<1>
@@ -593,7 +609,7 @@ The default column names of `X_train` that the column transformer adds are a bit
 We can add the `verbose_feature_names_out=False` flag to have a cleaner `X_train` dataframe. 
 :::
 
-## Transform each column in one hit II
+## Transform all columns in one hit II
 
 ```{python}
 from sklearn.compose import make_column_transformer
@@ -632,6 +648,10 @@ pandas.options.display.max_rows = 6
 
 ## Aside: The order of the variables matters
 
+::: {.content-visible unless-format="revealjs"}
+Sometimes the ordinal categories are named with words, such as "Low", "Medium", "High" (rather than, for example, "A", "B", "C"). The ordinal encoder does not know how to read these and orders the categories based on alphabetical order. 
+:::
+
 ```{python}
 X_train_raw["Area_In_Words"] = X_train_raw["Area"].map({
     "A": "Very low", "B": "Low", "C": "Medium",
@@ -657,6 +677,10 @@ print(" < ".join(enc_wrong.categories_[0]))
 ```
 
 ## Aside: Manually set the order
+
+::: {.content-visible unless-format="revealjs"}
+To fix this issue, we need to manually set the order.
+:::
 
 ```{python}
 ordered = [["Very low", "Low", "Medium", "High", "Very high", "Extremely high"]]
@@ -711,6 +735,10 @@ data.head()
 11) `smoking_status`: "formerly smoked", "never smoked", "smokes" or "Unknown"
 12) `stroke`: 0 or 1 if the patient had a stroke
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Target: `stroke`.
 :::
 
 ::: footer
@@ -828,7 +856,7 @@ X_val_raw["gender"].value_counts()
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below.
+Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below. In the second row, the values given for `gender_Female` and `gender_Male` are both 0, implying a third category.
 :::
 
 ::: columns
@@ -877,6 +905,10 @@ y_test.to_csv(PROCESSED_DATA_DIR / "y_test.csv", index=False)
 
 Later want to make a prediction on some new data point.
 It has to go through the **exact same** preprocessing steps.
+
+::: {.content-visible unless-format="revealjs"}
+We can save the preprocessing column transformer and save it to a file to use later.
+:::
 
 ```{python}
 import joblib

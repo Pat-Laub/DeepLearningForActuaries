@@ -113,9 +113,17 @@ plt.plot(scores[:,0], label='Loss')
 plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The exposure and bonus-malus variables are the least important. The type of coverage, use and if the vehicle is part of a fleet are the most important variables.
+:::
+
 ## PDP: Training data {.smaller}
 
 Partial dependence plots start by looking at the training data.
+
+::: {.content-visible unless-format="revealjs"}
+What is the average prediction over the training data?
+:::
 
 ```{python}
 X_train_raw
@@ -126,6 +134,10 @@ nn_model.predict(ct.transform(X_train_raw), verbose=0).mean()
 ```
 
 ## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+Consider an alternate reality where all polidyholders are 18 years old. What is the average prediction then?
+:::
 
 ```{python}
 X_train_pd = X_train_raw.copy()
@@ -138,6 +150,10 @@ nn_model.predict(ct.transform(X_train_pd), verbose=0).mean()
 ```
 
 ## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+What about if we pretend all the policyholders are 19 years old?
+:::
 
 ```{python}
 X_train_pd = X_train_raw.copy()
@@ -172,6 +188,10 @@ What could go wrong?
 
 
 ## Partial dependence plots
+
+::: {.content-visible unless-format="revealjs"}
+Plot the average prediction for each age given to all policyholders.
+:::
 
 ```{python}
 # Make partial dependence plot for ageph by hand
@@ -247,6 +267,20 @@ PartialDependenceDisplay.from_estimator(
     feature_names=X_train_raw.columns,
 )
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The 9 small vertical lines on the x-axis represent the bounds of the deciles of the dataset, i.e., 10% of observations lie between each pair of bars. This helps us understand where most of the observations lie. E.g., for `agec`, we can see that most of the cars were younger than around 15 years, and 10% of observations have `agec` greater than 15 years.
+
+These bars are useful as they indicate where we should place most of our interpretation. We should avoid reading too much into PDP lines where only a small portion of the dataset lies.
+
+:::{.callout-caution}
+Let's have a closer look at the PDP for `expo` (exposure). Does this plot make sense to you?
+
+**Answer**: Intuitively, exposure should have a _multiplicative_ impact on expected claim numbers (i.e. $y=mx, m>0$). It should be an increasing straight line.
+
+In this case, rather than putting exposure in as a feature like every other variable, it should be manually adjusted to have the right impact.
+:::
+:::
 
 ## Explaining the bonus-malus and location
 

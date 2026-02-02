@@ -158,6 +158,10 @@ $$\longrightarrow$$
 What's wrong? Not enough rows? Not enough columns?
 :::
 
+::: {.content-visible unless-format="revealjs"}
+These claim size predictions are not genuine future predictions --- the next claim that a 40-year-old with a 5-year-old SUV will probably not be $2,500. That's only a _best guess_.
+:::
+
 ```{python}
 #| code-fold: true
 data = [
@@ -186,6 +190,12 @@ Customer 1 = (25, 3, 🚙)
 #| code-fold: true
 draw_gamma_distribution(1200, 2, colors[0], 0)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+What we are trying to predict is fundamentally unpredictable. Rather than making a 100% confident prediction on a customer's next claim, the distributional regression model returns a range of possible claim sizes, namely, a distribution of predicted claim sizes for a given customer.
+
+Based on the distribution output, actuaries can obtain risk measures such as expected claim size, variance, Value at Risk, etc. 
+:::
 
 ## Distributional regression {data-visibility=uncounted}
 
@@ -313,6 +323,10 @@ plt.axvline(1582.48, color="black", linestyle="--", label="Mean");
 
 :::
 
+::: {.content-visible unless-format="revealjs"}
+While traditional models give a single prediction (expected value), distributional regression models give a distribution of predictions.
+:::
+
 ## Baseline: a generalised linear model
 
 A gamma GLM with a log link function:
@@ -337,6 +351,12 @@ A simple model, easy to train and interpret, but...
 
 :::
 
+::: {.content-visible unless-format="revealjs"}
+GLMs can be bad at _regression_ because they are restricted to having to take a _linear combination_ of the covariates.
+
+GLMs can be bad at _distributional regression_ because they are restricted to a _limited number of probability distributions_ (Gamma, Poisson, etc.).
+:::
+
 ## Example 1: Non-monotonicity
 
 
@@ -356,6 +376,12 @@ plt.ylabel("Claim Size Effect ($)")
 # plt.legend(fontsize=10)
 plt.show()
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The relationship between the input and output is not always linear. We need to find a way to reflect these non-linear relationships. 
+While you can manually perform feature engineering before placing them in the GLM, this quickly becomes time-consuming. 
+This doesn't compare to the automated and complex feature engineering that neural networks can do.
+:::
 
 GLMs cannot (easily) do this $\longrightarrow$ Use a neural network
 
@@ -386,6 +412,18 @@ plt.ylabel("Density")
 None
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The distribution of the output cannot always be easily represented with the limited distributions available for GLMs. For example, if the distribution of the claim size is multi-modal... Gamma/Weibull/Pareto distributions cannot capture this.
+
+::: {.callout-note}
+## Mixture distribution
+A mixture distribution is, simply put, a mixture of two or more distributions. If $f_1(\cdot)$ is the distribution of claim sizes when a parent is driving and $f_2(\cdot)$ is the distribution when a kid is driving, then the distribution of all claim sizes is: 
+
+$$ f(x) = wf_1(x) + (1-w)f_2(x)$$
+
+The weight parameter $w$ would be chosen based on the expected proportion of the time that a parent/kid is driving.
+:::
+:::
 
 ## Key idea
 
@@ -402,6 +440,10 @@ None
 - Each prediction becomes a _distribution_ over the possible outcomes 
 
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+In this example, the distribution of predictions is much more concentrated around the mean for earlier predictions. As we look further into the future, naturally our confidence decreases and the variance of predictions increases.
 :::
 
 ::: footer
@@ -497,7 +539,15 @@ plt.ylabel('$y$')
 plt.legend()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The error terms $\varepsilon \sim \mathcal{N}(0, \sigma^2)$ are represented by the purple distribution curves along the fitted line.
+:::
+
 ## The probabilistic view
+
+::: {.content-visible unless-format="revealjs"}
+From a probability point of view, we are fitting a distributional model. Since $\varepsilon$ is random, then $Y$ is also partially random.
+:::
 
 $$Y_i \sim \mathcal{N}(\mu_i, \sigma^2)$$
 
@@ -542,6 +592,10 @@ for i, ax in enumerate(axes):
 
 plt.tight_layout();
 ```
+
+::: {.content-visible unless-format="revealjs"}
+$\sigma^2$ is known, fixed and the same for all observations. For each observation, the shape of the distribution doesn't change, only the location.
+:::
 
 ## The machine learning view
 
@@ -707,6 +761,10 @@ $$
 $$
 :::
 
+::: {.content-visible unless-format="revealjs"}
+All of these examples show the overlap between the world of probability and the world of statistical machine learning. They are both trying to solve the same problem, and in fact use the same methods to solve those problems. 
+:::
+
 ## Why do actuaries use GLMs?
 
 - GLMs are interpretable.
@@ -785,6 +843,14 @@ plt.title("CBA Daily Log Returns");
 
 ## Noisy auto-regressive forecast
 
+::: {.content-visible unless-format="revealjs"}
+Remember the auto-regressive forecast: based on the stock's log return history up to yesterday, predict today's stock price.
+
+What about tomorrow's stock price? $\longrightarrow$ Assume today's prediction actually occurred, and use that to predict tomorrow's price.
+
+This time, add _noise_ to the forecasts.
+:::
+
 ```{python}
 def noisy_autoregressive_forecast(model, X_val, sigma, suppress=False):
     """
@@ -803,7 +869,7 @@ def noisy_autoregressive_forecast(model, X_val, sigma, suppress=False):
         else:
             next_value = model.predict(input_df)
 
-        next_value += np.random.normal(0, sigma)
+        next_value += np.random.normal(0, sigma)                                    #<1>
 
         multi_step.iloc[i] = next_value
 
@@ -813,6 +879,18 @@ def noisy_autoregressive_forecast(model, X_val, sigma, suppress=False):
 
     return multi_step
 ```
+
+1. Add random normal noise with a specified variance to the prediction.
+
+::: {.content-visible unless-format="revealjs"}
+In this model, we assume that: 
+$$\hat y_{t+1} \sim \mathcal N (\mu_i, \sigma^2)$$
+
+This is equivalent to
+$$\hat y_{t+1} = \mu_i + \varepsilon, \quad \varepsilon \sim \mathcal{N}(0,\sigma^2)$$
+
+which is what we see in the code.
+:::
 
 ## Original forecast
 
@@ -853,6 +931,10 @@ price_noisy = log_to_price(lr_noisy_forecast, last_price)
 stock.loc[price_noisy.index, "AR Noisy Log-Return"] = price_noisy
 plot_forecasts(stock)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+This noisy forecast seems much more realistic than the non-noisy AR forecast.
+:::
 
 ## With noise {visibility="uncounted"}
 
@@ -901,6 +983,10 @@ noisy_forecasts.loc["2024-12":"2025"].plot(legend=False, alpha=0.4)
 plt.ylabel("Stock Price");
 ```
 
+::: {.content-visible unless-format="revealjs"}
+This plot contains 300 simulated forecasts of the stock price over time. We see that the variance in the predictions increases with time. This makes sense as we are accumulating the random components ove time.
+:::
+
 ## 95% "prediction intervals"
 
 ```{python}
@@ -933,6 +1019,10 @@ plt.ylabel("Stock Price")
 plt.tight_layout();
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The model predicts with 95% confidence that the stock price in 6 months time will be somewhere between $120 and $200. 
+:::
+
 ## Residuals 
 
 ```{python}
@@ -963,6 +1053,13 @@ plt.plot(x, stats.norm.pdf(x, 0, 1));
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+How do we choose the value for `sigma`? 
+Here, `sigma` was chosen to be the standard deviation of the residuals of the original AR (non-noisy) forecast model.
+
+The plot above shows the histogram of the standardised residuals and the standard normal curve. Based on this plot and the Shapiro test, it appears that the residuals are _not_ normally distributed.
+:::
+
 
 ## Q-Q plot and P-P plot {visibility="uncounted"}
 
@@ -987,6 +1084,10 @@ sm.ProbPlot(residuals).ppplot(line="45");
 set_rectangular_figures()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The distribution of the residuals has _heavier_ tails than the standard normal distribution.
+:::
+
 ## Residuals against time
 
 ```{python}
@@ -998,6 +1099,10 @@ plt.tight_layout();
 ```
 
 Heteroskedasticity!
+
+::: {.content-visible unless-format="revealjs"}
+The variance of the standardised residuals changes over time. Higher variance occurs during significantly volatile economic periods (e.g. the global financial crisis in 2007-2009 and COVID).
+:::
 
 ## Retrain on less data
 
@@ -1067,6 +1172,9 @@ sm.ProbPlot(res2).ppplot(line="45");
 set_rectangular_figures()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+While the distribution looks closer, it is still significantly farr off of normally distributed. At this point, we should question the validity of the normal distribution assumption we made.
+:::
 
 # GLMs and Neural Networks {visibility="uncounted"}
 
@@ -1087,34 +1195,24 @@ sev
 
 ## Preprocessing
 
-::: {.content-visible unless-format="revealjs"}
-Next we carry out some basic preprocessing.
-The column transformer first applies ordinal encoding to `Area` and `VehGas` variables, and applies standard scaling to all remaining numerical values.
-To simplify things, `VehBrand` and `Region` variables are dropped from the dataframe.
-The column transformer is then applied to both training and test sets.
-:::
-
 ```{python}
 X_train, X_test, y_train, y_test = train_test_split(
-  sev.drop("ClaimAmount", axis=1), sev["ClaimAmount"], random_state=2023)
+  sev.drop("ClaimAmount", axis=1), sev["ClaimAmount"], random_state=2023)   #<1>
 ct = make_column_transformer((OrdinalEncoder(), ["Area", "VehGas"]),
-    ("drop", ["VehBrand", "Region"]), remainder=StandardScaler())
-X_train = ct.fit_transform(X_train)
-X_test = ct.transform(X_test)
+    ("drop", ["VehBrand", "Region"]), remainder=StandardScaler())           #<2>
+X_train = ct.fit_transform(X_train)                                         #<3>
+X_test = ct.transform(X_test)                                               #<4>
 plt.hist(y_train[y_train < 5000], bins=30);
 ```
 
-::: {.content-visible unless-format="revealjs"}
-Plotting the empirical distribution of the target variable `ClaimAmount` help us get an understanding of the inherent variability associated with the data.
-:::
+1. Split the data into train and test sets
+2. Apply ordinal encoding to `Area` and `VehGas` variables, and apply standard scaling to all remaining numerical variables. To simplify things, `VehBrand` and `Region` variables are dropped from the dataframe.
+3. Fit the column transformer to the train set and apply it
+4. Apply the column trainsformer to the test set
 
 ::: {.content-visible unless-format="revealjs"}
-The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{\text{CANN}}$ for the neural network.
-<!--The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.-->
-:::
-
-::: {.content-visible unless-format="revealjs"}
-The idea of GLM is to find a linear combination of independent variables $\boldsymbol{x}$ and coefficients $\boldsymbol{\beta}$, apply a non-linear transformation ($g^{-1}$) to that linear combination and set it equal to conditional mean of the response variable $Y$ given an instance $\boldsymbol{x}$. The non-linear transformation provides added flexibility.
+Plotting the empirical distribution of the target variable `ClaimAmount` helps us to get an understanding of the inherent variability associated with the data.
+The data appears to be multi-modal.
 :::
 
 ## Doesn't prove that $Y | \boldsymbol{X} = \boldsymbol{x}$ is multimodal
@@ -1166,6 +1264,19 @@ for i, ax in enumerate(axes):
 plt.tight_layout();
 ```
 
+::: {.content-visible unless-format="revealjs"}
+While the distribution of claim size from entire dataset appears to be multimodal, that does not mean that the distribution of claim size of a particular type of customer is multimodal. Two different categories of customers can have different unimodal distributions, and the combination ("mixture") of the two categories would be multimodal.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The following section illustrates how embedding a GLM in a neural network architecture can help us quantify the uncertainty relating to the predictions coming from the neural network. The idea is to first fit a GLM, and use the predictions from the GLM and predictions from the neural network part to define a custom loss function. This embedding presents an opportunity to compute the dispersion parameter $\phi_{\text{CANN}}$ for the neural network.
+<!--The dispersion parameter provides insights into whether the model accurately captures the inherent variability (aleatoric uncertainty) in the data or not.-->
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The idea of GLM is to find a linear combination of independent variables $\boldsymbol{x}$ and coefficients $\boldsymbol{\beta}$, apply a non-linear transformation ($g^{-1}$) to that linear combination and set it equal to conditional mean of the response variable $Y$ given an instance $\boldsymbol{x}$. The non-linear transformation provides added flexibility.
+:::
+
 ## Gamma GLM
 
 Suppose a fitted Gamma GLM model has
@@ -1197,7 +1308,7 @@ $$
 
 Step 2. Estimate the dispersion parameter:
 $$
-    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{\bigl(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta})\bigr)^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta} )^2}
+    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{\bigl(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta}^*)\bigr)^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta}^* )^2}
 $$ 
 
 (Here, $p$ is the number of coefficients in the model. If this $p$ doesn't include the intercept, then the scaling should be $\frac{1}{n-(p+1)}$.)
@@ -1251,6 +1362,15 @@ The above example of fitting a Gamma distribution assumes a constant dispersion,
 Source: Ronald Richman (2022), _Mind the Gap --- Safely Incorporating Deep Learning Models into the Actuarial Toolkit_, IFoA seminar, Slide 14.
 :::
 
+::: {.content-visible unless-format="revealjs"}
+By zooming in on the last hidden layer of the NN and the output neuron, we are essentially looking at a GLM. 
+The hidden layer of neurons would be the input "covariates". 
+The output neuron before applying the activation function is $\hat\mu$, which is a linear combination of the covariates using the fitted weights and bias. 
+The activation function (inverse link function) converts $\hat \mu$ into $\hat y$. 
+The only difference is that the input neurons are not the raw data values; they are the processed versions of the data.
+Then we can consider the first part of the NN to simply be the feature engineering process.
+:::
+
 # Combined Actuarial Neural Network {visibility="uncounted"}
 
 ## CANN
@@ -1267,6 +1387,10 @@ $$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\
 If just a sequential dense network, then
 
 $$\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \Big\langle \boldsymbol{w}^{(K+1)}, \bigl( \boldsymbol{z}^{(K)} \circ \dots \circ \boldsymbol{z}^{(1)}\bigr)(\boldsymbol{x}) \Big\rangle \Big).$$
+
+::: {.content-visible unless-format="revealjs"}
+The neural network is shifting the predictions given by the GLM.
+:::
 
 ## Shifting the predicted distributions
 
@@ -1297,9 +1421,21 @@ for i, ax in enumerate(axes):
 
 ```
 
+::: {.content-visible unless-format="revealjs"}
+While the assumed distribution of the target variable remains the same the neural network shifts the parameters of the distribution (e.g. mean and variance) to give a new shape under the CANN.
+:::
+
 ## Architecture
 
+::: {.content-visible unless-format="revealjs"}
+Building CANNs is relatively straightforward.
+:::
+
 ![The CANN architecture.](cann-architecture.png)
+
+::: {.content-visible unless-format="revealjs"}
+One copy of the variables is processed through many dense hidden layers (NN component), while a second copy skips the layers and gets combined directly into the generation of the output neuron (GLM component).
+:::
 
 ::: footer
 Source: Schelldorfer and Wüthrich (2019), [Nesting Classical Actuarial Models into Neural Networks](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525), SSRN, Figure 8.
@@ -1313,21 +1449,23 @@ inputs = Input(shape=X_train.shape[1:])
 
 # GLM part (won't be updated during training)
 glm_weights = gamma_glm.params.iloc[1:].values.reshape((-1, 1))
-glm_bias = gamma_glm.params.iloc[0]  
+glm_bias = gamma_glm.params.iloc[0]                                     #<1>
 glm_part = Dense(1, activation='linear', trainable=False,
                      kernel_initializer=Constant(glm_weights),
-                     bias_initializer=Constant(glm_bias))(inputs)       #<1>         
+                     bias_initializer=Constant(glm_bias))(inputs)       #<2>         
 
 # Neural network part
-x = Dense(64, activation='leaky_relu')(inputs)
-nn_part = Dense(1, activation='linear')(x) 
+x = Dense(64, activation='leaky_relu')(inputs)                          
+nn_part = Dense(1, activation='linear')(x)                              #<3>
 
 # Combine GLM and CANN estimates
-mu = keras.ops.exp(glm_part + nn_part)                                #<2>
+mu = keras.ops.exp(glm_part + nn_part)                                  #<4>
 cann = Model(inputs, mu)
 ```
-1. Adds a `Dense` layer with just one neuron, to store the model output (before inverse link function) from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
-2. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
+1. Fit a GLM directly to the train data, and extract the fitted coefficients.
+2. Add a `Dense` layer with just one neuron, to store the model output (before inverse link function) from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
+3. Specify the neural network layers (1 dense hidden layer and the output neuron).
+4. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
 
 Since this CANN predicts Gamma distributions, we use the Gamma NLL loss function.
 
@@ -1393,11 +1531,11 @@ $$
       Y_K & \text{w.p. } \pi_K, \\ 
   \end{cases}
 $$
-where we define a set of finite set of weights $\boldsymbol{\pi}=(\pi_{1} \ldots, \pi_{K})$ such that $\pi_k \ge 0$ for $k \in \{1, \ldots, K\}$ and $\sum_{k=1}^{K}\pi_k=1$.
+where we define a finite set of weights $\boldsymbol{\pi}=(\pi_{1} \ldots, \pi_{K})$ such that $\pi_k \ge 0$ for $k \in \{1, \ldots, K\}$ and $\sum_{k=1}^{K}\pi_k=1$.
 
 ## Mixture Distribution
 
-Let $f_{Y_k|\boldsymbol{X}}$ and $F_{Y_k|\boldsymbol{X}}$ be the p.d.f. and the c.d.f of $Y_k|\boldsymbol{X}$ for all $k \in \{1, \ldots, K\}$.
+Let $f_k$ and $F_k$ be the p.d.f. and the c.d.f of $Y_k|\boldsymbol{X}$ for all $k \in \{1, \ldots, K\}$.
 
 The random variable $Y|\boldsymbol{X}$, which mixes $Y_k|\boldsymbol{X}$'s with weights $\pi_k$'s, has the density function
 $$
@@ -1522,9 +1660,17 @@ $$
 \end{align*}
 $$
 
+::: {.content-visible unless-format="revealjs"}
+This loss function is quite complex, and for more complicated mixture distributions the loss function would be impossible to write in closed-form.
+:::
+
 ## Code: Loss & training 
 
 `tensorflow_probability` to the rescue.
+
+::: {.content-visible unless-format="revealjs"}
+`tensorflow_probability` does all the hard work of mathematically describing the mixture distribution.
+:::
 
 ```{python}
 import tensorflow_probability as tfp                                        #<1>
@@ -1540,10 +1686,10 @@ def gamma_mixture_nll(y_true, y_pred):
         components_distribution=tfd.Gamma(alphas, betas))                   #<4>
     return -tf_keras.backend.mean(mixture_distribution.log_prob(y_true))    #<5>
 ```
-1. Imports `tfp` class from `tensorflow_probability`
-2. Stores statistical distributions in the `tfp` class as `tfd`
-4. Extracts predicted values for all model components and stores them in separate matrices
-5. Specifies the mixture distribution using computed model components
+1. Import `tfp` class from `tensorflow_probability`
+2. Store statistical distributions in the `tfp` class as `tfd`
+4. Extract predicted values for all model components and stores them in separate matrices
+5. Specify the mixture distribution using computed model components
 6. Use the fitted model to calculate negative log likelihood given the observed data
 
 ```{python}
@@ -1582,6 +1728,10 @@ else:
 
 # Metrics for Distributional Regression {visibility="uncounted"}
 
+::: {.content-visible unless-format="revealjs"}
+How do we assess the distributional regression model?
+:::
+
 ## Proper Scoring Rules
 
 ::: {.content-visible unless-format="revealjs"}
@@ -1603,6 +1753,12 @@ Definition
     for all $F$ and $Q$ distributions.
     
     It is called _strictly proper_ if equality holds only if $F = Q$.
+
+::: {.content-visible unless-format="revealjs"}
+::: {.callout-note}
+$Y \sim Q$: the true distribution of $Y$ is $Q$.
+:::
+:::
 
 ## Example Proper Scoring Rules
 
@@ -1654,6 +1810,12 @@ for i, ax in enumerate(axes):
     
 plt.tight_layout();
 ```
+
+::: {.content-visible unless-format="revealjs"}
+In this example the observed value is in red and the green line is the predicted distribution. For overconfiedent predictions (low variance), we can either be rewarded greatly if we are right ($\mu_4$). We can also be penalised heavily if our confident prediction is wrong ($\mu_3$). For underconfident predictions, the reward does not change significantly between predictions, and we are penalised for not being confident enough.
+
+When fitting the model by trying to maximise the likelihood, you want to balance the trade-off between making an accurate prediction and making a confident prediction. 
+:::
 
 ## Code: NLL
 
@@ -1741,9 +1903,10 @@ i.e., the total uncertainty subtracting the aleatoric uncertainty $\mathbb{V}[Y|
 
 ::: {.content-visible unless-format="revealjs"}
 There are many sources of uncertainty in statistical or machine learning models.
-Parameter error stems primarily due to lack of data.
-Model error stems from assuming wrong distributional properties of the data.
-Data uncertainty arises due to the lack of confidence we may have about the quality of the collected data.
+
+* Parameter error stems primarily due to lack of data.
+* Model error stems from assuming wrong distributional properties of the data.
+* Data uncertainty arises due to the lack of confidence we may have about the quality of the collected data.
 Noisy data, inconsistent data, data with missing values or data with missing important variables can result in data uncertainty.
 :::
 
@@ -1757,6 +1920,10 @@ Noisy data, inconsistent data, data with missing values or data with missing imp
 <!-- # Avoiding Overfitting {visibility="uncounted"} -->
 
 ## Traditional regularisation
+
+::: {.content-visible unless-format="revealjs"}
+Regularisation is performed when fitting model parameters to avoid overfitting to the train data.
+:::
 
 Say all the $m$ weights (excluding biases) are in the vector $\boldsymbol{\theta}$.
 If we change the loss function to
@@ -1778,6 +1945,10 @@ $$
 is called $L^2$ regularisation.
 
 ## Regularisation in Keras
+
+::: {.content-visible unless-format="revealjs"}
+We can perform regularisation in Keras with the same intuition as for the context of regression.
+:::
 
 ```{python}
 #| code-fold: true
@@ -1827,6 +1998,10 @@ def l2_model(regulariser_strength=0.01):
   return model
 ```
 
+::: {.content-visible unless-format="revealjs"}
+This code defines functions that specify and fit a NN under the two regularisation methods.
+:::
+
 ## Weights before & after $L^2$
 
 ```{python}
@@ -1852,6 +2027,10 @@ plt.hist(weights, bins=100);
 ```
 ::: 
 ::: 
+
+::: {.content-visible unless-format="revealjs"}
+May of the weights are much closer to 0 (but never exactly 0).
+:::
 
 ## Weights before & after $L^1$
 
@@ -1880,7 +2059,15 @@ plt.hist(weights, bins=100);
 set_rectangular_figures()
 ``` 
 
+::: {.content-visible unless-format="revealjs"}
+Many of the weights have been reduced to exactly 0. This breaks the connections between neurons inside the NN.
+:::
+
 ## Early-stopping regularisation
+
+::: {.content-visible unless-format="revealjs"}
+A form of regularisation that we've already been doing is early-stopping. The model stops learning when the _validation_ loss is minimised, clearly solving the issue of over-fitting the model to the train data.
+:::
 
 > A very different way to regularize iterative learning algorithms such as gradient descent is to stop training as soon as the validation error reaches a minimum. This is called early stopping... It is such a simple and efficient regularization technique that Geoffrey Hinton called it a “beautiful free lunch”.
 
@@ -1959,10 +2146,6 @@ model.fit(X_train_sc, y_train, epochs=4, verbose=0);
 
 Making predictions is the same as any other model:
 
-::: {.content-visible unless-format="revealjs"}
-Dropout has no impact on model predictions because `Dropout` function is carried out only during the training stage. Once the model finishes its training (once the weights and biases are computed), all neurons together contribute to the predictions(no dropping out during the prediction stage). Therefore, predictions from the model will not change across different runs.
-:::
-
 ::: columns
 ::: column
 ```{python}
@@ -1976,6 +2159,10 @@ model.predict(X_train_sc.head(3),
                   verbose=0)
 ```
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Dropout has no impact on model predictions because `Dropout` function is carried out only during the training stage. Once the model finishes its training (once the weights and biases are computed), all neurons together contribute to the predictions (no dropping out during the prediction stage). Therefore, predictions from the model will not change across different runs.
 :::
 
 We can make the model think it is still training:
@@ -1995,7 +2182,7 @@ model(X_train_sc.head(3),
 :::
 :::
 
-By setting the `training=True`, we can let dropout happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_.
+By setting the `training=True`, we can let dropout happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_ and can be used to generate a distribution of predictions.
 
 ## Dropout Limitation
 
@@ -2008,6 +2195,10 @@ By setting the `training=True`, we can let dropout happen during prediction stag
 
 ![Combine many models to get better predictions.](ensemble.png)
 
+::: {.content-visible unless-format="revealjs"}
+Ensemble learning: combine predictions from multiple models.
+:::
+
 ::: footer
 Source: Marcus Lautier (2022).
 :::
@@ -2018,18 +2209,25 @@ Train $M$ neural networks with different random initial weights independently (e
 
 ```{python}
 def build_model(seed):
-    random.seed(seed)
+    random.seed(seed)                                                       #<1>
     model = Sequential([
         Dense(30, activation="leaky_relu"),
         Dense(1, activation="exponential")
-    ])
-    model.compile("adam", "mse")
+    ])                                                                      
+    model.compile("adam", "mse")                                           
 
     es = EarlyStopping(restore_best_weights=True, patience=5)
     model.fit(X_train_sc, y_train, epochs=1_000,
-        callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)
+        callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)   #<2>
     return model
 ```
+
+1. Set random seed which is used for a single NN
+2. Specify, compile and fit the NN as usual
+
+::: {.content-visible unless-format="revealjs"}
+The following code fits 3 neural networks with different starting weights and biases.
+:::
 
 ```{python}
 #| eval: false
@@ -2057,7 +2255,7 @@ for seed in seeds:
 
 ## Deep Ensembles II
 
-Say the trained weights by $\boldsymbol{w}^{(1)}, \ldots, \boldsymbol{w}^{(M)}$, then we get predictions $\bigl\{ \hat{y}(\boldsymbol{x}; \boldsymbol{w}^{(m)}) \bigr\}_{m=1}^{M}$
+Say the trained weights for the NNs are $\boldsymbol{w}^{(1)}, \ldots, \boldsymbol{w}^{(M)}$, then we get predictions $\bigl\{ \hat{y}(\boldsymbol{x}; \boldsymbol{w}^{(m)}) \bigr\}_{m=1}^{M}$
 
 ```{python}
 y_preds = []
@@ -2067,6 +2265,10 @@ for model in models:
 y_preds = np.array(y_preds)
 y_preds
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Now that we have multiple predictions for each NN, we can obtain a distribution of the predictions. The distribution helps us to understand how uncertain our predictions are. Some architectures are more sensitive to the starting weights than others; this would be reflected in the prediction uncertainty. 
+:::
 
 <!-- It's simple to implement and requires very little hyperparameter tuning. -->
 

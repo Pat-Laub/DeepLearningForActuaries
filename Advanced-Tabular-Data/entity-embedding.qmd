@@ -87,6 +87,10 @@ set_config(transform_output="pandas")
 
 # Entity Embedding {visibility="uncounted"}
 
+::: {.content-visible unless-format="revealjs"}
+Entity embedding is a new way of handling categorical variables.
+:::
+
 ## Revisit the French motor dataset
 
 ```{python}
@@ -269,6 +273,9 @@ X_train_raw["Region"].value_counts()
 
 ## How we preprocessed last time
 
+::: {.content-visible unless-format="revealjs"}
+As a reminder, last time we preprocessed the categorical data through one-hot encoding/dummy encoding.
+:::
 
 ```{python}
 from sklearn.compose import make_column_transformer
@@ -303,10 +310,15 @@ X_train.head(3)
 ![French Administrative Regions](french-regions.png)
 
 ::: footer
-Source: Nell et al. (2020), [Case Study: French Motor Third-Party Liability Claims](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764), SSRN.
+Source: [Wikimedia](https://commons.wikimedia.org/wiki/File:Carte-des-codes-des-regions-selon-l-INSEE.jpg 
+)
 :::
 
 ## One-hot encoding
+
+::: {.content-visible unless-format="revealjs"}
+One hot encoding is a way to assign numerical values to nominal variables. One hot encoding is different from ordinal encoding in the way in which it transforms the data. Ordinal encoding assigns a numerical integer to each unique category of the data column and returns one integer column. In contrast, one hot encoding returns a binary vector for each unique category. As a result, what we get from one hot encoding is not a single column vector, but a matrix with number of columns equal to the number of unique categories in that nominal data column.
+:::
 
 ```{python}
 oh = OneHotEncoder(sparse_output=False)
@@ -315,14 +327,11 @@ X_test_oh = oh.transform(X_test_raw[["Region"]])
 print(list(X_train_raw["Region"][:5]))
 X_train_oh.head()
 ```
-::: {.content-visible unless-format="revealjs"}
-One hot encoding is a way to assign numerical values to nominal variables. One hot encoding is different from ordinal encoding in the way in which it transforms the data. Ordinal encoding assigns a numerical integer to each unique category of the data column and returns one integer column. In contrast, one hot encoding returns a binary vector for each unique category. As a result, what we get from one hot encoding is not a single column vector, but a matrix with number of columns equal to the number of unique categories in that nominal data column.
-:::
 
 ## Train on one-hot inputs
 
 ::: {.content-visible unless-format="revealjs"}
-For the sake of explaining entity embeddings, we will train a neural network just on one categorical variable which is one-hot encoded.
+For the sake of explaining entity embeddings, we will train a neural network on just one categorical variable which is one-hot encoded.
 :::
 
 ```{python}
@@ -343,11 +352,15 @@ hist.history["val_loss"][-1]                                   #<6>
 ```
 
 1. Computes the number of unique categories in the encoded column and store it in `num_regions`
-2. Constructs the neural network. This time, it is a neural network with 1 hidden layer and 1 output layer. `Dense(2, input_dim=num_regions)` takes in an input matrix of with columns = `num_regions` and transofrmas it down to an output with 2 neurons
+2. Constructs the neural network. This time, it is a neural network with 1 hidden layer and 1 output layer. `Dense(2, input_dim=num_regions)` takes in an input matrix with columns = `num_regions` and transforms it down to an output with 2 neurons
 3. Steps 3-6 are similar to what we saw during training with ordinal encoded variables
 
 
 ## Make a fake batch of data
+
+::: {.content-visible unless-format="revealjs"}
+Make a fake batch of data where one observation is from each region (essentially an identity matrix). We use this fake batch of data to see what the hidden layer's activation looks like under each of the 22 categories.
+:::
 
 ::: columns
 ::: column
@@ -364,6 +377,10 @@ model.layers[0](X)
 ```
 
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+We see above the values of the 2 neurons in the hidden layer for each region as input.
 :::
 
 ## The first layer
@@ -396,10 +413,14 @@ W + b
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-The above codes manually compute and returns the same answers as before.
+The above codes manually compute and return the same answers as before. Remember that our $\mathbf X$ is the identity matrix, so any matrix multiplication with $\mathbf X$ becomes redundant (`X @ W + b == W + b`). This is extremely valuable as, if your categorical variable had, say, 10,000 different category possibilities, the matrix operation becomes intensive.
 :::
 
 ## Just a look-up operation
+
+::: {.content-visible unless-format="revealjs"}
+We can consider this as just a look-up operation, where each row of the matrix `W+b` is some vector representation of each category. For example, if we want to know how region 11 is represented, we just look at the first row of the matrix `W+b`.
+:::
 
 ::: columns
 ::: column
@@ -420,7 +441,16 @@ The above outputs show that the neural network thinks the best way to represent 
 :::
 -->
 
+::: {.content-visible unless-format="revealjs"}
+This is what _entity embedding_ does.
+:::
+
+
 ## Turn the region into an index
+
+::: {.content-visible unless-format="revealjs"}
+To use the entity embedding functionality, we need to turn the categories into indices. We can use the oridinal encoder to do so.
+:::
 
 ```{python}
 oe = OrdinalEncoder()
@@ -432,6 +462,10 @@ for i, reg in enumerate(oe.categories_[0][:3]):
 ```
 
 ## Use an Embedding layer
+
+::: {.content-visible unless-format="revealjs"}
+Feed this new version of the data into the NN, using an _embedding layer_.
+:::
 
 ```{python}
 from keras.layers import Embedding
@@ -501,6 +535,14 @@ We can observe how the last code returns a numpy array with representations corr
 :::
 -->
 
+::: {.content-visible unless-format="revealjs"}
+The regions in get converted from text to index to vector representation in the embedding layer for each observation.
+
+Entity embedding is especially useful when there is a very large number of categories (such as 1,000 or 10,000) and you want to reduce the number of columns. If your categorical variable has $n$ categories, a simple rule of thumb is to use $n^{1/4}$ for the dimension of the entity embedding.
+
+In this case, the dimension chosen was 2. The intuition behind this is that regions can be represented easily over a 2-dimensional plane (by their geographical coordinates).
+:::
+
 ## The learned embeddings
 
 ::: {.content-visible unless-format="revealjs"}
@@ -522,6 +564,10 @@ While it not always the case, entity embeddings can at times be meaningful inste
 
 ![Embeddings will gradually improve during training.](entity-embeddings.png)
 
+::: {.content-visible unless-format="revealjs"}
+Each category is initially assigned a random vector, but they move during training. These movements follow some sort of logic, for example in this graph countries in Europe cluster together and countries in Asia cluster together.
+:::
+
 ::: footer
 Source: Marcus Lautier (2022).
 :::
@@ -529,15 +575,19 @@ Source: Marcus Lautier (2022).
 ## Embeddings & other inputs
 
 ::: {.content-visible unless-format="revealjs"}
-Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data in to the neural network. Numerical variables are inherently numeric hence, do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.
+Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data in to the neural network. Numerical variables are inherently numeric and do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.
 :::
 
 ![Illustration of a neural network with both continuous and categorical inputs.](nn-with-entity-embedding-diagram.png)
 
 We can't do this with Sequential models...
 
+::: {.content-visible unless-format="revealjs"}
+Given we want numerical variables to do one thing and categorical variables to do another, they need to be preprocessed separately and independently. The outputs of these independent (non-sequential) preprocesses become inputs to the next hidden layer (now back to sequential).
+:::
+
 ::: footer
-Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning](https://www.lotuslabs.ai/accurate-insurance-claims-prediction-with-deep-learning/).
+Source: LotusLabs Blog, [Accurate insurance claims prediction with Deep Learning](https://www.lotuslabs.ai/post/accurate-insurance-claims-prediction-with-deep-learning).
 :::
 
 # Keras' Functional API {visibility="uncounted"}
@@ -599,7 +649,9 @@ hist.history["val_loss"][-1]
 See [one-length tuples](https://pat-laub.github.io/DeepLearningForActuaries/Artificial-Intelligence/python.html#/one-length-tuples).
 
 ::: {.content-visible unless-format="revealjs"}
-The above code shows how to construct the same neural network using sequential models and Keras functional API. There are some differences in the construction. In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer. `model = Model(inputs, out)` function specifies the input and output of the model. This manner of specifying the inputs and outputs of the model allow the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
+The above code shows how to construct the same neural network using sequential models and Keras functional API. Every sequential model can be converted into the functional style, but not every functional model can be converted to the sequential style. 
+
+In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer before specifying the model. `model = Model(inputs, out)` specifies the inputs and outputs of the model. This manner of specifying the inputs and outputs of the model allows the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.
 :::
 
 ## Wide & Deep network
@@ -626,6 +678,10 @@ model = Model(
     outputs=[output])
 ```
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The functional API method can unlock some new non-sequential NN architectures, such as the _Wide & Deep network_. One version of the inputs is processed through dense hidden layers, and the other version skips the processing. The two versions are then concatenated into a new layer which is used to create the output layer.
 :::
 
 ::: footer
@@ -664,6 +720,10 @@ model.summary(line_length=75)
 ```
 :::
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The plot of the model becomes much easier to understand and interpret.
 :::
 
 # French Motor Dataset with Embeddings {visibility="uncounted"}
@@ -777,7 +837,7 @@ plot_model(model, show_layer_names=True, show_shapes=True)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The plotted model shows how, for example, `region` starts off as a matrix with `(None,1)` shape. This indicates that, `region` was a column matrix with some number of rows. Entity embedding the `region` variable resulted in a 3D array of shape (`(None,1,2)`) which is not the required format for concatenating. Therefore, we reshape it using the `Reshape` function. This results in column array of shape, `(None,2)` which is what we need for concatenating.
+The plotted model shows how, for example, `region` starts off as a matrix with `(None,1)` shape. This indicates that `region` was a column matrix with some number of rows. Entity embedding the `region` variable resulted in a 3D array of shape (`(None,1,2)`) which is not the required format for concatenating. Therefore, we reshape it using the `Reshape` function. This results in column array of shape, `(None,2)` which is what we need for concatenating.
 :::
 
 # Scale By Exposure {visibility="uncounted"}
@@ -798,7 +858,7 @@ Now, $\text{Exposure}_i \not\in \mathbf{x}_i$, and $\lambda(\mathbf{x}_i)$ is th
 ## Just take continuous variables
 
 ::: {.content-visible unless-format="revealjs"}
-For convenience, following code only considers the numerical variables during this implementation.
+For convenience, the following code only considers the numerical variables during this implementation.
 :::
 
 ```{python}
@@ -813,7 +873,7 @@ X_test = ct.transform(X_test_raw)                                        #<7>
 ```
 
 1. Starts defining the column transformer 
-2. Lets `Exposure` passthrough the neural network as it is without peprocessing
+2. Lets `Exposure` pass through the neural network as it is without peprocessing
 3. Drops the categorical variables (for the ease of implementation)
 4. Scales the remaining variables
 5. Choose the simpler style of column names for the transformed dataframes

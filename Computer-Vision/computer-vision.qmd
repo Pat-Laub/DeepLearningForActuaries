@@ -540,17 +540,24 @@ Source: Randall Munroe (2019), [xkcd #2173: Trained a Neural Net](https://xkcd.c
 
 ## Architecture
 
-![Typical CNN architecture.](Geron-mls2_1411.png)
+![Typical CNN architecture.](CNN-architecture.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-11.
+Source: Melissa Renard (2025)
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-A standard CNN architecture has the following components: an input layer, a sequence of feature extraction layers (which combine convolution and pooling operations sequentially), a sequence of classification layers (which include flattening and fully connected layers) and a final output layer. Convolution layers are used to extract meaningful patterns from the input using spatial filters. Pooling layers are used to reduce the spatial dimensions of the feature maps generated from convolutional layers. The purpose of the feature extraction layers is to learn complex but meaningful, high levels patterns in data. The aim of classification layers is to receive the learned patterns and make decisions more closely related to the classification task at hand.
+A standard CNN architecture has the following components: 
+
+* Input layer
+* Sequence of feature extraction layers (which combine convolution and pooling operations sequentially)
+* Sequence of classification layers (which include flattening and fully connected layers)
+* Final output layer
+
+Convolution layers are used to extract meaningful patterns from the input using spatial filters. Pooling layers are used to reduce the spatial dimensions of the feature maps generated from convolutional layers. The purpose of the feature extraction layers is to learn complex but meaningful, high levels patterns in data. The aim of classification layers is to receive the learned patterns and make decisions more closely related to the classification task at hand.
 :::
 
-## Architecture #2
+## Architecture II
 
 ![](mathworks-typical-cnn.svg)
 
@@ -608,6 +615,16 @@ Source: Hinton, [Reddit AMA](https://www.reddit.com/r/MachineLearning/comments/2
 ## What do the CNN layers learn?
 
 ![](distill-feature-visualisation.png)
+
+::: {.content-visible unless-format="revealjs"}
+CNN layers learn (sequentially):
+
+1. Edges
+2. Textures
+3. Patterns
+4. Parts
+5. Objects
+:::
 
 ::: footer
 Source: Distill article, [Feature Visualization](https://distill.pub/2017/feature-visualization/).
@@ -820,7 +837,20 @@ print(f"Test: X={X_test.shape}, y={y_test.shape}")
 print("Class Names:", class_names)
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The shape of the X data represents:
+
+1. Number of images
+2. Image height
+3. Image width
+4. Image depth
+:::
+
 ## Some setup
+
+::: {.content-visible unless-format="revealjs"}
+Split the data into training and validation.
+:::
 
 ```{python}
 X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.2,
@@ -886,10 +916,18 @@ plt.imshow(dong);
 
 # Fitting a (multinomial) logistic regression
 
+::: {.content-visible unless-format="revealjs"}
+What if, rather than deep learning, we wanted to fit a logistic regression to an image?
+:::
 
 ## Make a logistic regression
 
 ![Basically pretend it's not an image](flattening-image-to-vector.png)
+
+::: {.content-visible unless-format="revealjs"}
+By flattening the image, we convert the matrix of information (tensor 2) into a vector (tensor 1), converting the dataset to tabular.
+A consequence is that we lose information about the dimensions of the image.
+:::
 
 ```{python}
 from keras.layers import Rescaling, Flatten     #<1>
@@ -931,11 +969,11 @@ Path("model.png").unlink(missing_ok=True)
 #| code-line-numbers: "1-7,14-15|"
 loss = keras.losses.SparseCategoricalCrossentropy()
 topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)
-model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])
+model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])  #<1>
 
 epochs = 100
 es = EarlyStopping(patience=15, restore_best_weights=True,
-    monitor="val_accuracy", verbose=2)
+    monitor="val_accuracy", verbose=2)                                  #<2>
 
 if Path("logistic.keras").exists():
     model = keras.models.load_model("logistic.keras")
@@ -943,12 +981,16 @@ if Path("logistic.keras").exists():
         history = json.load(json_file)
 else:
     hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
-      epochs=epochs, callbacks=[es], verbose=0)
+      epochs=epochs, callbacks=[es], verbose=0)                         #<3>
     model.save("logistic.keras")
     history = hist.history
     with open("logistic_history.json", "w") as json_file:
         json.dump(history, json_file)
 ```
+
+1. Compile the model with specified optimizer (`"adam"`) and loss function (cross-entropy). The metrics we look at are accuracy and top-5 accuracy
+2. Perform early stopping to fit the parameters, using the accuracy on the validation set to determine the stopping point
+3. Fit the model with the optimized parameters
 
 Most of this last part is just to save time rendering this slides, you don't need it.
 
@@ -990,6 +1032,15 @@ print(f"Validation Loss: {loss_value:.4f}")
 print(f"Validation Accuracy: {accuracy:.4f}")
 print(f"Validation Top 5 Accuracy: {top5_accuracy:.4f}")
 ```
+
+::: {.content-visible unless-format="revealjs"}
+::: {.callout-note}
+Why is top-5 accuracy greater than accuracy?
+
+* Accuracy: the proportion of guesses that are correct (the "guess" is the category with the highest implied probability)
+* Top-5 accuracy: the proportion of the time that the top 5 categories (the 5 categories with the highest implied probabilities) include the correct answer
+:::
+:::
 
 # Fitting a CNN {visibility="uncounted"}
 
@@ -1092,7 +1143,7 @@ print(f"Test Accuracy: {accuracy:.4f}")
 print(f"Test Top 5 Accuracy: {top5_accuracy:.4f}")
 ```
 
-## Make a prediction
+## Predict on the test set
 
 ```{python}
 #| error: true
@@ -1117,9 +1168,19 @@ print(warn)
 X_test[0].shape, X_test[0][np.newaxis, :].shape, X_test[[0]].shape
 ```
 
+::: {.content-visible unless-format="revealjs"}
+Make sure to check the shape of your data to ensure the right inputs to the functions.
+:::
+
+
 ```{python}
 model.predict(X_test[[0]], verbose=0)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Because we don't have the softmax activation function, the predicted values don't directly represent the probabilities (not between 0 and 1). However, the predicted values are ordered according to their respective implied probabilities. In other words, the category with the highest predicted value is the category with the highest implied probability.
+:::
+
 
 ## Predict on the test set II
 
@@ -1135,7 +1196,15 @@ class_names[model.predict(X_test[[0]], verbose=0).argmax()]
 plt.imshow(X_test[0], cmap="gray");
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The predicted category appears to be correct.
+:::
+
 # Error Analysis
+
+::: {.content-visible unless-format="revealjs"}
+Our NN is working well but still makes occasional errors. Let's see if we can understand why.
+:::
 
 ## Take a look at the failure cases
 
@@ -1167,17 +1236,30 @@ def plot_failed_predictions(X, y, class_names, max_errors = 20,
 plot_failed_predictions(X_test, y_test, class_names)
 ```
 
+::: {.content-visible unless-format="revealjs"}
+By looking at the failure cases, we can ask ourselves:
+
+* Was any of the data mislabeled?
+* Are there common patterns in the failure cases? E.g. Two different characters that look similar
+:::
+
 ## Confidence of predictions
 
 ```{python}
-y_log = model.predict(X_test, verbose=0)
-y_pred = keras.ops.convert_to_numpy(keras.activations.softmax(y_log))
-y_pred_class = np.argmax(y_pred, axis=1)
-y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]
+y_log = model.predict(X_test, verbose=0)                                #<1>
+y_pred = keras.ops.convert_to_numpy(keras.activations.softmax(y_log))   #<2>
+y_pred_class = np.argmax(y_pred, axis=1)                                #<3>
+y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]          #<4>
 
 confidence_when_correct = y_pred_prob[y_pred_class == y_test]
-confidence_when_wrong = y_pred_prob[y_pred_class != y_test]
+confidence_when_wrong = y_pred_prob[y_pred_class != y_test]             #<5>
 ```
+
+1. Make predictions on the test set
+2. Convert the predictions to probabilities [0,1] using softmax activation function
+3. Extract the category with the highest probability (the prediction's best guess)
+4. Extract the *probability* of the above category
+5. Split the probabilities between correct and incorrect guesses
 
 ::: columns
 ::: column
@@ -1190,6 +1272,11 @@ plt.hist(confidence_when_correct);
 plt.hist(confidence_when_wrong);
 ```
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+For correct guesses, almost all of them were at least 90% confident.
+For incorrect guesses, the guesses were less confident on average, but most of the guesses were still at least 90% confident.
 :::
 
 ## Another test set
@@ -1245,6 +1332,10 @@ fails = class_accuracies[class_accuracies["Accuracy"] < 0.5]
 fails.sort_values("Accuracy").plot(kind="bar", x="Class")
 plt.xticks(fontproperties=CHINESE_FONT, rotation=0);
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The characters that the NN has the most trouble with tend to be the ones that I have written poorly. The lesson here is that I need to practice and improve writing these characters...
+:::
 
 # Hyperparameter tuning {visibility="uncounted"}
 
@@ -1328,6 +1419,16 @@ def build_model(hp):
     return model
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The hyperparameters we are tuning are:
+
+* The number of neurons in each hidden layer
+* The activation functions for the hidden layers
+* The learning rate for the Adam optimiser
+
+We give the model a few choices for the first two (the learning rate is continuous).
+:::
+
 ## Do a random search
 
 ```{python}
@@ -1362,6 +1463,10 @@ tuner.results_summary(1)
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The model runs through 10 random combinations of the hyperparameters and returns the one where the loss on the validation set is minimised. !!!CHECK WITH PL
+:::
+
 ## Tune layers separately
 
 ```{python}
@@ -1384,6 +1489,9 @@ def build_model(hp):
     return model
 ```
 
+::: {.content-visible unless-format="revealjs"}
+This time, we let the number of neurons in each hidden layer be tuned separately. For this example we are not tuning the activation functions or the learning rate. !!!CHECK WITH PL
+:::
 
 ## Do a Bayesian search
 
@@ -1418,6 +1526,10 @@ tuner.results_summary(1)
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+Bayesian search is not purely random, and updates its beliefs about the optimal hyperparameter values based on past models. Bayesian search balances *exploration* of new hyperparameter values and *exploitation* of the values that are expected to be optimal. !!!CHECK WITH PL
+:::
+
 # Benchmark Problems {visibility="uncounted"}
 
 ## Demo: Object classification
@@ -1429,6 +1541,10 @@ tuner.results_summary(1)
 ::: column
 ![Example of object classification.](https://info.deeplearning.ai/hs-fs/hubfs/NOCODE.gif?width=1199&upscale=true&name=NOCODE.gif)
 :::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+How are these classification models so accurate?
 :::
 
 ::: footer
@@ -1497,6 +1613,16 @@ Winner of the ILSVRC 2012 challenge (top-five error 17%), developed by Alex Kriz
 
 ## Data Augmentation
 
+::: {.content-visible unless-format="revealjs"}
+Data augmentation: start with an image, and make new images from it by extracting certain information. Examples include: 
+
+* De-texturising
+* De-colorising
+* Flipping/rotating
+
+Data augmentation doesn't *add* new information, but it can make the model robust and sensitive to small changes in the images. In a way the model has more images to learn from.
+:::
+
 ![Examples of data augmentation.](data-augmentation.png)
 
 ::: footer
@@ -1528,38 +1654,32 @@ and [KnowYourMeme.com](https://knowyourmeme.com/memes/we-need-to-go-deeper)
 
 ## GoogLeNet / Inception_v0 (2014)
 
-![Schematic of the GoogLeNet architecture.](Geron-mls2_1414.png)
+![Schematic of the GoogLeNet architecture.](Zhang-googlenet-architecture.png)
 
 ::: footer
-Source: Aurélien Géron (2018), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-14.
+Source: Zhang et al. (2018), [Can deep learning identify tomato leaf disease?](https://doi.org/10.1155/2018/6710865), Advances in Multimedia.
 :::
 
 ## Depth is important for image tasks
 
-![Deeper models aren't just better because they have more parameters. Model depth given in the legend. Accuracy is on the Street View House Numbers dataset.](goodfellow-depth-matters.png)
+![Deeper models aren't just better because they have more parameters. ](goodfellow-depth-matters2.png)
 
 ::: footer
-Source: Goodfellow et al. (2015), [Deep Learning](http://www.deeplearningbook.org), Figure 6.7.
+Source: Adapted from Goodfellow et al. (2014), [Multi-digit Number Recognition from Street View Imagery using Deep Convolutional Neural Networks](https://doi.org/10.48550/arXiv.1312.6082)
 :::
 
 ## Residual connection
 
-![Illustration of a residual connection.](Geron-mls2_1415.png)
+![Illustration of a residual connection.](residual-connection.png)
 
 ::: footer
-Source: Aurélien Géron (2018), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-15.
+Source: [Wikimedia](https://commons.wikimedia.org/wiki/File:ResBlock.png)
 :::
 
 
 ## ResNet (2014)
 
-ResNet won the ILSVRC 2014 challenge (top-5 error 3.6%), developed by [Kaiming He et al.](https://arxiv.org/abs/1512.03385)
-
-![Diagram of the ResNet architecture.](Geron-mls2_1417.png)
-
-::: footer
-Source: Aurélien Géron (2018), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 14-17.
-:::
+ResNet won the ILSVRC 2014 challenge (top-5 error 3.6%), developed by [Kaiming He et al.](https://arxiv.org/abs/1512.03385) (see Figure 14-17 of Géron; 2018).
 
 # Transfer Learning {visibility="uncounted"}
 
@@ -1586,6 +1706,10 @@ model.layers[0].layers[0].layers
 ```{python}
 len(model.layers[0].layers[0].layers)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The model as 155 layers.
+:::
 
 ## The original pretrained model
 

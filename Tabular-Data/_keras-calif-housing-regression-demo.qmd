@@ -134,11 +134,19 @@ Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/
 3. Select the model with the lowest validation error.
 4. Compute the error of the final model on the _test set_.
 
+::: {.content-visible unless-format="revealjs"}
+You should have seen split A in your previous courses. In those courses, split A is used, and then cross-validation is performed to fit the hyperparameters. In the case of NNs, it much is more common to split the dataset into training, validation and test (split B). 
+:::
+
 ::: footer
 Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ML_dataset_training_validation_test_sets.png#filelinks).
 :::
 
 ## Split three ways
+
+::: {.content-visible unless-format="revealjs"}
+Using the same dataset for both validating and testing purposes can result in **data leakage**: the information from supposedly 'unseen' data is now used by the model during its training. This results in a situation where the model is now 'learning' from the test data, which could lead to overly optimistic results in the model evaluation stage. That is why it is important to split the data three ways.
+:::
 
 ```{python}
 # Thanks https://datascience.stackexchange.com/a/15136
@@ -419,10 +427,10 @@ Storing results in data structures like dictionaries is a good practice that can
 Keras is common way of specifying, training, and using neural networks.
 It gives a simple interface to _various backend_ libraries, including Tensorflow. 
 
-![Keras as a independent interface, and Keras as part of Tensorflow.](Geron-mls2_1010.png)
+![The Keras application programming interface (API)](keras-backends.png)
 
 :::footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Figure 10-10.
+Source: Melissa Renard (2025)
 :::
 
 ## Create a Keras ANN model
@@ -447,7 +455,9 @@ model = Sequential(
 3. Defines the model architecture using `Sequential()` function
 
 ::: {.content-visible unless-format="revealjs"}
-This neural network architecture includes one hidden layer with 30 neurons and an output layer with 1 neuron. While there is an activation function specified (`leaky_relu`) for the hidden layer, there is no activation function specified for the output layer. In situations where there is no specification, the output layer assumes a `linear` activation.
+This neural network architecture includes one hidden layer with 30 neurons and an output layer with 1 neuron. An activation function is specified (`leaky_relu`) for both the hidden layer and the output layer. In situations where no activation function is specified for the output layer, it assumes a `linear` activation.
+
+What is meant by `Sequential`? The outputs in a given layer become inputs into the next layer, and so on.
 :::
 
 ## Inspect the model
@@ -456,7 +466,15 @@ This neural network architecture includes one hidden layer with 30 neurons and a
 model.summary()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+Note: the output shapes have `None` for the number of rows because the predictions have not yet been made. The `None` is a placeholder for the potential predictions.
+:::
+
 ## The model is initialised randomly
+
+::: {.content-visible unless-format="revealjs"}
+When fitting the ANN, we need to have some initial values for the weights and biases. These are chosen randomly.
+:::
 
 ```{python}
 model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
@@ -496,20 +514,32 @@ By setting the seed, we can control for the randomness.
 
 ## Fit the model
 ```{python}
-random.seed(123)
+random.seed(123)                                                    #<1>
 
-model = Sequential([
+model = Sequential([                                                #<2>
     Dense(30, activation="leaky_relu"),
     Dense(1, activation="leaky_relu")
 ])
 
-model.compile("adam", "mse")
-%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
-hist.history["loss"]
+model.compile("adam", "mse")                                        #<3>
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)   #<4>
+hist.history["loss"]                                                #<5>
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The above code explains how we would fit a basic neural network. First, we define the seed for reproducibility. Next, we define the architecture of the model. Thereafter, we compile the model. Compiling involves giving instructions on how we want the model to be trained. At the least, we must define the optimizer and loss function. The optimizer explains how the model should learn (how the model should update the weights), and the loss function states the objective that the model needs to optimize. In the above code, we use `adam` as the optimizer and `mse` (mean squared error) as the loss function. After compilation, we fit the model. The `fit()` function takes in the training data, and runs the entire dataset through 5 epochs before training completes. What this means is that the model is run through the entire dataset 5 times. Suppose we start the training process with the random initialization, run the model through the entire data, calculate the `mse` (after 1 epoch), and update the weights using the `adam` optimizer. Then we run the model through the entire dataset once again with the updated weights, to calculate the `mse` at the end of the second epoch. Likewise, we would run the model 5 times before the training completes. `hist.history()` function returns the calculate `mse` at each step.
+The above code explains how we would fit a basic neural network. 
+
+1. Define the seed for reproducibility.
+2. Define the architecture of the model. 
+3. Compile the model. 
+4. Fit the model. 
+5. Return the calculate loss function (`mse`) at the end of each epoch.
+
+Compiling the model (step 3) involves giving instructions on how we want the model to be trained. At the least, we must define the optimizer and loss function. The *optimizer* explains how the model should learn (how the model should update the weights), and the *loss function* states the objective that the model needs to optimize. In the above code, we use `adam` as the optimizer and `mse` (mean squared error) as the loss function. 
+
+The `fit()` function (step 4) takes in the training data, and runs the entire dataset through 5 epochs before training completes. What this means is that the model is run through the entire dataset 5 times. Suppose we start the training process with the random initialization, run the model through the entire data, calculate the `mse` (after 1 epoch), and update the weights using the `adam` optimizer. Then we run the model through the entire dataset once again with the updated weights, to calculate the `mse` at the end of the second epoch. Likewise, we would run the model 5 times before the training completes. 
+
+**Epoch**: Each step looks at a batch of data (say, the first 10 observations), fits the model, compares with the actual values, and updates the weights and biases to improve the loss function (this is 1 update). Then it moves on to the next batch of data, and updates the weights and biases another time... Once it reaches the end of the dataset, it loops back to the beginning of the dataset. This is defined as *one single epoch*.
 :::
 
 <br>
@@ -610,6 +640,10 @@ y_val.min(), y_val.max()
 
 # Force positive predictions {visibility="uncounted"}
 
+::: {.content-visible unless-format="revealjs"}
+We noted that a lot of the predictions include negative values which is unrealistic for house prices. How can we force the predictions to be positive?
+:::
+
 ## Try running for longer
 
 ```{python}
@@ -693,7 +727,15 @@ add_diagonal_line()
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+While there is an improvement, we are still seeing some negative predictions. What else can we try, other than training the NN for longer?
+:::
+
 ## Try different activation functions
+
+::: {.content-visible unless-format="revealjs"}
+We can choose a different activation function for the final layer, namely, an activation function that guarantees a positive output.
+:::
 
 ```{python}
 #| echo: false
@@ -826,25 +868,59 @@ Training the model again with an exponential activation function will give `nan`
 
 ## Same as transforming the target
 
+::: {.content-visible unless-format="revealjs"}
+A benefit of NNs is that you don't have to manually transform the features like you do when fitting a GLM.
+:::
+
+::: {.content-hidden unless-format="revealjs"}
 ![The polynomial regression used by researchers who first studied this dataset.](california-housing-linear-model.png)
+:::
+
+::: {.content-visible unless-format="revealjs"}
+[@kelley1997sparse] studied the California house price dataset. This was one of the models they fit:
+
+$$\begin{align}
+
+\ln(\text{MedHouseVal}) = & \beta_0 + \beta_1\text{MedInc} + \beta_2\text{MedInc}^2 + \beta_3\text{MedInc}^3 \\
+
+& + \beta_4\ln(\text{HouseAge})+ \beta_5\ln(\text{AveRooms}/\text{Population}) \\
+
+& + \beta_6\ln(\text{AveBedrms}/\text{Population}) + \beta_7\ln(\text{Population}/\text{AveOccup}) \\
+
+& + \beta_8\ln(\text{AveOccup})
+
+\end{align}$$
+:::
 
 ::: {.callout-note}
 Fitting $\ln(\text{Median Value})$ is mathematically identical to the `exponential` activation function in the final layer (but metrics are in different units).
 :::
 
+::: {.content-hidden unless-format="revealjs"}
 ::: footer
 Source: Pace and Barry (1997), [Sparse Spatial Autoregressions](http://www.sciencedirect.com/science/article/pii/S0167-7152(96)00140-X), Statistics & Probability Letters.
+:::
 :::
 
 ## Good to know others results
 
+::: {.content-visible unless-format="revealjs"}
+If you find that someone else has fit a model to the same dataset, you can compare your metrics to theirs in your report. For example, [@kelley1997sparse] studied this dataset. You can compare the $R^2$ of their two models and compare them to the ones we fit here.
+:::
+
+::: {.content-hidden unless-format="revealjs"}
 ![That basic model gets $R^2$ of 0.61, but their fancy model gets 0.86.](california-housing-linear-model-results.png)
 
 ::: footer
 Source: Pace and Barry (1997), [Sparse Spatial Autoregressions](http://www.sciencedirect.com/science/article/pii/S0167-7152(96)00140-X), Statistics & Probability Letters.
 :::
+:::
 
 ## GPT can double-check these results
+
+::: {.content-visible unless-format="revealjs"}
+You can ask GPT to fit the linear model shown above to the data using Python and calculate the $R^2$.
+:::
 
 ::: columns
 ::: column
@@ -857,9 +933,17 @@ I'd previously given it the CSV of the data.
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+The resulting $R^2$ is equal to the one documented in the article.
+:::
+
 # Preprocessing {visibility="uncounted"}
 
 ## Re-scaling the inputs
+
+::: {.content-visible unless-format="revealjs"}
+Neural networks prefer if the inputs range between -1 and 1.
+:::
 
 ```{python}
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -897,7 +981,7 @@ plt.legend(["Original", "Scaled"]);
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-We can see how the original values for the input varied between 0 and 10, and how the scaled input values are now between -2 and 2.5. Neural networks prefer if the inputs range between -1 and 1. 
+We can see how the original values for the input varied between 0 and 10, and how the scaled input values are now between -2 and 2.5.
 :::
 
 ## Same model with scaled inputs
@@ -1019,6 +1103,10 @@ val_results = pd.DataFrame(
 val_results.sort_values("MSE", ascending=False)
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The neural network with exponential activation function, scaled inputs and 50 epochs performed the best on the training and validation sets.
+:::
+
 # Early Stopping {visibility="uncounted"}
 
 ## Choosing when to stop training
@@ -1051,18 +1139,22 @@ es = EarlyStopping(restore_best_weights=True, patience=15)                      
 
 %time hist = model.fit(X_train_sc, y_train, epochs=1_000, \
     callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)           #<6>
-print(f"Keeping model at epoch #{len(hist.history['loss'])-10}.")               #<7>              
+print(f"Keeping model at epoch #{len(hist.history['loss'])-15}.")             #<7>              
 ```
 
 1. Imports `EarlyStopping` from `keras.callbacks`
 2. Sets the random seed
 3. Constructs the sequential model
 4. Configures the training process with optimiser and loss function
-5. Defines the early stopping object. Here, the `patience` parameter tells how many epochs the neural network has to wait without no improvement before the process stops. `patience=15` indicates that the neural network will wait for 15 epochs without any improvement before it stops training. `restore_best_weights=True` ensures that model's weights will be restored to the best model, i.e., the model we saw before 15 epochs
+5. Defines the early stopping object. Here, the `patience` parameter tells how many epochs the neural network has to wait without no improvement before the process stops. `patience=15` indicates that the neural network will wait for 15 epochs without any improvement before it stops training. `restore_best_weights=True` ensures that model's weights will be restored to the best model, i.e., the model we saw before 15 epochs earlier
 6. Fits the model with early stopping object passed in
 7. Prints the outs 
 
 ## Loss curve
+
+::: {.content-visible unless-format="revealjs"}
+We can look at the training and validation loss function (`"mse"`) across epochs. The validation error is lowest at the end of epoch 8 (starting from 0), so the weights are restored to that model.
+:::
 
 ```{python}
 plt.plot(hist.history["loss"])
@@ -1138,7 +1230,7 @@ val_results.sort_values("MSE", ascending=False)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-MSE error on the validation set has improved from the ANN model without early stopping (0.354653) to the one with early stopping (0.326440).
+In this case, early stopping did not improve the ANN (0.387 vs. 0.369). Ultimately, we hope that these methods improve the model but that's not always the case. This shows the importance of validating your models.
 :::
 
 ## The test set

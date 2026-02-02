@@ -51,6 +51,17 @@ Source: Jeff Heaton (2021), [Training a GAN from your Own Images: StyleGAN2](htt
 
 ![A schematic of a generative adversarial network.](gan-diagram.png)
 
+::: {.content-visible unless-format="revealjs"}
+Two NNs in the structure:
+
+* Generator: creates fake data (fake images)
+  - input: random noise
+  - output: fake data (fake image)
+* Discriminator: tries to determine whether the input is real or fake
+  - input: data (image)
+  - output: binary classification
+:::
+
 ::: footer
 Source: Thales Silva (2018), [An intuitive introduction to Generative Adversarial Networks (GANs)](https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394), freeCodeCamp.
 :::
@@ -60,6 +71,13 @@ Source: Thales Silva (2018), [An intuitive introduction to Generative Adversaria
 ![](google-devs-bad_gan.svg)
 ![](google-devs-ok_gan.svg)
 ![](google-devs-good_gan.svg)
+
+::: {.content-visible unless-format="revealjs"}
+We want to train both the generator and the discriminator:
+
+* Train the generator to generate more realistic images
+* Train the discriminator to get better at distinguishing between real and fake images
+:::
 
 ::: footer
 Source: Google Developers, [Overview of GAN Structure](https://developers.google.com/machine-learning/gan/gan_structure), Google Machine Learning Education.
@@ -239,17 +257,37 @@ for epoch in range(epochs):
 
 ![An analogy for unconditional vs conditional GANs](unconditional-vs-conditional-generation.png)
 
+::: {.content-visible unless-format="revealjs"}
+Unconditional generation
+: Complete randomness
+
+Conditional generation
+: Randomness that is bounded in some way. You don't know what you're getting, but you know it is in a certain category.
+:::
+
 ## Hurricane example data
 
 ![Original data](hurricane/reals.jpeg)
+
+::: {.content-visible unless-format="revealjs"}
+This is a labelled dataset of satellite images; some are under normal circumstances, and some are after a hurricane occurred.
+:::
 
 ## Hurricane example {data-visibility="uncounted"}
 
 ![Initial fakes](hurricane/fakes_init.jpeg)
 
+::: {.content-visible unless-format="revealjs"}
+The original dataset was input to a conditional GAN. The GAN starts off by generating random images.
+:::
+
 ## Hurricane example (after 54s) {data-visibility="uncounted"}
 
 ![Fakes after 1 iteration](hurricane/fakes000000.jpeg)
+
+::: {.content-visible unless-format="revealjs"}
+After 1 iteration, the fake images start to look more like the original dataset, but still far off.
+:::
 
 ## Hurricane example (after 21m) {data-visibility="uncounted"}
 
@@ -267,11 +305,21 @@ for epoch in range(epochs):
 
 ![Fakes after 3700 kimg](hurricane/fakes003700.jpeg)
 
+::: {.content-visible unless-format="revealjs"}
+By the end (over 14 hours!), the fake images look much more realistic --- if you zoom in, you can see that they are certainly not perfect, but have much more detail and variety than the previous iterations shown. 
+
+The benefit of training a _conditional_ GAN is that we can ask it to generate new images that would come from each category: occurred after a hurricane or not.
+:::
+
 # Image-to-image translation {visibility="uncounted"}
 
 ## Example: Deoldify images #1
 
 ![A deoldified version of the famous "Migrant Mother" photograph.](deoldify-migrant-mother.jpeg)
+
+::: {.content-visible unless-format="revealjs"}
+Here, the conditional GAN is trained on the specific image we see on the left. The "category" is the black and white image itself, and it is trained to colourise the image.
+:::
 
 :::footer
 Source: [Deoldify package](https://github.com/jantic/DeOldify).
@@ -303,11 +351,19 @@ Source: [Deoldify package](https://github.com/jantic/DeOldify).
 
 ## Explore the latent space
 
+::: {.content-visible unless-format="revealjs"}
+Can I get a GAN to produce a fake face that looks like mine?
+:::
+
 ::: {.content-hidden unless-format="revealjs"}
 {{< video https://youtu.be/rr_ARby64lw width="1000px" height="600px" >}}
 :::
 ::: {.content-visible unless-format="revealjs"}
 {{< video https://youtu.be/rr_ARby64lw >}}
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The initial image is a randomly generated face.
 :::
 
 ## Generator can't generate everything
@@ -331,12 +387,12 @@ Source: [Deoldify package](https://github.com/jantic/DeOldify).
 
 StyleGAN2-ADA training times on V100s (1024x1024):
 
-| GPUs | 1000 kimg | 25000 kimg | sec / kimg          | GPU mem | CPU mem
-| :-: | :---------: | :--------: | :----: | :------: | :---------:
-| 1    | 1d 20h    | 46d 03h    | 158 | 8.1 GB  | 5.3 GB
-| 2    | 23h 09m   | 24d 02h    | 83   | 8.6 GB  | 11.9 GB
-| 4    | 11h 36m   | 12d 02h    | 40   | 8.4 GB  | 21.9 GB
-| 8    | 5h 54m    | 6d 03h     | 20   | 8.3 GB  | 44.7 GB
+| GPUs | 1000 kimg   | 25000 kimg | sec / kimg | GPU mem  | CPU mem
+| :-:  | :---------: | :--------: | :----:     | :------: | :---------:
+| 1    | 1d 20h      | 46d 03h    | 158        | 8.1 GB   | 5.3 GB
+| 2    | 23h 09m     | 24d 02h    | 83         | 8.6 GB   | 11.9 GB
+| 4    | 11h 36m     | 12d 02h    | 40         | 8.4 GB   | 21.9 GB
+| 8    | 5h 54m      | 6d 03h     | 20         | 8.3 GB   | 44.7 GB
 
 ::: footer
 Source: NVIDIA's Github, [StyleGAN2-ADA — Official PyTorch implementation](https://github.com/NVlabs/stylegan2-ada-pytorch/).
@@ -368,6 +424,10 @@ Source: Lilian Weng (2019), _From GAN to WGAN_, ArXiV.
 :::
 :::
 
+::: {.content-visible unless-format="revealjs"}
+You want the GAN to create lots of different realistic-looking faces. The example above shows how the GAN was unable to create a variety of images, and just created the same one over and over.
+:::
+
 ::: footer
 Source: Metz et al. (2017), [Unrolled Generative Adversarial Networks](https://arxiv.org/pdf/1611.02163.pdf) and Randall Munroe (2007), [xkcd #221: Random Number](https://xkcd.com/221/).
 :::
@@ -381,6 +441,10 @@ Source: Metz et al. (2017), [Unrolled Generative Adversarial Networks](https://a
 d_optimizer = keras.optimizers.Adam(learning_rate=0.0003)
 g_optimizer = keras.optimizers.Adam(learning_rate=0.0004)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The two NNs have to learn at the right rates. One can't dominate the other; otherwise the whole process falls apart. Finding those learning rates is difficult.
+:::
 
 ::: footer
 Source: Thales Silva (2018), [An intuitive introduction to Generative Adversarial Networks (GANs)](https://www.freecodecamp.org/news/an-intuitive-introduction-to-generative-adversarial-networks-gans-7a2264a81394), freeCodeCamp.
@@ -406,21 +470,26 @@ Conv2DTranspose
 
 ![](conv2dTranspose.gif){.absolute bottom=0 right=50 width="300"}
 
+::: {.content-visible unless-format="revealjs"}
+In the course so far, we have been looking at reducing images to numbers (Figures 1 and 2). With GANs, the opposite needs to be done (Figure 3). This is a much more complex process.
+:::
+
 ::: footer
 Sources: Pröve (2017), [An Introduction to different Types of Convolutions in Deep Learning](https://towardsdatascience.com/types-of-convolutions-in-deep-learning-717013397f4d), and Peltarion Knowledge Center, [Global max pooling 2D](https://peltarion.com/knowledge-center/documentation/modeling-view/build-an-ai-model/blocks/global-max-pooling-2d).
 :::
 
 ::: {.content-visible unless-format="revealjs"}
 
-## Vanishing gradients (I)
+## Vanishing gradients I
 
-![When the discriminator is too good, vanishing gradients](coursera-vanishing-gradients.png)
+**BCE Loss and vanishing gradients**
+![When the discriminator is too good, vanishing gradients](vanishing-gradients.png)
 
 ::: footer
-Source: Sharon Zhou, _Problem with BCE Loss_, Build Basic Generative Adversarial Networks (Week 3), DeepLearning.AI on Coursera.
+Source: Melissa Renard (2025)
 ::::
 
-## Vanishing gradients (II)
+## Vanishing gradients II
 
 ![Vanishing gradients](lilian-weng-vanishing-gradients.png)
 
@@ -459,6 +528,13 @@ $$ \max_{D} \mathbb{E}[ D(X) ] - \mathbb{E}[ D(G(Z)) ] + \lambda \mathbb{E} \Big
 ## GANs with differential privacy
 
 ![Generating synthetic user information with _differential privacy_ and _Wasserstein GANs_.](wasserstein-schematic.png)
+
+::: {.content-visible unless-format="revealjs"}
+In some cases, we can't use real policyholder data; it's a breach of privacy. The goal is to make a GAN that learns the characteristics of the policy data, generate a fake dataset of poliycholders that resembles the real one; then the fake data can be given to anyone. 
+
+Differential privacy
+: You don't want any of the real policyholders to leak into the fake dataset. How do we leverage the data without leaking it?
+:::
 
 ::: footer
 Source: Côté et al. (2020), _Synthesizing Property & Casualty Ratemaking Datasets using Generative Adversarial Networks_, arXiv.

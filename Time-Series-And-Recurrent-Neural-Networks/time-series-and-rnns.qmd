@@ -138,7 +138,8 @@ The task is to _forecast_ future values based on the past.
 <!-- - **Autocorrelation**: The correlation of a signal with a delayed copy of itself. -->
 
 ::: {.callout-note}
-Question: What will be the temperature in Berlin tomorrow?
+## Question
+What will be the temperature in Berlin tomorrow?
 What information would you use to make a prediction?
 :::
 
@@ -209,6 +210,18 @@ stocks
 stocks.plot()
 ```
 
+::: {.content-visible unless-format="revealjs"}
+::: {.callout-note}
+## Question
+What is wrong with this plot?
+
+*Answer*: The main issues are
+* $x$-axis is unclear: should show the _date_, not the observation number
+* The ASX200 has much larger value than the individual stocks; it should be plotted separately.
+* The legend shouldn't be overlapping and hiding half of the plot.
+:::
+:::
+
 ## Data types and NA values
 
 ::: columns
@@ -237,6 +250,10 @@ stocks = stocks.set_index("Date") # or `stocks.set_index("Date", inplace=True)`
 stocks
 ```
 
+::: {.content-visible unless-format="revealjs"}
+By setting the index to the date (and converting the date to a proper date format rather than a string), the plot of the stocks can be updated accordingly very easily.
+:::
+
 ## Plot II
 ```{python}
 stocks.plot()
@@ -245,6 +262,10 @@ plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
 ```
 
 ## Can index using dates I {.smaller}
+
+::: {.content-visible unless-format="revealjs"}
+We can filter our data nicely using the dates that are now indexed.
+:::
 
 ```{python}
 stocks.loc["2010-1-4":"2010-01-8"]
@@ -263,13 +284,25 @@ stocks.loc["2019-12":"2020", ["CBA"]]
 
 ## Can look at the first differences
 
+::: {.content-visible unless-format="revealjs"}
+Rather than looking directly at the time series, we can remove the effect of the trend by looking at first differences. 
+:::
+
 ```{python}
 stocks.diff().plot()
 plt.ylabel("Daily Price Changes ($)")
 plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The variance of the first differences increases over time (heteroscedasticity). This is a natural occurrence when the stock price increases over time.
+:::
+
 ## Can look at the percentage changes
+
+::: {.content-visible unless-format="revealjs"}
+We can normalise the differences by taking the percentage changes.
+:::
 
 ```{python}
 stocks.pct_change().plot()
@@ -332,6 +365,10 @@ plt.title("Distribution of CBA Daily Log Returns");
 
 ## Fill in the missing values
 
+::: {.content-visible unless-format="revealjs"}
+Some of the data has missing values. Here, we fill in the missing values by taking the value from the previous day. If the previous day also has missing value, then you do the same thing until all values are filled. This is called _foward-filling_.
+:::
+
 ```{python}
 asx200 = pd.DataFrame(asx200).set_index(stocks.index)
 missing_day = asx200.index[asx200["ASX200"].isna()][1]
@@ -354,6 +391,10 @@ asx200.loc[prev_day:after]
 :::
 
 # Baseline forecasts
+
+::: {.content-visible unless-format="revealjs"}
+We look at some baseline forecast methods.
+:::
 
 ## Helper functions
 
@@ -458,6 +499,17 @@ trend_mse = mean_squared_error(actual_prices, trend_prices)
 persistence_mse, trend_mse
 ```
 
+::: {.content-visible unless-format="revealjs"}
+::: {.callout-tip}
+## Question
+What are the units of the calculated MSE?
+
+*Answer*: Since the forecasts are in $, and we square the differences, the units are in _squared_ $.
+
+By taking the root MSE (RMSE), the unit is back in $ which is more interpretable.
+:::
+:::
+
 ## Use the history
 
 ::: {.content-visible unless-format="revealjs"}
@@ -465,10 +517,14 @@ Now let's work with log returns instead of raw prices to create lagged features:
 :::
 
 ```{python}
-cba_log_shifted = stock_log["CBA"].head().shift(1)
-both = pd.concat([stock_log["CBA"].head(), cba_log_shifted], axis=1, keys=["Today", "Yesterday"])
+cba_log_shifted = stock_log["CBA"].head().shift(1)                                                  
+both = pd.concat([stock_log["CBA"].head(), cba_log_shifted], axis=1, keys=["Today", "Yesterday"]) 
 both
 ```
+
+::: {.content-visible unless-format="revealjs"}
+This code creates a new variable that is the log return from the previous day.
+:::
 
 ```{python}
 def lagged_timeseries(df, target, window=40):
@@ -478,6 +534,10 @@ def lagged_timeseries(df, target, window=40):
     lagged["T"] = df[target].values
     return lagged
 ```
+
+::: {.content-visible unless-format="revealjs"}
+This code does the same thing as above, but for 40 days, i.e. the log returns for the previous 40 days.
+:::
 
 ## Lagged time series {.smaller}
 
@@ -498,6 +558,14 @@ pandas.options.display.max_rows = 6
 
 ## Split into training and testing
 
+::: {.content-visible unless-format="revealjs"}
+We can't split the data randomly, as the timing of the data matters. We need to fit on older data and try to predict forward in time. Here we define:
+
+* Training data: up to 2021
+* Validation data: 2022-2024
+* Test data: 2025
+:::
+
 ```{python}
 # Split the data in time
 X_train = df_lags.loc[:"2021"]
@@ -513,6 +581,10 @@ y_train = X_train.pop("T")
 y_val = X_val.pop("T")
 y_test = X_test.pop("T")
 ```
+
+::: {.content-visible unless-format="revealjs"}
+We want to predict today's stock price. We need to remove today's stock price (`"T"`) from the features and define it as the target.
+:::
 
 ```{python}
 X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
@@ -580,6 +652,10 @@ plt.ylabel("Daily Log Return")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The actual log returns are far more volatile than what the linear model predicted. But let's convert the actual and predicted returns to raw prices.
+:::
+
 ## Convert to raw prices and plot
 
 ```{python}
@@ -598,6 +674,12 @@ plt.axvline("2025-01", color="black", linestyle="--")
 plt.ylabel("Stock Price ($)")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The raw prices from the linear regression are surprisingly accurate. Why is linear regression be so much better than the persistence and trend forecasts?
+
+This is because the regression uses the last 40 days of log return data to make further predictions, unlike the persistence (assumes constant price) and trend (assume constant return) forecasts.
+:::
 
 ## Distribution of log return predictions
 
@@ -619,6 +701,10 @@ ax2.set_title("Predicted Log Returns")
 
 plt.tight_layout()
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The variance of the predicted log returns is much smaller than the variance of the actual log returns.
+:::
 
 ```{python}
 # Calculate MSE on raw prices using explicit forecast calculation
@@ -658,6 +744,12 @@ plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
 shifted_mse = mean_squared_error(stock.loc["2025":, "CBA"], shifted_forecast)
 persistence_mse, trend_mse, linear_mse, shifted_mse
 ```
+
+::: {.content-visible unless-format="revealjs"}
+In fact, the linear model is not any better than just assuming that today's stock price will be the same as yesterday's.
+
+What if we want to produce multi-step-ahead linear forecasts?
+:::
 
 ## Autoregressive forecasts
 
@@ -723,6 +815,10 @@ plt.ylabel("Stock Price ($)")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The multi-step-ahead linear forecast doesn't look very good.
+:::
+
 ## Compare log return forecasts
 
 ```{python}
@@ -737,6 +833,10 @@ log_forecasts_multistep.plot()
 plt.ylabel("Daily Log Return")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The variability in the one-step-ahead forecast is already small. The multi-step-ahead forecast reflects that and in fact the variance converges to 0 over time.
+:::
 
 ## Metrics
 
@@ -753,6 +853,10 @@ multi_step_linear_mse = mean_squared_error(stock.loc["2025":, "CBA"], lr_multi_s
 persistence_mse, trend_mse, multi_step_linear_mse
 ```
 
+::: {.content-visible unless-format="revealjs"}
+We explicitly see that the mlti-step-ahead linear forecast is worse than the trend forecast.
+:::
+
 ## Prefer only short windows
 
 ```{python}
@@ -765,6 +869,10 @@ plt.ylabel("Stock Price ($)")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
 ```
 
+::: {.content-visible unless-format="revealjs"}
+It's best not to make predictions too far in the future. There is a lot of uncertainty, and that is evident in this plot and previous plots.
+:::
+
 > "It's tough to make predictions, especially about the future."
 
 ::: footer
@@ -775,6 +883,10 @@ Yogi Berra
 
 ## Simple feedforward neural network
 
+::: {.content-visible unless-format="revealjs"}
+We can fit a simple feedforward NN. This is not much more complex than a linear model. 
+:::
+
 ```{python}
 model = Sequential([
         Rescaling(1/0.02),
@@ -782,6 +894,14 @@ model = Sequential([
         Dense(1)])  # Linear activation for log returns
 model.compile(optimizer="adam", loss="mean_absolute_error")
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The above code does the following (NN architecture):
+1. Rescale the data
+2. Add one hidden layer with 32 neurons
+3. Final output layer is 1 neuron
+4. Compile the model with selected optimizer and loss function
+:::
 
 ```{python}
 if Path("aus_fin_fnn_model.keras").exists():
@@ -794,6 +914,10 @@ else:
 
 model.summary()
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The parameters are fitted using early stopping to minimise the mean absolute error (MAE).
+:::
 
 ## Forecast and plot
 
@@ -814,6 +938,10 @@ log_forecasts_nn.plot()
 plt.ylabel("Daily Log Return")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The variance of the predicted log returns from the NN is higher; a better reflection of actual log returns.
+:::
 
 ## Plot forecasts in raw price space
 
@@ -872,6 +1000,10 @@ plt.ylabel("Stock Price ($)")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The predictions look okay for the first 2-3 months but then after that is more optimistic. Although, at the end of the forecast, the MS FNN prediction converges again to the actual price.
+:::
+
 ## Compare multi-step log return forecasts
 
 ```{python}
@@ -886,6 +1018,10 @@ log_forecasts_multistep_nn.plot()
 plt.ylabel("Daily Log Return")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Again, for the multi-step predictions the variance converges to 0 over time.
+:::
 
 ## Metrics
 
@@ -903,6 +1039,10 @@ multi_step_fnn_mse = mean_squared_error(stock.loc["2025":, "CBA"], fnn_multi_ste
 persistence_mse, trend_mse, multi_step_linear_mse, multi_step_fnn_mse
 ```
 
+::: {.content-visible unless-format="revealjs"}
+Based on MSE the FNN is better than the persistence forecast but worse than the other two.
+:::
+
 # Recurrent Neural Networks {visibility="uncounted"}
 
 ## Basic facts of RNNs
@@ -915,10 +1055,10 @@ persistence_mse, trend_mse, multi_step_linear_mse, multi_step_fnn_mse
 
 ## Applications
 
-- Forecasting: revenue forecast, weather forecast, predict disease rate from medical history, etc. 
-- Classification: given a time series of the activities of a visitor on a website, classify whether the visitor is a bot or a human.
-- Event detection: given a continuous data stream, identify the occurrence of a specific event. Example: Detect utterances like "Hey Alexa" from an audio stream.
-- Anomaly detection: given a continuous data stream, detect anything unusual happening. Example: Detect unusual activity on the corporate network.
+- _Forecasting_: revenue forecast, weather forecast, predict disease rate from medical history, etc. 
+- _Classification_: given a time series of the activities of a visitor on a website, classify whether the visitor is a bot or a human.
+- _Event detection_: given a continuous data stream, identify the occurrence of a specific event. Example: Detect utterances like "Hey Alexa" from an audio stream.
+- _Anomaly detection_: given a continuous data stream, detect anything unusual happening. Example: Detect unusual activity on the corporate network.
 
 ## Origin of the name of RNNs
 
@@ -940,14 +1080,14 @@ Source: Wikipedia, [Recurrence relation](https://en.wikipedia.org/wiki/Recurrenc
 
 The RNN processes each data in the sequence one by one, while keeping memory of what came before.
 
+![Schematic of a recurrent neural network. E.g. SimpleRNN, LSTM, or GRU.](rnn-diagram.png)
+
 ::: {.content-visible unless-format="revealjs"}
-The following figure shows how the recurrent neural network combines an input `X_l` with a preprocessed state of the process `A_l` to produce the output `O_l`. RNNs have a cyclic information processing structure that enables them to pass information sequentially from previous inputs. RNNs can capture dependencies and patterns in sequential data, making them useful for analysing time series data.
+The RNN combines an input $X_n$ with a processed state using inputs $X_1,...,X_{n-1}$ to produce the output $Y_n$. RNNs have a cyclic information processing structure that enables them to pass information sequentially from previous inputs. RNNs can capture dependencies and patterns in sequential data, making them useful for analysing time series data.
 :::
 
-![Schematic of a recurrent neural network. E.g. SimpleRNN, LSTM, or GRU.](ISLR2-10_12.svg)
-
 ::: footer
-Source: James et al (2022), [An Introduction to Statistical Learning](https://www.statlearning.com/), 2nd edition, Figure 10.12.
+Source: Melissa Renard (2025)
 :::
 
 ## A SimpleRNN cell
@@ -1093,7 +1233,15 @@ multi_step_rnn_mse = mean_squared_error(stock.loc["2025":, "CBA"], rnn_multi_ste
 persistence_mse, trend_mse, multi_step_linear_mse, multi_step_fnn_mse, multi_step_rnn_mse
 ```
 
+::: {.content-visible unless-format="revealjs"}
+Based on MSE, the RNN performs the best out of one-step forecasts, and the second best for multi-step forecasts (after the trend forecast).
+:::
+
 ## GRU
+
+::: {.content-visible unless-format="revealjs"}
+The gated recurrent unit (GRU) is a type of RNN. We can select GRU in the model specification step.
+:::
 
 ```{python}
 from keras.layers import GRU
@@ -1414,7 +1562,8 @@ $$
 $$
 
 ::: {.content-visible unless-format="revealjs"}
-At each time step, a simple Recurrent Neural Network (RNN) takes an input vector `x_t`, incorporate it with the information from the previous hidden state `{y}_{t-1}` and produces an output vector at each time step `y_t`. The hidden state helps the network remember the context of the previous words, enabling it to make informed predictions about what comes next in the sequence. In a simple RNN, the output at time `(t-1)` is the same as the hidden state at time `t`.
+At each time step, a simple Recurrent Neural Network (RNN) takes an input vector $x_t$, incorporates it with the information from the previous hidden state ${y}_{t-1}$ and produces an output vector at each time step $y_t$. The hidden state helps the network remember the context of the previous inputs and states, enabling it to make informed predictions about what comes next in the sequence. 
+In a simple RNN, the output at time $(t-1)$ is the same as the hidden state at time $t$.
 :::
 
 ## SimpleRNN (in batches)
@@ -1534,10 +1683,10 @@ Y
 
 ## Input and output sequences
 
-![Categories of recurrent neural networks: sequence to sequence, sequence to vector, vector to sequence, encoder-decoder network.](Geron-rnnType.png)
+![Categories of recurrent neural networks: sequence to sequence, sequence to vector, vector to sequence, encoder-decoder network.](rnn-types2.png)
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 15.
+Source: Melissa Renard (2025)
 :::
 
 
@@ -1553,11 +1702,14 @@ Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, K
 
 ## Recurrent layers can be stacked.
 
-![_Deep RNN_ unrolled through time.](Geron-recurrentneurondeep.png)
+![_Deep RNN_ unrolled through time.](rnn-stacked2.png)
 
+::: {.content-visible unless-format="revealjs"}
+The output from a hidden state can be used as input for another hidden layer of RNN processing. This is called _stacking_, or a _stacked RNN_.
+:::
 
 ::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 15.
+Source: Melissa Renard (2025)
 :::
 
 {{< include _houseprice-demo.qmd >}}
