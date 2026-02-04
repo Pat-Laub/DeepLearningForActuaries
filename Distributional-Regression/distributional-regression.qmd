@@ -1604,45 +1604,44 @@ $$
 
 ![We demonstrate the structure of a Gamma MDN that outputs the parameters for a Gamma mixture with two components.](Gamma_MDN.png)
 
-## Code: Import "legacy" Keras (for now)
-
-```{python}
-import tf_keras
-```
-
-![](keras_tfp_github_issue.png)
-![](keras_tfp_github_issue_comment.png)
-
-::: footer
-Source: Tensorflow Probability GitHub, [Keras 3 breaks Tensorflow Probability upon import](https://github.com/tensorflow/probability/issues/1774#issuecomment-1841706103), issue #1774.
-:::
-
 ## Code: Architecture
 
 The following code implements the gamma MDN from the previous slide.
 
 ```{python}
-# Ensure reproducibility
-random.seed(1);                                                                         #<1>
+import torch                                                                            #<1>
+import torch.nn as nn
 
-inputs = tf_keras.layers.Input(shape=X_train.shape[1:])                                 #<2>
+random.seed(1)
+torch.manual_seed(1)
 
-# Two hidden layers 
-x = tf_keras.layers.Dense(64, activation='relu')(inputs)                                #<3>
-x = tf_keras.layers.Dense(64, activation='relu')(x)
+class GammaMDN(nn.Module):                                                              #<2>
+    def __init__(self, input_dim, hidden_dim=64, n_components=2):
+        super().__init__()
+        self.hidden = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),                                            #<3>
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+        )
+        self.pi_layer = nn.Linear(hidden_dim, n_components)                              #<4>
+        self.alpha_layer = nn.Linear(hidden_dim, n_components)
+        self.beta_layer = nn.Linear(hidden_dim, n_components)
 
-pis = tf_keras.layers.Dense(2, activation='softmax')(x) # Mixing weights                #<4>
-alphas = tf_keras.layers.Dense(2, activation='exponential')(x) # Shape parameters
-betas = tf_keras.layers.Dense(2, activation='exponential')(x) # Scale parameters
-out = tf_keras.layers.Concatenate(axis=1)([pis, alphas, betas]) # shape = (None, 6)     #<5>
+    def forward(self, x):
+        h = self.hidden(x)
+        pis = torch.softmax(self.pi_layer(h), dim=-1)
+        alphas = torch.exp(self.alpha_layer(h))
+        betas = torch.exp(self.beta_layer(h))
+        return pis, alphas, betas                                                        #<5>
 
-gamma_mdn = tf_keras.Model(inputs, out)
+gamma_mdn = GammaMDN(X_train.shape[1])
 ```
-1. Sets the random seeds for reproducibility
-2. Defines the input layer with the number of neurons being equal to the number of input features
+1. Import PyTorch
+2. Defines the MDN as a PyTorch `nn.Module`
 3. Specifies the hidden layers of the neural network
-4. Specifies the neurons of the output layer. Here, `softmax` is used for $\pi$ values as they must sum up to 1. `exponential` activation is used for both $\alpha$'s and $\beta$'s as they must be non-negative.
-5. Combines all of the outputs since Keras' loss function requires a single output (which will now have 6 columns).
+4. Specifies the output heads. `softmax` is used for $\pi$ values as they must sum to 1. `exp` is used for $\alpha$'s and $\beta$'s as they must be positive.
+5. Returns the mixing weights, shape parameters, and rate parameters separately.
 
 ## Loss Function
 
@@ -1664,62 +1663,109 @@ $$
 This loss function is quite complex, and for more complicated mixture distributions the loss function would be impossible to write in closed-form.
 :::
 
-## Code: Loss & training 
+## Code: Loss & training
 
-`tensorflow_probability` to the rescue.
+`torch.distributions` to the rescue.
 
 ::: {.content-visible unless-format="revealjs"}
-`tensorflow_probability` does all the hard work of mathematically describing the mixture distribution.
+`torch.distributions` does all the hard work of mathematically describing the mixture distribution.
 :::
 
 ```{python}
-import tensorflow_probability as tfp                                        #<1>
-tfd = tfp.distributions                                                     #<2>
+from torch.distributions import Gamma, MixtureSameFamily, Categorical      #<1>
 
-def gamma_mixture_nll(y_true, y_pred):   
-    K = y_pred.shape[1] // 3                                                #<3>
-    pis = y_pred[:, :K]                                                    
-    alphas = y_pred[:, K:2*K]                                               
-    betas = y_pred[:, 2*K:3*K]
-    mixture_distribution = tfd.MixtureSameFamily(
-        mixture_distribution=tfd.Categorical(probs=pis),
-        components_distribution=tfd.Gamma(alphas, betas))                   #<4>
-    return -tf_keras.backend.mean(mixture_distribution.log_prob(y_true))    #<5>
+def gamma_mixture_nll(pis, alphas, betas, y_true):                          #<2>
+    mixture = MixtureSameFamily(
+        mixture_distribution=Categorical(probs=pis),
+        component_distribution=Gamma(concentration=alphas, rate=betas))     #<3>
+    return -mixture.log_prob(y_true).mean()                                 #<4>
 ```
-1. Import `tfp` class from `tensorflow_probability`
-2. Store statistical distributions in the `tfp` class as `tfd`
-4. Extract predicted values for all model components and stores them in separate matrices
-5. Specify the mixture distribution using computed model components
-6. Use the fitted model to calculate negative log likelihood given the observed data
+1. Import distribution classes from `torch.distributions`
+2. The loss function takes the MDN outputs (mixing weights, shapes, rates) and observed values
+3. Specify the mixture distribution using the predicted model components
+4. Calculate the mean negative log-likelihood given the observed data
 
 ```{python}
 #| eval: false
-gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)             #<1>
+# Convert data to PyTorch tensors
+X_train_t = torch.tensor(X_train.values, dtype=torch.float32)
+y_train_t = torch.tensor(y_train.values, dtype=torch.float32)
 
-hist = gamma_mdn.fit(X_train, y_train,
-    epochs=100, 
-    callbacks=[tf_keras.callbacks.EarlyStopping(patience=10)],  
-    verbose=0,
-    batch_size=64, 
-    validation_split=0.2)                                               #<2>
+# Split into train and validation (80/20)
+n_val = int(0.2 * len(X_train_t))
+X_val_mdn, y_val_mdn = X_train_t[-n_val:], y_train_t[-n_val:]
+X_trn_mdn, y_trn_mdn = X_train_t[:-n_val], y_train_t[:-n_val]
+
+optimizer = torch.optim.Adam(gamma_mdn.parameters())                       #<1>
+loader = torch.utils.data.DataLoader(
+    torch.utils.data.TensorDataset(X_trn_mdn, y_trn_mdn),
+    batch_size=64, shuffle=True)
+
+best_val_loss, patience_counter, best_state = float('inf'), 0, None
+
+for epoch in range(100):                                                    #<2>
+    gamma_mdn.train()
+    for xb, yb in loader:
+        pis, alphas, betas = gamma_mdn(xb)
+        loss = gamma_mixture_nll(pis, alphas, betas, yb)
+        optimizer.zero_grad(); loss.backward(); optimizer.step()
+
+    gamma_mdn.eval()
+    with torch.no_grad():
+        pis_v, alphas_v, betas_v = gamma_mdn(X_val_mdn)
+        val_loss = gamma_mixture_nll(pis_v, alphas_v, betas_v, y_val_mdn)
+
+    if val_loss < best_val_loss:                                            #<3>
+        best_val_loss = val_loss
+        best_state = {k: v.clone() for k, v in gamma_mdn.state_dict().items()}
+        patience_counter = 0
+    else:
+        patience_counter += 1
+        if patience_counter >= 10: break
+
+gamma_mdn.load_state_dict(best_state)
 ```
-1. Compiles the model using `adam` optimizer and the `gamma_mixture_nll` (negative log likelihood) as the loss function
-2. Fits the model using the training data, with a validation split
+1. Uses the Adam optimiser
+2. Fits the model with a manual training loop, evaluating on a validation split each epoch
+3. Early stopping with patience of 10 epochs, restoring the best weights
 
 ```{python}
 #| echo: false
-if not os.path.exists("gamma_mdn.keras"):
-    gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)
-    gamma_mdn.fit(X_train, y_train,
-      epochs=100, 
-      callbacks=[tf_keras.callbacks.EarlyStopping(patience=10)],  
-      verbose=0,
-      batch_size=64, 
-      validation_split=0.2)
-    gamma_mdn.save("gamma_mdn.keras")
+mdn_path = "gamma_mdn.pt"
+if not os.path.exists(mdn_path):
+    X_train_t = torch.tensor(X_train.values, dtype=torch.float32)
+    y_train_t = torch.tensor(y_train.values, dtype=torch.float32)
+    n_val = int(0.2 * len(X_train_t))
+    X_val_mdn, y_val_mdn = X_train_t[-n_val:], y_train_t[-n_val:]
+    X_trn_mdn, y_trn_mdn = X_train_t[:-n_val], y_train_t[:-n_val]
+
+    optimizer = torch.optim.Adam(gamma_mdn.parameters())
+    loader = torch.utils.data.DataLoader(
+        torch.utils.data.TensorDataset(X_trn_mdn, y_trn_mdn),
+        batch_size=64, shuffle=True)
+
+    best_val_loss, patience_counter, best_state = float('inf'), 0, None
+    for epoch in range(100):
+        gamma_mdn.train()
+        for xb, yb in loader:
+            pis, alphas, betas = gamma_mdn(xb)
+            loss = gamma_mixture_nll(pis, alphas, betas, yb)
+            optimizer.zero_grad(); loss.backward(); optimizer.step()
+        gamma_mdn.eval()
+        with torch.no_grad():
+            pis_v, alphas_v, betas_v = gamma_mdn(X_val_mdn)
+            val_loss = gamma_mixture_nll(pis_v, alphas_v, betas_v, y_val_mdn)
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_state = {k: v.clone() for k, v in gamma_mdn.state_dict().items()}
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= 10: break
+    gamma_mdn.load_state_dict(best_state)
+    torch.save(gamma_mdn.state_dict(), mdn_path)
 else:
-    gamma_mdn = tf_keras.models.load_model("gamma_mdn.keras", 
-                                           custom_objects={'gamma_mixture_nll': gamma_mixture_nll})
+    gamma_mdn.load_state_dict(torch.load(mdn_path, weights_only=True))
 ```
 
 <!--
@@ -1839,7 +1885,12 @@ mus = cann.predict(X_test, verbose=0)
 nll_cann = gamma_nll(mus, phi_cann, y_test)
 
 # MDN
-nll_mdn = gamma_mdn.evaluate(X_test, y_test, verbose=0)
+gamma_mdn.eval()
+with torch.no_grad():
+    X_test_t = torch.tensor(X_test.values, dtype=torch.float32)
+    y_test_t = torch.tensor(y_test.values, dtype=torch.float32)
+    pis, alphas, betas = gamma_mdn(X_test_t)
+    nll_mdn = gamma_mixture_nll(pis, alphas, betas, y_test_t).item()
 ```
 
 <!-- ## Model Comparisons -->
@@ -2276,7 +2327,7 @@ Now that we have multiple predictions for each NN, we can obtain a distribution 
 
 ```{python}
 from watermark import watermark
-print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow,tensorflow_probability,tf_keras"))
+print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow"))
 ```
 
 ## Glossary {.appendix data-visibility="uncounted"}
