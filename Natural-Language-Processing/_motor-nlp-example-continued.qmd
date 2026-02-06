@@ -22,28 +22,28 @@ X_train, X_val, y_train, y_val = \
 X_train.shape, X_val.shape, X_test.shape
 ```
 
-## Using Keras `TextVectorization`
+## Using TF-IDF Vectorization
 
 ::: {.content-visible unless-format="revealjs"}
 Rather than BoW, we use TF-IDF (not removing stop-words). Now, words that appear frequently across the police reports are given less importance.
 :::
 
 ```{python}
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 max_tokens = 1_000
-vect = layers.TextVectorization(
-    max_tokens=max_tokens,
-    output_mode="tf_idf",
-    standardize="lower_and_strip_punctuation",
+vect = TfidfVectorizer(
+    max_features=max_tokens,
+    lowercase=True,
+    token_pattern=r"(?u)\b\w+\b",  # Similar to "lower_and_strip_punctuation"
 )
 
-vect.adapt(X_train)
-vocab = vect.get_vocabulary()
+X_train_txt = vect.fit_transform(X_train).toarray()
+X_val_txt = vect.transform(X_val).toarray()
+X_test_txt = vect.transform(X_test).toarray()
 
-X_train_txt = vect(X_train)
-X_val_txt = vect(X_val)
-X_test_txt = vect(X_test)
-
-print(vocab[:50])
+vocab = vect.get_feature_names_out()
+print(list(vocab[:50]))
 ```
 
 ## The TF-IDF vectors
@@ -89,20 +89,31 @@ tfidf_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
 ## Keep text as sequence of tokens
 
 ```{python}
+from sklearn.feature_extraction.text import CountVectorizer
+import re
+
 max_length = 500
 max_tokens = 1_000
-vect = layers.TextVectorization(
-    max_tokens=max_tokens,
-    output_sequence_length=max_length,
-    standardize="lower_and_strip_punctuation",
-)
 
-vect.adapt(X_train)
-vocab = vect.get_vocabulary()
+# Build vocabulary using CountVectorizer
+count_vect = CountVectorizer(max_features=max_tokens-1, lowercase=True,
+    token_pattern=r"(?u)\b\w+\b")
+count_vect.fit(X_train)
+vocab = [""] + list(count_vect.get_feature_names_out())  # Index 0 reserved for padding
+word_to_idx = {word: idx for idx, word in enumerate(vocab)}
 
-X_train_txt = vect(X_train)
-X_val_txt = vect(X_val)
-X_test_txt = vect(X_test)
+def texts_to_sequences(texts, word_to_idx, max_length):
+    sequences = []
+    for text in texts:
+        tokens = re.findall(r"(?u)\b\w+\b", text.lower())
+        seq = [word_to_idx.get(t, 0) for t in tokens][:max_length]
+        seq = seq + [0] * (max_length - len(seq))  # Pad with zeros
+        sequences.append(seq)
+    return np.array(sequences)
+
+X_train_txt = texts_to_sequences(X_train, word_to_idx, max_length)
+X_val_txt = texts_to_sequences(X_val, word_to_idx, max_length)
+X_test_txt = texts_to_sequences(X_test, word_to_idx, max_length)
 
 print(vocab[:50])
 ```

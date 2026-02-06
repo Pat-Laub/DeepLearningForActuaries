@@ -5,57 +5,11 @@ title: Distributional Regression
 ```{python}
 #| echo: false
 #| warning: false
-from dotenv import find_dotenv, load_dotenv
-assert load_dotenv(find_dotenv(usecwd=False)), "The .env file was not loaded."
-
-import numpy
-import matplotlib
-
-# TODO: Update following section
-import matplotlib.pyplot as plt
-import cycler
-
-colors = ["#91CCCC", "#FF8FA9", "#CC91BC", "#3F9999", "#A5FFB8"]
-plt.rcParams["axes.prop_cycle"] = cycler.cycler(color=colors)
-
-
-def set_square_figures():
-    plt.rcParams["figure.figsize"] = (2.0, 2.0)
-
-
-def set_rectangular_figures():
-    plt.rcParams["figure.figsize"] = (5.0, 2.0)
-
-
-set_rectangular_figures()
-plt.rcParams["figure.dpi"] = 350
-plt.rcParams["savefig.bbox"] = "tight"
-plt.rcParams["font.family"] = "serif"
-
-plt.rcParams["axes.spines.right"] = False
-plt.rcParams["axes.spines.top"] = False
-
-def add_diagonal_line():
-    xl = matplotlib.pyplot.xlim()
-    yl = matplotlib.pyplot.ylim()
-    shortest_side = min(xl[1], yl[1])
-    matplotlib.pyplot.plot(
-        [0, shortest_side], [0, shortest_side], color="black", linestyle="--"
-    )
-
-import pandas as pandas
+import sys
+sys.path.insert(0, "../scripts")
+from setup import *
 
 pandas.options.display.max_rows = 5
-
-import random
-
-random.seed(1234)
-
-import tensorflow
-
-tensorflow.random.set_seed(1)
-tensorflow.get_logger().setLevel("ERROR")
-tensorflow.config.set_visible_devices([], "GPU")
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -188,7 +142,7 @@ def draw_gamma_distribution(mean, shape, color, customer_id):
 Customer 1 = (25, 3, 🚙)
 ```{python}
 #| code-fold: true
-draw_gamma_distribution(1200, 2, colors[0], 0)
+draw_gamma_distribution(1200, 2, COLOURS[0], 0)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -202,7 +156,7 @@ Based on the distribution output, actuaries can obtain risk measures such as exp
 Customer 2 = (40, 5, 🚐)
 ```{python}
 #| code-fold: true
-draw_gamma_distribution(2500, 2, colors[1], 1)
+draw_gamma_distribution(2500, 2, COLOURS[1], 1)
 ```
 
 ## Distributional regression {data-visibility=uncounted}
@@ -210,7 +164,7 @@ draw_gamma_distribution(2500, 2, colors[1], 1)
 Customer 3 = (19, 1, 🏎️)
 ```{python}
 #| code-fold: true
-draw_gamma_distribution(3800, 2, colors[2], 2)
+draw_gamma_distribution(3800, 2, COLOURS[2], 2)
 ```
 
 ## Distributional regression {data-visibility=uncounted}
@@ -218,7 +172,7 @@ draw_gamma_distribution(3800, 2, colors[2], 2)
 Customer 4 = (60, 10, 🚘)
 ```{python}
 #| code-fold: true
-draw_gamma_distribution(800, 2, colors[3], 3)
+draw_gamma_distribution(800, 2, COLOURS[3], 3)
 ```
 
 ## Distributional regression {data-visibility=uncounted}
@@ -234,7 +188,7 @@ for i, (age, car_age, car_type, cost) in enumerate(data):
   shape = 2  # Example shape parameter for the gamma distribution
   scale = mean / shape  # Scale parameter to achieve the correct mean
 
-  plt.plot(x, stats.gamma.pdf(x, a=shape, scale=scale), label=f"Customer {i+1}", color=colors[i])
+  plt.plot(x, stats.gamma.pdf(x, a=shape, scale=scale), label=f"Customer {i+1}", color=COLOURS[i])
 
 plt.title(f"Predicted Claim Size Distribution")
 plt.xlabel("Claim size")
@@ -1250,11 +1204,11 @@ bins = np.histogram_bin_edges(y, bins=30)
 # Plot each normal distribution with different means vertically
 for i, ax in enumerate(axes):
     if i == 0:
-        ax.hist(y_1, bins=bins, density=True, color=colors[i+1])
+        ax.hist(y_1, bins=bins, density=True, color=COLOURS[i+1])
         ax.set_ylabel(f'$f(y | x = 1)$')
 
     elif i == 1:
-        ax.hist(y_2, bins=bins, density=True, color=colors[i+1])
+        ax.hist(y_2, bins=bins, density=True, color=COLOURS[i+1])
         ax.set_ylabel(f'$f(y | x = 2)$')
 
     else:
@@ -2222,13 +2176,13 @@ We can make the model think it is still training:
 ::: column
 ```{python}
 model(X_train_sc.head(3),
-    training=True).numpy()
+    training=True).detach().numpy()
 ```
 :::
 ::: column
 ```{python}
 model(X_train_sc.head(3),
-    training=True).numpy()
+    training=True).detach().numpy()
 ```
 :::
 :::
@@ -2327,7 +2281,7 @@ Now that we have multiple predictions for each NN, we can obtain a distribution 
 
 ```{python}
 from watermark import watermark
-print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,tensorflow"))
+print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch"))
 ```
 
 ## Glossary {.appendix data-visibility="uncounted"}

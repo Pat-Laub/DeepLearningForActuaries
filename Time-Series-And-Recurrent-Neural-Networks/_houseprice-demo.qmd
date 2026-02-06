@@ -110,23 +110,17 @@ set_rectangular_figures()
 
 ## Subsequences of a time series
 
-Keras has a built-in method for converting a time series into subsequences/chunks.
+We can use numpy to convert a time series into subsequences/chunks using a sliding window.
 
 ```{python}
-#| warning: false
-from keras.utils import timeseries_dataset_from_array
+integers = np.arange(10)
+seq_len = 3
 
-integers = range(10)
-dummy_dataset = timeseries_dataset_from_array(
-    data=integers[:-3],
-    targets=integers[3:],
-    sequence_length=3,
-    batch_size=2,
-)
+X = np.stack([integers[i : i + seq_len] for i in range(len(integers) - seq_len)])
+y = integers[seq_len:]
 
-for inputs, targets in dummy_dataset:
-    for i in range(inputs.shape[0]):
-        print([int(x) for x in inputs[i]], int(targets[i]))
+for i in range(len(X)):
+    print(X[i].tolist(), int(y[i]))
 ```
 
 ::: footer
@@ -298,7 +292,19 @@ for i in range(X_test.shape[0]):
 
 # Predicting Sydney House Prices {visibility="uncounted"}
 
-## Creating dataset objects
+## Creating input arrays
+
+```{python}
+def make_sequences(data, targets, seq_len, start_index=0, end_index=None):
+    data = np.asarray(data, dtype=np.float32)
+    targets = np.asarray(targets, dtype=np.float32)
+    if end_index is None:
+        end_index = len(data)
+    n = end_index - start_index - seq_len + 1
+    X = np.stack([data[start_index + i : start_index + i + seq_len] for i in range(n)])
+    y = targets[start_index : start_index + n]
+    return X, y
+```
 
 ::: columns
 ::: column
@@ -321,11 +327,9 @@ delay = seq_length + ahead - 1
 # Which suburb to predict.
 target_suburb = changes["Sydney"]
 
-train_ds = timeseries_dataset_from_array(
-    changes[:-delay],
-    targets=target_suburb[delay:],
-    sequence_length=seq_length,
-    end_index=num_train,
+X_train, y_train = make_sequences(
+    changes[:-delay], target_suburb[delay:],
+    seq_length, end_index=num_train,
 )
 ```
 :::
@@ -334,36 +338,24 @@ train_ds = timeseries_dataset_from_array(
 ::: columns
 ::: column
 ```{python}
-val_ds = timeseries_dataset_from_array(
-    changes[:-delay],
-    targets=target_suburb[delay:],
-    sequence_length=seq_length,
-    start_index=num_train,
+X_val, y_val = make_sequences(
+    changes[:-delay], target_suburb[delay:],
+    seq_length, start_index=num_train,
     end_index=num_train + num_val,
 )
 ```
 :::
 ::: column
 ```{python}
-test_ds = timeseries_dataset_from_array(
-    changes[:-delay],
-    targets=target_suburb[delay:],
-    sequence_length=seq_length,
-    start_index=num_train + num_val,
+X_test, y_test = make_sequences(
+    changes[:-delay], target_suburb[delay:],
+    seq_length, start_index=num_train + num_val,
 )
 ```
 :::
 :::
 
-## Converting `Dataset` to numpy
-
-The `Dataset` object can be handed to Keras directly, but if we really need a numpy array, we can run:
-```{python}
-X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
-y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
-```
-
-The shape of our training set is now:
+## Training set shape
 
 ```{python}
 X_train.shape
@@ -371,15 +363,6 @@ X_train.shape
 
 ```{python}
 y_train.shape
-```
-
-Converting the rest to numpy arrays:
-
-```{python}
-X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
-y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
-X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
-y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ```
 
 ## A dense network
@@ -613,7 +596,7 @@ plt.legend(frameon=False);
 
 # Predicting Multiple Time Series {visibility="uncounted"}
 
-## Creating dataset objects
+## Creating input arrays
 
 ::: columns
 ::: column
@@ -621,11 +604,9 @@ Change the `targets` argument to include all the suburbs.
 :::
 ::: column
 ```{python}
-train_ds = timeseries_dataset_from_array(
-    changes[:-delay],
-    targets=changes[delay:],
-    sequence_length=seq_length,
-    end_index=num_train,
+X_train, y_train = make_sequences(
+    changes[:-delay], changes[delay:],
+    seq_length, end_index=num_train,
 )
 ```
 :::
@@ -634,48 +615,33 @@ train_ds = timeseries_dataset_from_array(
 ::: columns
 ::: column
 ```{python}
-val_ds = timeseries_dataset_from_array(
-    changes[:-delay],
-    targets=changes[delay:],
-    sequence_length=seq_length,
-    start_index=num_train,
+X_val, y_val = make_sequences(
+    changes[:-delay], changes[delay:],
+    seq_length, start_index=num_train,
     end_index=num_train + num_val,
 )
 ```
 :::
 ::: column
 ```{python}
-test_ds = timeseries_dataset_from_array(
-    changes[:-delay],
-    targets=changes[delay:],
-    sequence_length=seq_length,
-    start_index=num_train + num_val,
+X_test, y_test = make_sequences(
+    changes[:-delay], changes[delay:],
+    seq_length, start_index=num_train + num_val,
 )
 ```
 :::
 :::
 
-## Converting `Dataset` to numpy
+## Training set shape
 
 The shape of our training set is now:
 
 ```{python}
-X_train = np.concatenate(list(train_ds.map(lambda x, y: x)))
 X_train.shape
 ```
 
 ```{python}
-y_train = np.concatenate(list(train_ds.map(lambda x, y: y)))
 y_train.shape
-```
-
-Converting the rest to numpy arrays:
-
-```{python}
-X_val = np.concatenate(list(val_ds.map(lambda x, y: x)))
-y_val = np.concatenate(list(val_ds.map(lambda x, y: y)))
-X_test = np.concatenate(list(test_ds.map(lambda x, y: x)))
-y_test = np.concatenate(list(test_ds.map(lambda x, y: y)))
 ```
 
 ## A dense network
