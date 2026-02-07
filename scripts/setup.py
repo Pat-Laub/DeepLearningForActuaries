@@ -7,10 +7,20 @@ Usage in the hidden setup cell of each .qmd file:
     from setup import *
 """
 
-# Load environment variables first (before importing torch/keras)
-from dotenv import find_dotenv, load_dotenv
+# Set environment variables (replaces .env file)
+import os
 
-assert load_dotenv(find_dotenv(usecwd=False)), "The .env file was not loaded."
+# Use PyTorch backend for Keras
+os.environ['KERAS_BACKEND'] = 'torch'
+
+# Disable CUDA (use CPU only)
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
+# Deterministic Quarto rendering (Deno seed)
+os.environ['QUARTO_DENO_EXTRA_OPTIONS'] = '--seed=2026'
+
+# Deterministic Python hashing
+os.environ['PYTHONHASHSEED'] = '0'
 
 # Force PyTorch to use CPU instead of MPS (Mac GPU) or CUDA
 # This must happen BEFORE importing Keras, which checks for available devices
@@ -18,6 +28,16 @@ import torch
 
 torch.backends.mps.is_available = lambda: False
 torch.backends.mps.is_built = lambda: False
+
+# Set PyTorch to deterministic mode for reproducible builds
+torch.manual_seed(42)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+try:
+    torch.use_deterministic_algorithms(True)
+except Exception:
+    # Some PyTorch versions don't support this
+    pass
 
 # Matplotlib configuration
 import cycler
