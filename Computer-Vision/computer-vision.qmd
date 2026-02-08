@@ -1311,7 +1311,7 @@ Frankly, a lot of this is just 'enlightened' trial and error.
 Source: [Twitter](https://twitter.com/tetraduzione/status/1525501171221274627?s=20&t=ulVFesw-f7hCuG9KyaoYbQ).
 :::
 
-## Keras Tuner
+## Optuna {.smaller}
 
 ```{python}
 #| echo: false
@@ -1343,32 +1343,55 @@ X_test_sc = sc.transform(X_test)
 
 ```{python}
 #| output: false
-!pip install keras-tuner
+!pip install optuna
 ```
 
 ```{python}
-import keras_tuner as kt
+import os
+import optuna
+optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-def build_model(hp):
+os.makedirs("./optuna-artifacts", exist_ok=True)
+artifact_store = optuna.artifacts.FileSystemArtifactStore(
+    base_path="./optuna-artifacts")
+
+def objective(trial):
     model = Sequential()
     model.add(
         Dense(
-            hp.Choice("neurons", [4, 8, 16, 32, 64, 128, 256]),
-            activation=hp.Choice("activation",
+            trial.suggest_categorical("neurons",
+                [4, 8, 16, 32, 64, 128, 256]),
+            activation=trial.suggest_categorical(
+                "activation",
                 ["relu", "leaky_relu", "tanh"]),
         )
     )
-  
     model.add(Dense(1, activation="exponential"))
-    
-    learning_rate = hp.Float("lr",
-        min_value=1e-4, max_value=1e-2, sampling="log")
-    opt = keras.optimizers.Adam(learning_rate=learning_rate)
 
+    learning_rate = trial.suggest_float("lr",
+        1e-4, 1e-2, log=True)
+    opt = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=opt, loss="poisson")
-    
-    return model
+
+    es = EarlyStopping(patience=3,
+        restore_best_weights=True)
+    model.fit(X_train_sc, y_train, epochs=100,
+        callbacks=[es],
+        validation_data=(X_val_sc, y_val), verbose=0)
+
+    val_loss = model.evaluate(
+        X_val_sc, y_val, verbose=0)
+
+    model.save("_trial_model.keras")              #<1>
+    artifact_id = optuna.artifacts.upload_artifact(
+        artifact_store=artifact_store,
+        file_path="_trial_model.keras",
+        study_or_trial=trial)
+    trial.set_user_attr("artifact_id", artifact_id)
+
+    return val_loss
 ```
+1. Each trial's trained model is saved to Optuna's artifact store so the best model can be retrieved later
 
 ::: {.content-visible unless-format="revealjs"}
 The hyperparameters we are tuning are:
@@ -1377,108 +1400,118 @@ The hyperparameters we are tuning are:
 * The activation functions for the hidden layers
 * The learning rate for the Adam optimiser
 
-We give the model a few choices for the first two (the learning rate is continuous).
+We give the model a few choices for the first two (the learning rate is continuous). Note that with Optuna, the `objective` function handles the entire training loop and returns the validation loss. Optuna then uses this to decide which hyperparameters to try next.
 :::
 
 ## Do a random search
 
 ```{python}
-#| echo: false
-# import shutil
-# shutil.rmtree("random-search", ignore_errors=True)
-``` 
+sampler = optuna.samplers.RandomSampler(seed=123)
+study = optuna.create_study(
+    direction="minimize",
+    sampler=sampler)
 
-::: columns
-::: {.column width="60%"}
-```{python}
-tuner = kt.RandomSearch(
-  build_model,
-  objective="val_loss",
-  max_trials=10,
-  directory="random-search")
-
-es = EarlyStopping(patience=3,
-  restore_best_weights=True)
-
-tuner.search(X_train_sc, y_train,
-  epochs=100, callbacks = [es],
-  validation_data=(X_val_sc, y_val))
-
-best_model = tuner.get_best_models()[0]
+study.optimize(objective, n_trials=10)
 ```
-:::
-::: {.column width="40%"}
+
 ```{python}
-tuner.results_summary(1)
+print(f"Best value: {study.best_trial.value:.4f}")
+print(f"Best params:")
+for k, v in study.best_trial.params.items():
+    print(f"  {k}: {v}")
 ```
-:::
-:::
+
+```{python}
+best_id = study.best_trial.user_attrs["artifact_id"]
+Path("best_random_model.keras").unlink(missing_ok=True)
+optuna.artifacts.download_artifact(
+    artifact_store=artifact_store,
+    file_path="best_random_model.keras",
+    artifact_id=best_id)
+best_model = keras.models.load_model(
+    "best_random_model.keras")
+```
 
 ::: {.content-visible unless-format="revealjs"}
-The model runs through 10 random combinations of the hyperparameters and returns the one where the loss on the validation set is minimised. !!!CHECK WITH PL
+The model runs through 10 random combinations of the hyperparameters and returns the one where the loss on the validation set is minimised. After the search, we retrieve the best trial's saved model from the artifact store.
 :::
 
-## Tune layers separately
+## Tune layers separately {.smaller}
 
 ```{python}
-def build_model(hp):
+def objective(trial):
     model = Sequential()
 
-    for i in range(hp.Int("numHiddenLayers", 1, 3)):
-      # Tune number of units in each layer separately.
-      model.add(
-          Dense(
-              hp.Choice(f"neurons_{i}", [8, 16, 32, 64]),
-              activation="relu"
-          )
-      )
+    for i in range(trial.suggest_int(
+            "numHiddenLayers", 1, 3)):
+        model.add(
+            Dense(
+                trial.suggest_categorical(
+                    f"neurons_{i}", [8, 16, 32, 64]),
+                activation="relu"
+            )
+        )
     model.add(Dense(1, activation="exponential"))
 
     opt = keras.optimizers.Adam(learning_rate=0.0005)
     model.compile(optimizer=opt, loss="poisson")
-    
-    return model
+
+    es = EarlyStopping(patience=3,
+        restore_best_weights=True)
+    model.fit(X_train_sc, y_train, epochs=100,
+        callbacks=[es],
+        validation_data=(X_val_sc, y_val), verbose=0)
+
+    val_loss = model.evaluate(
+        X_val_sc, y_val, verbose=0)
+
+    model.save("_trial_model.keras")
+    artifact_id = optuna.artifacts.upload_artifact(
+        artifact_store=artifact_store,
+        file_path="_trial_model.keras",
+        study_or_trial=trial)
+    trial.set_user_attr("artifact_id", artifact_id)
+
+    return val_loss
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-This time, we let the number of neurons in each hidden layer be tuned separately. For this example we are not tuning the activation functions or the learning rate. !!!CHECK WITH PL
+This time, we let the number of neurons in each hidden layer be tuned separately. For this example we are not tuning the activation functions or the learning rate.
 :::
 
 ## Do a Bayesian search
 
 ```{python}
-#| echo: false
-# shutil.rmtree("bayesian-search", ignore_errors=True)
-``` 
+sampler = optuna.samplers.TPESampler(seed=123) #<1>
+study = optuna.create_study(
+    direction="minimize",
+    sampler=sampler)
 
-::: columns
-::: {.column width="60%"}
-```{python}
-tuner = kt.BayesianOptimization(
-  build_model,
-  objective="val_loss",
-  directory="bayesian-search",
-  max_trials=10)
-
-es = EarlyStopping(patience=3,
-  restore_best_weights=True)
-
-tuner.search(X_train_sc, y_train,
-  epochs=100, callbacks = [es],
-  validation_data=(X_val_sc, y_val))
-
-best_model = tuner.get_best_models()[0]
+study.optimize(objective, n_trials=10)
 ```
-:::
-::: {.column width="40%"}
+1. Optuna uses a _Tree-structured Parzen Estimator_ (TPE) by default, which is a Bayesian method. Passing a `seed` makes the search reproducible.
+
 ```{python}
-tuner.results_summary(1)
+print(f"Best value: {study.best_trial.value:.4f}")
+print(f"Best params:")
+for k, v in study.best_trial.params.items():
+    print(f"  {k}: {v}")
 ```
+
+::: {.content-visible unless-format="revealjs"}
+Bayesian search is not purely random, and updates its beliefs about the optimal hyperparameter values based on past models. Bayesian search balances *exploration* of new hyperparameter values and *exploitation* of the values that are expected to be optimal. Optuna's default sampler is the Tree-structured Parzen Estimator (TPE), which is a Bayesian optimization algorithm. Passing a `seed` to the sampler ensures the same sequence of hyperparameters is tried each time.
 :::
+
+## Averaging over random seeds
+
+::: {.callout-tip}
+Neural networks are sensitive to their random initialisation. A hyperparameter combination that looks good (or bad) on a single run might just have been lucky (or unlucky).
+
+A more robust approach is to train 3--5 models with the same hyperparameters but different random seeds, and average the validation loss. This way you select architectures that perform well *and* reliably, rather than ones that happened to land on a favourable starting point.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-Bayesian search is not purely random, and updates its beliefs about the optimal hyperparameter values based on past models. Bayesian search balances *exploration* of new hyperparameter values and *exploitation* of the values that are expected to be optimal. !!!CHECK WITH PL
+In the objective function, instead of returning the loss from a single fit, you would loop over a few seeds, refit each time, and return the mean validation loss. This is slower but gives you much more confidence that the chosen hyperparameters are genuinely good rather than a fluke.
 :::
 
 # Benchmark Problems {visibility="uncounted"}
