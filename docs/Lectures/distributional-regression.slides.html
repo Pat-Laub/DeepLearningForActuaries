@@ -1,0 +1,3240 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<link href="../favicon.ico" rel="icon">
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-html/tabby.min.js"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-81034a5d93012ce44e9ffdbb0cb72db6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-contrib/reveal-auto-agenda-0.0.3/reveal-auto-agenda.css" rel="stylesheet"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.9.37">
+
+  <meta name="author" content="Patrick Laub">
+  <title>Deep Learning for Actuaries – Distributional Regression</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/reveal.css">
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {  background-color: #e9ecef; }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #0040ff; font-weight: bold; } /* Alert */
+    code span.an { color: #4090c0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #336699; } /* Attribute */
+    code span.bn { color: #0033a0; } /* BaseN */
+    code span.bu { color: #0055cc; } /* BuiltIn */
+    code span.cf { color: #0055cc; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #002080; } /* Constant */
+    code span.co { color: #4090c0; font-style: italic; } /* Comment */
+    code span.cv { color: #4090c0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #3060a0; font-style: italic; } /* Documentation */
+    code span.dt { color: #0044bb; } /* DataType */
+    code span.dv { color: #0033a0; } /* DecVal */
+    code span.er { color: #0040ff; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #0033a0; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #0055cc; font-weight: bold; } /* Import */
+    code span.in { color: #4090c0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #0055cc; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #0055cc; } /* Other */
+    code span.pp { color: #336699; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #336699; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #4090c0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-476f8152091a473501321f93897261ec.css">
+  <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css">
+  <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-J0TZXJ0Y33"></script>
+
+  <script type="text/javascript">
+
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-J0TZXJ0Y33', { 'anonymize_ip': true});
+  </script>
+  <link href="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-chalkboard/font-awesome/css/all.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/reveal-chalkboard/style.css" rel="stylesheet">
+  <link href="../site_libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+  
+  <script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+</head>
+<body class="quarto-light">
+<script>
+  let selectedAnnoteEl;
+</script>
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Distributional Regression</h1>
+  <p class="subtitle">ACTL3143 &amp; ACTL5111 Deep Learning for Actuaries</p>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Patrick Laub 
+</div>
+</div>
+</div>
+
+</section>
+<section>
+<section id="introduction" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Introduction</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="why-actuaries-avoid-neural-networks" class="slide level2">
+<h2>Why actuaries avoid neural networks</h2>
+<p>They’re not <em>inherently interpretable</em>, so just we have to look at inputs and outputs from the black box.</p>
+<div class="fragment">
+<p>Neural network models typically just output a prediction without any sense of its <em>confidence</em>.</p>
+</div>
+<div class="fragment">
+<p>Therefore we cannot <em>trust</em> the neural network models, which is a <strong>dealbreaker</strong>.</p>
+</div>
+<div class="fragment">
+<p>Now let’s focus on actuarial problems.</p>
+</div>
+</section>
+<section id="car-insurance" class="slide level2">
+<h2>Car insurance</h2>
+<p>Claim size prediction</p>
+<div class="columns">
+<div class="column" style="width:5%;">
+
+</div><div class="column" style="width:60%;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th>👤 <strong>Age</strong></th>
+<th>🚗 <strong>Age</strong></th>
+<th>🏎️ <strong>Type</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>25</td>
+<td>3</td>
+<td>🚙 Sedan</td>
+</tr>
+<tr class="even">
+<td>40</td>
+<td>5</td>
+<td>🚐 SUV</td>
+</tr>
+<tr class="odd">
+<td>19</td>
+<td>1</td>
+<td>🏎️ Sports Car</td>
+</tr>
+<tr class="even">
+<td>60</td>
+<td>10</td>
+<td>🚘 Hatchback</td>
+</tr>
+</tbody>
+</table>
+</div><div class="column" style="width:10%;">
+<p><br> <br></p>
+<div class="fragment">
+<p><span class="math display">\longrightarrow</span></p>
+</div>
+</div><div class="column" style="width:20%;">
+<div class="fragment">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th><strong>Cost</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>💵 $1,200</td>
+</tr>
+<tr class="even">
+<td>💵 $2,500</td>
+</tr>
+<tr class="odd">
+<td>💵 $3,800</td>
+</tr>
+<tr class="even">
+<td>💵 $800</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div></div>
+<div class="fragment">
+<p>What’s wrong? Not enough rows? Not enough columns?</p>
+</div>
+<div class="cell" data-execution_count="4">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a></a>data <span class="op">=</span> [</span>
+<span id="cb1-2"><a></a>    (<span class="dv">25</span>, <span class="dv">3</span>, <span class="st">"🚙"</span>, <span class="dv">1200</span>),  <span class="co"># (Driver Age, Car Age, Type of Car, Repair Cost)</span></span>
+<span id="cb1-3"><a></a>    (<span class="dv">40</span>, <span class="dv">5</span>, <span class="st">"🚐"</span>, <span class="dv">2500</span>),</span>
+<span id="cb1-4"><a></a>    (<span class="dv">19</span>, <span class="dv">1</span>, <span class="st">"🏎️"</span>, <span class="dv">3800</span>),</span>
+<span id="cb1-5"><a></a>    (<span class="dv">60</span>, <span class="dv">10</span>, <span class="st">"🚘"</span>, <span class="dv">800</span>)</span>
+<span id="cb1-6"><a></a>]</span>
+<span id="cb1-7"><a></a></span>
+<span id="cb1-8"><a></a>x <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">5000</span>, <span class="dv">1000</span>)</span>
+<span id="cb1-9"><a></a></span>
+<span id="cb1-10"><a></a><span class="kw">def</span> draw_gamma_distribution(mean, shape, color, customer_id):</span>
+<span id="cb1-11"><a></a>  scale <span class="op">=</span> mean <span class="op">/</span> shape</span>
+<span id="cb1-12"><a></a>  plt.plot(x, stats.gamma.pdf(x, a<span class="op">=</span>shape, scale<span class="op">=</span>scale), label<span class="op">=</span><span class="ss">f"Customer </span><span class="sc">{</span>customer_id<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span>, color<span class="op">=</span>color)</span>
+<span id="cb1-13"><a></a>  plt.title(<span class="ss">f"Predicted Claim Size Distribution"</span>)</span>
+<span id="cb1-14"><a></a>  plt.xlabel(<span class="st">"Claim size"</span>)</span>
+<span id="cb1-15"><a></a>  plt.ylabel(<span class="st">"Density"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="distributional-regression" class="slide level2">
+<h2>Distributional regression</h2>
+<p>Customer 1 = (25, 3, 🚙)</p>
+<div class="cell" data-execution_count="5">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a></a>draw_gamma_distribution(<span class="dv">1200</span>, <span class="dv">2</span>, COLOURS[<span class="dv">0</span>], <span class="dv">0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-5-output-1.png" width="1697" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="distributional-regression-1" class="slide level2" data-visibility="uncounted">
+<h2>Distributional regression</h2>
+<p>Customer 2 = (40, 5, 🚐)</p>
+<div class="cell" data-execution_count="6">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a></a>draw_gamma_distribution(<span class="dv">2500</span>, <span class="dv">2</span>, COLOURS[<span class="dv">1</span>], <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-6-output-1.png" width="1697" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="distributional-regression-2" class="slide level2" data-visibility="uncounted">
+<h2>Distributional regression</h2>
+<p>Customer 3 = (19, 1, 🏎️)</p>
+<div class="cell" data-execution_count="7">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a></a>draw_gamma_distribution(<span class="dv">3800</span>, <span class="dv">2</span>, COLOURS[<span class="dv">2</span>], <span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-7-output-1.png" width="1728" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="distributional-regression-3" class="slide level2" data-visibility="uncounted">
+<h2>Distributional regression</h2>
+<p>Customer 4 = (60, 10, 🚘)</p>
+<div class="cell" data-execution_count="8">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a></a>draw_gamma_distribution(<span class="dv">800</span>, <span class="dv">2</span>, COLOURS[<span class="dv">3</span>], <span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-8-output-1.png" width="1728" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="distributional-regression-4" class="slide level2" data-visibility="uncounted">
+<h2>Distributional regression</h2>
+<p>All customers</p>
+<div class="cell" data-execution_count="9">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a></a><span class="co"># Plot all on the same graph</span></span>
+<span id="cb6-2"><a></a>plt.figure()</span>
+<span id="cb6-3"><a></a><span class="cf">for</span> i, (age, car_age, car_type, cost) <span class="kw">in</span> <span class="bu">enumerate</span>(data):</span>
+<span id="cb6-4"><a></a>  mean <span class="op">=</span> cost</span>
+<span id="cb6-5"><a></a>  shape <span class="op">=</span> <span class="dv">2</span>  <span class="co"># Example shape parameter for the gamma distribution</span></span>
+<span id="cb6-6"><a></a>  scale <span class="op">=</span> mean <span class="op">/</span> shape  <span class="co"># Scale parameter to achieve the correct mean</span></span>
+<span id="cb6-7"><a></a></span>
+<span id="cb6-8"><a></a>  plt.plot(x, stats.gamma.pdf(x, a<span class="op">=</span>shape, scale<span class="op">=</span>scale), label<span class="op">=</span><span class="ss">f"Customer </span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">"</span>, color<span class="op">=</span>COLOURS[i])</span>
+<span id="cb6-9"><a></a></span>
+<span id="cb6-10"><a></a>plt.title(<span class="ss">f"Predicted Claim Size Distribution"</span>)</span>
+<span id="cb6-11"><a></a>plt.xlabel(<span class="st">"Claim size"</span>)</span>
+<span id="cb6-12"><a></a>plt.ylabel(<span class="st">"Density"</span>)</span>
+<span id="cb6-13"><a></a>plt.legend()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-9-output-1.png" width="1728" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="traditional-vs-distributional-regression" class="slide level2">
+<h2>Traditional vs distributional regression</h2>
+<p>Traditional:</p>
+<p><br></p>
+<div class="columns">
+<div class="column" style="width:33%;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: center;">👤</th>
+<th style="text-align: center;">🚗</th>
+<th style="text-align: center;">🏎️</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">35</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">Sport</td>
+</tr>
+</tbody>
+</table>
+</div><div class="column" style="width:33%;">
+<div style="display:flex; align-items:center; justify-content:center;">
+<span style="font-size:2em; line-height:1;">→</span>
+<div style="
+      border:2px solid black;
+      padding:0.5em 1em;
+      margin:0 0.5em;
+      font-weight:bold;
+      white-space:nowrap;
+    ">
+<pre><code>Model</code></pre>
+</div>
+<p><span style="font-size:2em; line-height:1;">→</span></p>
+</div>
+</div><div class="column" style="width:33%;">
+<p><span class="math inline">1582.48</span></p>
+</div></div>
+<p><br></p>
+<p>Distributional:</p>
+<p><br></p>
+<div class="columns">
+<div class="column" style="width:33%;">
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th style="text-align: center;">👤</th>
+<th style="text-align: center;">🚗</th>
+<th style="text-align: center;">🏎️</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">35</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">Sport</td>
+</tr>
+</tbody>
+</table>
+</div><div class="column" style="width:33%;">
+<div style="display:flex; align-items:center; justify-content:center;">
+<span style="font-size:2em; line-height:1;">→</span>
+<div style="
+      border:2px solid black;
+      padding:0.5em 1em;
+      margin:0 0.5em;
+      font-weight:bold;
+      white-space:nowrap;
+    ">
+<pre><code>Model</code></pre>
+</div>
+<p><span style="font-size:2em; line-height:1;">→</span></p>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="cell" style="margin-top: -1.5em;" data-execution_count="10">
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-10-output-1.png" width="1697" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<section id="baseline-a-generalised-linear-model" class="slide level2">
+<h2>Baseline: a generalised linear model</h2>
+<p>A gamma GLM with a log link function:</p>
+<p><span class="math display">
+\begin{aligned}
+Y | \mathbf{X} &amp;\sim \mathrm{Gamma}(\ldots, \ldots) \\
+\mathbb{E}[Y | \mathbf{X}] &amp;= \exp\Bigl\{ \beta_0 + \beta_1 \cdot \text{Age} + \beta_2 \cdot \text{Car Age} + \beta_3 \cdot \text{Type} \Bigr\}
+\end{aligned}
+</span></p>
+<p>A simple model, easy to train and interpret, but…</p>
+<div class="fragment">
+<div class="callout callout-important callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>GLMs can be</strong></p>
+</div>
+<div class="callout-content">
+<ol type="1">
+<li>Bad at <em>regression</em></li>
+<li>Bad at <em>distributional</em> regression</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="example-1-non-monotonicity" class="slide level2">
+<h2>Example 1: Non-monotonicity</h2>
+<div class="cell" data-execution_count="11">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a></a>ages <span class="op">=</span> np.linspace(<span class="dv">18</span>, <span class="dv">80</span>, <span class="dv">200</span>)  <span class="co"># Driver ages from 18 to 80</span></span>
+<span id="cb9-2"><a></a>claim_sizes <span class="op">=</span> <span class="dv">1000</span> <span class="op">*</span> (<span class="dv">1</span> <span class="op">-</span> np.exp(<span class="op">-</span>((ages <span class="op">-</span> <span class="dv">35</span>) <span class="op">/</span> <span class="dv">20</span>)<span class="op">**</span><span class="dv">2</span>)) </span>
+<span id="cb9-3"><a></a></span>
+<span id="cb9-4"><a></a><span class="co"># Create the updated plot</span></span>
+<span id="cb9-5"><a></a><span class="co"># plt.figure(figsize=(8, 6))</span></span>
+<span id="cb9-6"><a></a>plt.plot(ages, claim_sizes, linewidth<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb9-7"><a></a>plt.title(<span class="st">"Effect of Driver Age on Claim Sizes"</span>)</span>
+<span id="cb9-8"><a></a>plt.xlabel(<span class="st">"Driver Age"</span>)</span>
+<span id="cb9-9"><a></a>plt.ylabel(<span class="st">"Claim Size Effect ($)"</span>)</span>
+<span id="cb9-10"><a></a><span class="co"># plt.grid(alpha=0.3)</span></span>
+<span id="cb9-11"><a></a><span class="co"># plt.axvline(35, color='gray', linestyle='--', label='New Middle Age Peak')</span></span>
+<span id="cb9-12"><a></a><span class="co"># plt.legend(fontsize=10)</span></span>
+<span id="cb9-13"><a></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-11-output-1.png" width="1650" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>GLMs cannot (easily) do this <span class="math inline">\longrightarrow</span> Use a neural network</p>
+</section>
+<section id="example-2-multi-modality" class="slide level2">
+<h2>Example 2: Multi-modality</h2>
+<div class="cell" data-execution_count="12">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a>x <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">20</span><span class="op">*</span><span class="dv">500</span>, <span class="dv">500</span>)  <span class="co"># Range restricted to positive real numbers</span></span>
+<span id="cb10-2"><a></a></span>
+<span id="cb10-3"><a></a><span class="co"># Adjust the components to ensure a bimodal mixture</span></span>
+<span id="cb10-4"><a></a>pdf1 <span class="op">=</span> stats.lognorm.pdf(x, s<span class="op">=</span><span class="fl">0.3</span>, scale<span class="op">=</span>np.exp(<span class="dv">1</span>)<span class="op">*</span><span class="dv">500</span>)  <span class="co"># Sharper log-normal distribution</span></span>
+<span id="cb10-5"><a></a>pdf2 <span class="op">=</span> stats.gamma.pdf(x, a<span class="op">=</span><span class="dv">10</span>, scale<span class="op">=</span><span class="fl">0.8</span><span class="op">*</span><span class="dv">500</span>)  <span class="co"># Narrower gamma distribution</span></span>
+<span id="cb10-6"><a></a>mixture_pdf <span class="op">=</span> <span class="fl">0.3</span> <span class="op">*</span> pdf1 <span class="op">+</span> <span class="fl">0.7</span> <span class="op">*</span> pdf2  <span class="co"># Equal weights to emphasize bimodality</span></span>
+<span id="cb10-7"><a></a></span>
+<span id="cb10-8"><a></a><span class="co"># Create the updated plot</span></span>
+<span id="cb10-9"><a></a>plt.figure()<span class="op">;</span></span>
+<span id="cb10-10"><a></a>plt.plot(x, pdf1, label<span class="op">=</span><span class="st">'Parent driving'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, color<span class="op">=</span><span class="st">'blue'</span>)</span>
+<span id="cb10-11"><a></a>plt.plot(x, pdf2, label<span class="op">=</span><span class="st">'Kid driving'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, color<span class="op">=</span><span class="st">'green'</span>)</span>
+<span id="cb10-12"><a></a>plt.plot(x, mixture_pdf, label<span class="op">=</span><span class="st">'Mixture Distribution'</span>, color<span class="op">=</span><span class="st">'red'</span>, linewidth<span class="op">=</span><span class="dv">2</span>)</span>
+<span id="cb10-13"><a></a>plt.title(<span class="st">"Claim Size Distribution"</span>)</span>
+<span id="cb10-14"><a></a>plt.legend()</span>
+<span id="cb10-15"><a></a>plt.xlabel(<span class="st">"Claim Size"</span>)</span>
+<span id="cb10-16"><a></a>plt.ylabel(<span class="st">"Density"</span>)</span>
+<span id="cb10-17"><a></a></span>
+<span id="cb10-18"><a></a><span class="co"># Turn off the y axis</span></span>
+<span id="cb10-19"><a></a><span class="co"># plt.gca().axes.get_yaxis().set_visible(False)</span></span>
+<span id="cb10-20"><a></a></span>
+<span id="cb10-21"><a></a><span class="va">None</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-12-output-1.png" width="1743" height="830"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="key-idea" class="slide level2">
+<h2>Key idea</h2>
+<div class="columns">
+<div class="column">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="images/Density_forecasting_2.jpeg"></p>
+<figcaption>An example of distributional forecasting over the All Ordinaries Index</figcaption>
+</figure>
+</div>
+</div><div class="column">
+<ul>
+<li>Earlier machine learning models focused on point estimates.</li>
+<li>However, in many applications, we need to understand the distribution of the response variable.</li>
+<li>Each prediction becomes a <em>distribution</em> over the possible outcomes</li>
+</ul>
+</div></div>
+<div class="footer">
+<p>Source: Tomasz Woźniak (2024), <a href="https://www.linkedin.com/posts/tomaszwwozniak_rstats-densityforecasting-activity-7171005952463134721-ZsHl?utm_source=share&amp;utm_medium=member_desktop">LinkedIn Post</a>, accessed on July 15 2024.</p>
+</div>
+</section>
+<section id="we-will-focus-on-regression-not-classification" class="slide level2">
+<h2>We will focus on regression not classification</h2>
+<p>Classifiers already give us a probability, which is a big step up compared to regression models.</p>
+<p>However, neural networks’ “probabilities” can be overconfident.</p>
+
+<img data-src="images/example-of-overconfidence.png" class="r-stretch quarto-figure-center"><p class="caption">We <a href="https://pat-laub.github.io/DeepLearningForActuaries/Computer-Vision/computer-vision.html#confidence-of-predictions">already saw</a> a case of this.</p><p>See Guo et al.&nbsp;(2017), <a href="https://arxiv.org/pdf/1706.04599">On Calibration of Modern Neural Networks</a>.</p>
+</section></section>
+<section>
+<section id="traditional-regression" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Traditional Regression</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="notation" class="slide level2">
+<h2>Notation</h2>
+<ul>
+<li>scalars are denoted by lowercase letters, e.g., <span class="math inline">y</span>,</li>
+<li>vectors are denoted by bold lowercase letters, e.g., <span class="math display">\boldsymbol{y} = (y_1, \ldots, y_n) ,</span></li>
+<li>random variables are denoted by capital letters, e.g., <span class="math inline">Y</span></li>
+<li>random vectors are denoted by bold capital letters, e.g., <span class="math display">\boldsymbol{X} = (X_1, \ldots, X_p) ,</span></li>
+<li>matrices are denoted by bold uppercase non-italics letters, e.g., <span class="math display">\mathbf{X} = \begin{pmatrix} x_{11} &amp; \cdots &amp; x_{1p} \\ \vdots &amp; \ddots &amp; \vdots \\ x_{n1} &amp; \cdots &amp; x_{np} \end{pmatrix} .</span></li>
+</ul>
+</section>
+<section id="regression-notation" class="slide level2">
+<h2>Regression notation</h2>
+<ul>
+<li><span class="math inline">n</span> is the number of observations, <span class="math inline">p</span> is the number of features,</li>
+<li>the true coefficients are <span class="math inline">\boldsymbol{\beta} = (\beta_0, \beta_1, \ldots, \beta_p)</span>,</li>
+<li><span class="math inline">\beta_0</span> is the intercept, <span class="math inline">\beta_1, \ldots, \beta_p</span> are the coefficients,</li>
+<li><span class="math inline">\boldsymbol{\beta}^*</span> is the estimated coefficient vector,</li>
+<li><span class="math inline">\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})</span> is the feature vector for the <span class="math inline">i</span>th observation,</li>
+<li><span class="math inline">y_i</span> is the response variable for the <span class="math inline">i</span>th observation,</li>
+<li><span class="math inline">\hat{y}_i</span> is the predicted value for the <span class="math inline">i</span>th observation,</li>
+<li>probability density functions (p.d.f.), probability mass functions (p.m.f.), cumulative distribution functions (c.d.f.).</li>
+</ul>
+</section>
+<section id="traditional-regression-1" class="slide level2">
+<h2>Traditional Regression</h2>
+<p>Multiple linear regression assumes the data-generating process is</p>
+<p><span class="math display">Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \ldots + \beta_p x_{ip} + \varepsilon</span></p>
+<p>where <span class="math inline">\varepsilon \sim \mathcal{N}(0, \sigma^2)</span>.</p>
+<p>We estimate the coefficients <span class="math inline">\beta_0, \beta_1, \ldots, \beta_p</span> by minimising the sum of squared residuals or mean squared error</p>
+<p><span class="math display">\text{RSS} := \sum_{i=1}^n (y_i - \hat{y}_i)^2
+, \quad \text{MSE} := \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 ,
+</span></p>
+<p>where <span class="math inline">\hat{y}_i</span> is the predicted value for the <span class="math inline">i</span>th observation.</p>
+</section>
+<section id="visualising-the-distribution-of-each-y" class="slide level2">
+<h2>Visualising the distribution of each <span class="math inline">Y</span></h2>
+<div class="cell" data-execution_count="13">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a></a><span class="co"># Generate sample data for linear regression</span></span>
+<span id="cb11-2"><a></a>np.random.seed(<span class="dv">0</span>)</span>
+<span id="cb11-3"><a></a>X_toy <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">10</span>)</span>
+<span id="cb11-4"><a></a>np.random.shuffle(X_toy)</span>
+<span id="cb11-5"><a></a></span>
+<span id="cb11-6"><a></a>beta_0 <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb11-7"><a></a>beta_1 <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb11-8"><a></a>y_toy <span class="op">=</span> beta_0 <span class="op">+</span> beta_1 <span class="op">*</span> X_toy <span class="op">+</span> np.random.normal(scale<span class="op">=</span><span class="dv">2</span>, size<span class="op">=</span>X_toy.shape)</span>
+<span id="cb11-9"><a></a>sigma_toy <span class="op">=</span> <span class="dv">2</span>  <span class="co"># Assuming a standard deviation for the normal distribution</span></span>
+<span id="cb11-10"><a></a></span>
+<span id="cb11-11"><a></a><span class="co"># Fit a simple linear regression model</span></span>
+<span id="cb11-12"><a></a>coefficients <span class="op">=</span> np.polyfit(X_toy, y_toy, <span class="dv">1</span>)</span>
+<span id="cb11-13"><a></a>predicted_y <span class="op">=</span> np.polyval(coefficients, X_toy)</span>
+<span id="cb11-14"><a></a></span>
+<span id="cb11-15"><a></a><span class="co"># Plot the data points and the fitted line</span></span>
+<span id="cb11-16"><a></a>plt.scatter(X_toy, y_toy, label<span class="op">=</span><span class="st">'Data Points'</span>)</span>
+<span id="cb11-17"><a></a>plt.plot(X_toy, predicted_y, color<span class="op">=</span><span class="st">'red'</span>, label<span class="op">=</span><span class="st">'Fitted Line'</span>)</span>
+<span id="cb11-18"><a></a></span>
+<span id="cb11-19"><a></a><span class="co"># Draw the normal distribution bell curve sideways at each data point</span></span>
+<span id="cb11-20"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(X_toy)):</span>
+<span id="cb11-21"><a></a>    mu <span class="op">=</span> predicted_y[i]</span>
+<span id="cb11-22"><a></a>    y_values <span class="op">=</span> np.linspace(mu <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma_toy, mu <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma_toy, <span class="dv">100</span>)</span>
+<span id="cb11-23"><a></a>    x_values <span class="op">=</span> stats.norm.pdf(y_values, mu, sigma_toy) <span class="op">+</span> X_toy[i]</span>
+<span id="cb11-24"><a></a>    plt.plot(x_values, y_values, color<span class="op">=</span><span class="st">'blue'</span>, alpha<span class="op">=</span><span class="fl">0.5</span>)</span>
+<span id="cb11-25"><a></a></span>
+<span id="cb11-26"><a></a>plt.xlabel(<span class="st">'$x$'</span>)</span>
+<span id="cb11-27"><a></a>plt.ylabel(<span class="st">'$y$'</span>)</span>
+<span id="cb11-28"><a></a>plt.legend()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-13-output-1.png" width="1588" height="756"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="the-probabilistic-view" class="slide level2">
+<h2>The probabilistic view</h2>
+<p><span class="math display">Y_i \sim \mathcal{N}(\mu_i, \sigma^2)</span></p>
+<p>where <span class="math inline">\mu_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip}</span>, and the <span class="math inline">\sigma^2</span> is known.</p>
+<p>The <span class="math inline">\mathcal{N}(\mu, \sigma^2)</span> normal distribution has p.d.f.</p>
+<p><span class="math display">f(y) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y - \mu)^2}{2\sigma^2}\right) .</span></p>
+<p>The likelihood function is</p>
+<p><span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - \mu_i)^2}{2\sigma^2}\right)
+</span> <span class="math display">
+\Rightarrow \ell(\boldsymbol{\beta}) = -\frac{n}{2}\log(2\pi) - \frac{n}{2}\log(\sigma^2) - \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
+</span></p>
+<p>Perform maximum likelihood estimation to find <span class="math inline">\boldsymbol{\beta}</span>.</p>
+</section>
+<section id="the-predicted-distributions" class="slide level2">
+<h2>The predicted distributions</h2>
+<div class="cell" data-execution_count="14">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a></a>y_pred <span class="op">=</span> np.polyval(coefficients, X_toy[:<span class="dv">4</span>])</span>
+<span id="cb12-2"><a></a></span>
+<span id="cb12-3"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>))</span>
+<span id="cb12-4"><a></a></span>
+<span id="cb12-5"><a></a>x_min <span class="op">=</span> y_pred[:<span class="dv">4</span>].min() <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb12-6"><a></a>x_max <span class="op">=</span> y_pred[:<span class="dv">4</span>].max() <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb12-7"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb12-8"><a></a></span>
+<span id="cb12-9"><a></a><span class="co"># Plot each normal distribution with different means vertically</span></span>
+<span id="cb12-10"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb12-11"><a></a>    mu <span class="op">=</span> y_pred[i]</span>
+<span id="cb12-12"><a></a>    y_grid <span class="op">=</span> stats.norm.pdf(x_grid, mu, sigma_toy)</span>
+<span id="cb12-13"><a></a>    ax.plot(x_grid, y_grid)</span>
+<span id="cb12-14"><a></a>    ax.set_ylabel(<span class="ss">f'$f(y ; </span><span class="ch">\\</span><span class="ss">boldsymbol</span><span class="ch">{{</span><span class="ss">x</span><span class="ch">}}</span><span class="ss">_</span><span class="ch">{{</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ch">}}</span><span class="ss">)$'</span>)</span>
+<span id="cb12-15"><a></a>    ax.set_xticks([y_pred[i]], labels<span class="op">=</span>[<span class="vs">r'$\mu_{'</span> <span class="op">+</span> <span class="bu">str</span>(i<span class="op">+</span><span class="dv">1</span>) <span class="op">+</span> <span class="vs">r'}$'</span>])</span>
+<span id="cb12-16"><a></a>    ax.plot(y_toy[i], <span class="dv">0</span>, <span class="st">'rx'</span>, clip_on<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb12-17"><a></a></span>
+<span id="cb12-18"><a></a>plt.tight_layout()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-14-output-1.png" width="1711" height="1018"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="the-machine-learning-view" class="slide level2">
+<h2>The machine learning view</h2>
+<p>The negative log-likelihood <span class="math inline">\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})</span> is to be minimised:</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta})
+= \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
+</span></p>
+<p>As <span class="math inline">\sigma^2</span> is fixed, minimising NLL is equivalent to minimising MSE:</p>
+<p><span class="math display">
+\begin{aligned}
+\boldsymbol{\beta}^*
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{NLL}(\boldsymbol{\beta}) \\
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 \\
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{1}{n} \sum_{i=1}^n \Bigl( y_i - \hat{y}_i(\boldsymbol{x}_i; \boldsymbol{\beta}) \Bigr)^2 \\
+&amp;= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{MSE}\bigl( \boldsymbol{y}, \hat{\boldsymbol{y}}(\boldsymbol{\mathbf{X}}; \boldsymbol{\beta}) \bigr).
+\end{aligned}
+</span></p>
+</section>
+<section id="generalised-linear-model-glm" class="slide level2">
+<h2>Generalised Linear Model (GLM)</h2>
+<p>The GLM is often characterised by the mean prediction:</p>
+<p><span class="math display">
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = g^{-1} \left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)
+</span></p>
+<p>where <span class="math inline">g</span> is the link function.</p>
+<p>Common GLM distributions for the response variable include:</p>
+<ul>
+<li>Normal distribution with identity link (just MLR)</li>
+<li>Bernoulli distribution with logit link (logistic regression)</li>
+<li>Poisson distribution with log link (Poisson regression)</li>
+<li>Gamma distribution with log link</li>
+</ul>
+</section>
+<section id="logistic-regression" class="slide level2">
+<h2>Logistic regression</h2>
+<p>A Bernoulli distribution with parameter <span class="math inline">p</span> has p.m.f.</p>
+<p><span class="math display">
+f(y)\ =\ \begin{cases}
+p &amp; \text{if } y = 1 \\
+1 - p &amp; \text{if } y = 0
+\end{cases}
+\ =\ p^y (1 - p)^{1 - y}.
+</span></p>
+<p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> follows a Bernoulli distribution with parameter</p>
+<p><span class="math display">
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \frac{1}{1 + \exp\left(-\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)} = \mathbb{P}(Y=1|\boldsymbol{X}=\boldsymbol{x}).
+</span></p>
+<p>The likelihood function, using <span class="math inline">\mu_i := \mu(\boldsymbol{x}_i; \boldsymbol{\beta})</span>, is</p>
+<p><span class="math display">
+L(\boldsymbol{\beta})
+\ =\ \prod_{i=1}^n \begin{cases}
+\mu_i &amp; \text{if } y_i = 1 \\
+1 - \mu_i &amp; \text{if } y_i = 0
+\end{cases}
+\ =\ \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i} .
+</span></p>
+</section>
+<section id="binary-cross-entropy-loss" class="slide level2">
+<h2>Binary cross-entropy loss</h2>
+<p><span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i}
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+</span></p>
+<p>The negative log-likelihood is</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+</span></p>
+<p>The binary cross-entropy loss is basically identical: <span class="math display">
+\text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = - \frac{1}{n} \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
+</span></p>
+</section>
+<section id="poisson-regression" class="slide level2">
+<h2>Poisson regression</h2>
+<p>A Poisson distribution with rate <span class="math inline">\lambda</span> has p.m.f. <span class="math display">
+f(y) = \frac{\lambda^y \exp(-\lambda)}{y!}.
+</span></p>
+<p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is Poisson distributed with parameter</p>
+<p><span class="math display">
+\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right) .
+</span></p>
+<p>The likelihood function is</p>
+<p><span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
+</span> <span class="math display">
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( -\mu_i + y_i \log(\mu_i) - \log(y_i!) \Bigr).
+</span></p>
+</section>
+<section id="poisson-loss" class="slide level2">
+<h2>Poisson loss</h2>
+<p>The negative log-likelihood is</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) + \log(y_i!) \Bigr) .
+</span></p>
+<p>The Poisson loss is</p>
+<p><span class="math display">
+\text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \frac{1}{n} \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
+</span></p>
+</section>
+<section id="gamma-regression" class="slide level2">
+<h2>Gamma regression</h2>
+<p>A Gamma distribution with mean <span class="math inline">\mu</span> and dispersion <span class="math inline">\phi</span> has p.d.f. <span class="math display">
+f(y; \mu, \phi) = \frac{(\mu \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y^{\frac{1}{\phi} - 1} \mathrm{e}^{-\frac{y}{\mu \phi}}
+</span></p>
+<p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is Gamma distributed with a dispersion of <span class="math inline">\phi</span> and a mean of <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)</span>.</p>
+<p>The likelihood function is <span class="math display">
+L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y_i^{\frac{1}{\phi} - 1} \exp\left(-\frac{y_i}{\mu_i \phi}\right)
+</span></p>
+<p><span class="math display">
+\Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ -\frac{1}{\phi} \log(\mu_i \phi) - \log \Gamma\left(\frac{1}{\phi}\right) + \left(\frac{1}{\phi} - 1\right) \log(y_i) - \frac{y_i}{\mu_i \phi} \right].
+</span></p>
+</section>
+<section id="gamma-loss" class="slide level2">
+<h2>Gamma loss</h2>
+<p>The negative log-likelihood is</p>
+<p><span class="math display">
+\text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i \phi) + \log \Gamma\left(\frac{1}{\phi}\right) - \left(\frac{1}{\phi} - 1\right) \log(y_i) + \frac{y_i}{\mu_i \phi} \right].
+</span></p>
+<p>Since <span class="math inline">\phi</span> is a nuisance parameter <span class="math display">
+\text{NLL}(\boldsymbol{\beta})
+= \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i) + \frac{y_i}{\mu_i \phi} \right] + \text{const}
+\propto \sum_{i=1}^n \left[ \log(\mu_i) + \frac{y_i}{\mu_i} \right].
+</span></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Note</strong></p>
+</div>
+<div class="callout-content">
+<p>As <span class="math inline">\log(\mu_i) = \log(y_i) - \log(y_i / \mu_i)</span>, we could write an alternative version <span class="math display">
+\text{NLL}(\boldsymbol{\beta})
+\propto \sum_{i=1}^n \left[ \log(y_i) - \log\Bigl(\frac{y_i}{\mu_i}\Bigr) + \frac{y_i}{\mu_i} \right]
+\propto \sum_{i=1}^n \left[ \frac{y_i}{\mu_i} - \log\Bigl(\frac{y_i}{\mu_i}\Bigr) \right].
+</span></p>
+</div>
+</div>
+</div>
+</section>
+<section id="why-do-actuaries-use-glms" class="slide level2">
+<h2>Why do actuaries use GLMs?</h2>
+<ul>
+<li>GLMs are interpretable.</li>
+<li>GLMs are flexible (can handle different types of response variables).</li>
+<li>We get the full distribution of the response variable, not just the mean.</li>
+</ul>
+<p>This last point is particularly important for analysing worst-case scenarios.</p>
+</section></section>
+<section>
+<section id="stochastic-forecasts" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Stochastic Forecasts</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="stock-price-forecasting" class="slide level2">
+<h2>Stock price forecasting</h2>
+<div class="cell" data-execution_count="15">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a></a><span class="kw">def</span> lagged_timeseries(df, target, window<span class="op">=</span><span class="dv">30</span>):</span>
+<span id="cb13-2"><a></a>    lagged <span class="op">=</span> pd.DataFrame()</span>
+<span id="cb13-3"><a></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(window, <span class="dv">0</span>, <span class="op">-</span><span class="dv">1</span>):</span>
+<span id="cb13-4"><a></a>        lagged[<span class="ss">f"T-</span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">"</span>] <span class="op">=</span> df[target].shift(i)</span>
+<span id="cb13-5"><a></a>    lagged[<span class="st">"T"</span>] <span class="op">=</span> df[target].values</span>
+<span id="cb13-6"><a></a>    <span class="cf">return</span> lagged</span>
+<span id="cb13-7"><a></a></span>
+<span id="cb13-8"><a></a></span>
+<span id="cb13-9"><a></a>stocks <span class="op">=</span> pd.read_csv(<span class="st">"../data/aus_fin_stocks.csv"</span>)</span>
+<span id="cb13-10"><a></a>stocks[<span class="st">"Date"</span>] <span class="op">=</span> pd.to_datetime(stocks[<span class="st">"Date"</span>])</span>
+<span id="cb13-11"><a></a>stocks <span class="op">=</span> stocks.set_index(<span class="st">"Date"</span>)</span>
+<span id="cb13-12"><a></a>_ <span class="op">=</span> stocks.pop(<span class="st">"ASX200"</span>)</span>
+<span id="cb13-13"><a></a>stock <span class="op">=</span> stocks[[<span class="st">"CBA"</span>]]</span>
+<span id="cb13-14"><a></a>stock <span class="op">=</span> stock.ffill()</span>
+<span id="cb13-15"><a></a></span>
+<span id="cb13-16"><a></a><span class="co"># Compute daily log returns</span></span>
+<span id="cb13-17"><a></a>stock_log <span class="op">=</span> np.log(stock <span class="op">/</span> stock.shift(<span class="dv">1</span>)).dropna()</span>
+<span id="cb13-18"><a></a></span>
+<span id="cb13-19"><a></a><span class="co"># Helper functions for converting log returns to prices</span></span>
+<span id="cb13-20"><a></a><span class="kw">def</span> log_to_price(log_returns, initial_price):</span>
+<span id="cb13-21"><a></a>    cumulative_log_returns <span class="op">=</span> log_returns.cumsum()</span>
+<span id="cb13-22"><a></a>    <span class="cf">return</span> initial_price <span class="op">*</span> np.exp(cumulative_log_returns)</span>
+<span id="cb13-23"><a></a></span>
+<span id="cb13-24"><a></a><span class="kw">def</span> get_last_price(stock_df, cutoff_date):</span>
+<span id="cb13-25"><a></a>    last_known_date <span class="op">=</span> stock_df.loc[:cutoff_date].index[<span class="op">-</span><span class="dv">1</span>]</span>
+<span id="cb13-26"><a></a>    <span class="cf">return</span> stock_df.loc[last_known_date, <span class="st">"CBA"</span>]</span>
+<span id="cb13-27"><a></a></span>
+<span id="cb13-28"><a></a><span class="co"># Create lagged features from log returns</span></span>
+<span id="cb13-29"><a></a>df_lags <span class="op">=</span> lagged_timeseries(stock_log, <span class="st">"CBA"</span>, <span class="dv">40</span>)</span>
+<span id="cb13-30"><a></a></span>
+<span id="cb13-31"><a></a><span class="co"># Split the data in time</span></span>
+<span id="cb13-32"><a></a>X_train <span class="op">=</span> df_lags.loc[:<span class="st">"2024"</span>]</span>
+<span id="cb13-33"><a></a>X_test <span class="op">=</span> df_lags.loc[<span class="st">"2025"</span>:]</span>
+<span id="cb13-34"><a></a></span>
+<span id="cb13-35"><a></a><span class="co"># Remove any with NAs and split into X and y</span></span>
+<span id="cb13-36"><a></a>X_train <span class="op">=</span> X_train.dropna()</span>
+<span id="cb13-37"><a></a>X_test <span class="op">=</span> X_test.dropna()</span>
+<span id="cb13-38"><a></a></span>
+<span id="cb13-39"><a></a>y_train <span class="op">=</span> X_train.pop(<span class="st">"T"</span>)</span>
+<span id="cb13-40"><a></a>y_test <span class="op">=</span> X_test.pop(<span class="st">"T"</span>)</span>
+<span id="cb13-41"><a></a></span>
+<span id="cb13-42"><a></a>lr <span class="op">=</span> LinearRegression()</span>
+<span id="cb13-43"><a></a>lr.fit(X_train, y_train)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="columns">
+<div class="column" style="width:50%;">
+<div class="cell" data-execution_count="16">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a></a>stocks.plot()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-16-output-1.png" width="1553" height="811"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:50%;">
+<div class="cell" data-execution_count="17">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a></a>stock_log.plot()</span>
+<span id="cb15-2"><a></a>plt.ylabel(<span class="st">"Daily Log Return"</span>)</span>
+<span id="cb15-3"><a></a>plt.title(<span class="st">"CBA Daily Log Returns"</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-17-output-1.png" width="1645" height="823"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<section id="noisy-auto-regressive-forecast" class="slide level2">
+<h2>Noisy auto-regressive forecast</h2>
+<div class="cell" data-execution_count="18">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a></a><span class="kw">def</span> noisy_autoregressive_forecast(model, X_val, sigma, suppress<span class="op">=</span><span class="va">False</span>):</span>
+<span id="cb16-2"><a></a>    <span class="co">"""</span></span>
+<span id="cb16-3"><a></a><span class="co">    Generate a multi-step forecast using the given model.</span></span>
+<span id="cb16-4"><a></a><span class="co">    """</span></span>
+<span id="cb16-5"><a></a>    multi_step <span class="op">=</span> pd.Series(index<span class="op">=</span>X_val.index, name<span class="op">=</span><span class="st">"Multi Step"</span>)</span>
+<span id="cb16-6"><a></a></span>
+<span id="cb16-7"><a></a>    <span class="co"># Initialize the input data for forecasting</span></span>
+<span id="cb16-8"><a></a>    input_data <span class="op">=</span> X_val.iloc[<span class="dv">0</span>].values.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb16-9"><a></a></span>
+<span id="cb16-10"><a></a>    <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="bu">len</span>(multi_step)):</span>
+<span id="cb16-11"><a></a>        <span class="co"># Ensure input_data has the correct feature names</span></span>
+<span id="cb16-12"><a></a>        input_df <span class="op">=</span> pd.DataFrame(input_data, columns<span class="op">=</span>X_val.columns)</span>
+<span id="cb16-13"><a></a>        <span class="cf">if</span> suppress:</span>
+<span id="cb16-14"><a></a>            next_value <span class="op">=</span> model.predict(input_df, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb16-15"><a></a>        <span class="cf">else</span>:</span>
+<span id="cb16-16"><a></a>            next_value <span class="op">=</span> model.predict(input_df)</span>
+<span id="cb16-17"><a></a></span>
+<span id="cb16-18"><a></a>        next_value <span class="op">+=</span> np.random.normal(<span class="dv">0</span>, sigma)</span>
+<span id="cb16-19"><a></a></span>
+<span id="cb16-20"><a></a>        multi_step.iloc[i] <span class="op">=</span> next_value</span>
+<span id="cb16-21"><a></a></span>
+<span id="cb16-22"><a></a>        <span class="co"># Append that prediction to the input for the next forecast</span></span>
+<span id="cb16-23"><a></a>        <span class="cf">if</span> i <span class="op">+</span> <span class="dv">1</span> <span class="op">&lt;</span> <span class="bu">len</span>(multi_step):</span>
+<span id="cb16-24"><a></a>            input_data <span class="op">=</span> np.append(input_data[:, <span class="dv">1</span>:], next_value).reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb16-25"><a></a></span>
+<span id="cb16-26"><a></a>    <span class="cf">return</span> multi_step</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="original-forecast" class="slide level2">
+<h2>Original forecast</h2>
+<div class="cell" data-execution_count="19">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a></a>lr_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_test, <span class="dv">0</span>)</span>
+<span id="cb17-2"><a></a>last_price <span class="op">=</span> get_last_price(stock, cutoff_date<span class="op">=</span><span class="st">"2024-12"</span>)</span>
+<span id="cb17-3"><a></a>price_forecast <span class="op">=</span> log_to_price(lr_forecast, last_price)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="20">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a></a>stock.loc[price_forecast.index, <span class="st">"AR Log-Return"</span>] <span class="op">=</span> price_forecast</span>
+<span id="cb18-2"><a></a></span>
+<span id="cb18-3"><a></a><span class="kw">def</span> plot_forecasts(stock):</span>
+<span id="cb18-4"><a></a>    stock.loc[<span class="st">"2024-12"</span>:<span class="st">"2025"</span>].plot()</span>
+<span id="cb18-5"><a></a>    plt.axvline(<span class="st">"2025"</span>, color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb18-6"><a></a>    plt.ylabel(<span class="st">"Stock Price ($)"</span>)</span>
+<span id="cb18-7"><a></a>    plt.legend(loc<span class="op">=</span><span class="st">"center left"</span>, bbox_to_anchor<span class="op">=</span>(<span class="dv">1</span>, <span class="fl">0.5</span>))</span>
+<span id="cb18-8"><a></a></span>
+<span id="cb18-9"><a></a>plot_forecasts(stock)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-20-output-1.png" width="2186" height="788"></p>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="21">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a></a>residuals <span class="op">=</span> y_train.loc[<span class="st">"2015"</span>:] <span class="op">-</span> lr.predict(X_train.loc[<span class="st">"2015"</span>:])</span>
+<span id="cb19-2"><a></a>sigma <span class="op">=</span> np.std(residuals)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="with-noise" class="slide level2">
+<h2>With noise</h2>
+<div class="cell" data-execution_count="22">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a></a>np.random.seed(<span class="dv">1</span>)</span>
+<span id="cb20-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_test, sigma)</span>
+<span id="cb20-3"><a></a>price_noisy <span class="op">=</span> log_to_price(lr_noisy_forecast, last_price)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="23">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a></a>stock.loc[price_noisy.index, <span class="st">"AR Noisy Log-Return"</span>] <span class="op">=</span> price_noisy</span>
+<span id="cb21-2"><a></a>plot_forecasts(stock)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-23-output-1.png" width="2341" height="788"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="with-noise-1" class="slide level2" data-visibility="uncounted">
+<h2>With noise</h2>
+<div class="cell" data-execution_count="24">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a></a>np.random.seed(<span class="dv">2</span>)</span>
+<span id="cb22-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_test, sigma)</span>
+<span id="cb22-3"><a></a>price_noisy <span class="op">=</span> log_to_price(lr_noisy_forecast, last_price)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="25">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a></a>stock.loc[price_noisy.index, <span class="st">"AR Noisy Log-Return"</span>] <span class="op">=</span> price_noisy</span>
+<span id="cb23-2"><a></a>plot_forecasts(stock)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-25-output-1.png" width="2341" height="788"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="with-noise-2" class="slide level2" data-visibility="uncounted">
+<h2>With noise</h2>
+<div class="cell" data-execution_count="26">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a></a>np.random.seed(<span class="dv">3</span>)</span>
+<span id="cb24-2"><a></a>lr_noisy_forecast <span class="op">=</span> noisy_autoregressive_forecast(lr, X_test, sigma)</span>
+<span id="cb24-3"><a></a>price_noisy <span class="op">=</span> log_to_price(lr_noisy_forecast, last_price)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="27">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a></a>stock.loc[price_noisy.index, <span class="st">"AR Noisy Log-Return"</span>] <span class="op">=</span> price_noisy</span>
+<span id="cb25-2"><a></a>plot_forecasts(stock)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-27-output-1.png" width="2341" height="788"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="many-noisy-forecasts" class="slide level2" data-visibility="uncounted">
+<h2>Many noisy forecasts</h2>
+<div class="cell" data-execution_count="28">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a></a>num_forecasts <span class="op">=</span> <span class="dv">300</span></span>
+<span id="cb26-2"><a></a>forecasts <span class="op">=</span> []</span>
+<span id="cb26-3"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_forecasts):</span>
+<span id="cb26-4"><a></a>    log_sim <span class="op">=</span> noisy_autoregressive_forecast(lr, X_test, sigma)</span>
+<span id="cb26-5"><a></a>    price_sim <span class="op">=</span> log_to_price(log_sim, last_price)</span>
+<span id="cb26-6"><a></a>    forecasts.append(price_sim)</span>
+<span id="cb26-7"><a></a>noisy_forecasts <span class="op">=</span> pd.concat(forecasts, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb26-8"><a></a>noisy_forecasts.index <span class="op">=</span> X_test.index</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="29">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a></a>noisy_forecasts.loc[<span class="st">"2024-12"</span>:<span class="st">"2025"</span>].plot(legend<span class="op">=</span><span class="va">False</span>, alpha<span class="op">=</span><span class="fl">0.4</span>)</span>
+<span id="cb27-2"><a></a>plt.ylabel(<span class="st">"Stock Price"</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-29-output-1.png" width="1619" height="788"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="prediction-intervals" class="slide level2">
+<h2>95% “prediction intervals”</h2>
+<div class="cell" data-execution_count="30">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a></a><span class="co"># Calculate quantiles for the forecasts</span></span>
+<span id="cb28-2"><a></a>lower_quantile <span class="op">=</span> noisy_forecasts.quantile(<span class="fl">0.025</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb28-3"><a></a>upper_quantile <span class="op">=</span> noisy_forecasts.quantile(<span class="fl">0.975</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb28-4"><a></a>mean_forecast <span class="op">=</span> noisy_forecasts.mean(axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="31">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a></a><span class="co"># Plot the mean forecast</span></span>
+<span id="cb29-2"><a></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">8</span>, <span class="dv">3</span>))</span>
+<span id="cb29-3"><a></a></span>
+<span id="cb29-4"><a></a>plt.plot(stock.loc[<span class="st">"2024-12"</span>:<span class="st">"2025"</span>].index, stock.loc[<span class="st">"2024-12"</span>:<span class="st">"2025"</span>][<span class="st">"CBA"</span>], label<span class="op">=</span><span class="st">"CBA"</span>)</span>
+<span id="cb29-5"><a></a></span>
+<span id="cb29-6"><a></a>plt.plot(mean_forecast, label<span class="op">=</span><span class="st">"Mean"</span>)</span>
+<span id="cb29-7"><a></a></span>
+<span id="cb29-8"><a></a><span class="co"># Plot the quantile-based shaded area</span></span>
+<span id="cb29-9"><a></a>plt.fill_between(mean_forecast.index, </span>
+<span id="cb29-10"><a></a>                 lower_quantile, </span>
+<span id="cb29-11"><a></a>                 upper_quantile, </span>
+<span id="cb29-12"><a></a>                 color<span class="op">=</span><span class="st">"grey"</span>, alpha<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb29-13"><a></a></span>
+<span id="cb29-14"><a></a><span class="co"># Plot settings</span></span>
+<span id="cb29-15"><a></a>plt.axvline(pd.Timestamp(<span class="st">"2025-01-01"</span>), color<span class="op">=</span><span class="st">"black"</span>, linestyle<span class="op">=</span><span class="st">"--"</span>)</span>
+<span id="cb29-16"><a></a>plt.legend(loc<span class="op">=</span><span class="st">"center left"</span>, bbox_to_anchor<span class="op">=</span>(<span class="dv">1</span>, <span class="fl">0.5</span>))</span>
+<span id="cb29-17"><a></a>plt.xlabel(<span class="st">"Date"</span>)</span>
+<span id="cb29-18"><a></a>plt.ylabel(<span class="st">"Stock Price"</span>)</span>
+<span id="cb29-19"><a></a>plt.tight_layout()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-31-output-1.png" width="2765" height="1015"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="residuals" class="slide level2">
+<h2>Residuals</h2>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="33">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a></a>y_pred <span class="op">=</span> lr.predict(X_train)</span>
+<span id="cb30-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> y_pred</span>
+<span id="cb30-3"><a></a>residuals <span class="op">-=</span> np.mean(residuals)</span>
+<span id="cb30-4"><a></a>residuals <span class="op">/=</span> np.std(residuals)</span>
+<span id="cb30-5"><a></a>stats.shapiro(residuals)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>/Users/z3535837/Library/CloudStorage/Dropbox/Lecturing/ACTL3143/DeepLearningForActuaries/.venv/lib/python3.14/site-packages/scipy/stats/_axis_nan_policy.py:592: UserWarning: scipy.stats.shapiro: For N &gt; 5000, computed p-value may not be accurate. Current N is 6582.
+  res = hypotest_fun_out(*samples, **kwds)</code></pre>
+</div>
+<div class="cell-output cell-output-display" data-execution_count="32">
+<pre><code>ShapiroResult(statistic=np.float64(0.9305463633130849), pvalue=np.float64(5.938320016173568e-48))</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="34">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a></a>plt.hist(residuals, bins<span class="op">=</span><span class="dv">60</span>, density<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb33-2"><a></a>x <span class="op">=</span> np.linspace(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">100</span>)</span>
+<span id="cb33-3"><a></a>plt.xlim(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb33-4"><a></a>plt.plot(x, stats.norm.pdf(x, <span class="dv">0</span>, <span class="dv">1</span>))<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-34-output-1.png" width="723" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<section id="q-q-plot-and-p-p-plot" class="slide level2" data-visibility="uncounted">
+<h2>Q-Q plot and P-P plot</h2>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="35">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a></a>sm.qqplot(residuals, line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-35-output-1.png" width="784" height="756"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="36">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a></a>sm.ProbPlot(residuals).ppplot(line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-36-output-1.png" width="828" height="774"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<section id="residuals-against-time" class="slide level2">
+<h2>Residuals against time</h2>
+<div class="cell" data-execution_count="38">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a></a>plt.plot(y_train.index, residuals)</span>
+<span id="cb36-2"><a></a>plt.xlabel(<span class="st">"Date"</span>)</span>
+<span id="cb36-3"><a></a>plt.ylabel(<span class="st">"Standardised Residuals"</span>)</span>
+<span id="cb36-4"><a></a>plt.tight_layout()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-38-output-1.png" width="1715" height="665"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Heteroskedasticity!</p>
+</section>
+<section id="retrain-on-less-data" class="slide level2">
+<h2>Retrain on less data</h2>
+<div class="cell" data-execution_count="39">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a></a><span class="co"># Drop 2008-2009 and also 2020-2021</span></span>
+<span id="cb37-2"><a></a>mask <span class="op">=</span> <span class="op">~</span>((y_train.index.year <span class="op">&gt;=</span> <span class="dv">2008</span>) <span class="op">&amp;</span> (y_train.index.year <span class="op">&lt;=</span> <span class="dv">2009</span>)) <span class="op">&amp;</span> <span class="op">~</span>((y_train.index.year <span class="op">&gt;=</span> <span class="dv">2020</span>) <span class="op">&amp;</span> (y_train.index.year <span class="op">&lt;=</span> <span class="dv">2021</span>))</span>
+<span id="cb37-3"><a></a>X2 <span class="op">=</span> X_train.loc[mask]</span>
+<span id="cb37-4"><a></a>y2 <span class="op">=</span> y_train.loc[mask]</span>
+<span id="cb37-5"><a></a></span>
+<span id="cb37-6"><a></a>lr2 <span class="op">=</span> LinearRegression()</span>
+<span id="cb37-7"><a></a>lr2.fit(X2, y2)</span>
+<span id="cb37-8"><a></a></span>
+<span id="cb37-9"><a></a>res2 <span class="op">=</span> y2 <span class="op">-</span> lr2.predict(X2)</span>
+<span id="cb37-10"><a></a>res2 <span class="op">=</span> (res2 <span class="op">-</span> np.mean(res2)) <span class="op">/</span> np.std(res2)</span>
+<span id="cb37-11"><a></a></span>
+<span id="cb37-12"><a></a>plt.plot(y2.index, res2)</span>
+<span id="cb37-13"><a></a>plt.xlabel(<span class="st">"Date"</span>)</span>
+<span id="cb37-14"><a></a>plt.ylabel(<span class="st">"Standardised Residuals"</span>)</span>
+<span id="cb37-15"><a></a>plt.tight_layout()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-39-output-1.png" width="1715" height="665"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Refit the model without these crisis years.</p>
+</section>
+<section id="residual-diagnostics" class="slide level2" data-visibility="uncounted">
+<h2>Residual diagnostics</h2>
+<div class="cell" data-execution_count="40">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a></a>stats.shapiro(res2)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="39">
+<pre><code>ShapiroResult(statistic=np.float64(0.9797545738507011), pvalue=np.float64(1.858481775102687e-27))</code></pre>
+</div>
+</div>
+<div class="columns">
+<div class="column" style="width:33%;">
+<div class="cell" data-execution_count="42">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a></a>plt.hist(res2, bins<span class="op">=</span><span class="dv">60</span>, density<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb40-2"><a></a>x <span class="op">=</span> np.linspace(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>, <span class="dv">100</span>)</span>
+<span id="cb40-3"><a></a>plt.xlim(<span class="op">-</span><span class="dv">3</span>, <span class="dv">3</span>)</span>
+<span id="cb40-4"><a></a>plt.plot(x, stats.norm.pdf(x, <span class="dv">0</span>, <span class="dv">1</span>))<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-42-output-1.png" width="723" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="cell" data-execution_count="43">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a></a>sm.qqplot(res2, line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-43-output-1.png" width="784" height="756"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:33%;">
+<div class="cell" data-execution_count="44">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a></a>sm.ProbPlot(res2).ppplot(line<span class="op">=</span><span class="st">"45"</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-44-output-1.png" width="828" height="774"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section></section>
+<section>
+<section id="glms-and-neural-networks" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>GLMs and Neural Networks</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="french-motor-claim-sizes" class="slide level2">
+<h2>French motor claim sizes</h2>
+<div class="cell" data-execution_count="46">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a></a>sev <span class="op">=</span> pd.read_csv(<span class="st">'../data/freMTPL2sev.csv'</span>)</span>
+<span id="cb43-2"><a></a>cov <span class="op">=</span> pd.read_csv(<span class="st">'../data/freMTPL2freq.csv'</span>).drop(columns<span class="op">=</span>[<span class="st">'ClaimNb'</span>])</span>
+<span id="cb43-3"><a></a>sev <span class="op">=</span> pd.merge(sev, cov, on<span class="op">=</span><span class="st">'IDpol'</span>, how<span class="op">=</span><span class="st">'left'</span>).drop(columns<span class="op">=</span>[<span class="st">"IDpol"</span>]).dropna()</span>
+<span id="cb43-4"><a></a>sev</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="45">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+
+<table class="dataframe caption-top" data-border="1">
+<thead>
+<tr class="header" style="text-align: right;">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">ClaimAmount</th>
+<th data-quarto-table-cell-role="th">Exposure</th>
+<th data-quarto-table-cell-role="th">VehPower</th>
+<th data-quarto-table-cell-role="th">VehAge</th>
+<th data-quarto-table-cell-role="th">DrivAge</th>
+<th data-quarto-table-cell-role="th">BonusMalus</th>
+<th data-quarto-table-cell-role="th">VehBrand</th>
+<th data-quarto-table-cell-role="th">VehGas</th>
+<th data-quarto-table-cell-role="th">Area</th>
+<th data-quarto-table-cell-role="th">Density</th>
+<th data-quarto-table-cell-role="th">Region</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>995.20</td>
+<td>0.59</td>
+<td>11.0</td>
+<td>0.0</td>
+<td>39.0</td>
+<td>56.0</td>
+<td>B12</td>
+<td>Diesel</td>
+<td>D</td>
+<td>778.0</td>
+<td>Picardie</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>1128.12</td>
+<td>0.95</td>
+<td>4.0</td>
+<td>1.0</td>
+<td>49.0</td>
+<td>50.0</td>
+<td>B12</td>
+<td>Regular</td>
+<td>E</td>
+<td>2354.0</td>
+<td>Ile-de-France</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">...</th>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">26637</th>
+<td>767.55</td>
+<td>0.43</td>
+<td>6.0</td>
+<td>0.0</td>
+<td>67.0</td>
+<td>50.0</td>
+<td>B2</td>
+<td>Diesel</td>
+<td>C</td>
+<td>142.0</td>
+<td>Languedoc-Roussillon</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">26638</th>
+<td>1500.00</td>
+<td>0.28</td>
+<td>7.0</td>
+<td>2.0</td>
+<td>36.0</td>
+<td>60.0</td>
+<td>B12</td>
+<td>Diesel</td>
+<td>D</td>
+<td>1732.0</td>
+<td>Rhone-Alpes</td>
+</tr>
+</tbody>
+</table>
+
+<p>26444 rows × 11 columns</p>
+</div>
+</div>
+</div>
+</section>
+<section id="preprocessing" class="slide level2">
+<h2>Preprocessing</h2>
+<div class="cell" data-execution_count="47">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb44-2"><a></a>  sev.drop(<span class="st">"ClaimAmount"</span>, axis<span class="op">=</span><span class="dv">1</span>), sev[<span class="st">"ClaimAmount"</span>], random_state<span class="op">=</span><span class="dv">2023</span>)</span>
+<span id="cb44-3"><a></a>ct <span class="op">=</span> make_column_transformer((OrdinalEncoder(), [<span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<span id="cb44-4"><a></a>    (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]), remainder<span class="op">=</span>StandardScaler())</span>
+<span id="cb44-5"><a></a>X_train <span class="op">=</span> ct.fit_transform(X_train)</span>
+<span id="cb44-6"><a></a>X_test <span class="op">=</span> ct.transform(X_test)</span>
+<span id="cb44-7"><a></a>plt.hist(y_train[y_train <span class="op">&lt;</span> <span class="dv">5000</span>], bins<span class="op">=</span><span class="dv">30</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-47-output-1.png" width="1584" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="doesnt-prove-that-y-boldsymbolx-boldsymbolx-is-multimodal" class="slide level2">
+<h2>Doesn’t prove that <span class="math inline">Y | \boldsymbol{X} = \boldsymbol{x}</span> is multimodal</h2>
+<div class="cell" data-execution_count="48">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a></a><span class="co"># Make some example where the distribution is multimodal because of a binary covariate which separates the means of the two distributions</span></span>
+<span id="cb45-2"><a></a>np.random.seed(<span class="dv">1</span>)</span>
+<span id="cb45-3"><a></a></span>
+<span id="cb45-4"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">3</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb45-5"><a></a></span>
+<span id="cb45-6"><a></a>x_min <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb45-7"><a></a>x_max <span class="op">=</span> y_train.max()</span>
+<span id="cb45-8"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb45-9"><a></a></span>
+<span id="cb45-10"><a></a><span class="co"># Simulate some data from an exponential distribution which has Pr(X &lt; 1000) = 0.9</span></span>
+<span id="cb45-11"><a></a>n <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb45-12"><a></a>p <span class="op">=</span> <span class="fl">0.1</span></span>
+<span id="cb45-13"><a></a>lambda_ <span class="op">=</span> <span class="op">-</span>np.log(p) <span class="op">/</span> <span class="dv">1000</span> </span>
+<span id="cb45-14"><a></a>mu <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> lambda_</span>
+<span id="cb45-15"><a></a>y_1 <span class="op">=</span> np.random.exponential(scale<span class="op">=</span>mu, size<span class="op">=</span>n)</span>
+<span id="cb45-16"><a></a></span>
+<span id="cb45-17"><a></a><span class="co"># Pick a truncated normal distribution with a mean of 1100 and std of 250 (truncated to be positive)</span></span>
+<span id="cb45-18"><a></a>mu <span class="op">=</span> <span class="dv">1100</span></span>
+<span id="cb45-19"><a></a>sigma <span class="op">=</span> <span class="dv">100</span></span>
+<span id="cb45-20"><a></a>y_2 <span class="op">=</span> stats.truncnorm.rvs((<span class="dv">0</span> <span class="op">-</span> mu) <span class="op">/</span> sigma, (np.inf <span class="op">-</span> mu) <span class="op">/</span> sigma, loc<span class="op">=</span>mu, scale<span class="op">=</span>sigma, size<span class="op">=</span>n)</span>
+<span id="cb45-21"><a></a></span>
+<span id="cb45-22"><a></a><span class="co"># Combine y_1 and y_2 for the final histogram</span></span>
+<span id="cb45-23"><a></a>y <span class="op">=</span> np.concatenate([y_1, y_2])</span>
+<span id="cb45-24"><a></a></span>
+<span id="cb45-25"><a></a><span class="co"># Determine common bins</span></span>
+<span id="cb45-26"><a></a>bins <span class="op">=</span> np.histogram_bin_edges(y, bins<span class="op">=</span><span class="dv">30</span>)</span>
+<span id="cb45-27"><a></a></span>
+<span id="cb45-28"><a></a></span>
+<span id="cb45-29"><a></a><span class="co"># Plot each normal distribution with different means vertically</span></span>
+<span id="cb45-30"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb45-31"><a></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb45-32"><a></a>        ax.hist(y_1, bins<span class="op">=</span>bins, density<span class="op">=</span><span class="va">True</span>, color<span class="op">=</span>COLOURS[i<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb45-33"><a></a>        ax.set_ylabel(<span class="ss">f'$f(y | x = 1)$'</span>)</span>
+<span id="cb45-34"><a></a></span>
+<span id="cb45-35"><a></a>    <span class="cf">elif</span> i <span class="op">==</span> <span class="dv">1</span>:</span>
+<span id="cb45-36"><a></a>        ax.hist(y_2, bins<span class="op">=</span>bins, density<span class="op">=</span><span class="va">True</span>, color<span class="op">=</span>COLOURS[i<span class="op">+</span><span class="dv">1</span>])</span>
+<span id="cb45-37"><a></a>        ax.set_ylabel(<span class="ss">f'$f(y | x = 2)$'</span>)</span>
+<span id="cb45-38"><a></a></span>
+<span id="cb45-39"><a></a>    <span class="cf">else</span>:</span>
+<span id="cb45-40"><a></a>        ax.hist(y, bins<span class="op">=</span>bins, density<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb45-41"><a></a>        ax.set_ylabel(<span class="ss">f'$f(y)$'</span>)</span>
+<span id="cb45-42"><a></a></span>
+<span id="cb45-43"><a></a>plt.tight_layout()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-48-output-1.png" width="1710" height="1015"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="gamma-glm" class="slide level2">
+<h2>Gamma GLM</h2>
+<p>Suppose a fitted Gamma GLM model has</p>
+<ul>
+<li>a log link function <span class="math inline">g(x)=\log(x)</span> and</li>
+<li>regression coefficients <span class="math inline">\boldsymbol{\beta}=(\beta_0, \beta_1, \beta_2, \beta_3)</span>.</li>
+</ul>
+<p>Then, it estimates the conditional mean of <span class="math inline">Y</span> given a new instance <span class="math inline">\boldsymbol{x}=(1, x_1, x_2, x_3)</span> as follows: <span class="math display">
+    \mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}(\langle \boldsymbol{\beta}, \boldsymbol{x}\rangle) = \exp\big(\beta_0 + \beta_1 x_1 + \beta_2 x_2 + \beta_3 x_3 \big).
+</span></p>
+<p>A GLM can model any other exponential family distribution using an appropriate link function <span class="math inline">g</span>.</p>
+</section>
+<section id="gamma-glm-loss" class="slide level2">
+<h2>Gamma GLM loss</h2>
+<p>If <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is a Gamma r.v. with mean <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta})</span> and dispersion parameter <span class="math inline">\phi</span>, we can minimise the negative log-likelihood (NLL) <span class="math display">
+    \text{NLL} \propto \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
+</span> i.e., we ignore the dispersion parameter <span class="math inline">\phi</span> while estimating the regression coefficients.</p>
+</section>
+<section id="fitting-steps" class="slide level2">
+<h2>Fitting Steps</h2>
+<p>Step 1. Use the advanced second derivative iterative method to find the regression coefficients: <span class="math display">
+    \boldsymbol{\beta}^* = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
+</span></p>
+<p>Step 2. Estimate the dispersion parameter: <span class="math display">
+    \phi = \frac{1}{n-p}\sum_{i=1}^{n}\frac{\bigl(y_i-\mu(\boldsymbol{x}_i; \boldsymbol{\beta}^*)\bigr)^2}{\mu(\boldsymbol{x}_i; \boldsymbol{\beta}^* )^2}
+</span></p>
+<p>(Here, <span class="math inline">p</span> is the number of coefficients in the model. If this <span class="math inline">p</span> doesn’t include the intercept, then the scaling should be <span class="math inline">\frac{1}{n-(p+1)}</span>.)</p>
+</section>
+<section id="code-gamma-glm" class="slide level2">
+<h2>Code: Gamma GLM</h2>
+<p>In Python, we can fit a Gamma GLM as follows:</p>
+<div class="cell" data-execution_count="49">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a></a><span class="im">import</span> statsmodels.api <span class="im">as</span> sm</span>
+<span id="cb46-2"><a></a></span>
+<span id="cb46-3"><a></a><span class="co"># Add a column of ones to include an intercept in the model</span></span>
+<span id="cb46-4"><a></a>X_train_design <span class="op">=</span> sm.add_constant(X_train)</span>
+<span id="cb46-5"><a></a></span>
+<span id="cb46-6"><a></a><span class="co"># Create a Gamma GLM with a log link function</span></span>
+<span id="cb46-7"><a></a>gamma_glm <span class="op">=</span> sm.GLM(y_train, X_train_design,                   </span>
+<span id="cb46-8"><a></a>            family<span class="op">=</span>sm.families.Gamma(sm.families.links.Log()))</span>
+<span id="cb46-9"><a></a></span>
+<span id="cb46-10"><a></a><span class="co"># Fit the model</span></span>
+<span id="cb46-11"><a></a>gamma_glm <span class="op">=</span> gamma_glm.fit()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="50">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a></a>gamma_glm.params</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="49">
+<pre><code>const                    7.786576
+ordinalencoder__Area    -0.073226
+                           ...   
+remainder__BonusMalus    0.157204
+remainder__Density       0.010539
+Length: 9, dtype: float64</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="51">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a></a><span class="co"># Dispersion Parameter</span></span>
+<span id="cb49-2"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_train_design)</span>
+<span id="cb49-3"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
+<span id="cb49-4"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>X_train_design.shape[<span class="dv">1</span>])</span>
+<span id="cb49-5"><a></a>phi_glm <span class="op">=</span> np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>mus<span class="op">**</span><span class="dv">2</span>)<span class="op">/</span>dof</span>
+<span id="cb49-6"><a></a><span class="bu">print</span>(phi_glm)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>59.63363123735744</code></pre>
+</div>
+</div>
+</div></div>
+</section>
+<section id="ann-can-feed-into-a-glm" class="slide level2">
+<h2>ANN can feed into a GLM</h2>
+
+<img data-src="images/richman-glm-and-ann.png" class="r-stretch quarto-figure-center"><p class="caption">Combining GLM &amp; ANN.</p><div class="footer">
+<p>Source: Ronald Richman (2022), <em>Mind the Gap — Safely Incorporating Deep Learning Models into the Actuarial Toolkit</em>, IFoA seminar, Slide 14.</p>
+</div>
+</section></section>
+<section>
+<section id="combined-actuarial-neural-network" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Combined Actuarial Neural Network</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="cann" class="slide level2">
+<h2>CANN</h2>
+<p>The Combined Actuarial Neural Network is an actuarial neural network architecture proposed by <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525">Schelldorfer and Wüthrich (2019)</a>. We summarise the CANN approach as follows:</p>
+<ul>
+<li>Find coefficients <span class="math inline">\boldsymbol{\beta}</span> of the GLM with a link function <span class="math inline">g(\cdot)</span>.</li>
+<li>Find weights <span class="math inline">\boldsymbol{w} = (\boldsymbol{w}^{(1)}, \dots, \boldsymbol{w}^{(K+1)})</span> of a neural network <span class="math inline">s:\mathbb{R}^{p}\to\mathbb{R}</span>.</li>
+<li>Given a new instance <span class="math inline">\boldsymbol{x}</span>, we have</li>
+</ul>
+<p><span class="math display">\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + s(\boldsymbol{x};\boldsymbol{w})\Big).</span></p>
+<p>If just a sequential dense network, then</p>
+<p><span class="math display">\mathbb{E}[Y|\boldsymbol{X}=\boldsymbol{x}] = g^{-1}\Big( \langle\boldsymbol{\beta}, \boldsymbol{x}\rangle + \Big\langle \boldsymbol{w}^{(K+1)}, \bigl( \boldsymbol{z}^{(K)} \circ \dots \circ \boldsymbol{z}^{(1)}\bigr)(\boldsymbol{x}) \Big\rangle \Big).</span></p>
+</section>
+<section id="shifting-the-predicted-distributions" class="slide level2">
+<h2>Shifting the predicted distributions</h2>
+<div class="cell" data-execution_count="52">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a></a><span class="co"># Ensure reproducibility</span></span>
+<span id="cb51-2"><a></a>random.seed(<span class="dv">1</span>)</span>
+<span id="cb51-3"><a></a></span>
+<span id="cb51-4"><a></a><span class="co"># Make a 4x1 grid of plots</span></span>
+<span id="cb51-5"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">4</span>, <span class="dv">1</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>), sharex<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb51-6"><a></a></span>
+<span id="cb51-7"><a></a><span class="co"># Define the x-axis</span></span>
+<span id="cb51-8"><a></a>x_min <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb51-9"><a></a>x_max <span class="op">=</span> <span class="dv">5000</span></span>
+<span id="cb51-10"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb51-11"><a></a></span>
+<span id="cb51-12"><a></a><span class="co"># Plot a few Gamma distribution pdfs with different means.</span></span>
+<span id="cb51-13"><a></a><span class="co"># Then plot Gamma distributions with shifted means and the same dispersion parameter.</span></span>
+<span id="cb51-14"><a></a>glm_means <span class="op">=</span> [<span class="dv">1000</span>, <span class="dv">3000</span>, <span class="dv">2000</span>, <span class="dv">4000</span>]</span>
+<span id="cb51-15"><a></a>cann_means <span class="op">=</span> [<span class="dv">1500</span>, <span class="dv">1400</span>, <span class="dv">3000</span>, <span class="dv">5000</span>]</span>
+<span id="cb51-16"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb51-17"><a></a>    ax.plot(x_grid, stats.gamma.pdf(x_grid, a<span class="op">=</span><span class="dv">2</span>, scale<span class="op">=</span>glm_means[i]<span class="op">/</span><span class="dv">2</span>), label<span class="op">=</span><span class="ss">f'GLM'</span>)</span>
+<span id="cb51-18"><a></a>    ax.plot(x_grid, stats.gamma.pdf(x_grid, a<span class="op">=</span><span class="dv">2</span>, scale<span class="op">=</span>cann_means[i]<span class="op">/</span><span class="dv">2</span>), label<span class="op">=</span><span class="ss">f'CANN'</span>)</span>
+<span id="cb51-19"><a></a>    ax.set_ylabel(<span class="ss">f'$f(y | x_</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ss">)$'</span>)</span>
+<span id="cb51-20"><a></a>    <span class="cf">if</span> i <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb51-21"><a></a>        ax.legend([<span class="st">"GLM"</span>, <span class="st">"CANN"</span>], loc<span class="op">=</span><span class="st">"upper right"</span>, ncol<span class="op">=</span><span class="dv">2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-52-output-1.png" width="1731" height="959"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="architecture" class="slide level2">
+<h2>Architecture</h2>
+
+<img data-src="images/cann-architecture.png" class="r-stretch quarto-figure-center"><p class="caption">The CANN architecture.</p><div class="footer">
+<p>Source: Schelldorfer and Wüthrich (2019), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525">Nesting Classical Actuarial Models into Neural Networks</a>, SSRN, Figure 8.</p>
+</div>
+</section>
+<section id="code-architecture" class="slide level2">
+<h2>Code: Architecture</h2>
+<div class="cell" data-execution_count="53">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a></a>random.seed(<span class="dv">1</span>)</span>
+<span id="cb52-2"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb52-3"><a></a></span>
+<span id="cb52-4"><a></a><span class="co"># GLM part (won't be updated during training)</span></span>
+<span id="cb52-5"><a></a>glm_weights <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">1</span>:].values.reshape((<span class="op">-</span><span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb52-6"><a></a>glm_bias <span class="op">=</span> gamma_glm.params.iloc[<span class="dv">0</span>]</span>
+<span id="cb52-7"><a></a>glm_part <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>, trainable<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb52-8"><a></a>                     kernel_initializer<span class="op">=</span>Constant(glm_weights),</span>
+<span id="cb52-9"><a></a>                     bias_initializer<span class="op">=</span>Constant(glm_bias))(inputs)</span>
+<span id="cb52-10"><a></a></span>
+<span id="cb52-11"><a></a><span class="co"># Neural network part</span></span>
+<span id="cb52-12"><a></a>x <span class="op">=</span> Dense(<span class="dv">64</span>, activation<span class="op">=</span><span class="st">'leaky_relu'</span>)(inputs)                          </span>
+<span id="cb52-13"><a></a>nn_part <span class="op">=</span> Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">'linear'</span>)(x)</span>
+<span id="cb52-14"><a></a></span>
+<span id="cb52-15"><a></a><span class="co"># Combine GLM and CANN estimates</span></span>
+<span id="cb52-16"><a></a>mu <span class="op">=</span> keras.ops.exp(glm_part <span class="op">+</span> nn_part)</span>
+<span id="cb52-17"><a></a>cann <span class="op">=</span> Model(inputs, mu)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Since this CANN predicts Gamma distributions, we use the Gamma NLL loss function.</p>
+<div class="cell" data-execution_count="54">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a></a><span class="kw">def</span> cann_negative_log_likelihood(y_true, y_pred):</span>
+<span id="cb53-2"><a></a>    <span class="cf">return</span> keras.ops.mean(keras.ops.log(y_pred) <span class="op">+</span> y_true<span class="op">/</span>y_pred)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="code-model-training" class="slide level2">
+<h2>Code: Model Training</h2>
+<div class="cell" data-execution_count="55">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a></a>cann.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span>cann_negative_log_likelihood)</span>
+<span id="cb54-2"><a></a>hist <span class="op">=</span> cann.fit(X_train, y_train,</span>
+<span id="cb54-3"><a></a>    epochs<span class="op">=</span><span class="dv">100</span>, </span>
+<span id="cb54-4"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>)],  </span>
+<span id="cb54-5"><a></a>    verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb54-6"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, </span>
+<span id="cb54-7"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Find the dispersion parameter.</p>
+<div class="cell" data-execution_count="57">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a></a>mus <span class="op">=</span> cann.predict(X_train, verbose<span class="op">=</span><span class="dv">0</span>).flatten()</span>
+<span id="cb55-2"><a></a>residuals <span class="op">=</span> y_train <span class="op">-</span> mus</span>
+<span id="cb55-3"><a></a>dof <span class="op">=</span> (<span class="bu">len</span>(y_train)<span class="op">-</span>(X_train.shape[<span class="dv">1</span>] <span class="op">+</span> <span class="dv">1</span>))</span>
+<span id="cb55-4"><a></a>phi_cann <span class="op">=</span> np.sum(residuals<span class="op">**</span><span class="dv">2</span><span class="op">/</span>mus<span class="op">**</span><span class="dv">2</span>) <span class="op">/</span> dof</span>
+<span id="cb55-5"><a></a><span class="bu">print</span>(phi_cann)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>19.928278221047712</code></pre>
+</div>
+</div>
+</section></section>
+<section>
+<section id="mixture-density-network" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Mixture Density Network</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="mixture-distribution-1" class="slide level2">
+<h2>Mixture Distribution</h2>
+<p>Given a finite set of resulting random variables <span class="math inline">(Y_1, \ldots, Y_{K})</span>, one can generate a multinomial random variable <span class="math inline">Y\sim \text{Multinomial}(1, \boldsymbol{\pi})</span>. Meanwhile, <span class="math inline">Y</span> can be regarded as a mixture of <span class="math inline">Y_1, \ldots, Y_{K}</span>, i.e., <span class="math display">
+  Y = \begin{cases}
+      Y_1 &amp; \text{w.p. } \pi_1, \\
+      \vdots &amp; \vdots\\
+      Y_K &amp; \text{w.p. } \pi_K, \\
+  \end{cases}
+</span> where we define a finite set of weights <span class="math inline">\boldsymbol{\pi}=(\pi_{1} \ldots, \pi_{K})</span> such that <span class="math inline">\pi_k \ge 0</span> for <span class="math inline">k \in \{1, \ldots, K\}</span> and <span class="math inline">\sum_{k=1}^{K}\pi_k=1</span>.</p>
+</section>
+<section id="mixture-distribution-2" class="slide level2">
+<h2>Mixture Distribution</h2>
+<p>Let <span class="math inline">f_k</span> and <span class="math inline">F_k</span> be the p.d.f. and the c.d.f of <span class="math inline">Y_k|\boldsymbol{X}</span> for all <span class="math inline">k \in \{1, \ldots, K\}</span>.</p>
+<p>The random variable <span class="math inline">Y|\boldsymbol{X}</span>, which mixes <span class="math inline">Y_k|\boldsymbol{X}</span>’s with weights <span class="math inline">\pi_k</span>’s, has the density function <span class="math display">
+    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) f_{k}(y|\boldsymbol{x}),
+</span> and the cumulative distribution function <span class="math display">
+    F_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) F_{k}(y|\boldsymbol{x}).
+</span></p>
+</section>
+<section id="mixture-density-network-1" class="slide level2">
+<h2>Mixture Density Network</h2>
+<p>A mixture density network (MDN) <span class="math inline">\text{MDN}(\boldsymbol{x})</span> outputs each distribution component’s mixing weights and parameters of <span class="math inline">Y</span> given the input features <span class="math inline">\boldsymbol{x}</span>, i.e., <span class="math display">
+    \text{MDN}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
+</span> where <span class="math inline">\boldsymbol{w}^*</span> is the networks’ weights found by minimising the following negative log-likelihood loss function, i.e., <span class="math display">
+    \boldsymbol{w}^* = \underset{\boldsymbol{w}}{\text{arg\,min}} \
+    \mathcal{L}(\mathcal{D}, \boldsymbol{w})= - \sum_{i=1}^{n} \log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}),
+</span> where <span class="math inline">\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{n}</span> is the training dataset.</p>
+</section>
+<section id="mixture-density-network-2" class="slide level2">
+<h2>Mixture Density Network</h2>
+
+<img data-src="images/MDN.png" class="r-stretch quarto-figure-center"><p class="caption">An MDN that outputs the parameters for a <span class="math inline">K</span> component mixture distribution. <span class="math inline">\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), \ldots, \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))</span> consists of the parameter estimates for the <span class="math inline">k</span>th mixture component.</p></section>
+<section id="model-specification" class="slide level2">
+<h2>Model Specification</h2>
+<p>Suppose there are two types of claims:</p>
+<ul>
+<li>Type I: <span class="math inline">Y_1|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))</span> and,</li>
+<li>Type II: <span class="math inline">Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))</span>.</li>
+</ul>
+<p>The density of the actual claim amount <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> follows <span class="math display">
+    \begin{align*}
+        f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
+        &amp;= \pi_1(\boldsymbol{x})\cdot \frac{\beta_1(\boldsymbol{x})^{\alpha_1(\boldsymbol{x})}}{\Gamma(\alpha_1(\boldsymbol{x}))}\mathrm{e}^{-\beta_1(\boldsymbol{x})y}y^{\alpha_1(\boldsymbol{x})-1} \\
+        &amp;\quad + (1-\pi_1(\boldsymbol{x}))\cdot \frac{\beta_2(\boldsymbol{x})^{\alpha_2(\boldsymbol{x})}}{\Gamma(\alpha_2(\boldsymbol{x}))}\mathrm{e}^{-\beta_2(\boldsymbol{x})y}y^{\alpha_2(\boldsymbol{x})-1}.
+    \end{align*}
+</span> where <span class="math inline">\pi_1(\boldsymbol{x})</span> is the probability of a Type I claim given <span class="math inline">\boldsymbol{x}</span>.</p>
+</section>
+<section id="output" class="slide level2">
+<h2>Output</h2>
+<p>The aim is to find the optimum weights <span class="math display">
+    \boldsymbol{w}^* = \underset{w}{\text{arg\,min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
+</span> for the Gamma mixture density network <span class="math inline">\text{MDN}(\boldsymbol{x})</span> that outputs the mixing weights, shapes and scales of <span class="math inline">Y</span> given the input features <span class="math inline">\boldsymbol{x}</span>, i.e., <span class="math display">
+    \begin{align*}
+        \text{MDN}(\boldsymbol{x})
+        = ( &amp;\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
+             \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
+            &amp;\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
+            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
+            &amp;\beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
+            \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
+        ).
+    \end{align*}
+</span></p>
+</section>
+<section id="architecture-1" class="slide level2">
+<h2>Architecture</h2>
+
+<img data-src="images/Gamma_MDN.png" class="r-stretch quarto-figure-center"><p class="caption">We demonstrate the structure of a Gamma MDN that outputs the parameters for a Gamma mixture with two components.</p></section>
+<section id="code-architecture-1" class="slide level2">
+<h2>Code: Architecture</h2>
+<p>The following code implements the gamma MDN from the previous slide.</p>
+<div class="cell" data-execution_count="58">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a></a><span class="im">import</span> torch</span>
+<span id="cb57-2"><a></a><span class="im">import</span> torch.nn <span class="im">as</span> nn</span>
+<span id="cb57-3"><a></a></span>
+<span id="cb57-4"><a></a>random.seed(<span class="dv">1</span>)</span>
+<span id="cb57-5"><a></a>torch.manual_seed(<span class="dv">1</span>)</span>
+<span id="cb57-6"><a></a></span>
+<span id="cb57-7"><a></a><span class="kw">class</span> GammaMDN(nn.Module):</span>
+<span id="cb57-8"><a></a>    <span class="kw">def</span> <span class="fu">__init__</span>(<span class="va">self</span>, input_dim, hidden_dim<span class="op">=</span><span class="dv">64</span>, n_components<span class="op">=</span><span class="dv">2</span>):</span>
+<span id="cb57-9"><a></a>        <span class="bu">super</span>().<span class="fu">__init__</span>()</span>
+<span id="cb57-10"><a></a>        <span class="va">self</span>.hidden <span class="op">=</span> nn.Sequential(</span>
+<span id="cb57-11"><a></a>            nn.Linear(input_dim, hidden_dim),</span>
+<span id="cb57-12"><a></a>            nn.ReLU(),</span>
+<span id="cb57-13"><a></a>            nn.Linear(hidden_dim, hidden_dim),</span>
+<span id="cb57-14"><a></a>            nn.ReLU(),</span>
+<span id="cb57-15"><a></a>        )</span>
+<span id="cb57-16"><a></a>        <span class="va">self</span>.pi_layer <span class="op">=</span> nn.Linear(hidden_dim, n_components)</span>
+<span id="cb57-17"><a></a>        <span class="va">self</span>.alpha_layer <span class="op">=</span> nn.Linear(hidden_dim, n_components)</span>
+<span id="cb57-18"><a></a>        <span class="va">self</span>.beta_layer <span class="op">=</span> nn.Linear(hidden_dim, n_components)</span>
+<span id="cb57-19"><a></a></span>
+<span id="cb57-20"><a></a>    <span class="kw">def</span> forward(<span class="va">self</span>, x):</span>
+<span id="cb57-21"><a></a>        h <span class="op">=</span> <span class="va">self</span>.hidden(x)</span>
+<span id="cb57-22"><a></a>        pis <span class="op">=</span> torch.softmax(<span class="va">self</span>.pi_layer(h), dim<span class="op">=-</span><span class="dv">1</span>)</span>
+<span id="cb57-23"><a></a>        alphas <span class="op">=</span> torch.exp(<span class="va">self</span>.alpha_layer(h))</span>
+<span id="cb57-24"><a></a>        betas <span class="op">=</span> torch.exp(<span class="va">self</span>.beta_layer(h))</span>
+<span id="cb57-25"><a></a>        <span class="cf">return</span> pis, alphas, betas</span>
+<span id="cb57-26"><a></a></span>
+<span id="cb57-27"><a></a>gamma_mdn <span class="op">=</span> GammaMDN(X_train.shape[<span class="dv">1</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="loss-function" class="slide level2">
+<h2>Loss Function</h2>
+<p>The negative log-likelihood loss function is given by</p>
+<p><span class="math display">
+    \mathcal{L}(\mathcal{D}, \boldsymbol{w})
+    = - \frac{1}{n} \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})
+</span> where the <span class="math inline">f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})</span> is defined by <span class="math display">
+\begin{align*}
+    &amp;\pi_1(\boldsymbol{x};\boldsymbol{w})\cdot \frac{\beta_1(\boldsymbol{x};\boldsymbol{w})^{\alpha_1(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_1(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_1(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_1(\boldsymbol{x};\boldsymbol{w})-1} \\
+    &amp; \quad + (1-\pi_1(\boldsymbol{x};\boldsymbol{w}))\cdot \frac{\beta_2(\boldsymbol{x};\boldsymbol{w})^{\alpha_2(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_2(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_2(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_2(\boldsymbol{x};\boldsymbol{w})-1}
+\end{align*}
+</span></p>
+</section>
+<section id="code-loss-training" class="slide level2">
+<h2>Code: Loss &amp; training</h2>
+<p><code>torch.distributions</code> to the rescue.</p>
+<div class="cell" data-execution_count="59">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a></a><span class="im">from</span> torch.distributions <span class="im">import</span> Gamma, MixtureSameFamily, Categorical</span>
+<span id="cb58-2"><a></a></span>
+<span id="cb58-3"><a></a><span class="kw">def</span> gamma_mixture_nll(pis, alphas, betas, y_true):</span>
+<span id="cb58-4"><a></a>    mixture <span class="op">=</span> MixtureSameFamily(</span>
+<span id="cb58-5"><a></a>        mixture_distribution<span class="op">=</span>Categorical(probs<span class="op">=</span>pis),</span>
+<span id="cb58-6"><a></a>        component_distribution<span class="op">=</span>Gamma(concentration<span class="op">=</span>alphas, rate<span class="op">=</span>betas))</span>
+<span id="cb58-7"><a></a>    <span class="cf">return</span> <span class="op">-</span>mixture.log_prob(y_true).mean()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="60">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a></a><span class="co"># Convert data to PyTorch tensors</span></span>
+<span id="cb59-2"><a></a>X_train_t <span class="op">=</span> torch.tensor(X_train.values, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb59-3"><a></a>y_train_t <span class="op">=</span> torch.tensor(y_train.values, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb59-4"><a></a></span>
+<span id="cb59-5"><a></a><span class="co"># Split into train and validation (80/20)</span></span>
+<span id="cb59-6"><a></a>n_val <span class="op">=</span> <span class="bu">int</span>(<span class="fl">0.2</span> <span class="op">*</span> <span class="bu">len</span>(X_train_t))</span>
+<span id="cb59-7"><a></a>X_val_mdn, y_val_mdn <span class="op">=</span> X_train_t[<span class="op">-</span>n_val:], y_train_t[<span class="op">-</span>n_val:]</span>
+<span id="cb59-8"><a></a>X_trn_mdn, y_trn_mdn <span class="op">=</span> X_train_t[:<span class="op">-</span>n_val], y_train_t[:<span class="op">-</span>n_val]</span>
+<span id="cb59-9"><a></a></span>
+<span id="cb59-10"><a></a>optimizer <span class="op">=</span> torch.optim.Adam(gamma_mdn.parameters())</span>
+<span id="cb59-11"><a></a>loader <span class="op">=</span> torch.utils.data.DataLoader(</span>
+<span id="cb59-12"><a></a>    torch.utils.data.TensorDataset(X_trn_mdn, y_trn_mdn),</span>
+<span id="cb59-13"><a></a>    batch_size<span class="op">=</span><span class="dv">64</span>, shuffle<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb59-14"><a></a></span>
+<span id="cb59-15"><a></a>best_val_loss, patience_counter, best_state <span class="op">=</span> <span class="bu">float</span>(<span class="st">'inf'</span>), <span class="dv">0</span>, <span class="va">None</span></span>
+<span id="cb59-16"><a></a></span>
+<span id="cb59-17"><a></a><span class="cf">for</span> epoch <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">100</span>):</span>
+<span id="cb59-18"><a></a>    gamma_mdn.train()</span>
+<span id="cb59-19"><a></a>    <span class="cf">for</span> xb, yb <span class="kw">in</span> loader:</span>
+<span id="cb59-20"><a></a>        pis, alphas, betas <span class="op">=</span> gamma_mdn(xb)</span>
+<span id="cb59-21"><a></a>        loss <span class="op">=</span> gamma_mixture_nll(pis, alphas, betas, yb)</span>
+<span id="cb59-22"><a></a>        optimizer.zero_grad()<span class="op">;</span> loss.backward()<span class="op">;</span> optimizer.step()</span>
+<span id="cb59-23"><a></a></span>
+<span id="cb59-24"><a></a>    gamma_mdn.<span class="bu">eval</span>()</span>
+<span id="cb59-25"><a></a>    <span class="cf">with</span> torch.no_grad():</span>
+<span id="cb59-26"><a></a>        pis_v, alphas_v, betas_v <span class="op">=</span> gamma_mdn(X_val_mdn)</span>
+<span id="cb59-27"><a></a>        val_loss <span class="op">=</span> gamma_mixture_nll(pis_v, alphas_v, betas_v, y_val_mdn)</span>
+<span id="cb59-28"><a></a></span>
+<span id="cb59-29"><a></a>    <span class="cf">if</span> val_loss <span class="op">&lt;</span> best_val_loss:</span>
+<span id="cb59-30"><a></a>        best_val_loss <span class="op">=</span> val_loss</span>
+<span id="cb59-31"><a></a>        best_state <span class="op">=</span> {k: v.clone() <span class="cf">for</span> k, v <span class="kw">in</span> gamma_mdn.state_dict().items()}</span>
+<span id="cb59-32"><a></a>        patience_counter <span class="op">=</span> <span class="dv">0</span></span>
+<span id="cb59-33"><a></a>    <span class="cf">else</span>:</span>
+<span id="cb59-34"><a></a>        patience_counter <span class="op">+=</span> <span class="dv">1</span></span>
+<span id="cb59-35"><a></a>        <span class="cf">if</span> patience_counter <span class="op">&gt;=</span> <span class="dv">10</span>: <span class="cf">break</span></span>
+<span id="cb59-36"><a></a></span>
+<span id="cb59-37"><a></a>gamma_mdn.load_state_dict(best_state)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section></section>
+<section>
+<section id="metrics-for-distributional-regression" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Metrics for Distributional Regression</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="proper-scoring-rules" class="slide level2">
+<h2>Proper Scoring Rules</h2>
+<dl>
+<dt>Definition</dt>
+<dd>
+<p>A <em>scoring rule</em> is the equivalent of a loss function for distributional regression.</p>
+<p>Denote <span class="math inline">S(F, y)</span> to be the score given to the forecasted distribution <span class="math inline">F</span> and an observation <span class="math inline">y \in \mathbb{R}</span>.</p>
+</dd>
+<dt>Definition</dt>
+<dd>
+<p>A scoring rule is called <em>proper</em> if <span class="math display">
+\mathbb{E}_{Y \sim Q} S(Q, Y) \le \mathbb{E}_{Y \sim Q} S(F, Y)
+</span> for all <span class="math inline">F</span> and <span class="math inline">Q</span> distributions.</p>
+<p>It is called <em>strictly proper</em> if equality holds only if <span class="math inline">F = Q</span>.</p>
+</dd>
+</dl>
+</section>
+<section id="example-proper-scoring-rules" class="slide level2">
+<h2>Example Proper Scoring Rules</h2>
+<dl>
+<dt>Logarithmic Score (NLL)</dt>
+<dd>
+<p>The logarithmic score is defined as <span class="math display">
+    \mathrm{LogS}(f, y) = - \log f(y),
+</span> where <span class="math inline">f</span> is the predictive density.</p>
+</dd>
+<dt>Continuous Ranked Probability Score (CRPS)</dt>
+<dd>
+<p>The continuous ranked probability score is defined as <span class="math display">
+    \mathrm{crps}(F, y) = \int_{-\infty}^{\infty} (F(t) - {1}_{t\ge y})^2 \ \mathrm{d}t,
+</span> where <span class="math inline">F</span> is the predicted c.d.f.</p>
+</dd>
+</dl>
+<div class="footer">
+<p>See, e.g., Taggart (2023), <a href="https://nla.gov.au/nla.obj-3160938615/view">Estimation of CRPS for precipitation forecasts…</a>, BoM Research Report 079.</p>
+</div>
+</section>
+<section id="likelihoods" class="slide level2">
+<h2>Likelihoods</h2>
+<div class="cell" data-execution_count="62">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a></a>y_pred <span class="op">=</span> np.polyval(coefficients, X_toy[:<span class="dv">4</span>])</span>
+<span id="cb60-2"><a></a>y_pred[<span class="dv">2</span>] <span class="op">*=</span> <span class="fl">1.1</span></span>
+<span id="cb60-3"><a></a>sigma_preds <span class="op">=</span> sigma_toy <span class="op">*</span> np.array([<span class="fl">1.0</span>, <span class="fl">3.0</span>, <span class="fl">0.5</span>, <span class="fl">0.5</span>])</span>
+<span id="cb60-4"><a></a>fig, axes <span class="op">=</span> plt.subplots(<span class="dv">1</span>, <span class="dv">4</span>, figsize<span class="op">=</span>(<span class="fl">5.0</span>, <span class="fl">3.0</span>), sharey<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb60-5"><a></a></span>
+<span id="cb60-6"><a></a>x_min <span class="op">=</span> y_pred[:<span class="dv">4</span>].min() <span class="op">-</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb60-7"><a></a>x_max <span class="op">=</span> y_pred[:<span class="dv">4</span>].max() <span class="op">+</span> <span class="dv">4</span><span class="op">*</span>sigma_toy</span>
+<span id="cb60-8"><a></a>x_grid <span class="op">=</span> np.linspace(x_min, x_max, <span class="dv">100</span>)</span>
+<span id="cb60-9"><a></a></span>
+<span id="cb60-10"><a></a><span class="co"># Plot each normal distribution with different means vertically</span></span>
+<span id="cb60-11"><a></a><span class="cf">for</span> i, ax <span class="kw">in</span> <span class="bu">enumerate</span>(axes):</span>
+<span id="cb60-12"><a></a>    y_grid <span class="op">=</span> stats.norm.pdf(x_grid, y_pred[i], sigma_preds[i])</span>
+<span id="cb60-13"><a></a>    ax.plot(x_grid, y_grid)</span>
+<span id="cb60-14"><a></a>    ax.plot([y_toy[i], y_toy[i]], [<span class="dv">0</span>, stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color<span class="op">=</span><span class="st">'red'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>)</span>
+<span id="cb60-15"><a></a>    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color<span class="op">=</span><span class="st">'red'</span>, zorder<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb60-16"><a></a>    ax.set_title(<span class="ss">f'$f(y ; </span><span class="ch">\\</span><span class="ss">boldsymbol</span><span class="ch">{{</span><span class="ss">x</span><span class="ch">}}</span><span class="ss">_</span><span class="ch">{{</span><span class="sc">{</span>i<span class="op">+</span><span class="dv">1</span><span class="sc">}</span><span class="ch">}}</span><span class="ss">)$'</span>)</span>
+<span id="cb60-17"><a></a>    ax.set_xticks([y_pred[i]], labels<span class="op">=</span>[<span class="vs">r'$\mu_{'</span> <span class="op">+</span> <span class="bu">str</span>(i<span class="op">+</span><span class="dv">1</span>) <span class="op">+</span> <span class="vs">r'}$'</span>])</span>
+<span id="cb60-18"><a></a>    <span class="co"># ax.set_ylim(0, 0.25)</span></span>
+<span id="cb60-19"><a></a></span>
+<span id="cb60-20"><a></a>    <span class="co"># Turn off the y axes</span></span>
+<span id="cb60-21"><a></a>    ax.yaxis.set_visible(<span class="va">False</span>)</span>
+<span id="cb60-22"><a></a>    </span>
+<span id="cb60-23"><a></a>plt.tight_layout()<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-62-output-1.png" width="1714" height="1014"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="code-nll" class="slide level2">
+<h2>Code: NLL</h2>
+<div class="cell" data-execution_count="63">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a></a><span class="kw">def</span> gamma_nll(mean, dispersion, y):</span>
+<span id="cb61-2"><a></a>    <span class="co"># Calculate shape and scale parameters from mean and dispersion</span></span>
+<span id="cb61-3"><a></a>    shape <span class="op">=</span> <span class="dv">1</span> <span class="op">/</span> dispersion<span class="op">;</span> scale <span class="op">=</span> mean <span class="op">*</span> dispersion</span>
+<span id="cb61-4"><a></a></span>
+<span id="cb61-5"><a></a>    <span class="co"># Create a gamma distribution object</span></span>
+<span id="cb61-6"><a></a>    gamma_dist <span class="op">=</span> stats.gamma(a<span class="op">=</span>shape, scale<span class="op">=</span>scale)</span>
+<span id="cb61-7"><a></a>    </span>
+<span id="cb61-8"><a></a>    <span class="cf">return</span> <span class="op">-</span>np.mean(gamma_dist.logpdf(y))</span>
+<span id="cb61-9"><a></a></span>
+<span id="cb61-10"><a></a><span class="co"># GLM</span></span>
+<span id="cb61-11"><a></a>X_test_design <span class="op">=</span> sm.add_constant(X_test)</span>
+<span id="cb61-12"><a></a>mus <span class="op">=</span> gamma_glm.predict(X_test_design)</span>
+<span id="cb61-13"><a></a>nll_glm <span class="op">=</span> gamma_nll(mus, phi_glm, y_test)</span>
+<span id="cb61-14"><a></a></span>
+<span id="cb61-15"><a></a><span class="co"># CANN</span></span>
+<span id="cb61-16"><a></a>mus <span class="op">=</span> cann.predict(X_test, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb61-17"><a></a>nll_cann <span class="op">=</span> gamma_nll(mus, phi_cann, y_test)</span>
+<span id="cb61-18"><a></a></span>
+<span id="cb61-19"><a></a><span class="co"># MDN</span></span>
+<span id="cb61-20"><a></a>gamma_mdn.<span class="bu">eval</span>()</span>
+<span id="cb61-21"><a></a><span class="cf">with</span> torch.no_grad():</span>
+<span id="cb61-22"><a></a>    X_test_t <span class="op">=</span> torch.tensor(X_test.values, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb61-23"><a></a>    y_test_t <span class="op">=</span> torch.tensor(y_test.values, dtype<span class="op">=</span>torch.float32)</span>
+<span id="cb61-24"><a></a>    pis, alphas, betas <span class="op">=</span> gamma_mdn(X_test_t)</span>
+<span id="cb61-25"><a></a>    nll_mdn <span class="op">=</span> gamma_mixture_nll(pis, alphas, betas, y_test_t).item()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="64">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a></a><span class="bu">print</span>(<span class="ss">f'GLM: </span><span class="sc">{</span>round(nll_glm, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb62-2"><a></a><span class="bu">print</span>(<span class="ss">f'CANN: </span><span class="sc">{</span>round(nll_cann, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span>
+<span id="cb62-3"><a></a><span class="bu">print</span>(<span class="ss">f'MDN: </span><span class="sc">{</span>round(nll_mdn, <span class="dv">2</span>)<span class="sc">}</span><span class="ss">'</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>GLM: 11.02
+CANN: 10.06
+MDN: 8.67</code></pre>
+</div>
+</div>
+</section></section>
+<section>
+<section id="aleatoric-and-epistemic-uncertainty" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
+<h1>Aleatoric and Epistemic Uncertainty</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="categories-of-uncertainty" class="slide level2">
+<h2>Categories of uncertainty</h2>
+<p>There are two major categories of uncertainty in statistical or machine learning:</p>
+<ul>
+<li>Aleatoric uncertainty: the inherent variability associated with the data generating process.</li>
+<li>Epistemic uncertainty: the lack of knowledge, limited data information, parameter errors and model errors.</li>
+</ul>
+</section>
+<section id="sources-of-uncertainty" class="slide level2">
+<h2>Sources of uncertainty</h2>
+<p><em>If you decide to predict the claim amount of an individual using a deep learning model, which source(s) of uncertainty are you dealing with?</em></p>
+<ol type="1">
+<li>The inherent variability of the data-generating process <span class="math inline">\rightarrow</span> aleatoric uncertainty.</li>
+<li>Parameter error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+<li>Model error <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+<li>Data uncertainty <span class="math inline">\rightarrow</span> epistemic uncertainty.</li>
+</ol>
+</section>
+<section id="traditional-regularisation" class="slide level2">
+<h2>Traditional regularisation</h2>
+<p>Say all the <span class="math inline">m</span> weights (excluding biases) are in the vector <span class="math inline">\boldsymbol{\theta}</span>. If we change the loss function to <span class="math display">
+\text{Loss}_{1:n}
+= \frac{1}{n} \sum_{i=1}^n \text{Loss}_i
+  + \lambda \sum_{j=1}^{m} \left| \theta_j \right|
+</span></p>
+<p>this would be using <span class="math inline">L^1</span> regularisation. A loss like</p>
+<p><span class="math display">
+\text{Loss}_{1:n}
+= \frac{1}{n} \sum_{i=1}^n \text{Loss}_i
+  + \lambda \sum_{j=1}^{m} \theta_j^2
+</span></p>
+<p>is called <span class="math inline">L^2</span> regularisation.</p>
+</section>
+<section id="regularisation-in-keras" class="slide level2">
+<h2>Regularisation in Keras</h2>
+<div class="cell" data-execution_count="65">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_california_housing</span>
+<span id="cb64-2"><a></a>features, target <span class="op">=</span> fetch_california_housing(as_frame<span class="op">=</span><span class="va">True</span>, return_X_y<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb64-3"><a></a></span>
+<span id="cb64-4"><a></a>NUM_FEATURES <span class="op">=</span> <span class="bu">len</span>(features.columns)</span>
+<span id="cb64-5"><a></a></span>
+<span id="cb64-6"><a></a>X_main, X_test, y_main, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb64-7"><a></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb64-8"><a></a>)</span>
+<span id="cb64-9"><a></a>X_train, X_val, y_train, y_val <span class="op">=</span> train_test_split(</span>
+<span id="cb64-10"><a></a>    X_main, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb64-11"><a></a>)</span>
+<span id="cb64-12"><a></a></span>
+<span id="cb64-13"><a></a>scaler <span class="op">=</span> StandardScaler()</span>
+<span id="cb64-14"><a></a>X_train_sc <span class="op">=</span> scaler.fit_transform(X_train)</span>
+<span id="cb64-15"><a></a>X_val_sc <span class="op">=</span> scaler.transform(X_val)</span>
+<span id="cb64-16"><a></a>X_test_sc <span class="op">=</span> scaler.transform(X_test)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell" data-execution_count="66">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a></a><span class="im">from</span> keras.regularizers <span class="im">import</span> L1, L2</span>
+<span id="cb65-2"><a></a></span>
+<span id="cb65-3"><a></a><span class="kw">def</span> l1_model(regulariser_strength<span class="op">=</span><span class="fl">0.01</span>):</span>
+<span id="cb65-4"><a></a>  random.seed(<span class="dv">123</span>)</span>
+<span id="cb65-5"><a></a>  model <span class="op">=</span> Sequential([</span>
+<span id="cb65-6"><a></a>      Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>,</span>
+<span id="cb65-7"><a></a>        kernel_regularizer<span class="op">=</span>L1(regulariser_strength)),</span>
+<span id="cb65-8"><a></a>      Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb65-9"><a></a>  ])</span>
+<span id="cb65-10"><a></a></span>
+<span id="cb65-11"><a></a>  model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb65-12"><a></a>  model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb65-13"><a></a>  <span class="cf">return</span> model</span>
+<span id="cb65-14"><a></a></span>
+<span id="cb65-15"><a></a><span class="kw">def</span> l2_model(regulariser_strength<span class="op">=</span><span class="fl">0.01</span>):</span>
+<span id="cb65-16"><a></a>  random.seed(<span class="dv">123</span>)</span>
+<span id="cb65-17"><a></a>  model <span class="op">=</span> Sequential([</span>
+<span id="cb65-18"><a></a>      Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>,</span>
+<span id="cb65-19"><a></a>        kernel_regularizer<span class="op">=</span>L2(regulariser_strength)),</span>
+<span id="cb65-20"><a></a>      Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb65-21"><a></a>  ])</span>
+<span id="cb65-22"><a></a></span>
+<span id="cb65-23"><a></a>  model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb65-24"><a></a>  model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">10</span>, verbose<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb65-25"><a></a>  <span class="cf">return</span> model</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="weights-before-after-l2" class="slide level2">
+<h2>Weights before &amp; after <span class="math inline">L^2</span></h2>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="68">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a></a>model <span class="op">=</span> l2_model(<span class="fl">0.0</span>)</span>
+<span id="cb66-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb66-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb66-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of weights almost 0: 0</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-68-output-2.png" width="708" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="69">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a></a>model <span class="op">=</span> l2_model(<span class="fl">1.0</span>)</span>
+<span id="cb68-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb68-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb68-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of weights almost 0: 0</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-69-output-2.png" width="708" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<section id="weights-before-after-l1" class="slide level2">
+<h2>Weights before &amp; after <span class="math inline">L^1</span></h2>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="70">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a></a>model <span class="op">=</span> l1_model(<span class="fl">0.0</span>)</span>
+<span id="cb70-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb70-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb70-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of weights almost 0: 0</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-70-output-2.png" width="754" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="71">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a></a>model <span class="op">=</span> l1_model(<span class="fl">1.0</span>)</span>
+<span id="cb72-2"><a></a>weights <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>].flatten()</span>
+<span id="cb72-3"><a></a><span class="bu">print</span>(<span class="ss">f"Number of weights almost 0: </span><span class="sc">{</span>np<span class="sc">.</span>sum(np.abs(weights) <span class="op">&lt;</span> <span class="fl">1e-5</span>)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb72-4"><a></a>plt.hist(weights, bins<span class="op">=</span><span class="dv">100</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of weights almost 0: 16</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<div>
+<figure>
+<p><img data-src="distributional-regression_files/figure-revealjs/cell-71-output-2.png" width="739" height="690"></p>
+</figure>
+</div>
+</div>
+</div>
+</div></div>
+</section>
+<section id="early-stopping-regularisation" class="slide level2">
+<h2>Early-stopping regularisation</h2>
+<blockquote>
+<p>A very different way to regularize iterative learning algorithms such as gradient descent is to stop training as soon as the validation error reaches a minimum. This is called early stopping… It is such a simple and efficient regularization technique that Geoffrey Hinton called it a “beautiful free lunch”.</p>
+</blockquote>
+<blockquote>
+<p>Alternatively, you can try building a model with slightly more layers and neurons than you actually need, then use early stopping and other regularization techniques to prevent it from overfitting too much. Vincent Vanhoucke, a scientist at Google, has dubbed this the “stretch pants” approach: instead of wasting time looking for pants that perfectly match your size, just use large stretch pants that will shrink down to the right size.</p>
+</blockquote>
+<div class="footer">
+<p>Source: Géron (2019), Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow, 3rd Edition, Chapters 4 and 10.</p>
+</div>
+</section></section>
+<section>
+<section id="dropout" class="title-slide slide level1 agenda-slide center">
+<h1>Dropout</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-inactive agenda-post-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="dropout-1" class="slide level2">
+<h2>Dropout</h2>
+
+<img data-src="images/dropout.png" class="r-stretch quarto-figure-center"><p class="caption">An example of neurons dropped during training.</p><div class="footer">
+<p>Sources: Marcus Lautier (2022).</p>
+</div>
+</section>
+<section id="dropout-quote-1" class="slide level2">
+<h2>Dropout quote #1</h2>
+<blockquote>
+<p>It’s surprising at first that this destructive technique works at all. Would a company perform better if its employees were told to toss a coin every morning to decide whether or not to go to work? Well, who knows; perhaps it would! The company would be forced to adapt its organization; it could not rely on any single person to work the coffee machine or perform any other critical tasks, so this expertise would have to be spread across several people. Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.</p>
+</blockquote>
+<div class="footer">
+<p>Source: Aurélien Géron (2019), <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow</em>, 2nd Edition, p.&nbsp;366</p>
+</div>
+</section>
+<section id="dropout-quote-2" class="slide level2">
+<h2>Dropout quote #2</h2>
+<blockquote>
+<p>The company would become much more resilient. If one person quit, it wouldn’t make much of a difference. It’s unclear whether this idea would actually work for companies, but it certainly does for neural networks. Neurons trained with dropout cannot co-adapt with their neighboring neurons; they have to be as useful as possible on their own. They also cannot rely excessively on just a few input neurons; they must pay attention to each of their input neurons. They end up being less sensitive to slight changes in the inputs. In the end, you get a more robust network that generalizes better.</p>
+</blockquote>
+<div class="footer">
+<p>Source: Aurélien Géron (2019), <em>Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow</em>, 2nd Edition, p.&nbsp;366</p>
+</div>
+</section>
+<section id="code-dropout" class="slide level2">
+<h2>Code: Dropout</h2>
+<p>Dropout is just another layer in Keras.</p>
+<div class="cell" data-execution_count="73">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb74"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb74-1"><a></a><span class="im">from</span> keras.layers <span class="im">import</span> Dropout</span>
+<span id="cb74-2"><a></a></span>
+<span id="cb74-3"><a></a>random.seed(<span class="dv">2</span>)<span class="op">;</span> </span>
+<span id="cb74-4"><a></a></span>
+<span id="cb74-5"><a></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb74-6"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb74-7"><a></a>    Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb74-8"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb74-9"><a></a>    Dropout(<span class="fl">0.2</span>),</span>
+<span id="cb74-10"><a></a>    Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb74-11"><a></a>])</span>
+<span id="cb74-12"><a></a></span>
+<span id="cb74-13"><a></a>model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)</span>
+<span id="cb74-14"><a></a>model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">4</span>, verbose<span class="op">=</span><span class="dv">0</span>)<span class="op">;</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="code-dropout-after-training" class="slide level2">
+<h2>Code: Dropout after training</h2>
+<p>Making predictions is the same as any other model:</p>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="74">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a></a>model.predict(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb75-2"><a></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="71">
+<pre><code>array([[1.45],
+       [0.69],
+       [1.57]], dtype=float32)</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="75">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a></a>model.predict(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb77-2"><a></a>                  verbose<span class="op">=</span><span class="dv">0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="72">
+<pre><code>array([[1.45],
+       [0.69],
+       [1.57]], dtype=float32)</code></pre>
+</div>
+</div>
+</div></div>
+<p>We can make the model think it is still training:</p>
+<div class="columns">
+<div class="column">
+<div class="cell" data-execution_count="76">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb79"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a></a>model(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb79-2"><a></a>    training<span class="op">=</span><span class="va">True</span>).detach().numpy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="73">
+<pre><code>array([[1.64],
+       [0.84],
+       [1.84]], dtype=float32)</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div class="cell" data-execution_count="77">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a></a>model(X_train_sc.head(<span class="dv">3</span>),</span>
+<span id="cb81-2"><a></a>    training<span class="op">=</span><span class="va">True</span>).detach().numpy()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="74">
+<pre><code>array([[1.35],
+       [1.5 ],
+       [1.8 ]], dtype=float32)</code></pre>
+</div>
+</div>
+</div></div>
+<p>By setting the <code>training=True</code>, we can let dropout happen during prediction stage as well. This will change predictions for the same output different. This is known as the <em>Monte Carlo dropout</em> and can be used to generate a distribution of predictions.</p>
+</section>
+<section id="dropout-limitation" class="slide level2">
+<h2>Dropout Limitation</h2>
+<ul>
+<li>Increased Training Time: Since dropout introduces noise into the training process, it can make the training process slower.</li>
+<li>Sensitivity to Dropout Rates: the performance of dropout is highly dependent on the chosen dropout rate.</li>
+</ul>
+</section></section>
+<section>
+<section id="ensembles" class="title-slide slide level1 agenda-slide center">
+<h1>Ensembles</h1>
+<div class="agenda-heading">
+<p>Lecture Outline</p>
+</div>
+<div class="agenda">
+<ul>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Introduction</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Traditional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Stochastic Forecasts</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>GLMs and Neural Networks</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Combined Actuarial Neural Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Mixture Density Network</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Metrics for Distributional Regression</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Aleatoric and Epistemic Uncertainty</p>
+</div></li>
+<li><div class="agenda-inactive agenda-pre-active">
+<p>Dropout</p>
+</div></li>
+<li><div class="agenda-active">
+<p>Ensembles</p>
+</div></li>
+</ul>
+</div>
+</section>
+<section id="ensembles-1" class="slide level2">
+<h2>Ensembles</h2>
+
+<img data-src="images/ensemble.png" class="r-stretch quarto-figure-center"><p class="caption">Combine many models to get better predictions.</p><div class="footer">
+<p>Source: Marcus Lautier (2022).</p>
+</div>
+</section>
+<section id="deep-ensembles" class="slide level2">
+<h2>Deep Ensembles</h2>
+<p>Train <span class="math inline">M</span> neural networks with different random initial weights independently (even in parallel).</p>
+<div class="cell" data-execution_count="78">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb83-1"><a></a><span class="kw">def</span> build_model(seed):</span>
+<span id="cb83-2"><a></a>    random.seed(seed)</span>
+<span id="cb83-3"><a></a>    model <span class="op">=</span> Sequential([</span>
+<span id="cb83-4"><a></a>        Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb83-5"><a></a>        Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb83-6"><a></a>    ])                                                                      </span>
+<span id="cb83-7"><a></a>    model.compile(<span class="st">"adam"</span>, <span class="st">"mse"</span>)                                           </span>
+<span id="cb83-8"><a></a></span>
+<span id="cb83-9"><a></a>    es <span class="op">=</span> EarlyStopping(restore_best_weights<span class="op">=</span><span class="va">True</span>, patience<span class="op">=</span><span class="dv">5</span>)</span>
+<span id="cb83-10"><a></a>    model.fit(X_train_sc, y_train, epochs<span class="op">=</span><span class="dv">1_000</span>,</span>
+<span id="cb83-11"><a></a>        callbacks<span class="op">=</span>[es], validation_data<span class="op">=</span>(X_val_sc, y_val), verbose<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb83-12"><a></a>    <span class="cf">return</span> model</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell" data-execution_count="79">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb84"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a></a>M <span class="op">=</span> <span class="dv">3</span></span>
+<span id="cb84-2"><a></a>seeds <span class="op">=</span> <span class="bu">range</span>(M)</span>
+<span id="cb84-3"><a></a>models <span class="op">=</span> []</span>
+<span id="cb84-4"><a></a><span class="cf">for</span> seed <span class="kw">in</span> seeds:</span>
+<span id="cb84-5"><a></a>    models.append(build_model(seed))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="deep-ensembles-ii" class="slide level2">
+<h2>Deep Ensembles II</h2>
+<p>Say the trained weights for the NNs are <span class="math inline">\boldsymbol{w}^{(1)}, \ldots, \boldsymbol{w}^{(M)}</span>, then we get predictions <span class="math inline">\bigl\{ \hat{y}(\boldsymbol{x}; \boldsymbol{w}^{(m)}) \bigr\}_{m=1}^{M}</span></p>
+<div class="cell" data-execution_count="81">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb85-1"><a></a>y_preds <span class="op">=</span> []</span>
+<span id="cb85-2"><a></a><span class="cf">for</span> model <span class="kw">in</span> models:</span>
+<span id="cb85-3"><a></a>    y_preds.append(model.predict(X_test_sc, verbose<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb85-4"><a></a></span>
+<span id="cb85-5"><a></a>y_preds <span class="op">=</span> np.array(y_preds)</span>
+<span id="cb85-6"><a></a>y_preds</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="77">
+<pre><code>array([[[2.93],
+        [0.9 ],
+        [2.39],
+        ...,
+        [2.26],
+        [2.54],
+        [1.3 ]],
+
+       [[1.9 ],
+        [0.94],
+        [0.8 ],
+        ...,
+        [1.76],
+        [1.96],
+        [2.61]],
+
+       [[3.22],
+        [0.64],
+        [2.47],
+        ...,
+        [2.62],
+        [2.32],
+        [1.1 ]]], shape=(3, 4128, 1), dtype=float32)</code></pre>
+</div>
+</div>
+</section>
+<section id="package-versions" class="slide level2 appendix" data-visibility="uncounted">
+<h2>Package Versions</h2>
+<div class="cell" data-execution_count="82">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb87"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb87-1"><a></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb87-2"><a></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Python implementation: CPython
+Python version       : 3.14.3
+IPython version      : 9.13.0
+
+keras     : 3.14.1
+matplotlib: 3.10.9
+numpy     : 2.4.4
+pandas    : 3.0.2
+seaborn   : 0.13.2
+scipy     : 1.17.1
+torch     : 2.11.0
+</code></pre>
+</div>
+</div>
+</section>
+<section id="glossary" class="slide level2 appendix" data-visibility="uncounted">
+<h2>Glossary</h2>
+<div class="columns">
+<div class="column">
+<ul>
+<li>aleatoric and epistemic uncertainty</li>
+<li>combined actuarial neural network</li>
+<li>dead ReLU</li>
+<li>deep ensembles</li>
+<li>distributional forecasts</li>
+<li>dropout</li>
+</ul>
+</div><div class="column">
+<ul>
+<li>generalised linear model</li>
+<li>mixture density network</li>
+<li>mixture distribution</li>
+<li>Monte Carlo dropout</li>
+<li>proper scoring rule</li>
+</ul>
+</div></div>
+
+
+</section></section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<p><img src="../unsw-logo.png" class="slide-logo"></p>
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="../site_libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="../site_libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="../site_libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="../site_libs/revealjs/plugin/reveal-chalkboard/plugin.js"></script>
+  <script src="../site_libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="../site_libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="../site_libs/revealjs/plugin/search/search.js"></script>
+  <script src="../site_libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': false,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleChalkboard(event)\"><kbd>b</kbd> Toggle Chalkboard</a></li>\n<li class=\"slide-tool-item\" data-item=\"6\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleNotesCanvas(event)\"><kbd>c</kbd> Toggle Notes Canvas</a></li>\n<li class=\"slide-tool-item\" data-item=\"7\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.downloadDrawings(event)\"><kbd>d</kbd> Download Drawings</a></li>\n<li class=\"slide-tool-item\" data-item=\"8\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'chalkboard': {"buttons":true,"boardmarkerWidth":4,"grid":false},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: true,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: true,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1120,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, RevealChalkboard, QuartoSupport,
+
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+          const outerScaffold = trigger.parentElement.cloneNode(true);
+          const codeEl = outerScaffold.querySelector('code');
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+              // Handle positioning of the toggle
+          window.addEventListener(
+            "resize",
+            throttle(() => {
+              elRect = undefined;
+              if (selectedAnnoteEl) {
+                selectCodeLines(selectedAnnoteEl);
+              }
+            }, 10)
+          );
+          function throttle(fn, ms) {
+          let throttle = false;
+          let timer;
+            return (...args) => {
+              if(!throttle) { // first call gets through
+                  fn.apply(this, args);
+                  throttle = true;
+              } else { // all the others get throttled
+                  if(timer) clearTimeout(timer); // cancel #2
+                  timer = setTimeout(() => {
+                    fn.apply(this, args);
+                    timer = throttle = false;
+                  }, ms);
+              }
+            };
+          }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>
