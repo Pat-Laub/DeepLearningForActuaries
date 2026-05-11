@@ -6,32 +6,34 @@ Go to [the main website](https://pat-laub.github.io/DeepLearningForActuaries/) t
 To render these slides yourself, you'll need [Quarto](https://quarto.org) and Python (e.g. the [Anaconda](https://www.anaconda.com/download) installation, or similar).
 
 Firstly, create a Python environment with all the packages from `scripts/requirements.in` installed.
-E.g. with `conda` you can run:
+From the repository root, create the environment and install the Python dependencies from `scripts/requirements.in`:
 
 ```shell
-conda create -n ai python=3.11
-conda activate ai
-pip install -r scripts/requirements.in
+uv venv --python 3.13
+source .venv/bin/activate
+uv pip install -r scripts/requirements.in
 ```
 
-Also, in the command-line `cd` to the main directory and run:
+If you prefer not to activate the environment in your shell, you can still run commands through it with `uv run ...`.
+
+Also, from the repository root run:
 
 ```shell
 quarto install extension andrie/reveal-auto-agenda
 ```
 
-This is to automatically generate the `agenda' slides inside the reveal.js slides (cf. [that extension's docs](https://github.com/andrie/reveal-auto-agenda#readme)).
+This is to automatically generate the `agenda` slides inside the reveal.js slides (cf. [that extension's docs](https://github.com/andrie/reveal-auto-agenda#readme)).
 
-Other dependences include having GraphViz installed.
+Other system dependencies include having GraphViz installed.
 
-To generate the entire website and slides for the whole project, just run
+To generate the entire website and slides for the whole project, run:
 
 ```shell
-quarto render
+uv run quarto render
 ```
 
-or more targeted versions for specific lectures, like
+For a more targeted render of a specific lecture, run:
 
 ```shell
-quarto render Lecture-1-Artificial-Intelligence/artificial-intelligence.qmd
+uv run quarto render Artificial-Intelligence/artificial-intelligence.qmd
 ```
