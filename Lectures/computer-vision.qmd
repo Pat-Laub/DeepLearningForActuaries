@@ -1,0 +1,1901 @@
+---
+title: Computer Vision
+---
+
+```{python}
+#| echo: false
+#| warning: false
+import sys
+sys.path.insert(0, "../scripts")
+from setup import *
+
+pandas.options.display.max_rows = 8
+```
+
+::: {.content-visible unless-format="revealjs"}
+
+```{python}
+#| code-fold: true
+#| code-summary: Show the package imports
+import json
+import random
+from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from PIL import Image
+
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, Input
+from keras.callbacks import EarlyStopping
+from keras.utils import plot_model
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+```
+
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Computer vision is a field of Artificial Intelligence (AI) that focuses on extracting meaningful information from visual data (images and videos). One of the primary goals of computer vision is to correctly identify and classify visual data. Convolutional Neural Networks (CNNs) are the most commonly used neural network architectures for computer vision related tasks.
+:::
+
+# Images {visibility="uncounted"}
+
+## Shapes of data
+
+::: {.content-visible unless-format="revealjs"}
+Special attention to the shapes of data is important in CNN architectures, because CNNs have special types of layers (e.g. convolution and pooling) which require explicit specifications of array dimensions.
+:::
+
+![Illustration of tensors of different rank.](images/medium-tensor-rank.png)
+
+::: footer
+Source: Paras Patidar (2019), [Tensors — Representation of Data In Neural Networks](https://medium.com/mlait/tensors-representation-of-data-in-neural-networks-bbe8a711b93b), Medium article.
+:::
+
+## Shapes of photos
+
+![A photo is a rank 3 tensor.](images/rgb-channels.png)
+
+::: footer
+Source: Kim et al (2021), [Data Hiding Method for Color AMBTC Compressed Images Using Color Difference](https://www.mdpi.com/applsci/applsci-11-03418/article_deploy/html/images/applsci-11-03418-g001.png), Applied Sciences.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Since the position of a pixel (one small square) in a photo can be represented using 3 positional values, we call it a rank 3 tensor.
+:::
+
+## How the computer sees them {.smaller}
+
+```{python}
+#| eval: false
+from matplotlib.image import imread
+img1 = imread('images/pu.gif'); img2 = imread('images/pl.gif')
+img3 = imread('images/pr.gif'); img4 = imread('images/pg.bmp')
+f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}."
+```
+
+```{python}
+#| echo: false
+from matplotlib.image import imread
+
+inds = (0, 1, 2)
+img1 = imread("images/pu.gif")
+img1 = img1[:, :, inds]
+
+img2 = imread("images/pl.gif")
+img2 = img2[:, :, inds]
+
+img3 = imread("images/pr.gif")
+img3 = img3[:, :, inds]
+
+img4 = imread("images/pg.bmp")
+
+f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}."
+```
+
+::: columns
+::: {.column width="25%"}
+
+```{python}
+img1
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+img2
+```
+
+:::
+::: {.column width="25%"}
+
+```{python}
+img3
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+img4
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above code reads 4 images and then shows how computers read those images. Each image is read by the computer as a rank 3 tensor. Each image is of (16,16,3) dimensions.
+:::
+
+## How we see them
+
+```{python}
+from matplotlib.pyplot import imshow
+```
+
+::: columns
+::: {.column width="25%"}
+
+```{python}
+imshow(img1);
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+imshow(img2);
+```
+
+:::
+::: {.column width="25%"}
+
+```{python}
+imshow(img3);
+```
+
+:::
+::: {.column width="25%"}
+```{python}
+imshow(img4);
+```
+:::
+:::
+
+## Why is 255 special?
+
+Each pixel's colour intensity is stored in one byte.
+
+One byte is 8 bits, so in binary that is 00000000 to 11111111.
+
+The largest _unsigned_ number this can be is $2^8-1 = 255$.
+
+```{python}
+np.array([0, 1, 255, 256]).astype(np.uint8)
+```
+
+If you had _signed_ numbers, this would go from -128 to 127.
+
+```{python}
+np.array([-128, 1, 127, 128]).astype(np.int8)
+```
+
+Alternatively, _hexadecimal_ numbers are used.
+E.g. 10100001 is split into 1010 0001, and 1010=A, 0001=1, so combined it is 0xA1.
+
+## Image editing with kernels
+
+Take a look at [https://setosa.io/ev/image-kernels/](https://setosa.io/ev/image-kernels/).
+
+
+![An example of an image kernel in action.](images/convolution.gif)
+
+
+::: footer
+Source: [Stanford's deep learning tutorial](http://deeplearning.stanford.edu/wiki/index.php/Feature_extraction_using_convolution) via [Stack Exchange](https://stats.stackexchange.com/a/188216).
+:::
+
+# Convolutional Layers {visibility="uncounted"}
+
+## 'Convolution' not 'complicated'
+
+Say $X_1, X_2 \sim f_X$ are i.i.d., and we look at $S = X_1 + X_2$.
+
+The density for $S$ is then
+
+$$
+f_S(s) = \int_{x_1=-\infty}^{\infty} f_X(x_1) \, f_X(s-x_1) \,\mathrm{d} x_1.
+$$
+
+This is the _convolution_ operation, $f_S = f_X \star f_X$.
+
+## Images are rank 3 tensors
+
+Height, width, and number of channels.
+
+::: {.content-visible unless-format="revealjs"}
+An image can be represented using a rank 3 tensor, since it has 3 dimensions; height, width, and number of channels. The number of channels is also known as the 'depth'. The left hand side of the picture shown below is tensor with height =5, width =5 and depth =3.
+:::
+
+![Examples of rank 3 tensors.](images/Glassner/16-1.png)
+
+Grayscale image has 1 channel. RGB image has 3 channels.
+
+::: {.content-visible unless-format="revealjs"}
+Each colour can be represented as a combination of three primary colours; red, green and blue.
+:::
+
+Example: Yellow = Red + Green. 
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Example: Detecting yellow
+
+::: {.content-visible unless-format="revealjs"}
+Suppose we wish to detect if a picture has yellow colour in it. One option would be to apply a neuron over each pixel and see if it detects the colour yellow. We know that each pixel is represented by 3 numerical values that correspond to red, green and blue. Higher numeric values for red and green indicate higher chances of detecting yellow. Higher values for blue indicate lower chances of detecting yellow. Utilising this information, we can assign RGB weights to be 1, 1, -1 respectively. 
+
+Next, a standard multiplication between numeric values and weights is carried out, and the weighted sum is passed through the neuron.
+:::
+
+::: columns
+::: column
+![Applying a neuron to an image pixel.](images/Glassner/16-3.png)
+:::
+::: column
+
+<br>
+
+Apply a neuron to each pixel in the image.
+
+<br>
+
+If red/green $\nearrow$ or blue $\searrow$ then yellowness $\nearrow$.
+
+<br>
+
+Set RGB weights to 1, 1, -1.
+:::
+:::
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Example: Detecting yellow II 
+
+![Scan the 3-channel input (colour image) with the neuron to produce a 1-channel output (grayscale image).](images/Glassner/16-4.png)
+
+The output is produced by *sweeping* the neuron over the input. This is called **convolution**.
+
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Example: Detecting yellow III {data-visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+The following picture demonstrates how yellow-coloured areas (in the colour picture) are transformed into a white colour (in the greyscale picture). This is a result of the way we assigned the weights. Since we assigned +1 weights to red and green, and -1 to blue, it ended up resulting in large positive values (for the weighted sum) for the pixels in the yellow-coloured areas. Large positive values in the greyscale correspond to white colour. Therefore, the areas which were yellow in the colour picture converted to white in the greyscale. In practice, we do not manually assign weights, instead, we let the neural network decide the optimal weights during training.
+:::
+
+![The more yellow the pixel in the colour image (left), the more white it is in the grayscale image.](images/Glassner/16-5.png)
+
+The neuron or its weights is called a **filter**. We *convolve* the image with a filter, i.e. a **convolutional filter**.
+
+## Terminology
+
+- The same neuron is used to sweep over the image, so we can store the weights in some shared memory and process the pixels in parallel. We say that the neurons are *weight sharing*.
+- In the previous example, the neuron only takes one pixel as input. Usually a larger filter containing a *block of weights* is used to process not only a pixel but also its neighboring pixels all at once.
+- The weights are called the filter **kernels**.
+- The cluster of pixels that forms the input of a filter is called its *footprint*.
+
+## Spatial filter
+
+![Example 3x3 filter](images/Glassner/16-9.png)
+
+
+When a filter's footprint is > 1 pixel, it is a **spatial filter**.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above spatial filter is a 3x3 filter. Hence, there are 9 weights to learn. 
+:::
+
+## Multidimensional convolution
+
+::: {.content-visible unless-format="revealjs"}
+In a multidimensional filter, the number of channels of the input must be equal to the number of channels in the filter (depths must be the same).
+:::
+
+Need $\# \text{ Channels in Input} = \# \text{ Channels in Filter}$.
+
+![Example: a 3x3 filter with 3 channels, containing 27 weights.](images/Glassner/16-18.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Example: 3x3 filter over RGB input 
+
+![Each channel is multiplied separately & then added together.](images/Glassner/16-19.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above figure shows how we pick a 3x3x3 block from the image, and then apply the 3x3 filter. The multiplication is carried out channel-wise, i.e. we select the first channel of the filter and the first channel of the image and carry out the element-wise multiplication. Once the elementwise multiplications for the three pairs of channels are completed, we sum them all, and pass through the neuron.
+:::
+
+## Input-output relationship 
+
+![Matching the original image footprints against the output location.](images/Glassner/16-10.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above figure shows how 9 inputs transform into one output. As a result, dimensions of the output matrix is smaller than the dimensions of the input matrix. There are some options we can use if we wish to keep the size of input and output matrices same.
+:::
+
+# Convolutional Layer Options {visibility="uncounted"}
+
+## Padding
+
+![What happens when filters go off the edge of the input?](images/Glassner/16-15.png)
+ 
+ - How to avoid the filter's receptive field falling off the side of the input.
+ - If we only scan the filter over places of the input where the filter can fit perfectly, it will lead to loss of information, especially after many filters.
+ 
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Padding
+
+Add a border of extra elements around the input, called **padding**.
+Normally we place zeros in all the new elements, called **zero padding**.
+
+![Padded values can be added to the outside of the input.](images/Glassner/16-17.png)
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Convolution layer
+
+- Multiple filters are bundled together in one layer.
+- The filters are applied *simultaneously* and *independently* to the input.
+- Filters can have different footprints, but in practice we almost always use the same footprint for every filter in a convolution layer.
+- Number of channels in the output will be the same as the number of filters.
+
+::: {.content-visible unless-format="revealjs"}
+The motivation behind applying filters *simultaneously* and *independently* is to let the filters learn different patterns in the input-output relationship. The idea is quite similar to using many neurons in one `Dense` layer (in a `Dense` layer, we would use multiple neurons so that different neurons can capture different patterns in the input-output relationship).
+:::
+
+## Example
+
+::: columns
+::: column
+In the image:
+
+- 6-channel input tensor
+- input pixels
+- four 3x3 filters
+- four output tensors
+- final output tensor.
+:::
+::: column
+![Example network highlighting that the number of output channels equals the number of filters.](images/Glassner/16-21.png)
+:::
+:::
+
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The above picture shows how we take in an image with 6 channels, select a 3x3 block (in pink colour), apply 4 different filters of same dimensions (in pink, green, blue and yellow), retrieve the output with 1 channel (1 output for each filter) and finally stack them together to create 1 output tensor. Note that the number of channels in the output tensor is 4, which is equal to the number of spatial filters used.  
+:::
+
+
+## 1x1 convolution
+
+- Feature reduction: Reduce the number of channels in the input tensor (removing correlated features) by using fewer filters than the number of channels in the input. This is because the number of channels in the output is always the same as number of filters.
+- 1x1 convolution: Convolution using 1x1 filters. 
+- When the channels are correlated, 1x1 convolution is very effective at reducing channels without loss of information.
+
+## Example of 1x1 convolution {.smaller}
+
+![Example network with 1x1 convolution.](images/Glassner/16-23.png)
+
+- Input tensor contains 300 channels.
+- Use 175 1x1 filters in the convolution layer (300 weights each).
+- Each filter produces a 1-channel output.
+- Final output tensor has 175 channels.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Striding
+
+::: {.content-visible unless-format="revealjs"}
+Striding allows us to modify the movement of the filter across the image. Instead of moving one step at a time (either horizontally or vertically), we can increase the number of steps using the *striding* option.
+:::
+
+We don't have to go one pixel across/down at a time.
+
+![Example: Use a stride of three horizontally and two vertically.](images/Glassner/16-29.png)
+
+Dimension of output will be smaller than input.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Choosing strides {.smaller}
+
+::: {layout-ncol=2}
+![](images/Glassner/16-31.png)
+
+![](images/Glassner/16-32.png)
+:::
+
+When a filter scans the input step by step, it processes the same input elements multiple times. Even with larger strides, this can still happen (left image).
+
+**If** we want to save time, we can choose strides that prevents input elements from being used more than once. Example (right image): 3x3 filter, stride 3 in both directions.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Specifying a convolutional layer
+
+Need to choose:
+
+- number of filters,
+- their footprints (e.g. 3x3, 5x5, etc.),
+- activation functions,
+- padding & striding (optional).
+
+All the filter weights are learned during training.
+
+# Convolutional Neural Networks {visibility="uncounted"}
+
+## Definition of CNN
+
+::: columns
+::: {.column width="60%"}
+
+<br>
+<br>
+
+A neural network that uses _convolution layers_ is called a _convolutional neural network_.
+
+:::
+::: {.column width="40%"}
+![](images/xkcd-trained_a_neural_net_2x.png)
+:::
+:::
+
+::: footer
+Source: Randall Munroe (2019), [xkcd #2173: Trained a Neural Net](https://xkcd.com/2173/).
+:::
+
+## Architecture
+
+![Typical CNN architecture.](images/CNN-architecture.png)
+
+::: footer
+Source: Melissa Renard (2025)
+:::
+
+::: {.content-visible unless-format="revealjs"}
+A standard CNN architecture has the following components: 
+
+* Input layer
+* Sequence of feature extraction layers (which combine convolution and pooling operations sequentially)
+* Sequence of classification layers (which include flattening and fully connected layers)
+* Final output layer
+
+Convolution layers are used to extract meaningful patterns from the input using spatial filters. Pooling layers are used to reduce the spatial dimensions of the feature maps generated from convolutional layers. The purpose of the feature extraction layers is to learn complex but meaningful, high levels patterns in data. The aim of classification layers is to receive the learned patterns and make decisions more closely related to the classification task at hand.
+:::
+
+## Architecture II
+
+![](images/mathworks-typical-cnn.svg)
+
+::: footer
+Source: MathWorks, [_Introducing Deep Learning with MATLAB_](https://au.mathworks.com/campaigns/offers/next/deep-learning-ebook.html), Ebook.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+On a high level, the idea would be to keep on increasing the number of channels (depth) and decrease the dimensions of the feature map. We can see how the depth increases, and spatial dimensions reduce from first convolution layer to the second pooling layer.
+:::
+
+## Pooling
+
+**Pooling**, or **downsampling**, is a technique to blur a tensor.
+
+![Illustration of pool operations.](images/Glassner/16-27.png)
+
+(a): Input tensor
+(b): Subdivide input tensor into 2x2 blocks
+(c): Average pooling
+(d): Max pooling
+(e): Icon for a pooling layer
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+
+## Pooling for multiple channels {.smaller}
+
+![Pooling a multichannel input.](images/Glassner/16-28.png)
+
+- Input tensor: 6x6 with 1 channel, zero padding.
+- Convolution layer: Three 3x3 filters.
+- Convolution layer output: 6x6 with 3 channels.
+- Pooling layer: apply max pooling to each channel.
+- Pooling layer output: 3x3, 3 channels.
+
+::: footer
+Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+:::
+
+## Why/why not use pooling?
+
+**Why?** Pooling *reduces the size* of tensors, therefore reduces memory usage and execution time (recall that 1x1 convolution *reduces the number of channels* in a tensor).
+
+**Why not?**
+
+![Geoffrey Hinton](images/reddit-hinton-pooling.png)
+
+::: footer
+Source: Hinton, [Reddit AMA](https://www.reddit.com/r/MachineLearning/comments/2lmo0l/comment/clyj4jv/?utm_source=share&utm_medium=web2x&context=3).
+:::
+
+## What do the CNN layers learn?
+
+![](images/distill-feature-visualisation.png)
+
+::: {.content-visible unless-format="revealjs"}
+CNN layers learn (sequentially):
+
+1. Edges
+2. Textures
+3. Patterns
+4. Parts
+5. Objects
+:::
+
+::: footer
+Source: Distill article, [Feature Visualization](https://distill.pub/2017/feature-visualization/).
+:::
+
+# Chinese Character Recognition Dataset {visibility="uncounted"}
+
+## MNIST Dataset
+
+![The MNIST dataset.](images/wiki-MnistExamples.png)
+
+::: footer
+Source: Wikipedia, [MNIST database](https://en.wikipedia.org/wiki/MNIST_database).
+:::
+
+## CASIA Chinese handwriting database
+
+Dataset source: [Institute of Automation of Chinese Academy of Sciences (CASIA)](https://nlpr.ia.ac.cn/databases/handwriting/Home.html)
+
+![A 13 GB dataset of 3,999,571 handwritten characters.](images/Offlin1.jpg)
+
+::: footer
+Source: Liu et al. (2011), [CASIA online and offline Chinese handwriting databases](https://nlpr.ia.ac.cn/databases/handwriting/Home.html), 2011 International Conference on Document Analysis and Recognition.
+:::
+
+## Inspect a subset of characters
+
+::: columns
+::: column
+
+Pulling out 55 characters to experiment with.
+
+人从众大夫天口太因鱼犬吠哭火炎啖木林森本竹羊美羔山出女囡鸟日东月朋明肉肤工白虎门闪问闲水牛马吗妈玉王国主川舟虫
+
+:::
+::: column
+
+Inspect directory structure
+```{python}
+#| output: false
+!pip install directory_tree
+```
+```{python}
+#| eval: false
+from directory_tree import DisplayTree
+DisplayTree("CASIA-Dataset")
+```
+```{python}
+#| echo: false
+from directory_tree import DisplayTree
+tree = DisplayTree("CASIA-Dataset", stringRep=True).split("\n")
+print("\n".join(tree[:12]))
+print("...")
+print("\n".join(tree[-4:]))
+```
+
+:::
+:::
+
+## Count number of images for each character
+
+```{python}
+def count_images_in_folders(root_folder):
+    counts = {}
+    for folder in root_folder.iterdir():
+        counts[folder.name] = len(list(folder.glob("*.png")))
+    return counts
+
+train_counts = count_images_in_folders(Path("CASIA-Dataset/Train"))
+test_counts = count_images_in_folders(Path("CASIA-Dataset/Test"))
+
+print(train_counts)
+print(test_counts)
+```
+
+## Number of images for each character
+
+```{python}
+plt.hist(train_counts.values(), bins=30, label="Train")
+plt.hist(test_counts.values(), bins=30, label="Test")
+plt.legend();
+```
+
+It differs, but basically ~600 training and ~140 test images per character.
+A couple of characters have a lot less of both though.
+
+## Checking the dimensions
+
+```{python}
+def get_image_dimensions(root_folder):
+    dimensions = []
+    for folder in root_folder.iterdir():
+        for image in folder.glob("*.png"):
+            img = imread(image)
+            dimensions.append(img.shape)
+    return dimensions
+
+train_dimensions = get_image_dimensions(Path("CASIA-Dataset/Train"))
+test_dimensions = get_image_dimensions(Path("CASIA-Dataset/Test"))
+
+train_heights = [d[0] for d in train_dimensions]
+train_widths = [d[1] for d in train_dimensions]
+test_heights = [d[0] for d in test_dimensions]
+test_widths = [d[1] for d in test_dimensions]
+```
+
+## Checking the dimensions II
+
+```{python}
+plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights")
+plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths")
+plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights")
+plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths")
+plt.legend();
+```
+
+The images are taller than they are wide.
+We have more training images than test images.
+
+## Checking the dimensions III
+
+```{python}
+plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights", density=True)
+plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths", density=True)
+plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights", density=True)
+plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths", density=True)
+plt.legend();
+```
+
+## Checking the dimensions IV
+
+::: columns
+::: column
+```{python}
+plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights", density=True)
+plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights", density=True)
+plt.legend();
+
+```
+:::
+::: column
+```{python}
+plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths", density=True)
+plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths", density=True)
+plt.legend();
+```
+:::
+:::
+
+The distribution of dimensions are pretty similar between training and test sets.
+
+## Keras image dataset loading
+
+Normally we'd used [`keras.utils.image_dataset_from_directory`](https://keras.io/api/data_loading/image/) but the Chinese characters breaks it on Windows.
+I made an image loading function just for this demo.
+
+```{python}
+#| code-fold: true
+def preprocess_image(img_path, img_height=80, img_width=60):
+    """
+    Loads and preprocesses an image:
+    - Converts to grayscale
+    - Resizes to (img_height, img_width) using anti-aliasing
+    - Returns a NumPy array normalized to [0,1]
+    """
+    img = Image.open(img_path).convert("L")  # Open image and convert to grayscale
+    img = img.resize((img_width, img_height), Image.LANCZOS)  # Resize with anti-aliasing
+    return np.array(img, dtype=np.float32)
+
+def load_images_from_directory(directory, img_height=80, img_width=60):
+    """
+    Loads images and labels from a directory where each subfolder represents a class.
+    
+    Returns:
+        X (numpy array): Image data of shape (num_samples, img_height, img_width, 1).
+        y (numpy array): Labels as integer indices.
+        class_names (list): List of class names in sorted order.
+    """
+    directory = Path(directory)  # Ensure it's a Path object
+    class_names = sorted([d.name for d in directory.iterdir() if d.is_dir()])  # Sorted UTF-8 class names
+    class_name_to_index = {name: i for i, name in enumerate(class_names)}
+
+    image_paths, labels = [], []
+    
+    for class_name in class_names:
+        class_dir = directory / class_name
+        for img_path in sorted(class_dir.glob("*.png")):
+            image_paths.append(img_path)
+            labels.append(class_name_to_index[class_name])
+
+    # Load and preprocess images
+    X = np.array([preprocess_image(img, img_height, img_width) for img in image_paths])
+    X = X[..., np.newaxis]  # Add channel dimension
+    y = np.array(labels, dtype=np.int32)
+
+    return X, y, class_names
+```
+
+```{python}
+data_dir = Path("CASIA-Dataset")
+img_height, img_width = 80, 60  # Target image size
+
+# Load 'training' and test datasets
+X_main, y_main, class_names = load_images_from_directory(data_dir / "Train", img_height, img_width)
+X_test, y_test, _ = load_images_from_directory(data_dir / "Test", img_height, img_width)
+
+# Verify dataset shape
+print(f"Train: X={X_main.shape}, y={y_main.shape}")
+print(f"Test: X={X_test.shape}, y={y_test.shape}")
+print("Class Names:", class_names)
+```
+
+::: {.content-visible unless-format="revealjs"}
+The shape of the X data represents:
+
+1. Number of images
+2. Image height
+3. Image width
+4. Image depth
+:::
+
+## Some setup
+
+::: {.content-visible unless-format="revealjs"}
+Split the data into training and validation.
+:::
+
+```{python}
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.2,
+    random_state=123)
+print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape)
+```
+
+```{python}
+import matplotlib.font_manager as fm
+CHINESE_FONT = fm.FontProperties(fname="STHeitiTC-Medium-01.ttf")
+
+def plot_mandarin_characters(X, y, class_names, n=5, title_font=CHINESE_FONT):
+    # Plot the first n images in X
+    plt.figure(figsize=(10, 4))
+    for i in range(n):
+        plt.subplot(1, n, i + 1)
+        plt.imshow(X[i], cmap="gray")
+        plt.title(class_names[y[i]], fontproperties=title_font)
+        plt.axis("off")
+```
+
+```{python}
+class_names[:5]
+```
+
+```{python}
+X_dong = X_train[y_train == 0]; y_dong = y_train[y_train == 0]
+X_ren = X_train[y_train == 2]; y_ren = y_train[y_train == 2]
+```
+
+## Plotting some training characters {.smaller}
+
+```{python}
+#| code-fold: true
+plot_mandarin_characters(X_dong, y_dong, class_names)
+```
+
+```{python}
+#| code-fold: true
+plot_mandarin_characters(X_ren, y_ren, class_names)
+```
+
+## Without the colourmap..
+
+::: columns
+::: {.column width="5%"}
+:::
+::: {.column width="45%"}
+```{python}
+dong = X_test[y_test == 0][0]
+plt.imshow(dong, cmap="gray");
+```
+:::
+::: {.column width="45%"}
+```{python}
+dong = X_test[y_test == 0][1]
+plt.imshow(dong);
+```
+:::
+::: {.column width="5%"}
+:::
+:::
+
+# Fitting a (multinomial) logistic regression
+
+::: {.content-visible unless-format="revealjs"}
+What if, rather than deep learning, we wanted to fit a logistic regression to an image?
+:::
+
+## Make a logistic regression
+
+![Basically pretend it's not an image](images/flattening-image-to-vector.png)
+
+::: {.content-visible unless-format="revealjs"}
+By flattening the image, we convert the matrix of information (tensor 2) into a vector (tensor 1), converting the dataset to tabular.
+A consequence is that we lose information about the dimensions of the image.
+:::
+
+```{python}
+from keras.layers import Rescaling, Flatten     #<1>
+
+num_classes = np.unique(y_train).shape[0]       #<2>
+random.seed(123)
+model = Sequential([
+  Input((img_height, img_width, 1)), Flatten(), Rescaling(1./255),
+  Dense(num_classes, activation="softmax")
+])
+```
+1. Imports preprocessing layers from `keras.layers` useful for image data
+2. Specifies the number of unique categories in the train set
+
+::: {.callout-tip}
+The `Rescaling` layer will rescale the intensities to [0, 1].
+:::
+
+## Inspecting the model
+
+```{python}
+model.summary()                            
+```
+
+## Plot the model
+
+```{python}
+plot_model(model, show_shapes=True)
+```
+
+```{python}
+#| echo: false
+Path("model.png").unlink(missing_ok=True)
+```
+
+## Fitting the model
+
+```{python}
+#| code-line-numbers: "1-7,14-15|"
+loss = keras.losses.SparseCategoricalCrossentropy()
+topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)
+model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])  #<1>
+
+epochs = 100
+es = EarlyStopping(patience=15, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)                                  #<2>
+
+if Path("logistic.keras").exists():
+    model = keras.models.load_model("logistic.keras")
+    with open("logistic_history.json", "r") as json_file:
+        history = json.load(json_file)
+else:
+    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+      epochs=epochs, callbacks=[es], verbose=0)                         #<3>
+    model.save("logistic.keras")
+    history = hist.history
+    with open("logistic_history.json", "w") as json_file:
+        json.dump(history, json_file)
+```
+
+1. Compile the model with specified optimizer (`"adam"`) and loss function (cross-entropy). The metrics we look at are accuracy and top-5 accuracy
+2. Perform early stopping to fit the parameters, using the accuracy on the validation set to determine the stopping point
+3. Fit the model with the optimized parameters
+
+Most of this last part is just to save time rendering this slides, you don't need it.
+
+## Plot the loss/accuracy curves
+
+```{python}
+#| code-fold: true
+def plot_history(history):
+    epochs = range(len(history["loss"]))
+
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs, history["accuracy"], label="Train")
+    plt.plot(epochs, history["val_accuracy"], label="Val")
+    plt.legend(loc="lower right")
+    plt.title("Accuracy")
+
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs, history["loss"], label="Train")
+    plt.plot(epochs, history["val_loss"], label="Val")
+    plt.legend(loc="upper right")
+    plt.title("Loss")
+    plt.show()
+```
+
+```{python}
+plot_history(history)
+```
+
+## Look at the metrics
+
+```{python}
+print(model.evaluate(X_train, y_train, verbose=0))
+print(model.evaluate(X_val, y_val, verbose=0))
+```
+
+```{python}
+loss_value, accuracy, top5_accuracy = model.evaluate(X_val, y_val, verbose=0)
+print(f"Validation Loss: {loss_value:.4f}")
+print(f"Validation Accuracy: {accuracy:.4f}")
+print(f"Validation Top 5 Accuracy: {top5_accuracy:.4f}")
+```
+
+::: {.content-visible unless-format="revealjs"}
+::: {.callout-note}
+Why is top-5 accuracy greater than accuracy?
+
+* Accuracy: the proportion of guesses that are correct (the "guess" is the category with the highest implied probability)
+* Top-5 accuracy: the proportion of the time that the top 5 categories (the 5 categories with the highest implied probabilities) include the correct answer
+:::
+:::
+
+# Fitting a CNN {visibility="uncounted"}
+
+## Make a CNN
+
+```{python}
+from keras.layers import Conv2D, MaxPooling2D                          #<1>
+
+random.seed(123)
+
+model = Sequential([
+  Input((img_height, img_width, 1)),
+  Rescaling(1./255),                                                    #<2>
+  Conv2D(16, 3, padding="same", activation="relu", name="conv1"),       #<3>
+  MaxPooling2D(name="pool1"),                                           #<4>
+  Conv2D(32, 3, padding="same", activation="relu", name="conv2"),
+  MaxPooling2D(name="pool2"),
+  Conv2D(64, 3, padding="same", activation="relu", name="conv3"),
+  MaxPooling2D(name="pool3", pool_size=(4, 4)),
+  Flatten(), Dense(64, activation="relu"), Dense(num_classes)           #<5>
+])
+```
+1. Imports CNN specific preprocessing layers from `keras.layers`
+2. Rescales the numeric representations of data which ranges from [0,255] into [0, 1] range
+3. Applies the convolution layer. Here `padding="same"` ensures that the dimensions of the input and output matrices remain same
+4. Applies `MaxPooling`, which reduces the spatial dimensions by carrying forward the maximum value over an input window
+5. Applies the `Flatten` layer to convert the 2D array (from pooling) into a single column vector, and passes through couple of `Dense` layers to train the neural network for the specific classification problem.
+Note that the output layer has number of neurons equal to `num_classes`, which corresponds to the number of unique classes in the output.
+
+::: footer
+Architecture inspired by [https://www.tensorflow.org/tutorials/images/classification](https://www.tensorflow.org/tutorials/images/classification).
+:::
+
+## Inspect the model
+
+```{python}
+model.summary()
+```
+
+## Plot the CNN
+
+```{python}
+plot_model(model, show_shapes=True)
+```
+
+```{python}
+#| echo: false
+Path("model.png").unlink(missing_ok=True)
+```
+
+## Fit the CNN
+
+```{python}
+loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True)               #<1>
+topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)                           #<2>
+model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])            #<3>
+
+epochs = 100
+es = EarlyStopping(patience=15, restore_best_weights=True,
+    monitor="val_accuracy", verbose=2)
+
+if Path("cnn.keras").exists():
+    model = keras.models.load_model("cnn.keras")
+    with open("cnn_history.json", "r") as json_file:
+        history = json.load(json_file)
+else:
+    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+      epochs=epochs, callbacks=[es], verbose=0)
+    model.save("cnn.keras")
+    history = hist.history
+    with open("cnn_history.json", "w") as json_file:
+        json.dump(history, json_file)
+```
+
+1. Defines the loss function with an added command `from_logits=True`. Doing this instead of defining a `softmax` function at the output `Dense` layer of the neural network is expected to be more numerically stable
+2. Specifies a new metric to keep track of accuracy of the top 5 predicted classes. This means that, for each input image, the metric will consider whether the true class is among the top 5 predicted classes by the model
+3. Compiles the model as usual with an optimizer, a loss function and metrics to monitor
+
+::: {.callout-tip}
+Instead of using softmax activation, just added `from_logits=True` to the loss function; this is more numerically stable.
+:::
+
+## Plot the loss/accuracy curves
+
+```{python}
+plot_history(history)
+```
+
+## Look at the metrics
+
+```{python}
+print(model.evaluate(X_train, y_train, verbose=0))
+print(model.evaluate(X_val, y_val, verbose=0))
+```
+
+```{python}
+loss_value, accuracy, top5_accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Test Loss: {loss_value:.4f}")
+print(f"Test Accuracy: {accuracy:.4f}")
+print(f"Test Top 5 Accuracy: {top5_accuracy:.4f}")
+```
+
+## Predict on the test set
+
+```{python}
+#| error: true
+#| output: false
+model.predict(X_test[0], verbose=0);
+```
+
+```{python}
+#| echo: false
+warn = """ValueError                                Traceback (most recent call last)
+Cell In[51], line 1
+----> 1 model.predict(X_test[0], verbose=0);
+ValueError: Exception encountered when calling MaxPooling2D.call().
+Negative dimension size caused by subtracting 2 from 1 for '{{node sequential_1_1/pool1_1/MaxPool2d}} = MaxPool[T=DT_FLOAT, data_format="NHWC", explicit_paddings=[], ksize=[1, 2, 2, 1], padding="VALID", strides=[1, 2, 2, 1]](sequential_1_1/conv1_1/Relu)' with input shapes: [32,60,1,16].
+Arguments received by MaxPooling2D.call():
+  • inputs=tf.Tensor(shape=(32, 60, 1, 16), dtype=float32)
+"""
+print(warn)
+```
+
+```{python}
+X_test[0].shape, X_test[0][np.newaxis, :].shape, X_test[[0]].shape
+```
+
+::: {.content-visible unless-format="revealjs"}
+Make sure to check the shape of your data to ensure the right inputs to the functions.
+:::
+
+
+```{python}
+model.predict(X_test[[0]], verbose=0)
+```
+
+::: {.content-visible unless-format="revealjs"}
+Because we don't have the softmax activation function, the predicted values don't directly represent the probabilities (not between 0 and 1). However, the predicted values are ordered according to their respective implied probabilities. In other words, the category with the highest predicted value is the category with the highest implied probability.
+:::
+
+
+## Predict on the test set II
+
+```{python}
+model.predict(X_test[[0]], verbose=0).argmax()
+```
+
+```{python}
+class_names[model.predict(X_test[[0]], verbose=0).argmax()]
+```
+
+```{python}
+plt.imshow(X_test[0], cmap="gray");
+```
+
+::: {.content-visible unless-format="revealjs"}
+The predicted category appears to be correct.
+:::
+
+## Take a look at the failure cases
+
+```{python}
+#| code-fold: true
+def plot_failed_predictions(X, y, class_names, max_errors = 20,
+            num_rows = 4, num_cols = 5, title_font=CHINESE_FONT):
+    plt.figure(figsize=(num_cols * 2, num_rows * 2))
+    errors = 0
+    y_pred = model.predict(X, verbose=0)
+    y_pred_classes = y_pred.argmax(axis=1)
+    y_pred_probs = keras.ops.convert_to_numpy(keras.ops.softmax(y_pred)).max(axis=1)
+    for i in range(len(y_pred)):
+        if errors >= max_errors:
+            break
+        if y_pred_classes[i] != y[i]:
+            plt.subplot(num_rows, num_cols, errors + 1)
+            plt.imshow(X[i], cmap="gray")
+            true_class = class_names[y[i]]
+            pred_class = class_names[y_pred_classes[i]]
+            conf = y_pred_probs[i]
+            msg = f"{true_class} not {pred_class} ({conf*100:.0f}%)"
+            plt.title(msg, fontproperties=title_font)
+            plt.axis("off")
+            errors += 1
+```
+
+```{python}
+plot_failed_predictions(X_test, y_test, class_names)
+```
+
+::: {.content-visible unless-format="revealjs"}
+By looking at the failure cases, we can ask ourselves:
+
+* Was any of the data mislabeled?
+* Are there common patterns in the failure cases? E.g. Two different characters that look similar
+:::
+
+## Confidence of predictions
+
+```{python}
+y_log = model.predict(X_test, verbose=0)                                #<1>
+y_pred = keras.ops.convert_to_numpy(keras.activations.softmax(y_log))   #<2>
+y_pred_class = np.argmax(y_pred, axis=1)                                #<3>
+y_pred_prob = y_pred[np.arange(y_pred.shape[0]), y_pred_class]          #<4>
+
+confidence_when_correct = y_pred_prob[y_pred_class == y_test]
+confidence_when_wrong = y_pred_prob[y_pred_class != y_test]             #<5>
+```
+
+1. Make predictions on the test set
+2. Convert the predictions to probabilities [0,1] using softmax activation function
+3. Extract the category with the highest probability (the prediction's best guess)
+4. Extract the *probability* of the above category
+5. Split the probabilities between correct and incorrect guesses
+
+::: columns
+::: column
+```{python}
+plt.hist(confidence_when_correct);
+```
+:::
+::: column
+```{python}
+plt.hist(confidence_when_wrong);
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+For correct guesses, almost all of them were at least 90% confident.
+For incorrect guesses, the guesses were less confident on average, but most of the guesses were still at least 90% confident.
+:::
+
+
+# Hyperparameter tuning {visibility="uncounted"}
+
+## Trial & error
+
+::: columns
+::: column
+
+<br>
+<br>
+
+Frankly, a lot of this is just 'enlightened' trial and error.
+:::
+::: column
+
+![Or 'received wisdom' from experts...](images/twitter-advice.png)
+
+:::
+:::
+
+::: footer
+Source: [X](https://x.com/tetraduzione/status/1525501171221274627?s=20&t=ulVFesw-f7hCuG9KyaoYbQ).
+:::
+
+## Optuna {.smaller}
+
+```{python}
+#| echo: false
+from sklearn.datasets import fetch_california_housing
+
+if not Path("california-features.csv").exists():
+  features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+  features.to_csv("california-features.csv", index=False)
+  target.to_csv("california-target.csv", index=False)
+else:
+  features = pd.read_csv("california-features.csv")
+  target = pd.read_csv("california-target.csv")
+
+X_main, X_test, y_main, y_test = \
+    train_test_split(features, target, test_size=0.2, random_state=1)
+
+# As 0.25 x 0.8 = 0.2
+X_train, X_val, y_train, y_val = \
+    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+
+X_train.shape, X_val.shape, X_test.shape
+
+sc = StandardScaler()
+sc.fit(X_train)
+X_train_sc = sc.transform(X_train)
+X_val_sc = sc.transform(X_val)
+X_test_sc = sc.transform(X_test)
+```
+
+```{python}
+#| output: false
+!pip install optuna
+```
+
+```{python}
+import os
+import optuna
+optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+os.makedirs("./optuna-artifacts", exist_ok=True)
+artifact_store = optuna.artifacts.FileSystemArtifactStore(
+    base_path="./optuna-artifacts")
+
+def objective(trial):
+    model = Sequential()
+    model.add(
+        Dense(
+            trial.suggest_categorical("neurons",
+                [4, 8, 16, 32, 64, 128, 256]),
+            activation=trial.suggest_categorical(
+                "activation",
+                ["relu", "leaky_relu", "tanh"]),
+        )
+    )
+    model.add(Dense(1, activation="exponential"))
+
+    learning_rate = trial.suggest_float("lr",
+        1e-4, 1e-2, log=True)
+    opt = keras.optimizers.Adam(learning_rate=learning_rate)
+    model.compile(optimizer=opt, loss="poisson")
+
+    es = EarlyStopping(patience=3,
+        restore_best_weights=True)
+    model.fit(X_train_sc, y_train, epochs=100,
+        callbacks=[es],
+        validation_data=(X_val_sc, y_val), verbose=0)
+
+    val_loss = model.evaluate(
+        X_val_sc, y_val, verbose=0)
+
+    model.save("_trial_model.keras")              #<1>
+    artifact_id = optuna.artifacts.upload_artifact(
+        artifact_store=artifact_store,
+        file_path="_trial_model.keras",
+        study_or_trial=trial)
+    trial.set_user_attr("artifact_id", artifact_id)
+
+    return val_loss
+```
+1. Each trial's trained model is saved to Optuna's artifact store so the best model can be retrieved later
+
+::: {.content-visible unless-format="revealjs"}
+The hyperparameters we are tuning are:
+
+* The number of neurons in each hidden layer
+* The activation functions for the hidden layers
+* The learning rate for the Adam optimiser
+
+We give the model a few choices for the first two (the learning rate is continuous). Note that with Optuna, the `objective` function handles the entire training loop and returns the validation loss. Optuna then uses this to decide which hyperparameters to try next.
+:::
+
+## Do a random search
+
+```{python}
+sampler = optuna.samplers.RandomSampler(seed=123)
+study = optuna.create_study(
+    direction="minimize",
+    sampler=sampler)
+
+study.optimize(objective, n_trials=10)
+```
+
+```{python}
+print(f"Best value: {study.best_trial.value:.4f}")
+print(f"Best params:")
+for k, v in study.best_trial.params.items():
+    print(f"  {k}: {v}")
+```
+
+```{python}
+best_id = study.best_trial.user_attrs["artifact_id"]
+Path("best_random_model.keras").unlink(missing_ok=True)
+optuna.artifacts.download_artifact(
+    artifact_store=artifact_store,
+    file_path="best_random_model.keras",
+    artifact_id=best_id)
+best_model = keras.models.load_model(
+    "best_random_model.keras")
+```
+
+::: {.content-visible unless-format="revealjs"}
+The model runs through 10 random combinations of the hyperparameters and returns the one where the loss on the validation set is minimised. After the search, we retrieve the best trial's saved model from the artifact store.
+:::
+
+## Tune layers separately {.smaller}
+
+```{python}
+def objective(trial):
+    model = Sequential()
+
+    for i in range(trial.suggest_int(
+            "numHiddenLayers", 1, 3)):
+        model.add(
+            Dense(
+                trial.suggest_categorical(
+                    f"neurons_{i}", [8, 16, 32, 64]),
+                activation="relu"
+            )
+        )
+    model.add(Dense(1, activation="exponential"))
+
+    opt = keras.optimizers.Adam(learning_rate=0.0005)
+    model.compile(optimizer=opt, loss="poisson")
+
+    es = EarlyStopping(patience=3,
+        restore_best_weights=True)
+    model.fit(X_train_sc, y_train, epochs=100,
+        callbacks=[es],
+        validation_data=(X_val_sc, y_val), verbose=0)
+
+    val_loss = model.evaluate(
+        X_val_sc, y_val, verbose=0)
+
+    model.save("_trial_model.keras")
+    artifact_id = optuna.artifacts.upload_artifact(
+        artifact_store=artifact_store,
+        file_path="_trial_model.keras",
+        study_or_trial=trial)
+    trial.set_user_attr("artifact_id", artifact_id)
+
+    return val_loss
+```
+
+::: {.content-visible unless-format="revealjs"}
+This time, we let the number of neurons in each hidden layer be tuned separately. For this example we are not tuning the activation functions or the learning rate.
+:::
+
+## Do a Bayesian search
+
+```{python}
+sampler = optuna.samplers.TPESampler(seed=123) #<1>
+study = optuna.create_study(
+    direction="minimize",
+    sampler=sampler)
+
+study.optimize(objective, n_trials=10)
+```
+1. Optuna uses a _Tree-structured Parzen Estimator_ (TPE) by default, which is a Bayesian method. Passing a `seed` makes the search reproducible.
+
+```{python}
+print(f"Best value: {study.best_trial.value:.4f}")
+print(f"Best params:")
+for k, v in study.best_trial.params.items():
+    print(f"  {k}: {v}")
+```
+
+::: {.content-visible unless-format="revealjs"}
+Bayesian search is not purely random, and updates its beliefs about the optimal hyperparameter values based on past models. Bayesian search balances *exploration* of new hyperparameter values and *exploitation* of the values that are expected to be optimal. Optuna's default sampler is the Tree-structured Parzen Estimator (TPE), which is a Bayesian optimization algorithm. Passing a `seed` to the sampler ensures the same sequence of hyperparameters is tried each time.
+:::
+
+## Averaging over random seeds
+
+::: {.callout-tip}
+Neural networks are sensitive to their random initialisation. A hyperparameter combination that looks good (or bad) on a single run might just have been lucky (or unlucky).
+
+A more robust approach is to train 3--5 models with the same hyperparameters but different random seeds, and average the validation loss. This way you select architectures that perform well *and* reliably, rather than ones that happened to land on a favourable starting point.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+In the objective function, instead of returning the loss from a single fit, you would loop over a few seeds, refit each time, and return the mean validation loss. This is slower but gives you much more confidence that the chosen hyperparameters are genuinely good rather than a fluke.
+:::
+
+# Benchmark Problems {visibility="uncounted"}
+
+## Demo: Object classification
+
+::: columns
+::: column
+![Example object classification run.](images/teach-images.png)
+:::
+::: column
+![Example of object classification.](https://info.deeplearning.ai/hs-fs/hubfs/NOCODE.gif?width=1199&upscale=true&name=NOCODE.gif)
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+How are these classification models so accurate?
+:::
+
+::: footer
+Source: Teachable Machine, [https://teachablemachine.withgoogle.com/](https://teachablemachine.withgoogle.com/).
+:::
+
+## How does that work?
+
+> ... these models use a technique called transfer learning. There’s a pretrained neural network, and when you create your own classes, you can sort of picture that your classes are becoming the last layer or step of the neural net. Specifically, both the image and pose models are learning off of pretrained mobilenet models ...
+
+[Teachable Machine FAQ](https://teachablemachine.withgoogle.com/faq#Diving-Deeper)
+
+## Benchmarks
+
+[CIFAR-11 / CIFAR-100 dataset](https://www.cs.toronto.edu/~kriz/cifar.html) from Canadian Institute for Advanced Research
+
+- 9 classes: 60000 32x32 colour images
+- 99 classes: 60000 32x32 colour images
+
+[ImageNet](https://www.image-net.org/index.php) and the _ImageNet Large Scale Visual Recognition Challenge (ILSVRC)_; originally [1,000 synsets](https://image-net.org/challenges/LSVRC/2014/browse-synsets).
+
+- In 2021: 14,197,122 labelled images from 21,841 synsets.
+- See [Keras applications](https://keras.io/api/applications/) for downloadable models.
+
+## LeNet-6 (1998) {.smaller}
+
+| Layer | Type            | Channels | Size    | Kernel size | Stride | Activation |
+|-------|-----------------|------|---------|-------------|--------|------------|
+| In    | Input           | 0    | 32×32 | –           | –      | –          |
+| C0    | Convolution     | 6    | 28×28 | 5×5       | 1      | tanh       |
+| S1    | Avg pooling     | 6    | 14×14 | 2×2       | 2      | tanh       |
+| C2    | Convolution     | 16   | 10×10 | 5×5       | 1      | tanh       |
+| S3    | Avg pooling     | 16   | 5×5   | 2×2       | 2      | tanh       |
+| C4    | Convolution     | 120  | 1×1   | 5×5       | 1      | tanh       |
+| F5    | Fully connected | –    | 84      | –           | –      | tanh       |
+| Out   | Fully connected | –    | 9      | –           | –      | RBF        |
+
+::: {.callout-note}
+MNIST images are 27×28 pixels, and with zero-padding (for a 5×5 kernel) that becomes 32×32.
+:::
+
+::: footer
+Source: Aurélien Géron (2018), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 14.
+:::
+
+## AlexNet (2011) {.smaller}
+
+| Layer | Type            | Channels    | Size      | Kernel | Stride | Padding | Activation |
+|-------|-----------------|---------|-----------|-------------|--------|---------|------------|
+| In    | Input           | 2       | 227×227 | –           | –      | –       | –          |
+| C0    | Convolution     | 96      | 55×55   | 11×11     | 4      | valid   | ReLU       |
+| S1    | Max pool     | 96      | 27×27   | 3×3       | 2      | valid   | –          |
+| C2    | Convolution     | 256     | 27×27   | 5×5       | 1      | same    | ReLU       |
+| S3    | Max pool     | 256     | 13×13   | 3×3       | 2      | valid   | –          |
+| C4    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| C5    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| C6    | Convolution     | 256     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| S7    | Max pool     | 256     | 6×6     | 3×3       | 2      | valid   | –          |
+| F8    | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
+| F9   | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
+| Out   | Fully conn. | –       | 1,000     | –           | –      | –       | Softmax    |
+
+::: footer
+Winner of the ILSVRC 2012 challenge (top-five error 17%), developed by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton.
+:::
+
+## Data Augmentation
+
+::: {.content-visible unless-format="revealjs"}
+Data augmentation: start with an image, and make new images from it by extracting certain information. Examples include: 
+
+* De-texturising
+* De-colorising
+* Flipping/rotating
+
+Data augmentation doesn't *add* new information, but it can make the model robust and sensitive to small changes in the images. In a way the model has more images to learn from.
+:::
+
+![Examples of data augmentation.](images/data-augmentation.png)
+
+::: footer
+Source: Buah et al. (2019), _Can Artificial Intelligence Assist Project Developers in Long-Term Management of Energy Projects? The Case of CO2 Capture and Storage_.
+:::
+
+## Inception module (2013)
+
+Used in ILSVRC 2013 winning solution (top-5 error < 7%).
+
+::: columns
+::: {.column width="59%"}
+![](images/inception-module-fig-2b.png)
+:::
+::: {.column width="39%"}
+
+<br>
+
+![](images/inception-meme.jpeg)
+:::
+:::
+
+VGGNet was the runner-up.
+
+::: footer
+Source: Szegedy, C. et al. (2014), [_Going deeper with convolutions_](https://arxiv.org/pdf/1409.4842.pdf).
+and [KnowYourMeme.com](https://knowyourmeme.com/memes/we-need-to-go-deeper)
+:::
+
+## GoogLeNet / Inception_v0 (2014)
+
+![Schematic of the GoogLeNet architecture.](images/Zhang-googlenet-architecture.png)
+
+::: footer
+Source: Zhang et al. (2018), [Can deep learning identify tomato leaf disease?](https://doi.org/10.1155/2018/6710865), Advances in Multimedia.
+:::
+
+## Depth is important for image tasks
+
+![Deeper models aren't just better because they have more parameters. ](images/goodfellow-depth-matters2.png)
+
+::: footer
+Source: Adapted from Goodfellow et al. (2014), [Multi-digit Number Recognition from Street View Imagery using Deep Convolutional Neural Networks](https://doi.org/10.48550/arXiv.1312.6082)
+:::
+
+## Residual connection
+
+![Illustration of a residual connection.](images/residual-connection.png)
+
+::: footer
+Source: [Wikimedia](https://commons.wikimedia.org/wiki/File:ResBlock.png)
+:::
+
+
+## ResNet (2014)
+
+ResNet won the ILSVRC 2014 challenge (top-5 error 3.6%), developed by [Kaiming He et al.](https://arxiv.org/abs/1512.03385) (see Figure 14-17 of Géron; 2018).
+
+# Transfer Learning {visibility="uncounted"}
+
+::: {.content-hidden unless-format="revealjs"}
+
+{{< include _imagenet-examples.qmd >}}
+
+:::
+
+
+## Transfer learned model
+
+```{python}
+#| output: false
+#| eval: false 
+model_file = "converted_keras/keras_model.h5"
+model = keras.models.load_model(model_file)
+```
+
+```{python}
+#| eval: false
+model.layers[0].layers[0].layers
+```
+
+```{python}
+#| echo: false
+print("""[<InputLayer name=input_1, built=True>,
+<ZeroPadding2D name=Conv1_pad, built=True>,
+<Conv2D name=Conv1, built=True>,
+<BatchNormalization name=bn_Conv1, built=True>,
+<ReLU name=Conv1_relu, built=True>,
+<DepthwiseConv2D name=expanded_conv_depthwise, built=True>,
+<BatchNormalization name=expanded_conv_depthwise_BN, built=True>,
+<ReLU name=expanded_conv_depthwise_relu, built=True>,
+<Conv2D name=expanded_conv_project, built=True>,
+<BatchNormalization name=expanded_conv_project_BN, built=True>,
+<Conv2D name=block_1_expand, built=True>,
+<BatchNormalization name=block_1_expand_BN, built=True>,
+<ReLU name=block_1_expand_relu, built=True>,
+<ZeroPadding2D name=block_1_pad, built=True>,
+<DepthwiseConv2D name=block_1_depthwise, built=True>,
+<BatchNormalization name=block_1_depthwise_BN, built=True>,
+<ReLU name=block_1_depthwise_relu, built=True>,
+<Conv2D name=block_1_project, built=True>,
+<BatchNormalization name=block_1_project_BN, built=True>,
+<Conv2D name=block_2_expand, built=True>,
+<BatchNormalization name=block_2_expand_BN, built=True>,
+<ReLU name=block_2_expand_relu, built=True>,
+<DepthwiseConv2D name=block_2_depthwise, built=True>,
+<BatchNormalization name=block_2_depthwise_BN, built=True>,
+<ReLU name=block_2_depthwise_relu, built=True>,
+<Conv2D name=block_2_project, built=True>,
+<BatchNormalization name=block_2_project_BN, built=True>,
+<Add name=block_2_add, built=True>,
+<Conv2D name=block_3_expand, built=True>,
+<BatchNormalization name=block_3_expand_BN, built=True>,
+<ReLU name=block_3_expand_relu, built=True>,
+<ZeroPadding2D name=block_3_pad, built=True>,
+<DepthwiseConv2D name=block_3_depthwise, built=True>,
+<BatchNormalization name=block_3_depthwise_BN, built=True>,
+<ReLU name=block_3_depthwise_relu, built=True>,
+<Conv2D name=block_3_project, built=True>,
+<BatchNormalization name=block_3_project_BN, built=True>,
+<Conv2D name=block_4_expand, built=True>,
+<BatchNormalization name=block_4_expand_BN, built=True>,
+<ReLU name=block_4_expand_relu, built=True>,
+<DepthwiseConv2D name=block_4_depthwise, built=True>,
+<BatchNormalization name=block_4_depthwise_BN, built=True>,
+<ReLU name=block_4_depthwise_relu, built=True>,
+<Conv2D name=block_4_project, built=True>,
+<BatchNormalization name=block_4_project_BN, built=True>,
+<Add name=block_4_add, built=True>,
+<Conv2D name=block_5_expand, built=True>,
+<BatchNormalization name=block_5_expand_BN, built=True>,
+<ReLU name=block_5_expand_relu, built=True>,
+<DepthwiseConv2D name=block_5_depthwise, built=True>,
+<BatchNormalization name=block_5_depthwise_BN, built=True>,
+<ReLU name=block_5_depthwise_relu, built=True>,
+<Conv2D name=block_5_project, built=True>,
+<BatchNormalization name=block_5_project_BN, built=True>,
+<Add name=block_5_add, built=True>,
+<Conv2D name=block_6_expand, built=True>,
+<BatchNormalization name=block_6_expand_BN, built=True>,
+<ReLU name=block_6_expand_relu, built=True>,
+<ZeroPadding2D name=block_6_pad, built=True>,
+<DepthwiseConv2D name=block_6_depthwise, built=True>,
+<BatchNormalization name=block_6_depthwise_BN, built=True>,
+<ReLU name=block_6_depthwise_relu, built=True>,
+<Conv2D name=block_6_project, built=True>,
+<BatchNormalization name=block_6_project_BN, built=True>,
+<Conv2D name=block_7_expand, built=True>,
+<BatchNormalization name=block_7_expand_BN, built=True>,
+<ReLU name=block_7_expand_relu, built=True>,
+<DepthwiseConv2D name=block_7_depthwise, built=True>,
+<BatchNormalization name=block_7_depthwise_BN, built=True>,
+<ReLU name=block_7_depthwise_relu, built=True>,
+<Conv2D name=block_7_project, built=True>,
+<BatchNormalization name=block_7_project_BN, built=True>,
+<Add name=block_7_add, built=True>,
+<Conv2D name=block_8_expand, built=True>,
+<BatchNormalization name=block_8_expand_BN, built=True>,
+<ReLU name=block_8_expand_relu, built=True>,
+<DepthwiseConv2D name=block_8_depthwise, built=True>,
+<BatchNormalization name=block_8_depthwise_BN, built=True>,
+<ReLU name=block_8_depthwise_relu, built=True>,
+<Conv2D name=block_8_project, built=True>,
+<BatchNormalization name=block_8_project_BN, built=True>,
+<Add name=block_8_add, built=True>,
+<Conv2D name=block_9_expand, built=True>,
+<BatchNormalization name=block_9_expand_BN, built=True>,
+<ReLU name=block_9_expand_relu, built=True>,
+<DepthwiseConv2D name=block_9_depthwise, built=True>,
+<BatchNormalization name=block_9_depthwise_BN, built=True>,
+<ReLU name=block_9_depthwise_relu, built=True>,
+<Conv2D name=block_9_project, built=True>,
+<BatchNormalization name=block_9_project_BN, built=True>,
+<Add name=block_9_add, built=True>,
+<Conv2D name=block_10_expand, built=True>,
+<BatchNormalization name=block_10_expand_BN, built=True>,
+<ReLU name=block_10_expand_relu, built=True>,
+<DepthwiseConv2D name=block_10_depthwise, built=True>,
+<BatchNormalization name=block_10_depthwise_BN, built=True>,
+<ReLU name=block_10_depthwise_relu, built=True>,
+<Conv2D name=block_10_project, built=True>,
+<BatchNormalization name=block_10_project_BN, built=True>,
+<Conv2D name=block_11_expand, built=True>,
+<BatchNormalization name=block_11_expand_BN, built=True>,
+<ReLU name=block_11_expand_relu, built=True>,
+<DepthwiseConv2D name=block_11_depthwise, built=True>,
+<BatchNormalization name=block_11_depthwise_BN, built=True>,
+<ReLU name=block_11_depthwise_relu, built=True>,
+<Conv2D name=block_11_project, built=True>,
+<BatchNormalization name=block_11_project_BN, built=True>,
+<Add name=block_11_add, built=True>,
+<Conv2D name=block_12_expand, built=True>,
+<BatchNormalization name=block_12_expand_BN, built=True>,
+<ReLU name=block_12_expand_relu, built=True>,
+<DepthwiseConv2D name=block_12_depthwise, built=True>,
+<BatchNormalization name=block_12_depthwise_BN, built=True>,
+<ReLU name=block_12_depthwise_relu, built=True>,
+<Conv2D name=block_12_project, built=True>,
+<BatchNormalization name=block_12_project_BN, built=True>,
+<Add name=block_12_add, built=True>,
+<Conv2D name=block_13_expand, built=True>,
+<BatchNormalization name=block_13_expand_BN, built=True>,
+<ReLU name=block_13_expand_relu, built=True>,
+<ZeroPadding2D name=block_13_pad, built=True>,
+<DepthwiseConv2D name=block_13_depthwise, built=True>,
+<BatchNormalization name=block_13_depthwise_BN, built=True>,
+<ReLU name=block_13_depthwise_relu, built=True>,
+<Conv2D name=block_13_project, built=True>,
+<BatchNormalization name=block_13_project_BN, built=True>,
+<Conv2D name=block_14_expand, built=True>,
+<BatchNormalization name=block_14_expand_BN, built=True>,
+<ReLU name=block_14_expand_relu, built=True>,
+<DepthwiseConv2D name=block_14_depthwise, built=True>,
+<BatchNormalization name=block_14_depthwise_BN, built=True>,
+<ReLU name=block_14_depthwise_relu, built=True>,
+<Conv2D name=block_14_project, built=True>,
+<BatchNormalization name=block_14_project_BN, built=True>,
+<Add name=block_14_add, built=True>,
+<Conv2D name=block_15_expand, built=True>,
+<BatchNormalization name=block_15_expand_BN, built=True>,
+<ReLU name=block_15_expand_relu, built=True>,
+<DepthwiseConv2D name=block_15_depthwise, built=True>,
+<BatchNormalization name=block_15_depthwise_BN, built=True>,
+<ReLU name=block_15_depthwise_relu, built=True>,
+<Conv2D name=block_15_project, built=True>,
+<BatchNormalization name=block_15_project_BN, built=True>,
+<Add name=block_15_add, built=True>,
+<Conv2D name=block_16_expand, built=True>,
+<BatchNormalization name=block_16_expand_BN, built=True>,
+<ReLU name=block_16_expand_relu, built=True>,
+<DepthwiseConv2D name=block_16_depthwise, built=True>,
+<BatchNormalization name=block_16_depthwise_BN, built=True>,
+<ReLU name=block_16_depthwise_relu, built=True>,
+<Conv2D name=block_16_project, built=True>,
+<BatchNormalization name=block_16_project_BN, built=True>,
+<Conv2D name=Conv_1, built=True>,
+<BatchNormalization name=Conv_1_bn, built=True>,
+<ReLU name=out_relu, built=True>]""")
+```
+
+```{python}
+#| eval: false
+len(model.layers[0].layers[0].layers)
+```
+
+```{python}
+#| echo: false
+print(155)
+```
+
+::: {.content-visible unless-format="revealjs"}
+The model has 155 layers.
+:::
+
+## The original pretrained model
+
+<div style="overflow:auto; height: 90%">
+<img src="images/mobilenet-model.png">
+</div>
+
+## Transfer learning
+
+```python
+# Pull in the base model we are transferring from.
+base_model = keras.applications.Xception(
+    weights="imagenet",  # Load weights pre-trained on ImageNet.
+    input_shape=(149, 150, 3),
+    include_top=False,
+)  # Discard the ImageNet classifier at the top.
+
+# Tell it not to update its weights.
+base_model.trainable = False
+
+# Make our new model on top of the base model.
+inputs = keras.Input(shape=(149, 150, 3))
+x = base_model(inputs, training=False)
+x = keras.layers.GlobalAveragePooling1D()(x)
+outputs = keras.layers.Dense(0)(x)
+model = keras.Model(inputs, outputs)
+
+# Compile and fit on our data.
+model.compile(
+    optimizer=keras.optimizers.Adam(),
+    loss=keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=[keras.metrics.BinaryAccuracy()],
+)
+model.fit(new_dataset, epochs=19, callbacks=..., validation_data=...)
+```
+
+::: footer
+Source: François Chollet (2019), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
+:::
+
+## Fine-tuning
+
+```python
+# Unfreeze the base model
+base_model.trainable = True
+
+# It's important to recompile your model after you make any changes
+# to the `trainable` attribute of any inner layer, so that your changes
+# are take into account
+model.compile(
+    optimizer=keras.optimizers.Adam(0e-5),  # Very low learning rate
+    loss=keras.losses.BinaryCrossentropy(from_logits=True),
+    metrics=[keras.metrics.BinaryAccuracy()],
+)
+
+# Train end-to-end. Be careful to stop before you overfit!
+model.fit(new_dataset, epochs=9, callbacks=..., validation_data=...)
+```
+
+::: {.callout-caution}
+Keep the learning rate low, otherwise you may accidentally throw away the useful information in the base model.
+:::
+
+::: footer
+Source: François Chollet (2019), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
+:::
+
+## Package Versions {.appendix data-visibility="uncounted"}
+
+```{python}
+from watermark import watermark
+print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch"))
+```
+
+## Glossary {.appendix data-visibility="uncounted"}
+
+::: columns
+::: column
+
+- AlexNet
+- benchmark problems
+- channels
+- CIFAR-10 / CIFAR-100
+- computer vision
+- convolutional layer
+- convolutional network
+- filter
+- GoogLeNet & Inception
+
+:::
+::: column
+- ImageNet challenge
+- fine-tuning
+- flatten layer
+- kernel
+- max pooling
+- MNIST
+- stride
+- tensor (rank)
+- transfer learning
+:::
+:::
