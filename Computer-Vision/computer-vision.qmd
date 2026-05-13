@@ -1151,12 +1151,6 @@ plt.imshow(X_test[0], cmap="gray");
 The predicted category appears to be correct.
 :::
 
-# Error Analysis
-
-::: {.content-visible unless-format="revealjs"}
-Our NN is working well but still makes occasional errors. Let's see if we can understand why.
-:::
-
 ## Take a look at the failure cases
 
 ```{python}
@@ -1230,63 +1224,6 @@ For correct guesses, almost all of them were at least 90% confident.
 For incorrect guesses, the guesses were less confident on average, but most of the guesses were still at least 90% confident.
 :::
 
-## Another test set
-
-55 poorly written Mandarin characters ($55 \times 7 = 385$).
-
-![Dataset of notes when learning/practising basic characters.](mandarin-practice-notebook3.png)
-
-## Evaluate on the new test set
-
-```{python}
-X_pat, y_pat, pat_class_names = load_images_from_directory(Path("mandarin"), img_height, img_width)
-
-assert pat_class_names == class_names, "Class names do not match!"
-
-print(f"Mandarin: X={X_pat.shape}, y={y_pat.shape}")
-```
-
-```{python}
-pat_metrics = model.evaluate(X_pat, y_pat, verbose=0)
-pat_metrics
-```
-
-```{python}
-correct = model.predict(X_pat, verbose=0).argmax(axis=1) == y_pat
-np.sum(~correct)
-```
-
-## Errors
-
-```{python}
-plot_failed_predictions(X_pat, y_pat, class_names)
-```
-
-## Which is worst...
-
-```{python}
-class_accuracies = []
-for i in range(num_classes):
-    class_indices = y_pat == i
-    y_pred = model.predict(X_pat[class_indices], verbose=0).argmax(axis=1)
-    class_correct = y_pred == y_pat[class_indices]
-    class_accuracies.append(np.mean(class_correct))
-
-class_accuracies = pd.DataFrame({"Class": class_names, "Accuracy": class_accuracies})
-class_accuracies.sort_values("Accuracy")
-```
-
-## Least (AI-) legible characters
-
-```{python}
-fails = class_accuracies[class_accuracies["Accuracy"] < 0.5]
-fails.sort_values("Accuracy").plot(kind="bar", x="Class")
-plt.xticks(fontproperties=CHINESE_FONT, rotation=0);
-```
-
-::: {.content-visible unless-format="revealjs"}
-The characters that the NN has the most trouble with tend to be the ones that I have written poorly. The lesson here is that I need to practice and improve writing these characters...
-:::
 
 # Hyperparameter tuning {visibility="uncounted"}
 
@@ -1946,7 +1883,6 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - computer vision
 - convolutional layer
 - convolutional network
-- error analysis
 - filter
 - GoogLeNet & Inception
 
