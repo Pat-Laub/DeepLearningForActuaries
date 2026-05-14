@@ -1,0 +1,803 @@
+
+# Linear Regression Recap
+
+## Single Linear Regression (SLR)
+
+Scenario: use _head circumference (mm)_ to predict _age (weeks)_ of a fetal baby
+
+$$
+\boldsymbol{x} = \begin{pmatrix}
+    105 \\
+    120 \\
+    110 \\
+    117 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    20 \\
+    24 \\
+    22 \\
+    23 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    20.3 \\
+    24.0 \\
+    21.5 \\
+    23.2 \\
+\end{pmatrix}
+$$
+
+$$\hat{y}(x) = \beta_0 + \beta_1 x$$
+
+```{python}
+circumference = np.array([[105], [120], [110], [117]])
+age = np.array([20, 24, 22, 23])
+model = LinearRegression().fit(circumference, age)
+print(f"Intercept: {model.intercept_:.4f}, Slope: {model.coef_[0]:.4f}")
+model.predict(circumference)
+```
+
+## Mean squared error
+
+$$
+\boldsymbol{y} = \begin{pmatrix}
+    20 \\
+    24 \\
+    22 \\
+    23 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    20.3 \\
+    24.0 \\
+    21.5 \\
+    23.2 \\
+\end{pmatrix}, \quad \boldsymbol{y} - \hat{\boldsymbol{y}}  = \begin{pmatrix}
+    -0.3 \\
+    0 \\
+    0.5 \\
+    -0.2 \\
+\end{pmatrix}.
+$$
+
+```{python}
+#| code-fold: true
+#| fig-height: 2
+#| fig-width: 8
+#| fig-dpi: 300
+predicted_age = model.predict(circumference)
+
+x = circumference.flatten()
+y = age
+yhat = predicted_age
+error = np.abs(y - yhat)
+mse = np.mean(error ** 2)
+
+fig, ax = plt.subplots(figsize=(8, 2), dpi=300)
+ax.scatter(x, y, color="black", zorder=3)
+order = np.argsort(x)
+ax.plot(x[order], yhat[order], color="black")
+for xi, yi, yhi, ei in zip(x, y, yhat, error):
+    ax.plot([xi, xi], [yi, yhi], linestyle="--", color="black")
+    ax.add_patch(plt.Rectangle((xi, min(yi, yhi)), ei, ei, color="red", alpha=0.3))
+ax.set_xlabel("Head Circumference (mm)")
+ax.set_ylabel("Age (weeks)")
+ax.set_title(f"MSE = {round(mse, 2)}")
+plt.tight_layout()
+plt.show()
+```
+
+$$\text{MSE} = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 = \frac{1}{4} \Bigl[ (-0.3)^2 + 0^2 + 0.5^2 + (-0.2)^2 \Bigr] = 0.09.$$
+
+::: footer
+$\text{RSS} = \sum_{i=1}^n (y_i - \hat{y}_i)^2 = 0.38$.
+:::
+
+## Sensitive to outliers
+
+$$
+\text{If we instead had }
+    \boldsymbol{y} = \begin{pmatrix}
+    \textcolor{red}{10} & 24 & 22 & 23 \end{pmatrix}^\top.
+$$
+
+::: columns
+::: column
+
+```{python}
+#| code-fold: true
+#| fig-height: 4
+#| fig-width: 4
+#| fig-dpi: 300
+#| fig-cap: "The previous model"
+circumference = np.array([[105], [120], [110], [117]])
+age_outlier = np.array([10, 24, 22, 23])
+# Predictions from the *original* model (before retraining)
+predicted_age = model.predict(circumference)
+
+x = circumference.flatten()
+y = age_outlier
+yhat = predicted_age
+error = np.abs(y - yhat)
+mse = np.mean(error ** 2)
+
+fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+ax.scatter(x, y, color="black", zorder=3)
+order = np.argsort(x)
+ax.plot(x[order], yhat[order], color="black")
+for xi, yi, yhi, ei in zip(x, y, yhat, error):
+    ax.plot([xi, xi], [yi, yhi], linestyle="--", color="black")
+    ax.add_patch(plt.Rectangle((xi, min(yi, yhi)), ei, ei, color="red", alpha=0.3))
+ax.set_xlabel("Head Circumference (mm)")
+ax.set_ylabel("Age (weeks)")
+ax.set_title(f"MSE = {round(mse, 2)}")
+plt.tight_layout()
+plt.show()
+```
+:::
+::: column
+
+
+```{python}
+#| code-fold: true
+#| fig-height: 4
+#| fig-width: 4
+#| fig-dpi: 300
+#| fig-cap: "New model after training"
+new_model = LinearRegression().fit(circumference, age_outlier)
+predicted_age = new_model.predict(circumference)
+
+x = circumference.flatten()
+y = age_outlier
+yhat = predicted_age
+error = np.abs(y - yhat)
+mse = np.mean(error ** 2)
+
+fig, ax = plt.subplots(figsize=(4, 4), dpi=300)
+ax.scatter(x, y, color="black", zorder=3)
+order = np.argsort(x)
+ax.plot(x[order], yhat[order], color="black")
+for xi, yi, yhi, ei in zip(x, y, yhat, error):
+    ax.plot([xi, xi], [yi, yhi], linestyle="--", color="black")
+    ax.add_patch(plt.Rectangle((xi, min(yi, yhi)), ei, ei, color="red", alpha=0.3))
+ax.set_xlabel("Head Circumference (mm)")
+ax.set_ylabel("Age (weeks)")
+ax.set_title(f"MSE = {round(mse, 2)}")
+plt.tight_layout()
+plt.show()
+```
+
+:::
+:::
+
+## Multiple Linear Regression (MLR)
+
+Scenario: use _temperature ($^\circ C$)_ **and** _humidity (%)_ to predict _rainfall (mm)_
+
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    27 & 80 \\
+    32 & 70 \\
+    28 & 72 \\
+    22 & 86 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    6 \\
+    7 \\
+    6 \\
+    4 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    5.7 \\
+    7.2 \\
+    5.9 \\
+    4.2 \\
+\end{pmatrix}
+$$
+
+$$\hat{y}(\boldsymbol{x}) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p = \beta_0 + \left \langle \boldsymbol{\beta}, \boldsymbol{x} \right \rangle$$
+
+```{python}
+weather = pd.DataFrame({"temperature": [27, 32, 28, 22], "humidity": [80, 70, 72, 86]})
+rainfall = np.array([6, 7, 6, 4])
+model = LinearRegression().fit(weather, rainfall)
+print(f"Intercept: {model.intercept_:.4f}, Coefficients: {model.coef_}")
+model.predict(weather)
+```
+
+## MLR's design matrix
+
+Scenario: use _temperature ($^\circ C$)_ **and** _humidity (%)_ to predict _rainfall (mm)_
+
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 27 & 80 \\
+    \textcolor{grey}{1} & 32 & 70 \\
+    \textcolor{grey}{1} & 28 & 72 \\
+    \textcolor{grey}{1} & 22 & 86 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    6 \\
+    7 \\
+    6 \\
+    4 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    5.7 \\
+    7.2 \\
+    5.9 \\
+    4.2 \\
+\end{pmatrix}
+$$
+
+$$\hat{y}(\boldsymbol{x}) = \beta_0 x_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p = \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle$$
+
+::: columns
+::: {.column width="30%"}
+```{python}
+weather.to_numpy()
+```
+
+:::
+::: {.column width="70%"}
+```{python}
+X = np.column_stack([np.ones(len(weather)), weather.to_numpy()])
+X
+```
+
+:::
+:::
+
+## MLR is just matrix equations
+
+$$
+  \boldsymbol{\beta} = (\boldsymbol{X}^\top\boldsymbol{X})^{-1} \boldsymbol{X}^\top \boldsymbol{y}
+$$
+
+::: columns
+::: column
+```{python}
+model = LinearRegression().fit(
+    weather, rainfall)
+np.concatenate(
+    [[model.intercept_], model.coef_])
+```
+:::
+::: column
+```{python}
+y = rainfall
+beta = np.linalg.solve(X.T @ X, X.T @ y)
+beta
+```
+:::
+:::
+
+$$
+  \hat{\boldsymbol{y}} = \boldsymbol{X} \boldsymbol{\beta}.
+$$
+
+::: columns
+::: column
+```{python}
+model.predict(weather)
+```
+:::
+::: column
+```{python}
+X @ beta
+```
+:::
+:::
+
+## MLR after normalising the inputs
+
+Scenario: use _temperature ($z$-score)_ **and** _humidity ($z$-score)_ to predict _rainfall (mm)_
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & -0.06 & 0.41 \\
+    \textcolor{grey}{1} & 1.15 & -0.95 \\
+    \textcolor{grey}{1} & 0.18 & -0.68 \\
+    \textcolor{grey}{1} & -1.28 & 1.22 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    6 \\
+    7 \\
+    6 \\
+    4 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    5.7 \\
+    7.2 \\
+    5.9 \\
+    4.2 \\
+\end{pmatrix}
+$$
+
+$$\hat{y}(\boldsymbol{x}) = \beta_0 x_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p = \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle$$
+
+```{python}
+from sklearn.preprocessing import StandardScaler
+
+weather = pd.DataFrame({"temperature": [27, 32, 28, 22], "humidity": [80, 70, 72, 86]})
+scaler = StandardScaler()
+weather_sc = pd.DataFrame(scaler.fit_transform(weather), columns=weather.columns)
+rainfall = np.array([6, 7, 6, 4])
+model = LinearRegression().fit(weather_sc, rainfall)
+print(f"Intercept: {model.intercept_:.4f}, Coefficients: {model.coef_}")
+model.predict(weather_sc)
+```
+
+## SLR with categorical inputs
+
+Scenario: use _property type_ to predict its _sale price ($)_
+
+$$
+\boldsymbol{x} = \begin{pmatrix}
+    \textcolor{red}{\text{Unit}} \\
+    \textcolor{green}{\text{TownHouse}} \\
+    \textcolor{green}{\text{TownHouse}} \\
+    \textcolor{blue}{\text{House}} \\
+\end{pmatrix} \longrightarrow \boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 1 & 0 \\
+    \textcolor{grey}{1} & 0 & 1 \\
+    \textcolor{grey}{1} & 0 & 1 \\
+    \textcolor{grey}{1} & 0 & 0 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    300000 \\
+    500000 \\
+    510000 \\
+    700000 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    300000 \\
+    505000 \\
+    505000 \\
+    700000 \\
+\end{pmatrix}
+$$
+
+$$
+\hat{y}(x) = \beta_0 + \beta_1 \underbrace{I(x = \textcolor{red}{\text{Unit}})}_{=: x_1} + \beta_2 \underbrace{I(x = \textcolor{green}{\text{TownHouse}})}_{=: x_2} = \beta_0 + \beta_1 x_1 + \beta_2 x_2
+$$
+
+```{python}
+property_type = pd.Categorical(["Unit", "TownHouse", "TownHouse", "House"])
+price = np.array([300000, 500000, 510000, 700000])
+X = pd.get_dummies(property_type, drop_first=True, dtype=int)
+model = LinearRegression().fit(X, price)
+print(f"Intercept: {model.intercept_:.2f}, Coefficients: {dict(zip(X.columns, model.coef_))}")
+model.predict(X)
+```
+
+## Changing the base case
+
+Scenario: use _property type_ to predict its _sale price ($)_
+
+$$
+\boldsymbol{x} = \begin{pmatrix}
+    \textcolor{red}{\text{Unit}} \\
+    \textcolor{green}{\text{TownHouse}} \\
+    \textcolor{green}{\text{TownHouse}} \\
+    \textcolor{blue}{\text{House}} \\
+\end{pmatrix} \longrightarrow \boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 0 & 0 \\
+    \textcolor{grey}{1} & 1 & 0 \\
+    \textcolor{grey}{1} & 1 & 0 \\
+    \textcolor{grey}{1} & 0 & 1 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    300000 \\
+    500000 \\
+    510000 \\
+    700000 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    300000 \\
+    505000 \\
+    505000 \\
+    700000 \\
+\end{pmatrix}
+$$
+
+$$
+\hat{y}(x) = \beta_0 + \beta_1 \underbrace{I(x = \textcolor{green}{\text{TownHouse}})}_{=: x_1} + \beta_2 \underbrace{I(x = \textcolor{blue}{\text{House}})}_{=: x_2} = \beta_0 + \beta_1 x_1 + \beta_2 x_2
+$$
+
+```{python}
+property_type = pd.Categorical(
+    ["Unit", "TownHouse", "TownHouse", "House"],
+    categories=["Unit", "TownHouse", "House"],
+)
+price = np.array([300000, 500000, 510000, 700000])
+X = pd.get_dummies(property_type, drop_first=True, dtype=int)
+model = LinearRegression().fit(X, price)
+print(f"Intercept: {model.intercept_:.2f}, Coefficients: {dict(zip(X.columns, model.coef_))}")
+model.predict(X)
+```
+
+## Changing the target's units
+
+Scenario: use _property type_ to predict its _sale price ($000,000's)_
+
+$$
+\boldsymbol{x} = \begin{pmatrix}
+    \textcolor{red}{\text{Unit}} \\
+    \textcolor{green}{\text{TownHouse}} \\
+    \textcolor{green}{\text{TownHouse}} \\
+    \textcolor{blue}{\text{House}} \\
+\end{pmatrix} \longrightarrow \boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 0 & 0 \\
+    \textcolor{grey}{1} & 1 & 0 \\
+    \textcolor{grey}{1} & 1 & 0 \\
+    \textcolor{grey}{1} & 0 & 1 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    0.3 \\
+    0.5 \\
+    0.51 \\
+    0.7 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    0.3 \\
+    0.505 \\
+    0.505 \\
+    0.7 \\
+\end{pmatrix}
+$$
+
+$$
+\hat{y}(x) = \beta_0 + \beta_1 \underbrace{I(x = \textcolor{green}{\text{TownHouse}})}_{=: x_1} + \beta_2 \underbrace{I(x = \textcolor{blue}{\text{House}})}_{=: x_2} = \beta_0 + \beta_1 x_1 + \beta_2 x_2
+$$
+
+```{python}
+property_type = pd.Categorical(
+    ["Unit", "TownHouse", "TownHouse", "House"],
+    categories=["Unit", "TownHouse", "House"],
+)
+price = np.array([0.3, 0.5, 0.51, 0.7])
+X = pd.get_dummies(property_type, drop_first=True, dtype=int)
+model = LinearRegression().fit(X, price)
+print(f"Intercept: {model.intercept_:.4f}, Coefficients: {dict(zip(X.columns, model.coef_))}")
+model.predict(X)
+```
+
+## Dates as categorical inputs
+
+Imagine you had dataset with 157,209 rows and one covariate column was 'date of birth'.
+There were 27,485 unique values for the date of birth column.
+You make a linear regression with the date of birth as an input, and treat it as a categorical variable.
+
+::: {.fragment}
+Pandas/sklearn would make a design matrix of size $157,209 \times 27,485$.
+This has 4,320,889,365 numbers in it.
+Each number is stored as 8 bytes, so the matrix is roughly
+$$
+34,000,000,000 \text{ bytes}
+= 34,000,000 \text{ KB}
+= 34,000 \text{ MB}
+= 34 \text{ GB}.
+$$
+:::
+
+::: {.fragment}
+**Question:** How do we avoid this situation of crashing our computer with an 'out of memory' error?
+:::
+
+::: {.fragment}
+**Solution:** Don't train on the date of birth --- at least, not as a categorical variable.
+Turn it into a numerical variable, e.g. age.
+If the date column were not 'date of birth', maybe calculate the number of days since some reference date, or split into day, month, year columns.
+:::
+
+
+# Generalised Linear Models Recap
+
+## MLR with categorical targets
+
+Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 14.8 & 48 \\
+    \textcolor{grey}{1} & 16.4 & 49 \\
+    \textcolor{grey}{1} & 15.5 & 47 \\
+    \textcolor{grey}{1} & 14.2 & 46 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    \text{Benign} \\
+    \text{Malignant} \\
+    \text{Benign} \\
+    \text{Malignant} \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    ? \\
+    ? \\
+    ? \\
+    ? \\
+\end{pmatrix}
+$$
+
+::: {.fragment}
+Step 1: Make a linear prediction
+$$ \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p , \quad \text{a.k.a.} \quad \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle.$$
+:::
+::: {.fragment}
+Step 2: Shove it through some function to make it a probability $$\sigma(\langle \boldsymbol{\beta}, \boldsymbol{x} \rangle)$$
+Interpret that as being the probability of the positive class.
+:::
+::: {.fragment}
+Step 3: Make a decision based on that probability. E.g., if the probability is greater than 0.5, predict the positive class.
+:::
+
+## Binomial regression
+
+Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 14.8 & 48 \\
+    \textcolor{grey}{1} & 16.4 & 49 \\
+    \textcolor{grey}{1} & 15.5 & 47 \\
+    \textcolor{grey}{1} & 14.2 & 46 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
+    -0.46 \\
+    0.18 \\
+    0.37 \\
+    -0.09 \\
+\end{pmatrix}
+$$
+
+```{python}
+from sklearn.linear_model import LogisticRegression
+
+df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
+tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
+model = LogisticRegression(penalty=None).fit(df, tumour)
+```
+
+Step 1: Make a linear prediction
+
+```{python}
+linear = model.decision_function(df)
+linear
+```
+
+```{python}
+X = np.column_stack([np.ones(len(df)), df.to_numpy()])
+beta = np.concatenate([model.intercept_, model.coef_.flatten()])
+X @ beta
+```
+
+## Logistic regression and probit regression
+
+::: columns
+::: column
+
+```{python}
+#| code-fold: true
+#| fig-height: 5
+#| fig-width: 5
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+x = np.arange(-6, 6, 0.1)
+y = sigmoid(x)
+
+fig, ax = plt.subplots(figsize=(5, 5))
+ax.plot(x, y, linewidth=1.5)
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+ax.set_title("Sigmoid function")
+ax.set_aspect("equal", adjustable="box")
+plt.show()
+```
+
+This give you **logistic regression**.
+:::
+::: column
+
+```{python}
+#| code-fold: true
+#| fig-height: 5
+#| fig-width: 5
+from scipy.stats import norm
+
+x = np.arange(-6, 6, 0.1)
+y = norm.cdf(x)
+
+fig, ax = plt.subplots(figsize=(5, 5))
+ax.plot(x, y, linewidth=1.5)
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+ax.set_title("Normal CDF function")
+ax.set_aspect("equal", adjustable="box")
+plt.show()
+```
+
+This gives you **probit regression**.
+:::
+:::
+
+## Logistic Regression
+
+Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
+$$
+\boldsymbol{y} = \begin{pmatrix}
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
+    -0.46 \\
+    0.18 \\
+    0.37 \\
+    -0.09 \\
+\end{pmatrix}, \quad \sigma( \boldsymbol{X} \boldsymbol{\beta} ) = \begin{pmatrix}
+    39\% \\
+    55\% \\
+    59\% \\
+    48\% \\
+\end{pmatrix}
+$$
+
+```{python}
+df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
+tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
+model = LogisticRegression(penalty=None).fit(df, tumour)
+```
+
+Step 2: Shove it through some function to make it a probability
+
+```{python}
+sigmoid(linear)
+```
+
+```{python}
+# Probability of the positive class (Malignant)
+model.predict_proba(df)[:, 1]
+```
+
+## Predicting categories
+
+Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
+$$
+\boldsymbol{y} = \begin{pmatrix}
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+\end{pmatrix}, \quad \sigma( \boldsymbol{X} \boldsymbol{\beta} ) = \begin{pmatrix}
+    39\% \\
+    55\% \\
+    59\% \\
+    48\% \\
+\end{pmatrix} , \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    \text{Benign} \\
+    \text{Malignant} \\
+    \text{Malignant} \\
+    \text{Benign} \\
+\end{pmatrix}
+$$
+
+```{python}
+df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
+tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
+model = LogisticRegression(penalty=None).fit(df, tumour)
+```
+
+```{python}
+predict_probs = model.predict_proba(df)[:, 1]
+print(np.round(100 * predict_probs, 2))
+cutoff = 0.5
+predicted_tumours = np.where(predict_probs > cutoff, "Malignant", "Benign")
+print(predicted_tumours)
+```
+
+## Assessing accuracy in classification problems
+
+Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
+$$
+\boldsymbol{y} = \begin{pmatrix}
+    \textcolor{Green}{\text{Benign}} \\
+    \textcolor{Green}{\text{Malignant}} \\
+    \textcolor{Red}{\text{Benign}} \\
+    \textcolor{Red}{\text{Malignant}} \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    \textcolor{Green}{\text{Benign}} \\
+    \textcolor{Green}{\text{Malignant}} \\
+    \textcolor{Red}{\text{Malignant}} \\
+    \textcolor{Red}{\text{Benign}} \\
+\end{pmatrix}
+$$
+
+::: columns
+::: column
+Accuracy: $$\frac{1}{n}\sum_{i=1}^n I(y_i = \hat{y}_i)$$
+:::
+::: column
+Error rate: $$\frac{1}{n}\sum_{i=1}^n I(y_i \neq \hat{y}_i)$$
+:::
+:::
+
+::: {.callout-note}
+The word "accuracy" is used often used loosely when discussing models, particularly regression models.
+In the context of classification it has this specific meaning.
+:::
+
+## Poisson regression
+
+Scenario: use _population density_ to predict the daily **count of** _gun violence incidents_
+
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 10 \\
+    \textcolor{grey}{1} & 15 \\
+    \textcolor{grey}{1} & 12 \\
+    \textcolor{grey}{1} & 18 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    155 \\
+    208 \\
+    116 \\
+    301 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    ? \\
+    ? \\
+    ? \\
+    ? \\
+\end{pmatrix}
+$$
+
+::: {.fragment}
+Step 1: Make a linear prediction
+$$ \beta_0 + \beta_1 x_1 + \dots + \beta_p x_p , \quad \text{a.k.a.} \quad \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle.$$
+:::
+::: {.fragment}
+Step 2: Shove it through some function to make it positive $$\exp(\langle \boldsymbol{\beta}, \boldsymbol{x} \rangle)$$
+Interpret that as being the expected count.
+:::
+
+## Predict the mean of a Poisson distribution
+
+Scenario: use _population density_ to predict the daily **count of** _gun violence incidents_
+
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 10 \\
+    \textcolor{grey}{1} & 15 \\
+    \textcolor{grey}{1} & 12 \\
+    \textcolor{grey}{1} & 18 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    155 \\
+    208 \\
+    116 \\
+    301 \\
+\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
+    4.82 \\
+    5.35 \\
+    5.03 \\
+    5.67 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{\mu}} = \begin{pmatrix}
+    125.1 \\
+    211.3 \\
+    154.3 \\
+    289.4 \\
+\end{pmatrix}
+$$
+
+```{python}
+from sklearn.linear_model import PoissonRegressor
+
+guns = pd.DataFrame({"density": [10, 15, 12, 18]})
+incidents = np.array([155, 208, 116, 301])
+model = PoissonRegressor(alpha=0).fit(guns, incidents)
+print(f"Intercept: {model.intercept_:.4f}, Coefficients: {model.coef_}")
+
+# Link (linear predictor)
+X = np.column_stack([np.ones(len(guns)), guns.to_numpy()])
+beta = np.concatenate([[model.intercept_], model.coef_])
+linear = X @ beta
+linear
+
+# Response (expected count)
+model.predict(guns)
+```
+
+## Trees
+
+```{python}
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+
+df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
+tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
+model = DecisionTreeClassifier(min_samples_split=2).fit(df, tumour)
+
+fig, ax = plt.subplots(figsize=(6, 4))
+plot_tree(model, feature_names=list(df.columns), class_names=model.classes_, filled=True, ax=ax)
+plt.show()
+```
+

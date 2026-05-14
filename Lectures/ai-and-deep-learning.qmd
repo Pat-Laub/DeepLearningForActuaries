@@ -1,16 +1,31 @@
 ---
-title: Artificial Intelligence
+title: AI & Deep Learning
+execute:
+    warning: false
 ---
 
 ```{python}
 #| echo: false
 #| warning: false
-import sys
-sys.path.insert(0, "../scripts")
 from setup import *
 
 from IPython.display import HTML
+
+keras.utils.set_random_seed(812)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+
+```{python}
+#| code-fold: true
+#| code-summary: Show the package imports
+import random
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+```
+
+:::
 
 # Artificial Intelligence {data-visibility="uncounted"}
 
@@ -75,9 +90,11 @@ Used in every GPS/Navigation app and...
 Source: Wikipedia page for [the A* search algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm).
 :::
 
+<!--
 ## Route-finding II
 
-![[Tunes of the Kingdom: Evolving Physics and Sounds for ‘The Legend of Zelda: Tears of the Kingdom’](https://youtu.be/N-dPDsLTrTE?si=cwnV19wG1tS43e2b&t=3137 ), GDC 2024](zelda-slide.png)
+![[Tunes of the Kingdom: Evolving Physics and Sounds for ‘The Legend of Zelda: Tears of the Kingdom’](https://youtu.be/N-dPDsLTrTE?si=cwnV19wG1tS43e2b&t=3137 ), GDC 2024](images/zelda-slide.png)
+-->
 
 
 ## Evaluating a chess game I
@@ -271,7 +288,7 @@ Tried *making a computer smart*, too hard!
 
 Make a computer that can **learn** to be smart.
 
-![The Venn diagram of Artificial Intelligence, Machine Learning, Neural Networks and Deep Learning. Adapted from [@shang2025artificial].](AI-vs-ML-vs-NN-vs-DeepLearning.png)
+![The Venn diagram of Artificial Intelligence, Machine Learning, Neural Networks and Deep Learning. Adapted from [@shang2025artificial].](images/AI-vs-ML-vs-NN-vs-DeepLearning.png)
 
 ## Definition
 
@@ -512,6 +529,7 @@ Source: Patrick House (2016), [AlphaGo, Lee Sedol, and the Reassuring Future of 
 Source: Dall-E 2 images, prompts by ACTL3143 students in 2022.
 :::
 
+<!--
 ## Dall-E 2 (2022) vs Dall-E 3 (2023) {.smaller}
 
 Same prompt: "A beautiful calm photorealistic view of an waterside metropolis that has been neglected for hundreds of years and is overgrown with nature"
@@ -528,6 +546,7 @@ Same prompt: "A beautiful calm photorealistic view of an waterside metropolis th
 ::: footer
 Dall-E 3 rewrites it as: "Photo of a once-majestic metropolis by the water, now abandoned for centuries. The city's skyscrapers and buildings are cloaked in thick green vines..."
 :::
+-->
 
 # Deep Learning Successes (Text) {data-visibility="uncounted"}
 
@@ -556,7 +575,7 @@ Compare to Copilot.
 
 ## Code generation (GitHub Copilot)
 
-{{< video assignmentexplain-Smallest.mp4 >}}
+{{< video images/assignmentexplain-Smallest.mp4 >}}
 
 ::: footer
 Source: [GitHub Blog](https://github.blog/2022-09-08-github-copilot-now-available-for-teachers/)
@@ -995,6 +1014,52 @@ What is the depth?
 Source: Dertat (2017), [_Applied Deep Learning - Part 1: Artificial Neural Networks_](https://towardsdatascience.com/applied-deep-learning-part-1-artificial-neural-networks-d7834f67a4f6), Medium.
 :::
 
+{{< include _keras-calif-housing-regression-demo.qmd >}}
+
+## Keras model methods {.appendix}
+
+```{python}
+#| echo: false
+# Make up some fake data to fit a model to.
+import numpy
+numpy.random.seed(42)
+Xs = np.random.normal(size=(100, 4))
+ys = np.random.poisson(size=(100, 1))
+
+# Convert to a pandas DataFrame.
+Xs = pd.DataFrame(Xs, columns=["x1", "x2", "x3", "x4"])
+ys = pd.DataFrame(ys, columns=["y"])
+
+X_main, X_test, y_main, y_test = train_test_split(Xs, ys, random_state=42)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, random_state=42)
+
+numpy.random.seed(123)
+```
+
+::: columns
+::: {.column width="45%"}
+- `compile`: specify the loss function and optimiser
+- `fit`: learn the parameters of the model
+- `predict`: apply the model
+- `evaluate`: apply the model and calculate a metric
+:::
+::: {.column width="55%"}
+
+<br>
+
+```{python}
+#| warning: false
+random.seed(12)
+model = Sequential()
+model.add(Dense(1, activation="relu"))
+model.compile("adam", "poisson")
+model.fit(X_train, y_train, verbose=0)
+y_pred = model.predict(X_val, verbose=0)
+print(model.evaluate(X_val, y_val, verbose=0))
+```
+:::
+:::
+
 ## Package Versions {.appendix data-visibility="uncounted"}
 
 ```{python}
@@ -1009,14 +1074,20 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - activations, activation function
 - artificial neural network
 - biases (in neurons)
+- callbacks
 - classification problem
+- cost/loss function
 - deep network, network depth
 - dense or fully-connected layer
+- early stopping
+- epoch
 - feed-forward neural network
-- labelled/unlabelled data
-- machine learning
 :::
 ::: column
+- Keras, TensorFlow, PyTorch
+- labelled/unlabelled data
+- machine learning
+- matplotlib
 - minimax algorithm
 - neural network architecture
 - perceptron
@@ -1024,6 +1095,7 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - representation learning
 - sigmoid activation function
 - targets
+- training/validation/test split
 - weights (in a neuron)
 :::
 :::

@@ -35,5 +35,5 @@ uv run quarto render
 For a more targeted render of a specific lecture, run:
 
 ```shell
-uv run quarto render Artificial-Intelligence/artificial-intelligence.qmd
+uv run quarto render Lectures/ai-and-deep-learning.qmd
 ```

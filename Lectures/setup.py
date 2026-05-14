@@ -95,3 +95,8 @@ keras.utils.set_random_seed(1)
 import random
 
 random.seed(1234)
+
+# Cache directory for trained models (see e.g. distributional-regression.qmd)
+from pathlib import Path
+
+Path("models").mkdir(exist_ok=True)
