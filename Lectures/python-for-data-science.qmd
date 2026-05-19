@@ -10,19 +10,6 @@ execute:
 from setup import *
 ```
 
-::: {.content-visible unless-format="revealjs"}
-
-```{python}
-#| code-fold: true
-#| code-summary: Show the package imports
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-```
-
-:::
-
-
 # Machine learning workflow
 
 ## An entire ML project
@@ -100,6 +87,19 @@ Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ML_dataset_training_
 Source: Learnbay.co, [Python libraries for data analysis and modeling in Data science](https://medium.com/@learnbay/python-libraries-for-data-analysis-and-modeling-in-data-science-c5c994208385), Medium.
 :::
 
+## Imports for these slides
+
+```{python}
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression, LogisticRegression, PoissonRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.datasets import fetch_california_housing
+```
+
 
 ## Numpy for matrices {.title-col2}
 
@@ -109,8 +109,6 @@ Source: Learnbay.co, [Python libraries for data analysis and modeling in Data sc
 Numpy is Python's standard approach for any low-level numerical mathematics tasks (matrix processing, linear algebra)
 
 ```{python}
-import numpy as np
-
 a = np.array([1, 2, 3, 4])
 a.mean(), a.std()
 ```
@@ -152,8 +150,6 @@ y = 2 * x + rng.normal(size=200)
 Used for tabular data: loading, cleaning, processing, saving
 
 ```{python}
-import pandas as pd
-
 df = pd.DataFrame({
     "age": [25, 32, 41, 28, 36],
     "salary": [45_000, 65_000, 80_000, 55_000, 72_000],
@@ -192,8 +188,6 @@ Pandas + NumPy depth (slicing, `.loc`, `Series`, merging) lives in the [Python f
 The traditional way to generate plots; similar (in spirit) to R's base `plot()`
 
 ```{python}
-import matplotlib.pyplot as plt
-
 plt.figure(figsize=(3, 3))
 plt.scatter(x, y);
 ```
@@ -232,9 +226,8 @@ Every sklearn estimator has the same three methods:
 <br>
 
 ```{python}
-from sklearn.linear_model import LinearRegression
-
-X = x.reshape(-1, 1)        # sklearn expects 2D features
+X = df[["age"]] # [[ ]] gives a 2D DataFrame
+y = df["salary"]
 model = LinearRegression()
 model.fit(X, y)
 y_pred = model.predict(X)
@@ -251,18 +244,23 @@ Once you've learned this pattern for `LinearRegression`, you've largely learned 
 ## Set aside a fraction for a test set
 
 ```{python}
+#| echo: false
 from sklearn.datasets import make_regression
-from sklearn.model_selection import train_test_split                        #<1>
 
-X, y = make_regression(n_samples=100, n_features=4, random_state=0)         #<2>
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, random_state=42
-)                                                                           #<3>
+X, y = make_regression(n_samples=10_000, n_features=4, random_state=0)
 ```
 
-1. Imports `train_test_split` from `sklearn.model_selection`.
-2. Generates a toy dataset so the API is the focus, not any one problem.
-3. Splits the dataset into train and test sets. `random_state=42` makes the split reproducible.
+Off-screen I have loaded up a larger `X` & `y` dataset:
+
+```{python}
+print(X.shape, y.shape)
+```
+
+We can split the dataset into train and test sets (`random_state` makes the split reproducible):
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42) #<1>
+```
 
 ::: {.content-visible unless-format="revealjs"}
 We set aside the test data, assuming it represents new, unseen data. Then we fit many models on the train data and select the one with the lowest train error. Thereafter we assess the performance of that model using the unseen test data.
@@ -279,15 +277,10 @@ Using the same dataset for both validating and testing purposes can result in **
 :::
 
 ```{python}
-# Thanks https://datascience.stackexchange.com/a/15136
-X_main, X_test, y_main, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=1
-)                                                                   #<1>
+X_main, X_test, y_main, y_test = train_test_split(X, y, test_size=0.2, random_state=1) #<1>
 
 # As 0.25 x 0.8 = 0.2
-X_train, X_val, y_train, y_val = train_test_split(
-    X_main, y_main, test_size=0.25, random_state=1
-)                                                                   #<2>
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.25, random_state=1) #<2>
 
 X_train.shape, X_val.shape, X_test.shape
 ```
@@ -384,16 +377,11 @@ Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/re
 ## Import the data {.smaller}
 
 ```{python}
-from sklearn.datasets import fetch_california_housing                           #<1>
-
-features, target = fetch_california_housing(
-    as_frame=True, return_X_y=True)                                             #<2>
+features, target = fetch_california_housing(as_frame=True, return_X_y=True) #<1>
 features
 ```
 
-
-1. Imports California house prices from `sklearn.datasets` library
-2. Assigns features and target from the dataset to two variables 'features' and 'target' and returns two separate data frames. The command `return_X_y=True` ensures that there will be two separate data frames, one for the features and the other for the target
+1. Assigns features and target from the dataset to two variables 'features' and 'target' and returns two separate data frames. The command `return_X_y=True` ensures that there will be two separate data frames, one for the features and the other for the target
 
 ## What is the target? {.title-col2}
 
@@ -419,13 +407,9 @@ Source: Dougherty and Griffith (2023), [The Silicon Valley Elite Who Want to Bui
 The same `train_test_split` pattern, now applied to the loaded data:
 
 ```{python}
-X_main, X_test, y_main, y_test = train_test_split(
-    features, target, test_size=0.2, random_state=1
-)
-X_train, X_val, y_train, y_val = train_test_split(
-    X_main, y_main, test_size=0.25, random_state=1
-)
-X_train.shape, X_val.shape, X_test.shape
+X_main, X_test, y_main, y_test = train_test_split(features, target, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+print(X_train.shape, X_val.shape, X_test.shape)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -670,4 +654,10 @@ print(watermark(python=True, packages="matplotlib,numpy,pandas,seaborn,scikit-le
 - `train_test_split`
 - training / validation / test split
 :::
+:::
+
+
+## Reference
+
+::: {refs}
 :::

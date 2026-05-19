@@ -27,11 +27,15 @@ $$
 $$\hat{y}(x) = \beta_0 + \beta_1 x$$
 
 ```{python}
-circumference = np.array([[105], [120], [110], [117]])
-age = np.array([20, 24, 22, 23])
-model = LinearRegression().fit(circumference, age)
-print(f"Intercept: {model.intercept_:.4f}, Slope: {model.coef_[0]:.4f}")
-model.predict(circumference)
+babies = pd.DataFrame({
+    "circumference": [105, 120, 110, 117],
+    "age": [20, 24, 22, 23],
+})
+X = babies[["circumference"]]
+y = babies["age"]
+model = LinearRegression()
+model.fit(X, y)
+model.predict(X)
 ```
 
 ## Mean squared error
@@ -60,10 +64,10 @@ $$
 #| fig-height: 2
 #| fig-width: 8
 #| fig-dpi: 300
-predicted_age = model.predict(circumference)
+predicted_age = model.predict(X)
 
-x = circumference.flatten()
-y = age
+x = babies["circumference"].to_numpy()
+y = babies["age"].to_numpy()
 yhat = predicted_age
 error = np.abs(y - yhat)
 mse = np.mean(error ** 2)
@@ -105,13 +109,17 @@ $$
 #| fig-width: 4
 #| fig-dpi: 300
 #| fig-cap: "The previous model"
-circumference = np.array([[105], [120], [110], [117]])
-age_outlier = np.array([10, 24, 22, 23])
+babies_outlier = pd.DataFrame({
+    "circumference": [105, 120, 110, 117],
+    "age": [10, 24, 22, 23],
+})
+X = babies_outlier[["circumference"]]
+y = babies_outlier["age"]
 # Predictions from the *original* model (before retraining)
-predicted_age = model.predict(circumference)
+predicted_age = model.predict(X)
 
-x = circumference.flatten()
-y = age_outlier
+x = babies_outlier["circumference"].to_numpy()
+y = babies_outlier["age"].to_numpy()
 yhat = predicted_age
 error = np.abs(y - yhat)
 mse = np.mean(error ** 2)
@@ -139,11 +147,12 @@ plt.show()
 #| fig-width: 4
 #| fig-dpi: 300
 #| fig-cap: "New model after training"
-new_model = LinearRegression().fit(circumference, age_outlier)
-predicted_age = new_model.predict(circumference)
+new_model = LinearRegression()
+new_model.fit(X, y)
+predicted_age = new_model.predict(X)
 
-x = circumference.flatten()
-y = age_outlier
+x = babies_outlier["circumference"].to_numpy()
+y = babies_outlier["age"].to_numpy()
 yhat = predicted_age
 error = np.abs(y - yhat)
 mse = np.mean(error ** 2)
@@ -191,11 +200,17 @@ $$
 $$\hat{y}(\boldsymbol{x}) = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p = \beta_0 + \left \langle \boldsymbol{\beta}, \boldsymbol{x} \right \rangle$$
 
 ```{python}
-weather = pd.DataFrame({"temperature": [27, 32, 28, 22], "humidity": [80, 70, 72, 86]})
-rainfall = np.array([6, 7, 6, 4])
-model = LinearRegression().fit(weather, rainfall)
-print(f"Intercept: {model.intercept_:.4f}, Coefficients: {model.coef_}")
-model.predict(weather)
+df = pd.DataFrame({
+    "temperature": [27, 32, 28, 22],
+    "humidity": [80, 70, 72, 86],
+    "rainfall": [6, 7, 6, 4]
+})
+X = df[["temperature", "humidity"]]
+y = df["rainfall"]
+
+model = LinearRegression()
+model.fit(X, y)
+model.predict(X)
 ```
 
 ## MLR's design matrix
@@ -226,14 +241,14 @@ $$\hat{y}(\boldsymbol{x}) = \beta_0 x_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \b
 ::: columns
 ::: {.column width="30%"}
 ```{python}
-weather.to_numpy()
+print(X.to_numpy())
 ```
 
 :::
 ::: {.column width="70%"}
 ```{python}
-X = np.column_stack([np.ones(len(weather)), weather.to_numpy()])
-X
+X_des = np.column_stack([np.ones(len(X)), X.to_numpy()])
+print(X_des)
 ```
 
 :::
@@ -248,16 +263,15 @@ $$
 ::: columns
 ::: column
 ```{python}
-model = LinearRegression().fit(
-    weather, rainfall)
-np.concatenate(
-    [[model.intercept_], model.coef_])
+model = LinearRegression()
+model.fit(X, y)
+print(model.intercept_, model.coef_)
 ```
 :::
 ::: column
 ```{python}
-y = rainfall
-beta = np.linalg.solve(X.T @ X, X.T @ y)
+beta = np.linalg.solve(
+    X_des.T @ X_des, X_des.T @ y)
 beta
 ```
 :::
@@ -270,12 +284,12 @@ $$
 ::: columns
 ::: column
 ```{python}
-model.predict(weather)
+model.predict(X)
 ```
 :::
 ::: column
 ```{python}
-X @ beta
+X_des @ beta
 ```
 :::
 :::
@@ -305,15 +319,13 @@ $$
 $$\hat{y}(\boldsymbol{x}) = \beta_0 x_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p = \langle \boldsymbol{\beta}, \boldsymbol{x} \rangle$$
 
 ```{python}
-from sklearn.preprocessing import StandardScaler
-
-weather = pd.DataFrame({"temperature": [27, 32, 28, 22], "humidity": [80, 70, 72, 86]})
 scaler = StandardScaler()
-weather_sc = pd.DataFrame(scaler.fit_transform(weather), columns=weather.columns)
-rainfall = np.array([6, 7, 6, 4])
-model = LinearRegression().fit(weather_sc, rainfall)
-print(f"Intercept: {model.intercept_:.4f}, Coefficients: {model.coef_}")
-model.predict(weather_sc)
+scaler.fit(X)
+X_sc = pd.DataFrame(scaler.transform(X), columns=X.columns)
+
+model = LinearRegression()
+model.fit(X_sc, y)
+print(model.intercept_, model.coef_, model.predict(X_sc))
 ```
 
 ## SLR with categorical inputs
@@ -349,12 +361,15 @@ $$
 $$
 
 ```{python}
-property_type = pd.Categorical(["Unit", "TownHouse", "TownHouse", "House"])
-price = np.array([300000, 500000, 510000, 700000])
-X = pd.get_dummies(property_type, drop_first=True, dtype=int)
-model = LinearRegression().fit(X, price)
-print(f"Intercept: {model.intercept_:.2f}, Coefficients: {dict(zip(X.columns, model.coef_))}")
-model.predict(X)
+df = pd.DataFrame({
+    "type": pd.Categorical(["Unit", "TownHouse", "TownHouse", "House"]),
+    "price": [300000, 500000, 510000, 700000],
+})
+X = pd.get_dummies(df["type"], drop_first=True, dtype=int)
+y = df["price"]
+model = LinearRegression()
+model.fit(X, y)
+print(model.intercept_, model.coef_, model.predict(X))
 ```
 
 ## Changing the base case
@@ -390,15 +405,12 @@ $$
 $$
 
 ```{python}
-property_type = pd.Categorical(
-    ["Unit", "TownHouse", "TownHouse", "House"],
-    categories=["Unit", "TownHouse", "House"],
-)
-price = np.array([300000, 500000, 510000, 700000])
-X = pd.get_dummies(property_type, drop_first=True, dtype=int)
-model = LinearRegression().fit(X, price)
-print(f"Intercept: {model.intercept_:.2f}, Coefficients: {dict(zip(X.columns, model.coef_))}")
-model.predict(X)
+df["type"] = df["type"].cat.reorder_categories(["Unit", "TownHouse", "House"])
+X = pd.get_dummies(df["type"], drop_first=True, dtype=int)
+
+model = LinearRegression()
+model.fit(X, y)
+print(model.intercept_, model.coef_, model.predict(X))
 ```
 
 ## Changing the target's units
@@ -434,15 +446,12 @@ $$
 $$
 
 ```{python}
-property_type = pd.Categorical(
-    ["Unit", "TownHouse", "TownHouse", "House"],
-    categories=["Unit", "TownHouse", "House"],
-)
-price = np.array([0.3, 0.5, 0.51, 0.7])
-X = pd.get_dummies(property_type, drop_first=True, dtype=int)
-model = LinearRegression().fit(X, price)
-print(f"Intercept: {model.intercept_:.4f}, Coefficients: {dict(zip(X.columns, model.coef_))}")
-model.predict(X)
+df["price"] /= 1e6
+y = df["price"]
+
+model = LinearRegression()
+model.fit(X, y)
+print(model.intercept_, model.coef_, model.predict(X))
 ```
 
 ## Dates as categorical inputs
@@ -510,7 +519,41 @@ Interpret that as being the probability of the positive class.
 Step 3: Make a decision based on that probability. E.g., if the probability is greater than 0.5, predict the positive class.
 :::
 
-## Binomial regression
+## Binomial regression I
+
+Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 14.8 & 48 \\
+    \textcolor{grey}{1} & 16.4 & 49 \\
+    \textcolor{grey}{1} & 15.5 & 47 \\
+    \textcolor{grey}{1} & 14.2 & 46 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+    \text{Benign} \\
+    \textbf{\text{Malignant}} \\
+\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
+    -0.46 \\
+    0.18 \\
+    0.37 \\
+    -0.09 \\
+\end{pmatrix}
+$$
+
+Step 0: Load the data and split covariates from target
+
+```{python}
+patients = pd.DataFrame({
+    "radius": [14.8, 16.4, 15.5, 14.2],
+    "age": [48, 49, 47, 46],
+    "tumour": ["Benign", "Malignant", "Benign", "Malignant"],
+})
+X = patients[["radius", "age"]]
+y = patients["tumour"]
+```
+
+## Binomial regression II
 
 Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
 $$
@@ -533,24 +576,21 @@ $$
 $$
 
 ```{python}
-from sklearn.linear_model import LogisticRegression
-
-df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
-tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
-model = LogisticRegression(penalty=None).fit(df, tumour)
+model = LogisticRegression(C=np.inf)
+model.fit(X, y);
 ```
 
 Step 1: Make a linear prediction
 
 ```{python}
-linear = model.decision_function(df)
+linear = model.decision_function(X)
 linear
 ```
 
 ```{python}
-X = np.column_stack([np.ones(len(df)), df.to_numpy()])
+X_des = np.column_stack([np.ones(len(X)), X.to_numpy()])
 beta = np.concatenate([model.intercept_, model.coef_.flatten()])
-X @ beta
+X_des @ beta
 ```
 
 ## Logistic regression and probit regression
@@ -560,20 +600,17 @@ X @ beta
 
 ```{python}
 #| code-fold: true
-#| fig-height: 5
-#| fig-width: 5
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-x = np.arange(-6, 6, 0.1)
-y = sigmoid(x)
+xs = np.arange(-6, 6, 0.1)
+ys = sigmoid(xs)
 
 fig, ax = plt.subplots(figsize=(5, 5))
-ax.plot(x, y, linewidth=1.5)
+ax.plot(xs, ys, linewidth=1.5)
 ax.set_xlabel("x")
 ax.set_ylabel("y")
 ax.set_title("Sigmoid function")
-ax.set_aspect("equal", adjustable="box")
 plt.show()
 ```
 
@@ -583,19 +620,16 @@ This give you **logistic regression**.
 
 ```{python}
 #| code-fold: true
-#| fig-height: 5
-#| fig-width: 5
 from scipy.stats import norm
 
-x = np.arange(-6, 6, 0.1)
-y = norm.cdf(x)
+xs = np.arange(-6, 6, 0.1)
+ys = norm.cdf(xs)
 
 fig, ax = plt.subplots(figsize=(5, 5))
-ax.plot(x, y, linewidth=1.5)
+ax.plot(xs, ys, linewidth=1.5)
 ax.set_xlabel("x")
 ax.set_ylabel("y")
 ax.set_title("Normal CDF function")
-ax.set_aspect("equal", adjustable="box")
 plt.show()
 ```
 
@@ -626,9 +660,9 @@ $$
 $$
 
 ```{python}
-df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
-tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
-model = LogisticRegression(penalty=None).fit(df, tumour)
+model = LogisticRegression(C=np.inf)
+model.fit(X, y)
+linear = model.decision_function(X)
 ```
 
 Step 2: Shove it through some function to make it a probability
@@ -638,8 +672,7 @@ sigmoid(linear)
 ```
 
 ```{python}
-# Probability of the positive class (Malignant)
-model.predict_proba(df)[:, 1]
+model.predict_proba(X)[:, 1] # Probability of the positive class (Malignant)
 ```
 
 ## Predicting categories
@@ -665,18 +698,17 @@ $$
 $$
 
 ```{python}
-df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
-tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
-model = LogisticRegression(penalty=None).fit(df, tumour)
+model = LogisticRegression(C=np.inf)
+model.fit(X, y);
 ```
 
 ```{python}
-predict_probs = model.predict_proba(df)[:, 1]
-print(np.round(100 * predict_probs, 2))
+predict_probs = model.predict_proba(X)[:, 1]
 cutoff = 0.5
 predicted_tumours = np.where(predict_probs > cutoff, "Malignant", "Benign")
 print(predicted_tumours)
 ```
+
 
 ## Assessing accuracy in classification problems
 
@@ -708,6 +740,17 @@ Error rate: $$\frac{1}{n}\sum_{i=1}^n I(y_i \neq \hat{y}_i)$$
 The word "accuracy" is used often used loosely when discussing models, particularly regression models.
 In the context of classification it has this specific meaning.
 :::
+
+## Decision Tree
+
+```{python}
+model = DecisionTreeClassifier(min_samples_split=2)
+model.fit(X, y)
+
+plot_tree(model, feature_names=list(X.columns), class_names=model.classes_, filled=True);
+```
+
+
 
 ## Poisson regression
 
@@ -741,7 +784,7 @@ Step 2: Shove it through some function to make it positive $$\exp(\langle \bolds
 Interpret that as being the expected count.
 :::
 
-## Predict the mean of a Poisson distribution
+## Predict the mean of a Poisson distribution I
 
 Scenario: use _population density_ to predict the daily **count of** _gun violence incidents_
 
@@ -769,35 +812,102 @@ $$
 \end{pmatrix}
 $$
 
+Load the data, fit the model, and make a prediction.
+
 ```{python}
-from sklearn.linear_model import PoissonRegressor
+guns = pd.DataFrame({
+    "density": [10, 15, 12, 18],
+    "incidents": [155, 208, 116, 301],
+})
+X = guns[["density"]]
+y = guns["incidents"]
 
-guns = pd.DataFrame({"density": [10, 15, 12, 18]})
-incidents = np.array([155, 208, 116, 301])
-model = PoissonRegressor(alpha=0).fit(guns, incidents)
-print(f"Intercept: {model.intercept_:.4f}, Coefficients: {model.coef_}")
+model = PoissonRegressor(alpha=0)
+model.fit(X, y)
 
-# Link (linear predictor)
-X = np.column_stack([np.ones(len(guns)), guns.to_numpy()])
+print(model.predict(X))
+```
+
+## Predict the mean of a Poisson distribution II
+
+Scenario: use _population density_ to predict the daily **count of** _gun violence incidents_
+
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 10 \\
+    \textcolor{grey}{1} & 15 \\
+    \textcolor{grey}{1} & 12 \\
+    \textcolor{grey}{1} & 18 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    155 \\
+    208 \\
+    116 \\
+    301 \\
+\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
+    4.82 \\
+    5.35 \\
+    5.03 \\
+    5.67 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{\mu}} = \begin{pmatrix}
+    125.1 \\
+    211.3 \\
+    154.3 \\
+    289.4 \\
+\end{pmatrix}
+$$
+
+These are the linear coefficients:
+
+```{python}
+print(model.intercept_, model.coef_)
+```
+
+Step 1: Make linear predictions
+
+```{python}
+X_des = np.column_stack([np.ones(len(X)), X.to_numpy()])
 beta = np.concatenate([[model.intercept_], model.coef_])
-linear = X @ beta
-linear
-
-# Response (expected count)
-model.predict(guns)
+linear = X_des @ beta
+print(linear)
 ```
 
-## Trees
+
+## Predict the mean of a Poisson distribution III
+
+Scenario: use _population density_ to predict the daily **count of** _gun violence incidents_
+
+$$
+\boldsymbol{X} = \begin{pmatrix}
+    \textcolor{grey}{1} & 10 \\
+    \textcolor{grey}{1} & 15 \\
+    \textcolor{grey}{1} & 12 \\
+    \textcolor{grey}{1} & 18 \\
+\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+    155 \\
+    208 \\
+    116 \\
+    301 \\
+\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
+    4.82 \\
+    5.35 \\
+    5.03 \\
+    5.67 \\
+\end{pmatrix}, \quad \hat{\boldsymbol{\mu}} = \begin{pmatrix}
+    125.1 \\
+    211.3 \\
+    154.3 \\
+    289.4 \\
+\end{pmatrix}
+$$
+
+Step 2: Exponentiate it
 
 ```{python}
-from sklearn.tree import DecisionTreeClassifier, plot_tree
-
-df = pd.DataFrame({"radius": [14.8, 16.4, 15.5, 14.2], "age": [48, 49, 47, 46]})
-tumour = np.array(["Benign", "Malignant", "Benign", "Malignant"])
-model = DecisionTreeClassifier(min_samples_split=2).fit(df, tumour)
-
-fig, ax = plt.subplots(figsize=(6, 4))
-plot_tree(model, feature_names=list(df.columns), class_names=model.classes_, filled=True, ax=ax)
-plt.show()
+linear = X_des @ beta
+print(np.exp(linear))
 ```
 
+
+```{python}
+model.predict(X)
+```
