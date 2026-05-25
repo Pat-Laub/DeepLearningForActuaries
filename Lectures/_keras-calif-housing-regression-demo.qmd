@@ -1,28 +1,92 @@
+
+# California House Price Prediction {visibility="uncounted"}
+
+## Imports needed for this demo
+
 ```{python}
-#| include: false
-# Setup: load the California housing data and fit the linear regression baseline
-# that the rest of this lecture references. The walkthrough of these steps lives
-# in `python-for-data-science.qmd`.
+import random
+from pathlib import Path
+
+import numpy as np
+
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
+
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
+from keras.models import Sequential
+from keras.layers import Dense, Input
+
+from keras.callbacks import EarlyStopping
+from keras.callbacks import ModelCheckpoint
+```
+
+## Data science always starts with the data!
+
+::: columns
+::: column
+
+> The target variable is the median house value for California districts, expressed in $100,000's.
+> This dataset was derived from the 1990 U.S. census, using one row per census block group.
+> A block group is the smallest geographical unit for which the U.S. Census Bureau publishes sample data (a block group typically has a population of 600 to 3,000 people).
+
+:::
+::: column
+![Dall-E's rendition of this dataset.](images/dalle-california-housing.jpeg)
+:::
+:::
+
+::: footer
+Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
+:::
+
+## Columns
+
+- `MedInc` median income in block group
+- `HouseAge` median house age in block group
+- `AveRooms` average number of rooms per household
+- `AveBedrms` average # of bedrooms per household
+- `Population` block group population
+- `AveOccup` average number of household members
+- `Latitude` block group latitude
+- `Longitude` block group longitude
+- `MedHouseVal` median house value (**target**)
+
+::: footer
+Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
+:::
+
+## Import the data {.smaller}
+
+```{python}
 features, target = fetch_california_housing(as_frame=True, return_X_y=True)
+features
+```
 
+## Train/validation/test split
+
+```{python}
 X_main, X_test, y_main, y_test = train_test_split(
-    features, target, test_size=0.2, random_state=1
-)
+    features, target, test_size=0.2, random_state=1)
 X_train, X_val, y_train, y_val = train_test_split(
-    X_main, y_main, test_size=0.25, random_state=1
-)
-num_features = features.shape[1]
+    X_main, y_main, test_size=0.25, random_state=1)
 
+num_features = features.shape[1]
+print(X_train.shape, X_val.shape, X_test.shape)
+```
+
+## Linear regression baseline
+
+Refit the linear regression from earlier; we'll compare neural networks against this baseline.
+
+```{python}
 lr = LinearRegression()
 lr.fit(X_train, y_train)
 
-mse_lr_train = mse(y_train, lr.predict(X_train))
-mse_lr_val = mse(y_val, lr.predict(X_val))
+mse_lr_train = mean_squared_error(y_train, lr.predict(X_train))
+mse_lr_val = mean_squared_error(y_val, lr.predict(X_val))
 
 mse_train = {"Linear Regression": mse_lr_train}
 mse_val = {"Linear Regression": mse_lr_val}
@@ -48,19 +112,14 @@ Decide on the architecture: a simple fully-connected network with one hidden lay
 Create the model:
 
 ```{python}
-from keras.models import Sequential                              #<1>
-from keras.layers import Dense, Input                            #<2>
-
-model = Sequential(
+model = Sequential(                      #<1>
     [Input((num_features,)),
-     Dense(30, activation="leaky_relu"),
+     Dense(30, activation="leaky_relu"), 
      Dense(1, activation="leaky_relu")]
-)                                                                #<3>
+)
 ```
 
-1. Imports `Sequential` from `keras.models`
-2. Imports `Dense` from `keras.layers`
-3. Defines the model architecture using `Sequential()` function
+1. Defines a feed-forward model architecture
 
 ::: {.content-visible unless-format="revealjs"}
 This neural network architecture includes one hidden layer with 30 neurons and an output layer with 1 neuron. An activation function is specified (`leaky_relu`) for both the hidden layer and the output layer. In situations where no activation function is specified for the output layer, it assumes a `linear` activation.
@@ -101,9 +160,7 @@ We can see how rerunning the same code with the same input data results in signi
 ## Controlling the randomness
 
 ```{python}
-#| code-line-numbers: "|1-3,9"
-import random
-
+#| code-line-numbers: "|1,7"
 random.seed(123)
 
 model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
@@ -225,14 +282,14 @@ One problem with the predictions is that lots of predictions include negative va
 
 ```{python}
 y_pred = model.predict(X_val, verbose=0)
-mse(y_val, y_pred)
+mean_squared_error(y_val, y_pred)
 ```
 
 ```{python}
-mse_train["Basic ANN"] = mse(
+mse_train["Basic ANN"] = mean_squared_error(
     y_train, model.predict(X_train, verbose=0)
 )
-mse_val["Basic ANN"] = mse(y_val, model.predict(X_val, verbose=0))
+mse_val["Basic ANN"] = mean_squared_error(y_val, model.predict(X_val, verbose=0))
 ```
 
 Some predictions are negative:
@@ -311,10 +368,10 @@ add_diagonal_line()
 ```
 
 ```{python}
-mse_train["Long run ANN"] = mse(
+mse_train["Long run ANN"] = mean_squared_error(
     y_train, model.predict(X_train, verbose=0)
 )
-mse_val["Long run ANN"] = mse(y_val, model.predict(X_val, verbose=0))
+mse_val["Long run ANN"] = mean_squared_error(y_val, model.predict(X_val, verbose=0))
 ```
 
 :::
@@ -405,7 +462,6 @@ model.compile("adam", "mse")
 %time hist = model.fit(X_train, y_train, epochs=50, \
     verbose=False)
 
-import numpy as np
 losses = np.round(hist.history["loss"], 2)
 print(losses[:5], "...", losses[-5:])
 ```
@@ -554,8 +610,6 @@ Neural networks prefer if the inputs range between -1 and 1.
 :::
 
 ```{python}
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-
 scaler = StandardScaler()
 scaler.fit(X_train)
 
@@ -647,10 +701,10 @@ add_diagonal_line()
 ```
 
 ```{python}
-mse_train["Exp ANN"] = mse(
+mse_train["Exp ANN"] = mean_squared_error(
     y_train, model.predict(X_train_sc, verbose=0)
 )
-mse_val["Exp ANN"] = mse(y_val, model.predict(X_val_sc, verbose=0))
+mse_val["Exp ANN"] = mean_squared_error(y_val, model.predict(X_val_sc, verbose=0))
 ```
 
 :::
@@ -733,9 +787,7 @@ Source: Heaton (2022), [Applications of Deep Learning](https://github.com/jeffhe
 Hinton calls it a "beautiful free lunch"
 
 ```{python}
-#| code-line-numbers: "|1,10,13"
-from keras.callbacks import EarlyStopping                                       #<1>
-
+#| code-line-numbers: "|8,11"
 random.seed(123)                                                                #<2>
 model = Sequential([                                                            #<3>
     Dense(30, activation="leaky_relu"),                                               #<3>
@@ -750,7 +802,6 @@ es = EarlyStopping(restore_best_weights=True, patience=15)                      
 print(f"Keeping model at epoch #{len(hist.history['loss'])-15}.")             #<7>              
 ```
 
-1. Imports `EarlyStopping` from `keras.callbacks`
 2. Sets the random seed
 3. Constructs the sequential model
 4. Configures the training process with optimiser and loss function
@@ -846,7 +897,7 @@ In this case, early stopping did not improve the ANN (0.387 vs. 0.369). Ultimate
 Evaluate _only the final/selected model_ on the test set.
 
 ```{python}
-mse(y_test, model.predict(X_test_sc, verbose=0))
+mean_squared_error(y_test, model.predict(X_test_sc, verbose=0))
 ```
 
 ```{python}
@@ -861,27 +912,24 @@ Since we configured the model to track 'mse' as the loss function, we can simply
 ## Another useful callback
 
 ```{python}
-from pathlib import Path
-from keras.callbacks import ModelCheckpoint                                 #<1>
-
 random.seed(123)
 model = Sequential(
     [Dense(30, activation="leaky_relu"), Dense(1, activation="exponential")]
 )
 model.compile("adam", "mse")
-mc = ModelCheckpoint(                                                       #<2>
-    "best-model.keras", monitor="val_loss", save_best_only=True             #<2>
-)                                                                           #<2>
-es = EarlyStopping(restore_best_weights=True, patience=5)
-hist = model.fit(                                                           #<3>
-    X_train_sc,                                                             #<3>
-    y_train,                                                                #<3>
-    epochs=100,                                                             #<3>
-    validation_split=0.1,                                                   #<3>
-    callbacks=[mc, es],                                                     #<3>
-    verbose=False,                                                          #<3>
+mc = ModelCheckpoint(
+    "best-model.keras", monitor="val_loss", save_best_only=True
 )
-Path("best-model.keras").stat().st_size                                     #<4>
+es = EarlyStopping(restore_best_weights=True, patience=5)
+hist = model.fit(
+    X_train_sc,
+    y_train,
+    epochs=100,
+    validation_split=0.1,
+    callbacks=[mc, es],
+    verbose=False,
+)
+Path("best-model.keras").stat().st_size
 ```
 
 ::: {.content-visible unless-format="revealjs"}

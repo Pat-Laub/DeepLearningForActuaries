@@ -10,6 +10,33 @@ execute:
 from setup import *
 ```
 
+## Preliminary notes
+
+::: columns
+::: column
+
+Readings for this topic:
+
+| Week | Readings (ACTL3142 Revision) |
+|:--:|--------------|
+| 1 | @james2021statistical: Chapter 2, Sections 3.1, 3.2, and 5.1.1 |
+| 2 | @james2021statistical: Section 3.3.1, 4.1, 4.2, 4.3 |
+
+: {tbl-colwidths="[6,94]"}
+
+For ACTL3143 students, these slides are mostly a revision of ACTL3142 concepts but using Python instead of R.
+
+For ACTL5111 students, if you have not taken ACTL5110, you need to self-study any surprising concepts in these slides ASAP.
+
+:::
+::: column
+
+![Introduction to Statistical Learning with ~~R~~ Python](images/ISLP_cover.webp){width="50%"}
+
+:::
+:::
+
+
 # Machine learning workflow
 
 ## An entire ML project
@@ -47,32 +74,14 @@ Adapted from: Heaton (2022), [Applications of Deep Learning](https://github.com/
 3. Select the model with the lowest validation error.
 4. Compute the error of the final model on the _test set_.
 
+Read Section 5.1.1 of @james2021statistical for details.
+
 ::: {.content-visible unless-format="revealjs"}
 You should have seen split A in your previous courses. In those courses, split A is used, and then cross-validation is performed to fit the hyperparameters. In the case of NNs, it is much more common to split the dataset into training, validation and test (split B).
 :::
 
 ::: footer
 Source: [Wikipedia](https://commons.wikimedia.org/wiki/File:ML_dataset_training_validation_test_sets.png#filelinks).
-:::
-
-## Readings for this topic
-
-::: columns
-::: column
-
-| Week | Readings (ACTL3142 Revision) |
-|:--:|--------------|
-| 1 | @james2021statistical: Chapter 2, Sections 3.1, 3.2, and 5.1.1 |
-| 2 | @james2021statistical: Section 3.3.1, 4.1, 4.2, 4.3 |
-
-: {tbl-colwidths="[6,94]"}
-
-:::
-::: column
-
-![Introduction to Statistical Learning with ~~R~~ Python](images/ISLP_cover.webp){width="50%"}
-
-:::
 :::
 
 
@@ -93,11 +102,13 @@ Source: Learnbay.co, [Python libraries for data analysis and modeling in Data sc
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
+from sklearn.datasets import fetch_california_housing
 from sklearn.linear_model import LinearRegression, LogisticRegression, PoissonRegressor
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.tree import DecisionTreeClassifier, plot_tree
-from sklearn.datasets import fetch_california_housing
 ```
 
 
@@ -256,10 +267,11 @@ Off-screen I have loaded up a larger `X` & `y` dataset:
 print(X.shape, y.shape)
 ```
 
-We can split the dataset into train and test sets (`random_state` makes the split reproducible):
+We can split into train and test sets (in a random but reproducible way):
 
 ```{python}
 X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42) #<1>
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -511,22 +523,6 @@ y_pred
 `lr.predict(X_train.head(3))` returns the predictions for the first three rows of the dataset `X_train`.
 :::
 
-::: {.content-visible unless-format="revealjs"}
-We can manually calculate predictions using the linear regression model to verify the output of the `lr.predict()` function. In the following code, we first define $w_0$ as the intercept of the `lr` function (initial value for the prediction calculation), and then keep on adding the $w_j \times x_j$ terms
-:::
-
-```{python}
-prediction = lr.intercept_                               #<1>
-for w_j, x_0j in zip(lr.coef_, X_train.iloc[0]):         #<2>
-    prediction += w_j * x_0j                             #<3>
-prediction
-```
-
-1. Specifies the value of the intercept from the fitted regression as `prediction`
-2. Iterates over the first observation from the train data (`X_train`) and the corresponding weight coefficients from the fitted linear regression
-3. Updates the prediction value
-
-
 ## Plot the predictions
 
 ```{python}
@@ -568,44 +564,13 @@ set_rectangular_figures()
 We can see how both plots have a dispersion to either sides of the fitted line.
 :::
 
-## Calculate mean squared error
+## Track MSE for model comparison
+
+We'll add ANN results to these dictionaries later.
 
 ```{python}
-y_pred = lr.predict(X_train)
-df = pd.DataFrame({"Predictions": y_pred, "True values": y_train})
-df["Squared Error"] = (df["Predictions"] - df["True values"]) ** 2
-df.head(4)
-```
-
-```{python}
-df["Squared Error"].mean()
-```
-
-## Using `mean_squared_error`
-
-```{python}
-df["Squared Error"].mean()
-```
-
-::: {.content-visible unless-format="revealjs"}
-We can compute the mean squared error to evaluate, on average, the accuracy of the predictions. To do this, we first create a data frame using pandas `DataFrame` function. It will have two columns, one with the predicted values and the other with the actual values. Next, we add another column to the same data frame using `df["Squared Error"]` that computes and stores the squared error for each row. Using the function `df["Squared Error"].mean()`, we extract the column 'Squared Error' from the data frame 'df' and calculate the 'mean'.
-:::
-
-```{python}
-from sklearn.metrics import mean_squared_error as mse
-
-mse(y_train, y_pred)
-```
-
-::: {.content-visible unless-format="revealjs"}
-We can also use the function `mean_squared_error` from `sklearn.metrics` library to calculate the same.
-:::
-
-Store the results in a dictionary:
-
-```{python}
-mse_lr_train = mse(y_train, lr.predict(X_train))
-mse_lr_val = mse(y_val, lr.predict(X_val))
+mse_lr_train = mean_squared_error(y_train, lr.predict(X_train))
+mse_lr_val = mean_squared_error(y_val, lr.predict(X_val))
 
 mse_train = {"Linear Regression": mse_lr_train}
 mse_val = {"Linear Regression": mse_lr_val}
@@ -616,9 +581,9 @@ Think about the units of the mean squared error.
 Is there a variation which is more interpretable?
 :::
 
-::: {.content-visible unless-format="revealjs"}
-Storing results in data structures like dictionaries is a good practice that can help in managing and handling data efficiently.
-:::
+### To be continued...
+
+We'll revisit this California housing problem in the **AI and Deep Learning** lecture, where we extend `mse_train` and `mse_val` with neural network results and compare them against this linear regression baseline.
 
 ## Package Versions {.appendix data-visibility="uncounted"}
 
@@ -657,7 +622,7 @@ print(watermark(python=True, packages="matplotlib,numpy,pandas,seaborn,scikit-le
 :::
 
 
-## Reference
+## References
 
 ::: {refs}
 :::

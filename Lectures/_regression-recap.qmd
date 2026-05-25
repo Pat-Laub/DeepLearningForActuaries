@@ -92,6 +92,14 @@ $$\text{MSE} = \frac{1}{n} \sum_{i=1}^n (y_i - \hat{y}_i)^2 = \frac{1}{4} \Bigl[
 $\text{RSS} = \sum_{i=1}^n (y_i - \hat{y}_i)^2 = 0.38$.
 :::
 
+## MSE in sklearn
+
+Rather than computing the formula by hand, use `mean_squared_error` from `sklearn.metrics`.
+
+```{python}
+mean_squared_error(y, model.predict(X))
+```
+
 ## Sensitive to outliers
 
 $$
@@ -213,6 +221,25 @@ model.fit(X, y)
 model.predict(X)
 ```
 
+## Predict by hand
+
+The intercept $\beta_0$ is in `model.intercept_` and the slopes $\beta_1, \dots, \beta_p$ are in `model.coef_`.
+
+`model.predict(X)` gives us:
+
+```{python}
+model.predict(X)
+```
+
+We can reproduce the first entry with a `for` loop:
+
+```{python}
+prediction = model.intercept_
+for beta_j, x_0j in zip(model.coef_, X.iloc[0]):
+    prediction += beta_j * x_0j
+prediction
+```
+
 ## MLR's design matrix
 
 Scenario: use _temperature ($^\circ C$)_ **and** _humidity (%)_ to predict _rainfall (mm)_
@@ -294,6 +321,10 @@ X_des @ beta
 :::
 :::
 
+::: {.fragment}
+Note, you should just use the left column. The right column's version is for pedagogical purposes (I'll do this kind of thing again in the upcoming slides).
+:::
+
 ## MLR after normalising the inputs
 
 Scenario: use _temperature ($z$-score)_ **and** _humidity ($z$-score)_ to predict _rainfall (mm)_
@@ -323,9 +354,13 @@ scaler = StandardScaler()
 scaler.fit(X)
 X_sc = pd.DataFrame(scaler.transform(X), columns=X.columns)
 
-model = LinearRegression()
-model.fit(X_sc, y)
-print(model.intercept_, model.coef_, model.predict(X_sc))
+model_norm = LinearRegression()
+model_norm.fit(X_sc, y)
+print(model_norm.intercept_, model_norm.coef_, model_norm.predict(X_sc))
+```
+
+```{python}
+print(model.intercept_, model.coef_, model.predict(X))
 ```
 
 ## SLR with categorical inputs
@@ -519,29 +554,29 @@ Interpret that as being the probability of the positive class.
 Step 3: Make a decision based on that probability. E.g., if the probability is greater than 0.5, predict the positive class.
 :::
 
-## Binomial regression I
+## Binomial regression with sklearn
 
 Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
 $$
-\boldsymbol{X} = \begin{pmatrix}
-    \textcolor{grey}{1} & 14.8 & 48 \\
-    \textcolor{grey}{1} & 16.4 & 49 \\
-    \textcolor{grey}{1} & 15.5 & 47 \\
-    \textcolor{grey}{1} & 14.2 & 46 \\
-\end{pmatrix}, \quad \boldsymbol{y} = \begin{pmatrix}
+\boldsymbol{y} = \begin{pmatrix}
     \text{Benign} \\
     \textbf{\text{Malignant}} \\
     \text{Benign} \\
     \textbf{\text{Malignant}} \\
-\end{pmatrix}, \quad \boldsymbol{X} \boldsymbol{\beta} = \begin{pmatrix}
-    -0.46 \\
-    0.18 \\
-    0.37 \\
-    -0.09 \\
+\end{pmatrix}, \quad \sigma( \boldsymbol{X} \boldsymbol{\beta} ) = \begin{pmatrix}
+    39\% \\
+    55\% \\
+    59\% \\
+    48\% \\
+\end{pmatrix} , \quad \hat{\boldsymbol{y}} = \begin{pmatrix}
+    \text{Benign} \\
+    \text{Malignant} \\
+    \text{Malignant} \\
+    \text{Benign} \\
 \end{pmatrix}
 $$
 
-Step 0: Load the data and split covariates from target
+Load the data, fit a GLM, make predictions:
 
 ```{python}
 patients = pd.DataFrame({
@@ -551,9 +586,13 @@ patients = pd.DataFrame({
 })
 X = patients[["radius", "age"]]
 y = patients["tumour"]
+
+model = LogisticRegression(C=np.inf)
+model.fit(X, y)
+model.predict(X)
 ```
 
-## Binomial regression II
+## Binomial regression I
 
 Scenario: use _tumour radius (mm)_ and _ages (years)_ to predict _benign_ **or** _malignant_
 $$
@@ -606,7 +645,7 @@ def sigmoid(x):
 xs = np.arange(-6, 6, 0.1)
 ys = sigmoid(xs)
 
-fig, ax = plt.subplots(figsize=(5, 5))
+fig, ax = plt.subplots(figsize=(3, 3))
 ax.plot(xs, ys, linewidth=1.5)
 ax.set_xlabel("x")
 ax.set_ylabel("y")
@@ -625,7 +664,7 @@ from scipy.stats import norm
 xs = np.arange(-6, 6, 0.1)
 ys = norm.cdf(xs)
 
-fig, ax = plt.subplots(figsize=(5, 5))
+fig, ax = plt.subplots(figsize=(3, 3))
 ax.plot(xs, ys, linewidth=1.5)
 ax.set_xlabel("x")
 ax.set_ylabel("y")
