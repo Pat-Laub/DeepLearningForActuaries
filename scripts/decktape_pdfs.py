@@ -72,7 +72,7 @@ def start_local_server(directory):
 
 def decktape(source, output, args=None, docker=False, version='', open=False):
     if args is None:
-        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false']
+        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
 
     args = args + [source, output]
 
