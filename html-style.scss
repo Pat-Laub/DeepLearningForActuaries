@@ -131,6 +131,75 @@ h3 {
 }
 
 
+// ── Dark / Light mode toggle ────────────────────────────────
+// Quarto's default toggle is wedged next to the sidebar title with an empty
+// `<i class="bi">` (no glyph). Lift it out into a fixed top-right pill,
+// give it a real moon/sun icon, and swap the glyph using the `.alternate`
+// class Quarto's JS adds whenever the dark stylesheet is layered on.
+
+.quarto-color-scheme-toggle {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1030;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #383D3D;
+  border: 1px solid #e0ded8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: background 0.15s ease, color 0.15s ease,
+              transform 0.15s ease, border-color 0.15s ease;
+}
+
+.quarto-color-scheme-toggle:hover {
+  background: #fedc00;
+  transform: scale(1.05);
+}
+
+// Quarto's default `.sidebar-navigation .quarto-color-scheme-toggle .bi::before`
+// rule paints a toggle-on/off SVG via `background-image` and fixes the icon
+// to 1rem × 1rem. We override that with a Bootstrap Icons font glyph (moon
+// in light mode, sun in dark mode), and double-escape the Unicode codepoint
+// so SCSS doesn't swallow the backslash before it reaches the CSS output.
+.quarto-color-scheme-toggle .bi::before {
+  background-image: none !important;
+  height: auto !important;
+  width: auto !important;
+  font-family: "bootstrap-icons" !important;
+  // bi-moon-stars-fill — current mode is light, click takes you to dark.
+  // unquote() bypasses SCSS string-escape handling so the `\fXXX` codepoint
+  // reaches the CSS output intact (raw `"\f495"` is interpreted as form-feed).
+  content: unquote('"\\f495"') !important;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+// `.alternate` is added to the toggle by Quarto's JS whenever the dark
+// stylesheet is active. We use it (rather than the @media query) so the
+// icon flips immediately when the user clicks, without waiting on the OS.
+.quarto-color-scheme-toggle.alternate {
+  background: #1c2229;
+  color: #ede8df;
+  border-color: #343b45;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.quarto-color-scheme-toggle.alternate:hover {
+  background: #7aa2c7;
+  color: #111418;
+}
+
+.quarto-color-scheme-toggle.alternate .bi::before {
+  // bi-sun-fill — current mode is dark, click takes you back to light.
+  content: unquote('"\\f5a1"') !important;
+}
+
+
 // ── Code Blocks ─────────────────────────────────────────────
 
 .cell-code {
