@@ -115,7 +115,11 @@ def start_local_server(directory):
 
 def decktape(source, output, args=None, docker=False, version='', open=False, capture=True):
     if args is None:
-        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
+        # --load-pause is a one-time wait after the page loads, before the first
+        # slide is exported. It gives reveal.js time to finish its initial
+        # layout/auto-scaling so slide 1 (the title) isn't snapshotted at the
+        # wrong font size. Unlike -p it doesn't add a delay to every slide.
+        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '--load-pause=500', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
 
     args = args + [source, output]
 
