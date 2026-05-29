@@ -21,6 +21,42 @@ YOUTUBE_IFRAME_RE = re.compile(
 # Hides the chalkboard/notes-canvas icons in the PDF only — the live HTML keeps them.
 HIDE_OVERLAY_CSS = '<style>.slide-chalkboard-buttons{display:none!important;}</style>'
 
+# Fixes the random ~0.71x-too-small title slide. Decktape loads each deck at
+# Chrome's default 800px-wide viewport, calls Reveal.configure() (which relays
+# out at 800px, baking in scale ≈ 800/1120 ≈ 0.71), and only then resizes the
+# viewport to the deck's real size (1280x720). It captures each slide with
+# page.pdf() (Chrome's printToPDF), which renders the DOM with whatever inline
+# `transform: scale(...)` Reveal last computed — and JS does not relayout during
+# printToPDF. Slides 2+ are saved because decktape navigates between them and
+# Reveal.next() relays out at 1280; but slide 1 is captured with no navigation,
+# so it depends entirely on the `resize` event reaching Reveal's handler. With
+# decktape's `-p 1` (1ms) pre-slide pause that window is only a few CDP
+# round-trips wide, and the resize/relayout often loses the race — leaving the
+# title and subtitle at the stale 0.71x scale (the slide-number, which lives
+# outside the scaled container, stays correct).
+#
+# Fix: force Reveal.layout() on a fast timer. setInterval callbacks run in the
+# renderer's event loop independent of the rendering pipeline (unlike a
+# resize/ResizeObserver handler, which headless printToPDF doesn't reliably
+# service), so a relayout is guaranteed to run at the real 1280px viewport in
+# the gap before slide 1 is captured. We stop a couple of seconds after the
+# viewport widens; per-slide navigation keeps the rest correct.
+FORCE_RELAYOUT_JS = """<script>
+(function () {
+  function ready() {
+    return window.Reveal && typeof Reveal.layout === 'function'
+      && (typeof Reveal.isReady !== 'function' || Reveal.isReady());
+  }
+  var ticks = 0, wideTicks = 0;
+  var id = setInterval(function () {
+    ticks++;
+    if (ready()) Reveal.layout();
+    if (window.innerWidth >= 1000) wideTicks++;
+    if (wideTicks > 200 || ticks > 3000) clearInterval(id);  // ~2s after resize, 30s cap
+  }, 10);
+})();
+</script>"""
+
 
 # Probe each video's maxresdefault availability at most once per build. The
 # threaded server may call this concurrently for the same id; a duplicate HEAD
@@ -95,6 +131,8 @@ class RewritingHandler(http.server.SimpleHTTPRequestHandler):
             text = YOUTUBE_IFRAME_RE.sub(_replace_youtube_iframe, text)
             if HIDE_OVERLAY_CSS not in text and '</head>' in text:
                 text = text.replace('</head>', f'{HIDE_OVERLAY_CSS}</head>', 1)
+            if FORCE_RELAYOUT_JS not in text and '</body>' in text:
+                text = text.replace('</body>', f'{FORCE_RELAYOUT_JS}</body>', 1)
             body = text.encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
@@ -117,11 +155,7 @@ def start_local_server(directory):
 
 def decktape(source, output, args=None, docker=False, version='', open=False, capture=True):
     if args is None:
-        # --load-pause is a one-time wait after the page loads, before the first
-        # slide is exported. It gives reveal.js time to finish its initial
-        # layout/auto-scaling so slide 1 (the title) isn't snapshotted at the
-        # wrong font size. Unlike -p it doesn't add a delay to every slide.
-        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '--load-pause=5000', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
+        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
 
     args = args + [source, output]
 
