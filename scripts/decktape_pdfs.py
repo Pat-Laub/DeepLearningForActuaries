@@ -4,9 +4,11 @@ import os
 import re
 import socketserver
 import subprocess
+import sys
 import threading
 import urllib.error
 import urllib.request
+from glob import glob
 from urllib.parse import quote
 
 OUTPUT_DIR = "docs"
@@ -119,7 +121,7 @@ def decktape(source, output, args=None, docker=False, version='', open=False, ca
         # slide is exported. It gives reveal.js time to finish its initial
         # layout/auto-scaling so slide 1 (the title) isn't snapshotted at the
         # wrong font size. Unlike -p it doesn't add a delay to every slide.
-        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '--load-pause=500', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
+        args = ['--chrome-arg=--allow-file-access-from-files', '-p', '1', '--load-pause=5000', '-s', '1280x720', '--chrome-arg=--no-sandbox', '--fragments=false', '--url-load-timeout=180000', '--page-load-timeout=120000', '--buffer-timeout=120000']
 
     args = args + [source, output]
 
@@ -159,11 +161,37 @@ def decktape(source, output, args=None, docker=False, version='', open=False, ca
     return output
 
 
-slides_files = [
-    file
-    for file in os.getenv("QUARTO_PROJECT_OUTPUT_FILES", "").split("\n")
-    if re.search(r"\.slides\.html$", file)
-]
+def _collect_slides():
+    """
+    Decide which .slides.html decks to convert, in priority order:
+
+      1. CLI arguments — file paths or globs. Both .slides.html and .pdf paths
+         are accepted (a .pdf is mapped back to its .slides.html source), and
+         globs already expanded by the shell work too.
+      2. QUARTO_PROJECT_OUTPUT_FILES — the newline-separated list Quarto sets
+         when this runs as a post-render step.
+      3. Neither — default to every .slides.html under the output directory.
+    """
+    if len(sys.argv) > 1:
+        candidates = []
+        for arg in sys.argv[1:]:
+            candidates.extend(glob(arg, recursive=True) or [arg])
+    else:
+        env = os.getenv("QUARTO_PROJECT_OUTPUT_FILES", "")
+        if env.strip():
+            candidates = env.split("\n")
+        else:
+            candidates = glob(f"{OUTPUT_DIR}/**/*.slides.html", recursive=True)
+
+    slides = []
+    for path in candidates:
+        path = re.sub(r"\.pdf$", ".slides.html", path.strip())
+        if path.endswith(".slides.html") and os.path.isfile(path) and path not in slides:
+            slides.append(path)
+    return slides
+
+
+slides_files = _collect_slides()
 
 if slides_files:
     # Conversions are independent (distinct output files) and the HTTP server
@@ -212,3 +240,5 @@ if slides_files:
             f"Failed to convert {len(failures)} slide deck(s) to PDF: "
             + ", ".join(failures)
         )
+else:
+    print("decktape_pdfs: no .slides.html files to convert.")
