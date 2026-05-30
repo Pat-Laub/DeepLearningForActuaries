@@ -12,6 +12,12 @@ Compress PDF" step with a tuned Ghostscript pass that:
     introduced (unlike the blunt -dPDFSETTINGS=/ebook preset),
   * de-duplicates repeated images (e.g. the logo/background on every slide).
 
+It then runs a fast pikepdf pass (see _repair_iccbased) that fixes a Ghostscript
+quirk: gs rewrites the slides' /ICCBased colour spaces with an empty (/Length 0)
+profile, which Apple's Quartz renderer (Preview, Safari) rejects, silently
+dropping every affected image. The pass relabels those to the equivalent device
+colour space — losslessly, without re-touching pixel data.
+
 On the benchmark deck this matched/beat Acrobat's "Compress" output at
 comparable quality. A file is only replaced if the result is actually smaller.
 
@@ -37,6 +43,11 @@ import sys
 import tempfile
 from glob import glob
 
+try:
+    import pikepdf
+except ImportError:
+    pikepdf = None
+
 GS = shutil.which("gs") or shutil.which("gswin64c") or shutil.which("gswin32c")
 DPI = os.getenv("COMPRESS_DPI", "200")
 
@@ -56,16 +67,55 @@ def _gs_command(src, dst):
         "-dDownsampleMonoImages=true", "-dMonoImageResolution=300",
         "-dAutoFilterColorImages=true", "-dAutoFilterGrayImages=true",
         "-dPassThroughJPEGImages=true",
-        # decktape's headless-Chrome PDFs tag images with /ICCBased colour
-        # spaces; Ghostscript rewrites these with an empty (/Length 0) profile.
-        # Poppler/Acrobat fall back to DeviceRGB, but Apple's Quartz renderer
-        # (Preview, Safari) is stricter and silently drops every affected image.
-        # Converting to DeviceRGB drops the broken profiles entirely (gray
-        # images/soft-masks stay gray, JPEGs still pass through untouched).
-        "-dColorConversionStrategy=/RGB", "-dProcessColorModel=/DeviceRGB",
         f"-sOutputFile={dst}",
         src,
     ]
+
+
+_DEVICE_CS = pikepdf and {
+    1: pikepdf.Name.DeviceGray,
+    3: pikepdf.Name.DeviceRGB,
+    4: pikepdf.Name.DeviceCMYK,
+}
+
+
+def _repair_iccbased(path):
+    """Relabel images whose colour space Ghostscript wrote as /ICCBased with an
+    empty (/Length 0) profile back to the equivalent device space, in place.
+
+    Such images render in Poppler/Acrobat (which fall back to the device space)
+    but Apple's Quartz renderer (Preview, Safari) is stricter and silently drops
+    them. We only rewrite the colour-space label — the (JPEG/Flate) pixel data is
+    left byte-for-byte untouched, so this is lossless and ~instant, unlike
+    re-converting every image through Ghostscript's colour engine. No-op if
+    pikepdf is missing (a warning is printed once in main()).
+    """
+    if pikepdf is None:
+        return 0
+    fixed = 0
+    with pikepdf.open(path, allow_overwriting_input=True) as pdf:
+        for obj in pdf.objects:
+            try:
+                if obj.get("/Subtype") != pikepdf.Name.Image:
+                    continue
+                cs = obj.get("/ColorSpace")
+                if (
+                    isinstance(cs, pikepdf.Array)
+                    and len(cs) == 2
+                    and cs[0] == pikepdf.Name.ICCBased
+                    and len(cs[1].read_bytes()) == 0
+                ):
+                    n = int(cs[1].get("/N", 3))
+                    obj.ColorSpace = _DEVICE_CS.get(n, pikepdf.Name.DeviceRGB)
+                    fixed += 1
+            except Exception:
+                continue
+        if fixed:
+            pdf.save(
+                path,
+                object_stream_mode=pikepdf.ObjectStreamMode.generate,
+            )
+    return fixed
 
 
 def compress(pdf):
@@ -77,6 +127,7 @@ def compress(pdf):
         subprocess.run(
             _gs_command(pdf, tmp), check=True, capture_output=True, text=True
         )
+        _repair_iccbased(tmp)  # fix Ghostscript's empty-ICC colour spaces
         after = os.path.getsize(tmp)
         if 0 < after < before:
             os.replace(tmp, pdf)  # atomic; same directory
@@ -114,6 +165,14 @@ def main():
     pdfs = _targets()
     if not pdfs:
         return
+
+    if pikepdf is None:
+        print(
+            "compress_pdfs: WARNING — pikepdf not installed; cannot repair "
+            "Ghostscript's empty-ICC colour spaces. The compressed PDFs will "
+            "render fine in Acrobat/Chrome but images will be MISSING in Apple "
+            "Preview/Safari. Install with: pip install pikepdf"
+        )
 
     max_workers = int(os.getenv("COMPRESS_JOBS", "0")) or min(
         4, os.cpu_count() or 4, len(pdfs)
