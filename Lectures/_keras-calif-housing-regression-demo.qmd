@@ -5,25 +5,23 @@
 
 ```{python}
 import random
-from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
-
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from keras.models import Sequential
 from keras.layers import Dense, Input
-
 from keras.callbacks import EarlyStopping
 from keras.callbacks import ModelCheckpoint
 ```
 
-## Data science always starts with the data!
+## Data science always starts with the data! {visibility="uncounted"}
 
 ::: columns
 ::: column
@@ -42,7 +40,7 @@ from keras.callbacks import ModelCheckpoint
 Source: [Scikit-learn documentation](https://scikit-learn.org/stable/datasets/real_world.html#california-housing-dataset).
 :::
 
-## Columns
+## Columns {visibility="uncounted"}
 
 - `MedInc` median income in block group
 - `HouseAge` median house age in block group
@@ -65,7 +63,7 @@ features, target = fetch_california_housing(as_frame=True, return_X_y=True)
 features
 ```
 
-## Train/validation/test split
+## Train/validation/test split {visibility="uncounted"}
 
 ```{python}
 X_main, X_test, y_main, y_test = train_test_split(
@@ -161,13 +159,13 @@ We can see how rerunning the same code with the same input data results in signi
 
 ```{python}
 #| code-line-numbers: "|1,7"
-random.seed(123)
+random.seed(2026)
 
 model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
 
 display(model.predict(X_val.head(3), verbose=0))
 
-random.seed(123)
+random.seed(2026)
 model = Sequential([Dense(30, activation="leaky_relu"), Dense(1, activation="leaky_relu")])
 
 display(model.predict(X_val.head(3), verbose=0))
@@ -179,7 +177,7 @@ By setting the seed, we can control for the randomness.
 
 ## Fit the model
 ```{python}
-random.seed(123)                                                    #<1>
+random.seed(2026)                                                    #<1>
 
 model = Sequential([                                                #<2>
     Dense(30, activation="leaky_relu"),
@@ -187,7 +185,7 @@ model = Sequential([                                                #<2>
 ])
 
 model.compile("adam", "mse")                                        #<3>
-%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)   #<4>
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=0)       #<4>
 hist.history["loss"]                                                #<5>
 ```
 
@@ -211,7 +209,7 @@ The `fit()` function (step 4) takes in the training data, and runs the entire da
 
 ::: {.content-visible unless-format="revealjs"}
 `%time` command computes and prints the amount of time spend on training.
-By setting `verbose=False` we can avoid printing of intermediate results during training. Setting `verbose=True` is useful when we want to observe how the neural network is training.  
+By setting `verbose=0` we can avoid printing of intermediate results during training. Setting values of 1 or 2 can be useful when we want to observe how the neural network is training.  
 :::
 
 ## Make predictions
@@ -312,7 +310,7 @@ We noted that a lot of the predictions include negative values which is unrealis
 ## Try running for longer
 
 ```{python}
-random.seed(123)
+random.seed(2026)
 
 model = Sequential([
     Dense(30, activation="leaky_relu"),
@@ -321,7 +319,7 @@ model = Sequential([
 
 model.compile("adam", "mse")
 
-%time hist = model.fit(X_train, y_train, epochs=50, verbose=False)
+%time hist = model.fit(X_train, y_train, epochs=50, verbose=0)
 ```
 ::: {.content-visible unless-format="revealjs"}
 We will train the same neural network architecture with more epochs (`epochs=50`) to see if the results improve.
@@ -450,7 +448,7 @@ We should be mindful when selecting the activation function. Both `tanh` and `si
 ## Enforce positive outputs (softplus)
 
 ```{python}
-random.seed(123)
+random.seed(2026)
 
 model = Sequential([
     Dense(30, activation="leaky_relu"),
@@ -459,8 +457,7 @@ model = Sequential([
 
 model.compile("adam", "mse")
 
-%time hist = model.fit(X_train, y_train, epochs=50, \
-    verbose=False)
+%time hist = model.fit(X_train, y_train, epochs=50, verbose=0)
 
 losses = np.round(hist.history["loss"], 2)
 print(losses[:5], "...", losses[-5:])
@@ -511,7 +508,7 @@ Plots illustrate how all the outputs were stuck at zero. Irrespective of how man
 
 ```{python}
 #| code-line-numbers: "|5"
-random.seed(123)
+random.seed(2026)
 
 model = Sequential([
     Dense(30, activation="leaky_relu"),
@@ -520,7 +517,7 @@ model = Sequential([
 
 model.compile("adam", "mse")
 
-%time hist = model.fit(X_train, y_train, epochs=5, verbose=False)
+%time hist = model.fit(X_train, y_train, epochs=5, verbose=0)
 
 losses = hist.history["loss"]
 print(losses)
@@ -649,8 +646,7 @@ We can see how the original values for the input varied between 0 and 10, and ho
 ## Same model with scaled inputs
 
 ```{python}
-#| code-line-numbers: "|11"
-random.seed(123)
+random.seed(2026)
 
 model = Sequential([
     Dense(30, activation="leaky_relu"),
@@ -659,12 +655,10 @@ model = Sequential([
 
 model.compile("adam", "mse")
 
-%time hist = model.fit( \
-    X_train_sc, \
-    y_train, \
-    epochs=50, \
-    verbose=False)
+%time hist = model.fit(X_train_sc, y_train, epochs=50, verbose=0)
 ```
+
+Note the use of `X_train_sc` instead of `X_train`.
 
 ## Loss curve
 
@@ -677,7 +671,7 @@ plt.ylabel("MSE");
 ## Loss curve {data-visibility="uncounted"}
 
 ```{python}
-plt.plot(range(2, 51), hist.history["loss"][1:])
+plt.plot(range(10, 51), hist.history["loss"][9:])
 plt.xlabel("Epoch")
 plt.ylabel("MSE");
 ```
@@ -750,18 +744,14 @@ Note: The error on the validation set is usually higher than the training set.
 ## Comparing models (train) {data-visibility="uncounted"}
 
 ```{python}
-train_results = pd.DataFrame(
-    {"Model": mse_train.keys(), "MSE": mse_train.values()}
-)
+train_results = pd.DataFrame({"Model": mse_train.keys(), "MSE": mse_train.values()})
 train_results.sort_values("MSE", ascending=False)
 ```
 
 ## Comparing models (validation) {data-visibility="uncounted"}
 
 ```{python}
-val_results = pd.DataFrame(
-    {"Model": mse_val.keys(), "MSE": mse_val.values()}
-)
+val_results = pd.DataFrame({"Model": mse_val.keys(), "MSE": mse_val.values()})
 val_results.sort_values("MSE", ascending=False)
 ```
 
@@ -788,9 +778,9 @@ Hinton calls it a "beautiful free lunch"
 
 ```{python}
 #| code-line-numbers: "|8,11"
-random.seed(123)                                                                #<2>
+random.seed(2026)                                                               #<2>
 model = Sequential([                                                            #<3>
-    Dense(30, activation="leaky_relu"),                                               #<3>
+    Dense(30, activation="leaky_relu"),                                         #<3>
     Dense(1, activation="exponential")                                          #<3>
 ])                                                                              #<3>
 model.compile("adam", "mse")                                                    #<4>
@@ -798,8 +788,8 @@ model.compile("adam", "mse")                                                    
 es = EarlyStopping(restore_best_weights=True, patience=15)                      #<5>
 
 %time hist = model.fit(X_train_sc, y_train, epochs=1_000, \
-    callbacks=[es], validation_data=(X_val_sc, y_val), verbose=False)           #<6>
-print(f"Keeping model at epoch #{len(hist.history['loss'])-15}.")             #<7>              
+    callbacks=[es], validation_data=(X_val_sc, y_val), verbose=0)           #<6>
+print(f"Keeping model at epoch #{len(hist.history['loss'])-15}.")               #<7>              
 ```
 
 2. Sets the random seed
@@ -826,7 +816,7 @@ plt.legend(["Training", "Validation"]);
 ```{python}
 plt.plot(hist.history["loss"])
 plt.plot(hist.history["val_loss"])
-plt.ylim([0, 8])
+plt.ylim([0, 0.75])
 plt.legend(["Training", "Validation"]);
 ```
 
@@ -871,10 +861,10 @@ set_rectangular_figures()
 #| echo: false
 # Store the results
 mse_train["Early stop ANN"] = model.evaluate(
-    X_train_sc, y_train, verbose=False
+    X_train_sc, y_train, verbose=0
 )
 mse_val["Early stop ANN"] = model.evaluate(
-    X_val_sc, y_val, verbose=False
+    X_val_sc, y_val, verbose=0
 )
 ```
 
@@ -901,42 +891,10 @@ mean_squared_error(y_test, model.predict(X_test_sc, verbose=0))
 ```
 
 ```{python}
-model.evaluate(X_test_sc, y_test, verbose=False)
+model.evaluate(X_test_sc, y_test, verbose=0)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
 Evaluating the model on the unseen test set provides an unbiased view on how the model will perform.
 Since we configured the model to track 'mse' as the loss function, we can simply use `model.evaluate()` function on the test set and get the same answer.
 :::
-
-## Another useful callback
-
-```{python}
-random.seed(123)
-model = Sequential(
-    [Dense(30, activation="leaky_relu"), Dense(1, activation="exponential")]
-)
-model.compile("adam", "mse")
-mc = ModelCheckpoint(
-    "best-model.keras", monitor="val_loss", save_best_only=True
-)
-es = EarlyStopping(restore_best_weights=True, patience=5)
-hist = model.fit(
-    X_train_sc,
-    y_train,
-    epochs=100,
-    validation_split=0.1,
-    callbacks=[mc, es],
-    verbose=False,
-)
-Path("best-model.keras").stat().st_size
-```
-
-::: {.content-visible unless-format="revealjs"}
-`ModelCheckpoint` is also another useful `callback` function that can be used to save the model at some intervals during training. This is useful when training large datasets. If the training process gets interrupted at some point, last saved set of weights from model checkpoints can be used to resume the training process instead of starting from the beginning.
-:::
-
-```{python}
-#| echo: false
-Path("best-model.keras").unlink()
-```
