@@ -56,6 +56,13 @@ def _gs_command(src, dst):
         "-dDownsampleMonoImages=true", "-dMonoImageResolution=300",
         "-dAutoFilterColorImages=true", "-dAutoFilterGrayImages=true",
         "-dPassThroughJPEGImages=true",
+        # decktape's headless-Chrome PDFs tag images with /ICCBased colour
+        # spaces; Ghostscript rewrites these with an empty (/Length 0) profile.
+        # Poppler/Acrobat fall back to DeviceRGB, but Apple's Quartz renderer
+        # (Preview, Safari) is stricter and silently drops every affected image.
+        # Converting to DeviceRGB drops the broken profiles entirely (gray
+        # images/soft-masks stay gray, JPEGs still pass through untouched).
+        "-dColorConversionStrategy=/RGB", "-dProcessColorModel=/DeviceRGB",
         f"-sOutputFile={dst}",
         src,
     ]
