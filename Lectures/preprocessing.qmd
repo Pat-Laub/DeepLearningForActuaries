@@ -30,6 +30,7 @@ pandas.options.display.max_rows = 4
 import random
 from pathlib import Path
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -39,9 +40,12 @@ from keras.layers import Dense, Input
 from keras.callbacks import EarlyStopping
 
 import sklearn
+from sklearn import set_config
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
+from sklearn.compose import make_column_transformer
+from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LinearRegression
 ```
 
@@ -64,11 +68,7 @@ from sklearn.linear_model import LinearRegression
 
 ## Overview
 
-Every dataset needs to be transformed in various ways before it can be fed into a machine learning model.
-
-![Preprocessing refers to the transformations of the raw data before input to the network](images/preprocessing.png)
-
-Some steps are specific to neural networks (e.g. standardising continuous variables), others are necessary for every model (e.g. encoding categorical variables, handling missing data).
+![Preprocessing refers to the transformations of the raw data before input to the network. Some steps are specific to neural networks (e.g. standardising continuous variables), others are necessary for every model (e.g. encoding categorical variables, handling missing data).](images/preprocessing_neural_network_diagram.svg)
 
 # Example 1: Continuous Variables
 
@@ -80,14 +80,66 @@ features, target = sklearn.datasets.fetch_california_housing(
 features
 ```
 
-## All the features were continuous variables
+## Pandas will assign or guess dtypes
 
 Can look at the data types of the features.
+
 ```{python}
 features.info()
 ```
-Note that this isn't foolproof. If you have 'postcode' as a feature, it may be read in as a number when it should be stored as a string and treated as a categorical variable.
 
+Here, all the features were continuous variables
+
+## Pandas can guess wrong though {.smaller}
+
+
+::: columns
+::: column
+For example, Australian postcodes are four digits and some start with `0` (e.g. Darwin is `0800`).
+A CSV reader just sees digits, guesses a number, and silently drops the leading zero — giving the column the wrong _type_ **and** the wrong _value_.
+:::
+::: column
+The raw file keeps the leading zero:
+
+```{python}
+print(Path("data/postcodes.csv").read_text())
+```
+:::
+:::
+
+::: columns
+::: column
+Default inference:
+
+```{python}
+df = pd.read_csv("data/postcodes.csv")
+df
+```
+
+```{python}
+df.dtypes
+```
+:::
+::: column
+Typed at read time:
+
+```{python}
+df = pd.read_csv("data/postcodes.csv",
+    dtype={"postcode": "string"})
+df
+```
+
+```{python}
+df.dtypes
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The fix is to declare the type as you read the data, e.g. `pd.read_csv(..., dtype={"postcode": "string"})` (or `"category"`), with `parse_dates=[...]` for any date columns.
+Fixing types at the point of ingestion is the cleanest place to do it: it preserves the leading zeros, it would raise an error if a value were not a valid number where one is expected, and _every_ downstream step (plots, `groupby`, the column transformer) then sees the correct type.
+Don't rely on the dtype alone to choose a feature's modelling role, though — a binary 0/1 flag, a count, and an ID column are all integers, so the nominal/ordinal/continuous decision still belongs in your column transformer.
+:::
 
 ## Splitting into train, validation and test sets
 
@@ -138,7 +190,7 @@ X_train
 That is because the neural network expects continuous inputs to be normalised to help with the training procedure.
 
 ::: {.content-visible unless-format="revealjs"}
-Basically, the initial starting point for the network are random weights and biases that assume a (roughly) standard normal kind of input, to keep the inner neuron values from overflowing or underflowing.
+Basically, the initial starting point for the network is random weights and biases that assume a (roughly) standard normal kind of input, to keep the inner neuron values from overflowing or underflowing.
 :::
 
 ::: {.callout-note}
@@ -193,7 +245,7 @@ print(X_val.std(axis=0))
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-Notice that wehn using `fit_transform`, this function is only used on the training set. Then, for the validation and test sets, the function `transform` is called, *not* `fit_transform`. It is important to make sure that the scaler is fitted using only the data from the train set, to avoid information leakage.
+Notice that when using `fit_transform`, this function is only used on the training set. Then, for the validation and test sets, the function `transform` is called, *not* `fit_transform`. It is important to make sure that the scaler is fitted using only the data from the train set, to avoid information leakage.
 :::
 
 <!-- 
@@ -231,22 +283,20 @@ By default, when you pass `sklearn` a DataFrame it returns a `numpy` array.
 From [scikit-learn 1.2](https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_2_0.html#pandas-output-with-set-output-api):
 
 ```{python}
-from sklearn import set_config              #<1>
-set_config(transform_output="pandas")       #<2>
+set_config(transform_output="pandas")       #<1>
 
-imp = SimpleImputer()                       #<3>
+imp = SimpleImputer()                       #<2>
 
-X_train = imp.fit_transform(X_train_raw)    #<4>
-X_val = imp.transform(X_val_raw)            #<5>
-X_test = imp.transform(X_test_raw)          #<6>
+X_train = imp.fit_transform(X_train_raw)    #<3>
+X_val = imp.transform(X_val_raw)            #<4>
+X_test = imp.transform(X_test_raw)          #<5>
 ```
 
-1. Imports `set_config` function from `sklearn`.
-2. Tells sklearn that any transformed data should stay as pandas dataframes.
-3. Defines the `SimpleImputer`. This function helps in dealing with missing values. Default is set to `mean`, meaning that, missing values in each column will be replaced with the column mean.
-4. Finds the means of training set columns, and replaces train set missing values by those means.
-5. Replace missing values in the validation set by the means of the _training set_ columns.
-6. Replace missing values in the test set by the means of the _training set_ columns.
+1. Tells sklearn that any transformed data should stay as pandas dataframes.
+2. Defines the `SimpleImputer`. This function helps in dealing with missing values. Default is set to `mean`, meaning that, missing values in each column will be replaced with the column mean.
+3. Finds the means of training set columns, and replaces train set missing values by those means.
+4. Replace missing values in the validation set by the means of the _training set_ columns.
+5. Replace missing values in the test set by the means of the _training set_ columns.
 
 
 <br><br><br>
@@ -391,7 +441,6 @@ There are two options for dealing with a nominal categorical variable:
 :::
 
 ```{python}
-from sklearn.preprocessing import OneHotEncoder
 gas = X_train_raw[["VehGas"]]
 ```
 
@@ -444,16 +493,14 @@ These are categorical variables which have a natural order to them.
 :::
 
 ```{python}
-from sklearn.preprocessing import OrdinalEncoder               #<1>
-enc = OrdinalEncoder()                                         #<2>
-enc.fit(X_train_raw[["Area"]])                                 #<3>
-enc.categories_                                                #<4>
+enc = OrdinalEncoder()                                         #<1>
+enc.fit(X_train_raw[["Area"]])                                 #<2>
+enc.categories_                                                #<3>
 ```
 
-1. Imports the `OrdinalEncoder` from `sklearn.preprocessing` library
-2. Create an `OrdinalEncoder` object named `enc`
-3. Selects the two columns with ordinal variables from `X_train` and fits the ordinal encoder
-4. Gives out the number of unique categories in each ordinal variable
+1. Create an `OrdinalEncoder` object named `enc`
+2. Selects the two columns with ordinal variables from `X_train` and fits the ordinal encoder
+3. Gives out the number of unique categories in each ordinal variable
 
 ```{python}
 for i, area in enumerate(enc.categories_[0]):
@@ -470,7 +517,7 @@ print(" = ".join(f"{r} - {l}" for l, r in zip(enc.categories_[0][:-1], enc.categ
 ## Ordinal encoded values
 
 ::: {.content-visible unless-format="revealjs"}
-Note that fitting an ordinal encoder (`enc.fit`) only establishes the mapping between numerical values and ordinal variable levels. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` function. Following lines of code shows how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
+Note that fitting an ordinal encoder (`enc.fit`) only establishes the mapping between numerical values and ordinal variable levels. To actually convert the values in the ordinal columns, we must also apply the `enc.transform` function. The following lines of code show how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use `enc.fit` function only to the train set.
 :::
 
 ```{python}
@@ -534,23 +581,20 @@ pandas.options.display.max_rows = 3
 ## Transform all columns in one hit I
 
 ```{python}
-from sklearn.compose import make_column_transformer         #<1>
-
-ct = make_column_transformer(                               #<2>
-  (OneHotEncoder(sparse_output=False, drop="first"), ["VehGas", "VehBrand", "Region"]), #<3>
-  (OrdinalEncoder(), ["Area"]),                             #<4>
-  remainder=StandardScaler()                                #<5>
+ct = make_column_transformer(                               #<1>
+  (OneHotEncoder(sparse_output=False, drop="first"), ["VehGas", "VehBrand", "Region"]), #<2>
+  (OrdinalEncoder(), ["Area"]),                             #<3>
+  remainder=StandardScaler()                                #<4>
 )
 
-X_train = ct.fit_transform(X_train_raw)                     #<6>
+X_train = ct.fit_transform(X_train_raw)                     #<5>
 ```
 
-1. Imports the `make_column_transformer` class that can carry out data preparation selectively
-2. Starts defining the column transformer object 
-3. Apply dummy encoding to the nominal categorical columns
-4. Apply ordinal encoding to the ordinal categorical column
-5. Standardise the remaining columns (which are all numerical)
-6. Fits and transforms the train set using this new column transformer
+1. Starts defining the column transformer object
+2. Apply dummy encoding to the nominal categorical columns
+3. Apply ordinal encoding to the ordinal categorical column
+4. Standardise the remaining columns (which are all numerical)
+5. Fits and transforms the train set using this new column transformer
 
 
 ::: columns
@@ -574,8 +618,6 @@ We can add the `verbose_feature_names_out=False` flag to have a cleaner `X_train
 ## Transform all columns in one hit II
 
 ```{python}
-from sklearn.compose import make_column_transformer
-
 ct = make_column_transformer(
   (OneHotEncoder(sparse_output=False, drop="first"), ["VehGas", "VehBrand", "Region"]),
   (OrdinalEncoder(), ["Area"]),
@@ -599,7 +641,7 @@ X_train
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-An important thing to notice here is that, the order of columns have changed. They are rearranged according to the order in which we specify the transformations inside the column transformer. 
+An important thing to notice here is that the order of columns has changed. They are rearranged according to the order in which we specify the transformations inside the column transformer. 
 :::
 
 ```{python}
@@ -765,6 +807,63 @@ Look for sparse categories.
 One common trick is to lump together all the small categories (e.g. < 5% or 10% each) into a new combined 'OTHER' or 'RARE' category.
 :::
 
+## Lumping rare categories automatically {.smaller}
+
+Rather than hand-coding an 'OTHER' category, `OneHotEncoder` can group infrequent levels for us (since scikit-learn 1.1).
+Here `Never_worked` is a very rare level of `work_type`:
+
+::: columns
+::: {.column width="35%"}
+```{python}
+X_train_raw["work_type"].value_counts()
+```
+:::
+::: {.column width="65%"}
+
+::: {.panel-tabset}
+
+### `min_frequency`
+
+Lump together any level below 5% of the rows:
+
+```{python}
+enc = OneHotEncoder(sparse_output=False,
+    min_frequency=0.05)
+ohe = enc.fit_transform(X_train_raw[["work_type"]])
+enc.infrequent_categories_
+```
+
+```{python}
+ohe.head(3)
+```
+
+### `max_categories`
+
+Keep the most common levels, capping the column count:
+
+```{python}
+enc = OneHotEncoder(sparse_output=False,
+    max_categories=3)
+ohe = enc.fit_transform(X_train_raw[["work_type"]])
+enc.infrequent_categories_
+```
+
+```{python}
+ohe.head(3)
+```
+
+:::
+
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The lumped levels are combined into a single `work_type_infrequent_sklearn` column, and the `infrequent_categories_` attribute records exactly which levels were grouped.
+Use `min_frequency` to set the threshold below which a level is treated as infrequent (an integer count, or a float proportion of the rows), or `max_categories` to cap the total number of output columns.
+Because the encoder learns the rare levels from the _training set only_, this avoids the data leakage you could accidentally introduce by hand-coding the grouping yourself.
+It also composes with `handle_unknown="infrequent_if_exist"`, which sends any unseen category at test time into the same infrequent column.
+:::
+
 ## Make a plan for preprocessing each column
 
 1. Take categorical columns $\hookrightarrow$ one-hot vectors
@@ -774,15 +873,13 @@ One common trick is to lump together all the small categories (e.g. < 5% or 10% 
 ## Make the column transformer
 
 ```{python}
-from sklearn.pipeline import make_pipeline                                              #<1>
-
-nom_vars =  ["gender", "ever_married", "Residence_type",                                #<2>
+nom_vars =  ["gender", "ever_married", "Residence_type",                                #<1>
     "work_type", "smoking_status"]                  
 
 ct = make_column_transformer(
-  (OneHotEncoder(sparse_output=False, handle_unknown="ignore"), nom_vars),              #<3>
-  ("passthrough", ["hypertension", "heart_disease"]),                                   #<4>
-  remainder=make_pipeline(SimpleImputer(), StandardScaler()),                           #<5>
+  (OneHotEncoder(sparse_output=False, handle_unknown="ignore"), nom_vars),              #<2>
+  ("passthrough", ["hypertension", "heart_disease"]),                                   #<3>
+  remainder=make_pipeline(SimpleImputer(), StandardScaler()),                           #<4>
   verbose_feature_names_out=False
 )
 
@@ -790,17 +887,16 @@ X_train = ct.fit_transform(X_train_raw)
 X_val = ct.transform(X_val_raw)
 X_test = ct.transform(X_test_raw)
 
-for name, X in zip(("train", "val", "test"), (X_train, X_val, X_test)):        #<6>
+for name, X in zip(("train", "val", "test"), (X_train, X_val, X_test)):        #<5>
     num_na = pd.DataFrame(X).isna().sum().sum()
     print(f"The {name} set has shape {X.shape} & with {num_na} NAs.")
 ```
 
-1. Imports `make_pipeline` class from `sklearn.pipeline` library. `make_pipeline` is used to streamline the data pre processing. In the above example, `make_pipeline` is used to first treat for missing values and then scale numerical values
-2. Stores categorical variables in `nom_vars`
-3. Specifies the one-hot encoding for all categorical variables. We set the `sparse_output=False`, to return a dense array rather than a sparse matrix. `handle_unknown` specifies how the neural network should handle unseen categories. By setting `handle_unknown="ignore"`, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it will interrupt the model's operation after deployment
-4. Passes through `hypertension` and `heart_disease` without any pre processing
-5. Makes a pipeline that first applies `SimpleImputer()` to replace missing values with the mean and then applies `StandardScaler()` to scale the numerical values 
-6. Prints out the missing values to ensure the `SimpleImputer()` has worked
+1. Stores categorical variables in `nom_vars`
+2. Specifies the one-hot encoding for all categorical variables. We set the `sparse_output=False`, to return a dense array rather than a sparse matrix. `handle_unknown` specifies how the neural network should handle unseen categories. By setting `handle_unknown="ignore"`, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it would interrupt the model's operation after deployment
+3. Passes through `hypertension` and `heart_disease` without any preprocessing
+4. Makes a pipeline that first applies `SimpleImputer()` to replace missing values with the mean and then applies `StandardScaler()` to scale the numerical values
+5. Prints out the missing values to ensure the `SimpleImputer()` has worked
 
 ## Handling unseen categories
 
@@ -818,7 +914,7 @@ X_val_raw["gender"].value_counts()
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below. In the second row, the values given for `gender_Female` and `gender_Male` are both 0, implying a third category.
+Because of the way the train and test sets were split, the one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below. In the second row, the values given for `gender_Female` and `gender_Male` are both 0, implying a third category.
 :::
 
 ::: columns
@@ -873,7 +969,6 @@ We can save the preprocessing column transformer and save it to a file to use la
 :::
 
 ```{python}
-import joblib
 joblib.dump(ct, PROCESSED_DATA_DIR / "preprocessor.pkl")
 preprocessor = joblib.load(PROCESSED_DATA_DIR / "preprocessor.pkl")
 ```

@@ -626,7 +626,8 @@ window.Quarto = {
   <li><a href="#example-1-continuous-variables" id="toc-example-1-continuous-variables" class="nav-link" data-scroll-target="#example-1-continuous-variables">Example 1: Continuous Variables</a>
   <ul class="collapse">
   <li><a href="#california-housing-dataset" id="toc-california-housing-dataset" class="nav-link" data-scroll-target="#california-housing-dataset">California housing dataset</a></li>
-  <li><a href="#all-the-features-were-continuous-variables" id="toc-all-the-features-were-continuous-variables" class="nav-link" data-scroll-target="#all-the-features-were-continuous-variables">All the features were continuous variables</a></li>
+  <li><a href="#pandas-will-assign-or-guess-dtypes" id="toc-pandas-will-assign-or-guess-dtypes" class="nav-link" data-scroll-target="#pandas-will-assign-or-guess-dtypes">Pandas will assign or guess dtypes</a></li>
+  <li><a href="#pandas-can-guess-wrong-though" id="toc-pandas-can-guess-wrong-though" class="nav-link" data-scroll-target="#pandas-can-guess-wrong-though">Pandas can guess wrong though</a></li>
   <li><a href="#splitting-into-train-validation-and-test-sets" id="toc-splitting-into-train-validation-and-test-sets" class="nav-link" data-scroll-target="#splitting-into-train-validation-and-test-sets">Splitting into train, validation and test sets</a></li>
   <li><a href="#checking-for-leaks" id="toc-checking-for-leaks" class="nav-link" data-scroll-target="#checking-for-leaks">Checking for leaks</a></li>
   <li><a href="#we-rescaled-every-column" id="toc-we-rescaled-every-column" class="nav-link" data-scroll-target="#we-rescaled-every-column">We rescaled every column</a></li>
@@ -655,6 +656,7 @@ window.Quarto = {
   <li><a href="#data-description" id="toc-data-description" class="nav-link" data-scroll-target="#data-description">Data description</a></li>
   <li><a href="#look-for-missing-values-and-split-the-data" id="toc-look-for-missing-values-and-split-the-data" class="nav-link" data-scroll-target="#look-for-missing-values-and-split-the-data">Look for missing values and split the data</a></li>
   <li><a href="#what-values-do-we-see-in-the-data-1" id="toc-what-values-do-we-see-in-the-data-1" class="nav-link" data-scroll-target="#what-values-do-we-see-in-the-data-1">What values do we see in the data?</a></li>
+  <li><a href="#lumping-rare-categories-automatically" id="toc-lumping-rare-categories-automatically" class="nav-link" data-scroll-target="#lumping-rare-categories-automatically">Lumping rare categories automatically</a></li>
   <li><a href="#make-a-plan-for-preprocessing-each-column" id="toc-make-a-plan-for-preprocessing-each-column" class="nav-link" data-scroll-target="#make-a-plan-for-preprocessing-each-column">Make a plan for preprocessing each column</a></li>
   <li><a href="#make-the-column-transformer" id="toc-make-the-column-transformer" class="nav-link" data-scroll-target="#make-the-column-transformer">Make the column transformer</a></li>
   <li><a href="#handling-unseen-categories" id="toc-handling-unseen-categories" class="nav-link" data-scroll-target="#handling-unseen-categories">Handling unseen categories</a></li>
@@ -702,19 +704,23 @@ window.Quarto = {
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense, Input</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sklearn</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, StandardScaler</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.impute <span class="im">import</span> SimpleImputer</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> joblib</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense, Input</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sklearn</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, OrdinalEncoder, StandardScaler</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.impute <span class="im">import</span> SimpleImputer</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.pipeline <span class="im">import</span> make_pipeline</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <section id="deep-learning-project-life-cycle" class="level3">
@@ -734,14 +740,12 @@ window.Quarto = {
 </section>
 <section id="overview" class="level3">
 <h3 class="anchored" data-anchor-id="overview">Overview</h3>
-<p>Every dataset needs to be transformed in various ways before it can be fed into a machine learning model.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
-<p><img src="images/preprocessing.png" class="img-fluid figure-img"></p>
-<figcaption>Preprocessing refers to the transformations of the raw data before input to the network</figcaption>
+<p><img src="images/preprocessing_neural_network_diagram.svg" class="img-fluid figure-img"></p>
+<figcaption>Preprocessing refers to the transformations of the raw data before input to the network. Some steps are specific to neural networks (e.g.&nbsp;standardising continuous variables), others are necessary for every model (e.g.&nbsp;encoding categorical variables, handling missing data).</figcaption>
 </figure>
 </div>
-<p>Some steps are specific to neural networks (e.g.&nbsp;standardising continuous variables), others are necessary for every model (e.g.&nbsp;encoding categorical variables, handling missing data).</p>
 </section>
 <section id="example-1-continuous-variables" class="level2">
 <h2 class="anchored" data-anchor-id="example-1-continuous-variables">Example 1: Continuous Variables</h2>
@@ -833,8 +837,8 @@ window.Quarto = {
 </div>
 </div>
 </section>
-<section id="all-the-features-were-continuous-variables" class="level3">
-<h3 class="anchored" data-anchor-id="all-the-features-were-continuous-variables">All the features were continuous variables</h3>
+<section id="pandas-will-assign-or-guess-dtypes" class="level3">
+<h3 class="anchored" data-anchor-id="pandas-will-assign-or-guess-dtypes">Pandas will assign or guess dtypes</h3>
 <p>Can look at the data types of the features.</p>
 <div class="cell" data-execution_count="5">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>features.info()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
@@ -856,31 +860,150 @@ dtypes: float64(8)
 memory usage: 1.3 MB</code></pre>
 </div>
 </div>
-<p>Note that this isn’t foolproof. If you have ‘postcode’ as a feature, it may be read in as a number when it should be stored as a string and treated as a categorical variable.</p>
+<p>Here, all the features were continuous variables</p>
+</section>
+<section id="pandas-can-guess-wrong-though" class="level3 smaller">
+<h3 class="smaller anchored" data-anchor-id="pandas-can-guess-wrong-though">Pandas can guess wrong though</h3>
+<div class="columns">
+<div class="column">
+<p>For example, Australian postcodes are four digits and some start with <code>0</code> (e.g.&nbsp;Darwin is <code>0800</code>). A CSV reader just sees digits, guesses a number, and silently drops the leading zero — giving the column the wrong <em>type</em> <strong>and</strong> the wrong <em>value</em>.</p>
+</div><div class="column">
+<p>The raw file keeps the leading zero:</p>
+<div class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(Path(<span class="st">"data/postcodes.csv"</span>).read_text())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>suburb,postcode
+Darwin,0800
+Sydney,2000
+Perth,6000
+</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="columns">
+<div class="column">
+<p>Default inference:</p>
+<div class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(<span class="st">"data/postcodes.csv"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">suburb</th>
+<th data-quarto-table-cell-role="th">postcode</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>Darwin</td>
+<td>800</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>Sydney</td>
+<td>2000</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>Perth</td>
+<td>6000</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>df.dtypes</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="7">
+<pre><code>suburb        str
+postcode    int64
+dtype: object</code></pre>
+</div>
+</div>
+</div><div class="column">
+<p>Typed at read time:</p>
+<div class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.read_csv(<span class="st">"data/postcodes.csv"</span>,</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    dtype<span class="op">=</span>{<span class="st">"postcode"</span>: <span class="st">"string"</span>})</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>df</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">suburb</th>
+<th data-quarto-table-cell-role="th">postcode</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>Darwin</td>
+<td>0800</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>Sydney</td>
+<td>2000</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>Perth</td>
+<td>6000</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>df.dtypes</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="9">
+<pre><code>suburb         str
+postcode    string
+dtype: object</code></pre>
+</div>
+</div>
+</div>
+</div>
+<p>The fix is to declare the type as you read the data, e.g.&nbsp;<code>pd.read_csv(..., dtype={"postcode": "string"})</code> (or <code>"category"</code>), with <code>parse_dates=[...]</code> for any date columns. Fixing types at the point of ingestion is the cleanest place to do it: it preserves the leading zeros, it would raise an error if a value were not a valid number where one is expected, and <em>every</em> downstream step (plots, <code>groupby</code>, the column transformer) then sees the correct type. Don’t rely on the dtype alone to choose a feature’s modelling role, though — a binary 0/1 flag, a count, and an ID column are all integers, so the nominal/ordinal/continuous decision still belongs in your column transformer.</p>
 </section>
 <section id="splitting-into-train-validation-and-test-sets" class="level3">
 <h3 class="anchored" data-anchor-id="splitting-into-train-validation-and-test-sets">Splitting into train, validation and test sets</h3>
-<div class="cell" data-execution_count="6">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>X_main, X_test_raw, y_main, y_test <span class="op">=</span> train_test_split(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>X_train_raw, X_val_raw, y_train, y_val <span class="op">=</span> train_test_split(</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    X_main, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="11">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>X_main, X_test_raw, y_main, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>X_train_raw, X_val_raw, y_train, y_val <span class="op">=</span> train_test_split(</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    X_main, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">1</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Note that we really cannot allow there to be duplicate rows in the training, validation, or test sets. If there are, we will have data leakage between the sets, which will lead to overfitting and poor generalisation.</p>
 </section>
 <section id="checking-for-leaks" class="level3">
 <h3 class="anchored" data-anchor-id="checking-for-leaks">Checking for leaks</h3>
 <p>We can look for rows that appear in multiple of the datasets.</p>
-<div class="cell" data-execution_count="7">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>train_val_overlap <span class="op">=</span> pd.merge(X_train_raw, X_val_raw, how<span class="op">=</span><span class="st">'inner'</span>)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>train_test_overlap <span class="op">=</span> pd.merge(X_train_raw, X_test_raw, how<span class="op">=</span><span class="st">'inner'</span>)</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>val_test_overlap <span class="op">=</span> pd.merge(X_val_raw, X_test_raw, how<span class="op">=</span><span class="st">'inner'</span>)</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of duplicated rows between train and val: </span><span class="sc">{</span><span class="bu">len</span>(train_val_overlap)<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of duplicated rows between train and test: </span><span class="sc">{</span><span class="bu">len</span>(train_test_overlap)<span class="sc">}</span><span class="ss">"</span>)</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of duplicated rows between val and test: </span><span class="sc">{</span><span class="bu">len</span>(val_test_overlap)<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="12">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>train_val_overlap <span class="op">=</span> pd.merge(X_train_raw, X_val_raw, how<span class="op">=</span><span class="st">'inner'</span>)</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>train_test_overlap <span class="op">=</span> pd.merge(X_train_raw, X_test_raw, how<span class="op">=</span><span class="st">'inner'</span>)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>val_test_overlap <span class="op">=</span> pd.merge(X_val_raw, X_test_raw, how<span class="op">=</span><span class="st">'inner'</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of duplicated rows between train and val: </span><span class="sc">{</span><span class="bu">len</span>(train_val_overlap)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of duplicated rows between train and test: </span><span class="sc">{</span><span class="bu">len</span>(train_test_overlap)<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Number of duplicated rows between val and test: </span><span class="sc">{</span><span class="bu">len</span>(val_test_overlap)<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Number of duplicated rows between train and val: 0
 Number of duplicated rows between train and test: 0
@@ -888,25 +1011,25 @@ Number of duplicated rows between val and test: 0</code></pre>
 </div>
 </div>
 <p>An earlier check is to check that there are no duplicate rows in the dataset.</p>
-<div class="cell" data-execution_count="8">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>features.duplicated().sum()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="7">
+<div class="cell" data-execution_count="13">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>features.duplicated().sum()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="12">
 <pre><code>np.int64(0)</code></pre>
 </div>
 </div>
 </section>
 <section id="we-rescaled-every-column" class="level3">
 <h3 class="anchored" data-anchor-id="we-rescaled-every-column">We rescaled every column</h3>
-<div class="cell" data-execution_count="9">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>scaler.fit(X_train_raw)</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> scaler.transform(X_train_raw)</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> scaler.transform(X_val_raw)</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> scaler.transform(X_test_raw)</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>X_train</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="8">
+<div class="cell" data-execution_count="14">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>scaler.fit(X_train_raw)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> scaler.transform(X_train_raw)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> scaler.transform(X_val_raw)</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> scaler.transform(X_test_raw)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>X_train</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="13">
 <pre><code>array([[ 0.15, -0.76,  0.26, ..., -0.01, -0.47,  0.69],
        [-1.79, -1.48,  0.48, ..., -0.08, -0.44,  1.33],
        [-0.97, -0.13, -0.67, ...,  0.05, -0.86,  0.65],
@@ -917,7 +1040,7 @@ Number of duplicated rows between val and test: 0</code></pre>
 </div>
 </div>
 <p>That is because the neural network expects continuous inputs to be normalised to help with the training procedure.</p>
-<p>Basically, the initial starting point for the network are random weights and biases that assume a (roughly) standard normal kind of input, to keep the inner neuron values from overflowing or underflowing.</p>
+<p>Basically, the initial starting point for the network is random weights and biases that assume a (roughly) standard normal kind of input, to keep the inner neuron values from overflowing or underflowing.</p>
 <div class="callout callout-style-default callout-note callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -946,17 +1069,17 @@ Note
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="" aria-current="page"><code>fit</code></a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href=""><code>fit_transform</code></a></li></ul>
 <div class="tab-content">
 <div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
-<div class="cell" data-execution_count="10">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>scaler.fit(X_train_raw)</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> scaler.transform(X_train_raw)</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> scaler.transform(X_val_raw)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> scaler.transform(X_test_raw)</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.std(axis<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.std(axis<span class="op">=</span><span class="dv">0</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="15">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>scaler.fit(X_train_raw)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> scaler.transform(X_train_raw)</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> scaler.transform(X_val_raw)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> scaler.transform(X_test_raw)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.std(axis<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.std(axis<span class="op">=</span><span class="dv">0</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[ 1.14e-16 -1.08e-16 -2.82e-16 -4.45e-17 -6.89e-18 -4.02e-17  1.14e-15
   1.75e-15]
@@ -967,16 +1090,16 @@ Note
 </div>
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
-<div class="cell" data-execution_count="11">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> scaler.fit_transform(X_train_raw)</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> scaler.transform(X_val_raw)</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> scaler.transform(X_test_raw)</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.std(axis<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.std(axis<span class="op">=</span><span class="dv">0</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="16">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>scaler <span class="op">=</span> StandardScaler()</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> scaler.fit_transform(X_train_raw)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> scaler.transform(X_val_raw)</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> scaler.transform(X_test_raw)</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_train.std(axis<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.mean(axis<span class="op">=</span><span class="dv">0</span>))</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(X_val.std(axis<span class="op">=</span><span class="dv">0</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[ 1.14e-16 -1.08e-16 -2.82e-16 -4.45e-17 -6.89e-18 -4.02e-17  1.14e-15
   1.75e-15]
@@ -990,15 +1113,15 @@ Note
 </div>
 </div>
 </div>
-<p>Notice that wehn using <code>fit_transform</code>, this function is only used on the training set. Then, for the validation and test sets, the function <code>transform</code> is called, <em>not</em> <code>fit_transform</code>. It is important to make sure that the scaler is fitted using only the data from the train set, to avoid information leakage.</p>
+<p>Notice that when using <code>fit_transform</code>, this function is only used on the training set. Then, for the validation and test sets, the function <code>transform</code> is called, <em>not</em> <code>fit_transform</code>. It is important to make sure that the scaler is fitted using only the data from the train set, to avoid information leakage.</p>
 </section>
 <section id="dataframes-arrays" class="level3">
 <h3 class="anchored" data-anchor-id="dataframes-arrays">Dataframes &amp; arrays</h3>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="12">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>X_test_raw.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="11">
+<div class="cell" data-execution_count="17">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>X_test_raw.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="16">
 <div>
 
 
@@ -1057,9 +1180,9 @@ Note
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="13">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>X_test</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="12">
+<div class="cell" data-execution_count="18">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>X_test</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="17">
 <pre><code>array([[-0.33,  0.83, -0.34, ..., -0.11, -0.73,  0.6 ],
        [-1.  ,  0.67, -0.16, ..., -0.04,  0.54, -0.1 ],
        [ 0.07,  1.38, -0.35, ...,  0.06,  0.98, -1.42],
@@ -1090,40 +1213,35 @@ Note
 <div class="columns">
 <div class="column" style="width:55%;">
 <p>From <a href="https://scikit-learn.org/stable/auto_examples/release_highlights/plot_release_highlights_1_2_0.html#pandas-output-with-set-output-api">scikit-learn 1.2</a>:</p>
-<div class="cell" data-execution_count="14">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-48"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-48" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-48-1" class="code-annotation-target"><a href="#annotated-cell-48-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-48" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-48-2" class="code-annotation-target"><a href="#annotated-cell-48-2" aria-hidden="true" tabindex="-1"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span>
-<span id="annotated-cell-48-3"><a href="#annotated-cell-48-3" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-48" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-48-4" class="code-annotation-target"><a href="#annotated-cell-48-4" aria-hidden="true" tabindex="-1"></a>imp <span class="op">=</span> SimpleImputer()</span>
-<span id="annotated-cell-48-5"><a href="#annotated-cell-48-5" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-48" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-48-6" class="code-annotation-target"><a href="#annotated-cell-48-6" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> imp.fit_transform(X_train_raw)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-48" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-48-7" class="code-annotation-target"><a href="#annotated-cell-48-7" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> imp.transform(X_val_raw)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-48" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-48-8" class="code-annotation-target"><a href="#annotated-cell-48-8" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> imp.transform(X_test_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="19">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-56"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-56" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-56-1" class="code-annotation-target"><a href="#annotated-cell-56-1" aria-hidden="true" tabindex="-1"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span>
+<span id="annotated-cell-56-2"><a href="#annotated-cell-56-2" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-56" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-56-3" class="code-annotation-target"><a href="#annotated-cell-56-3" aria-hidden="true" tabindex="-1"></a>imp <span class="op">=</span> SimpleImputer()</span>
+<span id="annotated-cell-56-4"><a href="#annotated-cell-56-4" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-56" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-56-5" class="code-annotation-target"><a href="#annotated-cell-56-5" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> imp.fit_transform(X_train_raw)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-56" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-56-6" class="code-annotation-target"><a href="#annotated-cell-56-6" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> imp.transform(X_val_raw)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-56" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-56-7" class="code-annotation-target"><a href="#annotated-cell-56-7" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> imp.transform(X_test_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-48" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-56" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-48" data-code-lines="1" data-code-annotation="1">Imports <code>set_config</code> function from <code>sklearn</code>.</span>
+<span data-code-cell="annotated-cell-56" data-code-lines="1" data-code-annotation="1">Tells sklearn that any transformed data should stay as pandas dataframes.</span>
 </dd>
-<dt data-target-cell="annotated-cell-48" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-56" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-48" data-code-lines="2" data-code-annotation="2">Tells sklearn that any transformed data should stay as pandas dataframes.</span>
+<span data-code-cell="annotated-cell-56" data-code-lines="3" data-code-annotation="2">Defines the <code>SimpleImputer</code>. This function helps in dealing with missing values. Default is set to <code>mean</code>, meaning that, missing values in each column will be replaced with the column mean.</span>
 </dd>
-<dt data-target-cell="annotated-cell-48" data-target-annotation="3">3</dt>
+<dt data-target-cell="annotated-cell-56" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-48" data-code-lines="4" data-code-annotation="3">Defines the <code>SimpleImputer</code>. This function helps in dealing with missing values. Default is set to <code>mean</code>, meaning that, missing values in each column will be replaced with the column mean.</span>
+<span data-code-cell="annotated-cell-56" data-code-lines="5" data-code-annotation="3">Finds the means of training set columns, and replaces train set missing values by those means.</span>
 </dd>
-<dt data-target-cell="annotated-cell-48" data-target-annotation="4">4</dt>
+<dt data-target-cell="annotated-cell-56" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-cell="annotated-cell-48" data-code-lines="6" data-code-annotation="4">Finds the means of training set columns, and replaces train set missing values by those means.</span>
+<span data-code-cell="annotated-cell-56" data-code-lines="6" data-code-annotation="4">Replace missing values in the validation set by the means of the <em>training set</em> columns.</span>
 </dd>
-<dt data-target-cell="annotated-cell-48" data-target-annotation="5">5</dt>
+<dt data-target-cell="annotated-cell-56" data-target-annotation="5">5</dt>
 <dd>
-<span data-code-cell="annotated-cell-48" data-code-lines="7" data-code-annotation="5">Replace missing values in the validation set by the means of the <em>training set</em> columns.</span>
-</dd>
-<dt data-target-cell="annotated-cell-48" data-target-annotation="6">6</dt>
-<dd>
-<span data-code-cell="annotated-cell-48" data-code-lines="8" data-code-annotation="6">Replace missing values in the test set by the means of the <em>training set</em> columns.</span>
+<span data-code-cell="annotated-cell-56" data-code-lines="7" data-code-annotation="5">Replace missing values in the test set by the means of the <em>training set</em> columns.</span>
 </dd>
 </dl>
 </div>
@@ -1131,9 +1249,9 @@ Note
 <p><br><br><br></p>
 <p>From SimpleImputer’s docs:</p>
 </div><div class="column" style="width:45%;">
-<div class="cell" data-execution_count="15">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>X_test</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="14">
+<div class="cell" data-execution_count="20">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>X_test</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="19">
 <div>
 
 
@@ -1225,7 +1343,7 @@ Note
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="example-2-continuous-and-categorical-variables">Example 2: Continuous and Categorical Variables</h2>
 <section id="french-motor-dataset" class="level3">
 <h3 class="anchored" data-anchor-id="french-motor-dataset">French motor dataset</h3>
-<div class="cell" data-execution_count="17">
+<div class="cell" data-execution_count="22">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-7"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-7-1"><a href="#annotated-cell-7-1" aria-hidden="true" tabindex="-1"></a> <span class="co"># Download the dataset if we don't have it already. </span></span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-7-2" class="code-annotation-target"><a href="#annotated-cell-7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">"../data/freq_data.csv"</span>).exists():</span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-7-3" class="code-annotation-target"><a href="#annotated-cell-7-3" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> sklearn.datasets.fetch_openml(data_id<span class="op">=</span><span class="dv">41214</span>, as_frame<span class="op">=</span><span class="va">True</span>).frame</span>
@@ -1278,9 +1396,9 @@ memory usage: 70.4 MB</code></pre>
 </section>
 <section id="the-data" class="level3">
 <h3 class="anchored" data-anchor-id="the-data">The data</h3>
-<div class="cell" data-execution_count="18">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>freq</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="17">
+<div class="cell" data-execution_count="23">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>freq</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="22">
 <div>
 
 
@@ -1447,14 +1565,14 @@ memory usage: 70.4 MB</code></pre>
 Y_i \sim \mathsf{Poisson}(\lambda(\mathbf{x}_i))
 </span></p>
 <p>We have <span class="math inline">\mathbb{E} Y_i = \lambda(\mathbf{x}_i)</span>. The NN takes <span class="math inline">\mathbf{x}_i</span> &amp; predicts <span class="math inline">\mathbb{E} Y_i</span>.</p>
-<div class="cell" data-execution_count="19">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>freq <span class="op">=</span> freq.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="24">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>freq <span class="op">=</span> freq.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>While <code>IDpol</code> is a useful tool for checking duplicates, we remove it before beginning the modelling process.</p>
 </section>
 <section id="split-the-data" class="level3">
 <h3 class="anchored" data-anchor-id="split-the-data">Split the data</h3>
-<div class="cell" data-execution_count="20">
+<div class="cell" data-execution_count="25">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-10"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-10" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-10-1" class="code-annotation-target"><a href="#annotated-cell-10-1" aria-hidden="true" tabindex="-1"></a>X_train_raw, X_test_raw, y_train, y_test <span class="op">=</span> train_test_split(</span>
 <span id="annotated-cell-10-2"><a href="#annotated-cell-10-2" aria-hidden="true" tabindex="-1"></a>  freq.drop(<span class="st">"ClaimNb"</span>, axis<span class="op">=</span><span class="dv">1</span>), freq[<span class="st">"ClaimNb"</span>], random_state<span class="op">=</span><span class="dv">2023</span>)</span>
 <a class="code-annotation-anchor" data-target-cell="annotated-cell-10" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-10-3" class="code-annotation-target"><a href="#annotated-cell-10-3" aria-hidden="true" tabindex="-1"></a>X_train_raw <span class="op">=</span> X_train_raw.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
@@ -1472,7 +1590,7 @@ Y_i \sim \mathsf{Poisson}(\lambda(\mathbf{x}_i))
 </dd>
 </dl>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="19">
+<div class="cell-output cell-output-display" data-execution_count="24">
 <div>
 
 
@@ -1594,14 +1712,14 @@ Y_i \sim \mathsf{Poisson}(\lambda(\mathbf{x}_i))
 </section>
 <section id="what-values-do-we-see-in-the-data" class="level3">
 <h3 class="anchored" data-anchor-id="what-values-do-we-see-in-the-data">What values do we see in the data?</h3>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Area"</span>].value_counts()</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"VehBrand"</span>].value_counts()</span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"VehGas"</span>].value_counts()</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Region"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Area"</span>].value_counts()</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"VehBrand"</span>].value_counts()</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"VehGas"</span>].value_counts()</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Region"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="quarto-layout-panel" data-layout-ncol="2" data-layout-nrow="2">
 <div class="quarto-layout-row">
-<div id="cc973733" class="cell quarto-layout-cell" data-execution_count="21" style="flex-basis: 50.0%;justify-content: flex-start;">
-<div class="cell-output cell-output-display" data-execution_count="20">
+<div id="27cfcd42" class="cell quarto-layout-cell" data-execution_count="26" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="cell-output cell-output-display" data-execution_count="25">
 <pre><code>Area
 C    144156
 D    113532
@@ -1612,8 +1730,8 @@ F     13442
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div id="a34c51a0" class="cell quarto-layout-cell" data-execution_count="22" style="flex-basis: 50.0%;justify-content: flex-start;">
-<div class="cell-output cell-output-display" data-execution_count="21">
+<div id="85ac4acb" class="cell quarto-layout-cell" data-execution_count="27" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="cell-output cell-output-display" data-execution_count="26">
 <pre><code>VehBrand
 B12    124490
 B1     122200
@@ -1627,16 +1745,16 @@ Name: count, Length: 11, dtype: int64</code></pre>
 </div>
 </div>
 <div class="quarto-layout-row">
-<div id="64e50ff1" class="cell quarto-layout-cell" data-execution_count="23" style="flex-basis: 50.0%;justify-content: flex-start;">
-<div class="cell-output cell-output-display" data-execution_count="22">
+<div id="77fc874a" class="cell quarto-layout-cell" data-execution_count="28" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="cell-output cell-output-display" data-execution_count="27">
 <pre><code>VehGas
 Regular    259422
 Diesel     249087
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div id="034529c4" class="cell quarto-layout-cell" data-execution_count="24" style="flex-basis: 50.0%;justify-content: flex-start;">
-<div class="cell-output cell-output-display" data-execution_count="23">
+<div id="617e2ee1" class="cell quarto-layout-cell" data-execution_count="29" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="cell-output cell-output-display" data-execution_count="28">
 <pre><code>Region
 R24    120597
 R82     63555
@@ -1660,17 +1778,16 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <li>One-hot encoding: one column for each category (taking the value 1 if true, 0 if false). Using this method, one of the columns is redundant.</li>
 <li>Dummy encoding: drop the first of the one-hot encoding categories.</li>
 </ul>
-<div class="cell" data-execution_count="25">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>gas <span class="op">=</span> X_train_raw[[<span class="st">"VehGas"</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="30">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>gas <span class="op">=</span> X_train_raw[[<span class="st">"VehGas"</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="columns">
 <div class="column" style="width:20%;">
 <p>The original data:</p>
 <p><br></p>
-<div class="cell" data-execution_count="26">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>gas.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="25">
+<div class="cell" data-execution_count="31">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>gas.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="30">
 <div>
 
 
@@ -1710,12 +1827,12 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column" style="width:50%;">
 <p>One-hot encoding</p>
-<div class="cell" data-execution_count="27">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> enc.fit_transform(gas)</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>X_train.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="26">
+<div class="cell" data-execution_count="32">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> enc.fit_transform(gas)</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>X_train.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="31">
 <div>
 
 
@@ -1761,13 +1878,13 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column" style="width:30%;">
 <p>Dummy encoding</p>
-<div class="cell" data-execution_count="28">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OneHotEncoder(</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>    drop<span class="op">=</span><span class="st">"first"</span>,</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    sparse_output<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> enc.fit_transform(gas)</span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>X_train.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="27">
+<div class="cell" data-execution_count="33">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OneHotEncoder(</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>    drop<span class="op">=</span><span class="st">"first"</span>,</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>    sparse_output<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> enc.fit_transform(gas)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>X_train.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="32">
 <div>
 
 
@@ -1825,38 +1942,33 @@ Warning
 <h3 class="anchored" data-anchor-id="ordinal-categorical-variables">Ordinal categorical variables</h3>
 <p>These are categorical variables which have a natural order to them.</p>
 <p><code>OrdinalEncoder</code> can assign numerical values to each category of the ordinal variable. The nice thing about <code>OrdinalEncoder</code> is that it can preserve the information about ordinal relationships in the data. To actually convert the values in the ordinal columns, we must also apply the <code>enc.transform</code> method. The following lines of code show how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use <code>enc.fit</code> function only to the train set.</p>
-<div class="cell" data-execution_count="29">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-12"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-12-1" class="code-annotation-target"><a href="#annotated-cell-12-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OrdinalEncoder</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-12-2" class="code-annotation-target"><a href="#annotated-cell-12-2" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OrdinalEncoder()</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-12-3" class="code-annotation-target"><a href="#annotated-cell-12-3" aria-hidden="true" tabindex="-1"></a>enc.fit(X_train_raw[[<span class="st">"Area"</span>]])</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-12-4" class="code-annotation-target"><a href="#annotated-cell-12-4" aria-hidden="true" tabindex="-1"></a>enc.categories_</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="34">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-12"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-12-1" class="code-annotation-target"><a href="#annotated-cell-12-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OrdinalEncoder()</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-12-2" class="code-annotation-target"><a href="#annotated-cell-12-2" aria-hidden="true" tabindex="-1"></a>enc.fit(X_train_raw[[<span class="st">"Area"</span>]])</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-12" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-12-3" class="code-annotation-target"><a href="#annotated-cell-12-3" aria-hidden="true" tabindex="-1"></a>enc.categories_</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-12" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-12" data-code-lines="1" data-code-annotation="1">Imports the <code>OrdinalEncoder</code> from <code>sklearn.preprocessing</code> library</span>
+<span data-code-cell="annotated-cell-12" data-code-lines="1" data-code-annotation="1">Create an <code>OrdinalEncoder</code> object named <code>enc</code></span>
 </dd>
 <dt data-target-cell="annotated-cell-12" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-12" data-code-lines="2" data-code-annotation="2">Create an <code>OrdinalEncoder</code> object named <code>enc</code></span>
+<span data-code-cell="annotated-cell-12" data-code-lines="2" data-code-annotation="2">Selects the two columns with ordinal variables from <code>X_train</code> and fits the ordinal encoder</span>
 </dd>
 <dt data-target-cell="annotated-cell-12" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-12" data-code-lines="3" data-code-annotation="3">Selects the two columns with ordinal variables from <code>X_train</code> and fits the ordinal encoder</span>
-</dd>
-<dt data-target-cell="annotated-cell-12" data-target-annotation="4">4</dt>
-<dd>
-<span data-code-cell="annotated-cell-12" data-code-lines="4" data-code-annotation="4">Gives out the number of unique categories in each ordinal variable</span>
+<span data-code-cell="annotated-cell-12" data-code-lines="3" data-code-annotation="3">Gives out the number of unique categories in each ordinal variable</span>
 </dd>
 </dl>
 </div>
-<div class="cell-output cell-output-display" data-execution_count="28">
+<div class="cell-output cell-output-display" data-execution_count="33">
 <pre><code>[array(['A', 'B', 'C', 'D', 'E', 'F'], dtype=object)]</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="30">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, area <span class="kw">in</span> <span class="bu">enumerate</span>(enc.categories_[<span class="dv">0</span>]):</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The Area value </span><span class="sc">{</span>area<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="35">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, area <span class="kw">in</span> <span class="bu">enumerate</span>(enc.categories_[<span class="dv">0</span>]):</span>
+<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The Area value </span><span class="sc">{</span>area<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The Area value A gets turned into 0.
 The Area value B gets turned into 1.
@@ -1867,9 +1979,9 @@ The Area value F gets turned into 5.</code></pre>
 </div>
 </div>
 <p>In other words,</p>
-<div class="cell" data-execution_count="31">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" &lt; "</span>.join(enc.categories_[<span class="dv">0</span>]) <span class="op">+</span> <span class="st">", and "</span>)</span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" = "</span>.join(<span class="ss">f"</span><span class="sc">{</span>r<span class="sc">}</span><span class="ss"> - </span><span class="sc">{</span>l<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> l, r <span class="kw">in</span> <span class="bu">zip</span>(enc.categories_[<span class="dv">0</span>][:<span class="op">-</span><span class="dv">1</span>], enc.categories_[<span class="dv">0</span>][<span class="dv">1</span>:])))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="36">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" &lt; "</span>.join(enc.categories_[<span class="dv">0</span>]) <span class="op">+</span> <span class="st">", and "</span>)</span>
+<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" = "</span>.join(<span class="ss">f"</span><span class="sc">{</span>r<span class="sc">}</span><span class="ss"> - </span><span class="sc">{</span>l<span class="sc">}</span><span class="ss">"</span> <span class="cf">for</span> l, r <span class="kw">in</span> <span class="bu">zip</span>(enc.categories_[<span class="dv">0</span>][:<span class="op">-</span><span class="dv">1</span>], enc.categories_[<span class="dv">0</span>][<span class="dv">1</span>:])))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>A &lt; B &lt; C &lt; D &lt; E &lt; F, and 
 B - A = C - B = D - C = E - D = F - E</code></pre>
@@ -1878,16 +1990,16 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </section>
 <section id="ordinal-encoded-values" class="level3">
 <h3 class="anchored" data-anchor-id="ordinal-encoded-values">Ordinal encoded values</h3>
-<p>Note that fitting an ordinal encoder (<code>enc.fit</code>) only establishes the mapping between numerical values and ordinal variable levels. To actually convert the values in the ordinal columns, we must also apply the <code>enc.transform</code> function. Following lines of code shows how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use <code>enc.fit</code> function only to the train set.</p>
-<div class="cell" data-execution_count="32">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> enc.transform(X_train_raw[[<span class="st">"Area"</span>]])</span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> enc.transform(X_test_raw[[<span class="st">"Area"</span>]])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Note that fitting an ordinal encoder (<code>enc.fit</code>) only establishes the mapping between numerical values and ordinal variable levels. To actually convert the values in the ordinal columns, we must also apply the <code>enc.transform</code> function. The following lines of code show how we consistently apply the transform function to both train and test sets. To avoid inconsistencies in encoding, we use <code>enc.fit</code> function only to the train set.</p>
+<div class="cell" data-execution_count="37">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> enc.transform(X_train_raw[[<span class="st">"Area"</span>]])</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> enc.transform(X_test_raw[[<span class="st">"Area"</span>]])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="33">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[[<span class="st">"Area"</span>]].head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="32">
+<div class="cell" data-execution_count="38">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[[<span class="st">"Area"</span>]].head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="37">
 <div>
 
 
@@ -1926,9 +2038,9 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="34">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>X_train.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="33">
+<div class="cell" data-execution_count="39">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>X_train.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="38">
 <div>
 
 
@@ -1972,50 +2084,44 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </section>
 <section id="transform-all-columns-in-one-hit-i" class="level3">
 <h3 class="anchored" data-anchor-id="transform-all-columns-in-one-hit-i">Transform all columns in one hit I</h3>
-<div class="cell" data-execution_count="36">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-16"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-16-1" class="code-annotation-target"><a href="#annotated-cell-16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
-<span id="annotated-cell-16-2"><a href="#annotated-cell-16-2" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-16-3" class="code-annotation-target"><a href="#annotated-cell-16-3" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-16-4" class="code-annotation-target"><a href="#annotated-cell-16-4" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-16-5" class="code-annotation-target"><a href="#annotated-cell-16-5" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-16-6" class="code-annotation-target"><a href="#annotated-cell-16-6" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler()</span>
-<span id="annotated-cell-16-7"><a href="#annotated-cell-16-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="annotated-cell-16-8"><a href="#annotated-cell-16-8" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-16-9" class="code-annotation-target"><a href="#annotated-cell-16-9" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="41">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-16"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-16-1" class="code-annotation-target"><a href="#annotated-cell-16-1" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-16-2" class="code-annotation-target"><a href="#annotated-cell-16-2" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-16-3" class="code-annotation-target"><a href="#annotated-cell-16-3" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-16-4" class="code-annotation-target"><a href="#annotated-cell-16-4" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler()</span>
+<span id="annotated-cell-16-5"><a href="#annotated-cell-16-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="annotated-cell-16-6"><a href="#annotated-cell-16-6" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-16-7" class="code-annotation-target"><a href="#annotated-cell-16-7" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-16" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-16" data-code-lines="1" data-code-annotation="1">Imports the <code>make_column_transformer</code> class that can carry out data preparation selectively</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="1" data-code-annotation="1">Starts defining the column transformer object</span>
 </dd>
 <dt data-target-cell="annotated-cell-16" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-16" data-code-lines="3" data-code-annotation="2">Starts defining the column transformer object</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="2" data-code-annotation="2">Apply dummy encoding to the nominal categorical columns</span>
 </dd>
 <dt data-target-cell="annotated-cell-16" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-16" data-code-lines="4" data-code-annotation="3">Apply dummy encoding to the nominal categorical columns</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="3" data-code-annotation="3">Apply ordinal encoding to the ordinal categorical column</span>
 </dd>
 <dt data-target-cell="annotated-cell-16" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-cell="annotated-cell-16" data-code-lines="5" data-code-annotation="4">Apply ordinal encoding to the ordinal categorical column</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="4" data-code-annotation="4">Standardise the remaining columns (which are all numerical)</span>
 </dd>
 <dt data-target-cell="annotated-cell-16" data-target-annotation="5">5</dt>
 <dd>
-<span data-code-cell="annotated-cell-16" data-code-lines="6" data-code-annotation="5">Standardise the remaining columns (which are all numerical)</span>
-</dd>
-<dt data-target-cell="annotated-cell-16" data-target-annotation="6">6</dt>
-<dd>
-<span data-code-cell="annotated-cell-16" data-code-lines="9" data-code-annotation="6">Fits and transforms the train set using this new column transformer</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="7" data-code-annotation="5">Fits and transforms the train set using this new column transformer</span>
 </dd>
 </dl>
 </div>
 </div>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="37">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>X_train_raw</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="36">
+<div class="cell" data-execution_count="42">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>X_train_raw</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="41">
 <div>
 
 
@@ -2083,9 +2189,9 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="38">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>X_train</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="37">
+<div class="cell" data-execution_count="43">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>X_train</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="42">
 <div>
 
 
@@ -2202,22 +2308,20 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </section>
 <section id="transform-all-columns-in-one-hit-ii" class="level3">
 <h3 class="anchored" data-anchor-id="transform-all-columns-in-one-hit-ii">Transform all columns in one hit II</h3>
-<div class="cell" data-execution_count="39">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
-<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
-<span id="cb42-5"><a href="#cb42-5" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
-<span id="cb42-6"><a href="#cb42-6" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb42-7"><a href="#cb42-7" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb42-8"><a href="#cb42-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb42-9"><a href="#cb42-9" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="44">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb50-7"><a href="#cb50-7" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="40">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>X_train_raw</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="39">
+<div class="cell" data-execution_count="45">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>X_train_raw</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="44">
 <div>
 
 
@@ -2285,9 +2389,9 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="41">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>X_train</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="40">
+<div class="cell" data-execution_count="46">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>X_train</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="45">
 <div>
 
 
@@ -2400,29 +2504,29 @@ B - A = C - B = D - C = E - D = F - E</code></pre>
 </div>
 </div>
 </div>
-<p>An important thing to notice here is that, the order of columns have changed. They are rearranged according to the order in which we specify the transformations inside the column transformer.</p>
+<p>An important thing to notice here is that the order of columns has changed. They are rearranged according to the order in which we specify the transformations inside the column transformer.</p>
 </section>
 <section id="aside-the-order-of-the-variables-matters" class="level3">
 <h3 class="anchored" data-anchor-id="aside-the-order-of-the-variables-matters">Aside: The order of the variables matters</h3>
 <p>Sometimes the ordinal categories are named with words, such as “Low”, “Medium”, “High” (rather than, for example, “A”, “B”, “C”). The ordinal encoder does not know how to read these and orders the categories based on alphabetical order.</p>
-<div class="cell" data-execution_count="43">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Area_In_Words"</span>] <span class="op">=</span> X_train_raw[<span class="st">"Area"</span>].<span class="bu">map</span>({</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"A"</span>: <span class="st">"Very low"</span>, <span class="st">"B"</span>: <span class="st">"Low"</span>, <span class="st">"C"</span>: <span class="st">"Medium"</span>,</span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"D"</span>: <span class="st">"High"</span>, <span class="st">"E"</span>: <span class="st">"Very high"</span>, <span class="st">"F"</span>: <span class="st">"Extremely high"</span></span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="48">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Area_In_Words"</span>] <span class="op">=</span> X_train_raw[<span class="st">"Area"</span>].<span class="bu">map</span>({</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"A"</span>: <span class="st">"Very low"</span>, <span class="st">"B"</span>: <span class="st">"Low"</span>, <span class="st">"C"</span>: <span class="st">"Medium"</span>,</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"D"</span>: <span class="st">"High"</span>, <span class="st">"E"</span>: <span class="st">"Very high"</span>, <span class="st">"F"</span>: <span class="st">"Extremely high"</span></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>})</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div class="cell" data-execution_count="44">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a>enc_wrong <span class="op">=</span> OrdinalEncoder()</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>enc_wrong.fit(X_train_raw[[<span class="st">"Area_In_Words"</span>]])</span>
-<span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>enc_wrong.categories_ </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="43">
+<div class="cell" data-execution_count="49">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>enc_wrong <span class="op">=</span> OrdinalEncoder()</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>enc_wrong.fit(X_train_raw[[<span class="st">"Area_In_Words"</span>]])</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>enc_wrong.categories_ </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="48">
 <pre><code>[array(['Extremely high', 'High', 'Low', 'Medium', 'Very high', 'Very low'],
        dtype=object)]</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="45">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb48"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, area <span class="kw">in</span> <span class="bu">enumerate</span>(enc_wrong.categories_[<span class="dv">0</span>]):</span>
-<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The Area value </span><span class="sc">{</span>area<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="50">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, area <span class="kw">in</span> <span class="bu">enumerate</span>(enc_wrong.categories_[<span class="dv">0</span>]):</span>
+<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The Area value </span><span class="sc">{</span>area<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The Area value Extremely high gets turned into 0.
 The Area value High gets turned into 1.
@@ -2433,8 +2537,8 @@ The Area value Very low gets turned into 5.</code></pre>
 </div>
 </div>
 <p>In other words,</p>
-<div class="cell" data-execution_count="46">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" &lt; "</span>.join(enc_wrong.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="51">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" &lt; "</span>.join(enc_wrong.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Extremely high &lt; High &lt; Low &lt; Medium &lt; Very high &lt; Very low</code></pre>
 </div>
@@ -2443,19 +2547,19 @@ The Area value Very low gets turned into 5.</code></pre>
 <section id="aside-manually-set-the-order" class="level3">
 <h3 class="anchored" data-anchor-id="aside-manually-set-the-order">Aside: Manually set the order</h3>
 <p>To fix this issue, we need to manually set the order.</p>
-<div class="cell" data-execution_count="47">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>ordered <span class="op">=</span> [[<span class="st">"Very low"</span>, <span class="st">"Low"</span>, <span class="st">"Medium"</span>, <span class="st">"High"</span>, <span class="st">"Very high"</span>, <span class="st">"Extremely high"</span>]]</span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>enc_right <span class="op">=</span> OrdinalEncoder(categories<span class="op">=</span>ordered)</span>
-<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>enc_right.fit(X_train_raw[[<span class="st">"Area_In_Words"</span>]])</span>
-<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>enc_right.categories_ </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="46">
+<div class="cell" data-execution_count="52">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>ordered <span class="op">=</span> [[<span class="st">"Very low"</span>, <span class="st">"Low"</span>, <span class="st">"Medium"</span>, <span class="st">"High"</span>, <span class="st">"Very high"</span>, <span class="st">"Extremely high"</span>]]</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>enc_right <span class="op">=</span> OrdinalEncoder(categories<span class="op">=</span>ordered)</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>enc_right.fit(X_train_raw[[<span class="st">"Area_In_Words"</span>]])</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>enc_right.categories_ </span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="51">
 <pre><code>[array(['Very low', 'Low', 'Medium', 'High', 'Very high', 'Extremely high'],
        dtype=object)]</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="48">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, area <span class="kw">in</span> <span class="bu">enumerate</span>(enc_right.categories_[<span class="dv">0</span>]):</span>
-<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The Area value </span><span class="sc">{</span>area<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="53">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, area <span class="kw">in</span> <span class="bu">enumerate</span>(enc_right.categories_[<span class="dv">0</span>]):</span>
+<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The Area value </span><span class="sc">{</span>area<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The Area value Very low gets turned into 0.
 The Area value Low gets turned into 1.
@@ -2466,14 +2570,14 @@ The Area value Extremely high gets turned into 5.</code></pre>
 </div>
 </div>
 <p>In other words,</p>
-<div class="cell" data-execution_count="49">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" &lt; "</span>.join(enc_right.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="54">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">" &lt; "</span>.join(enc_right.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Very low &lt; Low &lt; Medium &lt; High &lt; Very high &lt; Extremely high</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="50">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>X_train_raw <span class="op">=</span> X_train_raw.drop(<span class="st">"Area_In_Words"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="55">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb66"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>X_train_raw <span class="op">=</span> X_train_raw.drop(<span class="st">"Area_In_Words"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 </section>
@@ -2482,11 +2586,11 @@ The Area value Extremely high gets turned into 5.</code></pre>
 <section id="stroke-prediction-dataset" class="level3 smaller">
 <h3 class="smaller anchored" data-anchor-id="stroke-prediction-dataset">Stroke prediction dataset</h3>
 <p>Dataset source: <a href="https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset">Kaggle Stroke Prediction Dataset</a>.</p>
-<div class="cell" data-execution_count="51">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>RAW_DATA_DIR <span class="op">=</span> Path(<span class="st">"stroke/raw"</span>)</span>
-<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pd.read_csv(RAW_DATA_DIR <span class="op">/</span> <span class="st">"stroke.csv"</span>)</span>
-<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>data.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="50">
+<div class="cell" data-execution_count="56">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>RAW_DATA_DIR <span class="op">=</span> Path(<span class="st">"stroke/raw"</span>)</span>
+<span id="cb67-2"><a href="#cb67-2" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pd.read_csv(RAW_DATA_DIR <span class="op">/</span> <span class="st">"stroke.csv"</span>)</span>
+<span id="cb67-3"><a href="#cb67-3" aria-hidden="true" tabindex="-1"></a>data.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="55">
 <div>
 
 
@@ -2622,10 +2726,10 @@ The Area value Extremely high gets turned into 5.</code></pre>
 <section id="look-for-missing-values-and-split-the-data" class="level3">
 <h3 class="anchored" data-anchor-id="look-for-missing-values-and-split-the-data">Look for missing values and split the data</h3>
 <p>First, look for missing values.</p>
-<div class="cell" data-execution_count="52">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>number_missing <span class="op">=</span> data.isna().sum()</span>
-<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>number_missing[number_missing <span class="op">&gt;</span> <span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="51">
+<div class="cell" data-execution_count="57">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>number_missing <span class="op">=</span> data.isna().sum()</span>
+<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a>number_missing[number_missing <span class="op">&gt;</span> <span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="56">
 <pre><code>bmi    201
 dtype: int64</code></pre>
 </div>
@@ -2643,17 +2747,17 @@ Tip
 <p>Always take a look at the missing data in, say, Excel. Sometimes pandas reads in a category like “None” and interprets that as a missing value, when it’s really a valid category. This happened to me just the other day.</p>
 </div>
 </div>
-<div class="cell" data-execution_count="53">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> data.drop([<span class="st">"id"</span>, <span class="st">"stroke"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>target <span class="op">=</span> data[<span class="st">"stroke"</span>]</span>
-<span id="cb62-3"><a href="#cb62-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb62-4"><a href="#cb62-4" aria-hidden="true" tabindex="-1"></a>X_main_raw, X_test_raw, y_main, y_test <span class="op">=</span> train_test_split(</span>
-<span id="cb62-5"><a href="#cb62-5" aria-hidden="true" tabindex="-1"></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">7</span>)</span>
-<span id="cb62-6"><a href="#cb62-6" aria-hidden="true" tabindex="-1"></a>X_train_raw, X_val_raw, y_train, y_val <span class="op">=</span> train_test_split(</span>
-<span id="cb62-7"><a href="#cb62-7" aria-hidden="true" tabindex="-1"></a>    X_main_raw, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">12</span>)</span>
-<span id="cb62-8"><a href="#cb62-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb62-9"><a href="#cb62-9" aria-hidden="true" tabindex="-1"></a>X_train_raw.shape, X_val_raw.shape, X_test_raw.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="52">
+<div class="cell" data-execution_count="58">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>features <span class="op">=</span> data.drop([<span class="st">"id"</span>, <span class="st">"stroke"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb70-2"><a href="#cb70-2" aria-hidden="true" tabindex="-1"></a>target <span class="op">=</span> data[<span class="st">"stroke"</span>]</span>
+<span id="cb70-3"><a href="#cb70-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-4"><a href="#cb70-4" aria-hidden="true" tabindex="-1"></a>X_main_raw, X_test_raw, y_main, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb70-5"><a href="#cb70-5" aria-hidden="true" tabindex="-1"></a>    features, target, test_size<span class="op">=</span><span class="fl">0.2</span>, random_state<span class="op">=</span><span class="dv">7</span>)</span>
+<span id="cb70-6"><a href="#cb70-6" aria-hidden="true" tabindex="-1"></a>X_train_raw, X_val_raw, y_train, y_val <span class="op">=</span> train_test_split(</span>
+<span id="cb70-7"><a href="#cb70-7" aria-hidden="true" tabindex="-1"></a>    X_main_raw, y_main, test_size<span class="op">=</span><span class="fl">0.25</span>, random_state<span class="op">=</span><span class="dv">12</span>)</span>
+<span id="cb70-8"><a href="#cb70-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb70-9"><a href="#cb70-9" aria-hidden="true" tabindex="-1"></a>X_train_raw.shape, X_val_raw.shape, X_test_raw.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="57">
 <pre><code>((3066, 10), (1022, 10), (1022, 10))</code></pre>
 </div>
 </div>
@@ -2662,27 +2766,27 @@ Tip
 <h3 class="anchored" data-anchor-id="what-values-do-we-see-in-the-data-1">What values do we see in the data?</h3>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="54">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"gender"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="53">
+<div class="cell" data-execution_count="59">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"gender"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="58">
 <pre><code>gender
 Female    1802
 Male      1264
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="55">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb66"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a href="#cb66-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"ever_married"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="54">
+<div class="cell" data-execution_count="60">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb74"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb74-1"><a href="#cb74-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"ever_married"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="59">
 <pre><code>ever_married
 Yes    2007
 No     1059
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="56">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Residence_type"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="55">
+<div class="cell" data-execution_count="61">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb76"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb76-1"><a href="#cb76-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Residence_type"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="60">
 <pre><code>Residence_type
 Urban    1536
 Rural    1530
@@ -2690,9 +2794,9 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="57">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a href="#cb70-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"work_type"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="56">
+<div class="cell" data-execution_count="62">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb78"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb78-1"><a href="#cb78-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"work_type"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="61">
 <pre><code>work_type
 Private          1754
 Self-employed     490
@@ -2702,9 +2806,9 @@ Never_worked       13
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div class="cell" data-execution_count="58">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb72"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb72-1"><a href="#cb72-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"smoking_status"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="57">
+<div class="cell" data-execution_count="63">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb80"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"smoking_status"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="62">
 <pre><code>smoking_status
 never smoked       1130
 Unknown             944
@@ -2729,6 +2833,145 @@ Tip
 </div>
 </div>
 </section>
+<section id="lumping-rare-categories-automatically" class="level3 smaller">
+<h3 class="smaller anchored" data-anchor-id="lumping-rare-categories-automatically">Lumping rare categories automatically</h3>
+<p>Rather than hand-coding an ‘OTHER’ category, <code>OneHotEncoder</code> can group infrequent levels for us (since scikit-learn 1.1). Here <code>Never_worked</code> is a very rare level of <code>work_type</code>:</p>
+<div class="columns">
+<div class="column" style="width:35%;">
+<div class="cell" data-execution_count="64">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb82"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"work_type"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="63">
+<pre><code>work_type
+Private          1754
+Self-employed     490
+children          419
+Govt_job          390
+Never_worked       13
+Name: count, dtype: int64</code></pre>
+</div>
+</div>
+</div><div class="column" style="width:65%;">
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href=""><code>min_frequency</code></a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href=""><code>max_categories</code></a></li></ul>
+<div class="tab-content">
+<div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
+<p>Lump together any level below 5% of the rows:</p>
+<div class="cell" data-execution_count="65">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb84"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>    min_frequency<span class="op">=</span><span class="fl">0.05</span>)</span>
+<span id="cb84-3"><a href="#cb84-3" aria-hidden="true" tabindex="-1"></a>ohe <span class="op">=</span> enc.fit_transform(X_train_raw[[<span class="st">"work_type"</span>]])</span>
+<span id="cb84-4"><a href="#cb84-4" aria-hidden="true" tabindex="-1"></a>enc.infrequent_categories_</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="64">
+<pre><code>[array(['Never_worked'], dtype=object)]</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="66">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb86"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>ohe.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="65">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">work_type_Govt_job</th>
+<th data-quarto-table-cell-role="th">work_type_Private</th>
+<th data-quarto-table-cell-role="th">work_type_Self-employed</th>
+<th data-quarto-table-cell-role="th">work_type_children</th>
+<th data-quarto-table-cell-role="th">work_type_infrequent_sklearn</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">1914</th>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1958</th>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2920</th>
+<td>0.0</td>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+<div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<p>Keep the most common levels, capping the column count:</p>
+<div class="cell" data-execution_count="67">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb87"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb87-1"><a href="#cb87-1" aria-hidden="true" tabindex="-1"></a>enc <span class="op">=</span> OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb87-2"><a href="#cb87-2" aria-hidden="true" tabindex="-1"></a>    max_categories<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb87-3"><a href="#cb87-3" aria-hidden="true" tabindex="-1"></a>ohe <span class="op">=</span> enc.fit_transform(X_train_raw[[<span class="st">"work_type"</span>]])</span>
+<span id="cb87-4"><a href="#cb87-4" aria-hidden="true" tabindex="-1"></a>enc.infrequent_categories_</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="66">
+<pre><code>[array(['Govt_job', 'Never_worked', 'children'], dtype=object)]</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="68">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb89"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb89-1"><a href="#cb89-1" aria-hidden="true" tabindex="-1"></a>ohe.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="67">
+<div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">work_type_Private</th>
+<th data-quarto-table-cell-role="th">work_type_Self-employed</th>
+<th data-quarto-table-cell-role="th">work_type_infrequent_sklearn</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">1914</th>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1958</th>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2920</th>
+<td>1.0</td>
+<td>0.0</td>
+<td>0.0</td>
+</tr>
+</tbody>
+</table>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p>The lumped levels are combined into a single <code>work_type_infrequent_sklearn</code> column, and the <code>infrequent_categories_</code> attribute records exactly which levels were grouped. Use <code>min_frequency</code> to set the threshold below which a level is treated as infrequent (an integer count, or a float proportion of the rows), or <code>max_categories</code> to cap the total number of output columns. Because the encoder learns the rare levels from the <em>training set only</em>, this avoids the data leakage you could accidentally introduce by hand-coding the grouping yourself. It also composes with <code>handle_unknown="infrequent_if_exist"</code>, which sends any unseen category at test time into the same infrequent column.</p>
+</section>
 <section id="make-a-plan-for-preprocessing-each-column" class="level3">
 <h3 class="anchored" data-anchor-id="make-a-plan-for-preprocessing-each-column">Make a plan for preprocessing each column</h3>
 <ol type="1">
@@ -2739,51 +2982,45 @@ Tip
 </section>
 <section id="make-the-column-transformer" class="level3">
 <h3 class="anchored" data-anchor-id="make-the-column-transformer">Make the column transformer</h3>
-<div class="cell" data-execution_count="59">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-29"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-29-1" class="code-annotation-target"><a href="#annotated-cell-29-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.pipeline <span class="im">import</span> make_pipeline</span>
-<span id="annotated-cell-29-2"><a href="#annotated-cell-29-2" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-29-3" class="code-annotation-target"><a href="#annotated-cell-29-3" aria-hidden="true" tabindex="-1"></a>nom_vars <span class="op">=</span>  [<span class="st">"gender"</span>, <span class="st">"ever_married"</span>, <span class="st">"Residence_type"</span>,</span>
-<span id="annotated-cell-29-4"><a href="#annotated-cell-29-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"work_type"</span>, <span class="st">"smoking_status"</span>]                  </span>
-<span id="annotated-cell-29-5"><a href="#annotated-cell-29-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-29-6"><a href="#annotated-cell-29-6" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-29-7" class="code-annotation-target"><a href="#annotated-cell-29-7" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, handle_unknown<span class="op">=</span><span class="st">"ignore"</span>), nom_vars),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-29-8" class="code-annotation-target"><a href="#annotated-cell-29-8" aria-hidden="true" tabindex="-1"></a>  (<span class="st">"passthrough"</span>, [<span class="st">"hypertension"</span>, <span class="st">"heart_disease"</span>]),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-29-9" class="code-annotation-target"><a href="#annotated-cell-29-9" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>make_pipeline(SimpleImputer(), StandardScaler()),</span>
-<span id="annotated-cell-29-10"><a href="#annotated-cell-29-10" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="annotated-cell-29-11"><a href="#annotated-cell-29-11" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="annotated-cell-29-12"><a href="#annotated-cell-29-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-29-13"><a href="#annotated-cell-29-13" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
-<span id="annotated-cell-29-14"><a href="#annotated-cell-29-14" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> ct.transform(X_val_raw)</span>
-<span id="annotated-cell-29-15"><a href="#annotated-cell-29-15" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span>
-<span id="annotated-cell-29-16"><a href="#annotated-cell-29-16" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-29-17" class="code-annotation-target"><a href="#annotated-cell-29-17" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, X <span class="kw">in</span> <span class="bu">zip</span>((<span class="st">"train"</span>, <span class="st">"val"</span>, <span class="st">"test"</span>), (X_train, X_val, X_test)):</span>
-<span id="annotated-cell-29-18"><a href="#annotated-cell-29-18" aria-hidden="true" tabindex="-1"></a>    num_na <span class="op">=</span> pd.DataFrame(X).isna().sum().sum()</span>
-<span id="annotated-cell-29-19"><a href="#annotated-cell-29-19" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss"> set has shape </span><span class="sc">{</span>X<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> &amp; with </span><span class="sc">{</span>num_na<span class="sc">}</span><span class="ss"> NAs."</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="69">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-29"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-29-1" class="code-annotation-target"><a href="#annotated-cell-29-1" aria-hidden="true" tabindex="-1"></a>nom_vars <span class="op">=</span>  [<span class="st">"gender"</span>, <span class="st">"ever_married"</span>, <span class="st">"Residence_type"</span>,</span>
+<span id="annotated-cell-29-2"><a href="#annotated-cell-29-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"work_type"</span>, <span class="st">"smoking_status"</span>]                  </span>
+<span id="annotated-cell-29-3"><a href="#annotated-cell-29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-29-4"><a href="#annotated-cell-29-4" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-29-5" class="code-annotation-target"><a href="#annotated-cell-29-5" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, handle_unknown<span class="op">=</span><span class="st">"ignore"</span>), nom_vars),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-29-6" class="code-annotation-target"><a href="#annotated-cell-29-6" aria-hidden="true" tabindex="-1"></a>  (<span class="st">"passthrough"</span>, [<span class="st">"hypertension"</span>, <span class="st">"heart_disease"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-29-7" class="code-annotation-target"><a href="#annotated-cell-29-7" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>make_pipeline(SimpleImputer(), StandardScaler()),</span>
+<span id="annotated-cell-29-8"><a href="#annotated-cell-29-8" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="annotated-cell-29-9"><a href="#annotated-cell-29-9" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="annotated-cell-29-10"><a href="#annotated-cell-29-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-29-11"><a href="#annotated-cell-29-11" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
+<span id="annotated-cell-29-12"><a href="#annotated-cell-29-12" aria-hidden="true" tabindex="-1"></a>X_val <span class="op">=</span> ct.transform(X_val_raw)</span>
+<span id="annotated-cell-29-13"><a href="#annotated-cell-29-13" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span>
+<span id="annotated-cell-29-14"><a href="#annotated-cell-29-14" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-29" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-29-15" class="code-annotation-target"><a href="#annotated-cell-29-15" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, X <span class="kw">in</span> <span class="bu">zip</span>((<span class="st">"train"</span>, <span class="st">"val"</span>, <span class="st">"test"</span>), (X_train, X_val, X_test)):</span>
+<span id="annotated-cell-29-16"><a href="#annotated-cell-29-16" aria-hidden="true" tabindex="-1"></a>    num_na <span class="op">=</span> pd.DataFrame(X).isna().sum().sum()</span>
+<span id="annotated-cell-29-17"><a href="#annotated-cell-29-17" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"The </span><span class="sc">{</span>name<span class="sc">}</span><span class="ss"> set has shape </span><span class="sc">{</span>X<span class="sc">.</span>shape<span class="sc">}</span><span class="ss"> &amp; with </span><span class="sc">{</span>num_na<span class="sc">}</span><span class="ss"> NAs."</span>)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
 <dt data-target-cell="annotated-cell-29" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-29" data-code-lines="1" data-code-annotation="1">Imports <code>make_pipeline</code> class from <code>sklearn.pipeline</code> library. <code>make_pipeline</code> is used to streamline the data pre processing. In the above example, <code>make_pipeline</code> is used to first treat for missing values and then scale numerical values</span>
+<span data-code-cell="annotated-cell-29" data-code-lines="1" data-code-annotation="1">Stores categorical variables in <code>nom_vars</code></span>
 </dd>
 <dt data-target-cell="annotated-cell-29" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-29" data-code-lines="3" data-code-annotation="2">Stores categorical variables in <code>nom_vars</code></span>
+<span data-code-cell="annotated-cell-29" data-code-lines="5" data-code-annotation="2">Specifies the one-hot encoding for all categorical variables. We set the <code>sparse_output=False</code>, to return a dense array rather than a sparse matrix. <code>handle_unknown</code> specifies how the neural network should handle unseen categories. By setting <code>handle_unknown="ignore"</code>, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it would interrupt the model’s operation after deployment</span>
 </dd>
 <dt data-target-cell="annotated-cell-29" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-29" data-code-lines="7" data-code-annotation="3">Specifies the one-hot encoding for all categorical variables. We set the <code>sparse_output=False</code>, to return a dense array rather than a sparse matrix. <code>handle_unknown</code> specifies how the neural network should handle unseen categories. By setting <code>handle_unknown="ignore"</code>, we instruct the neural network to ignore categories that were not seen during training. If we did not do this, it will interrupt the model’s operation after deployment</span>
+<span data-code-cell="annotated-cell-29" data-code-lines="6" data-code-annotation="3">Passes through <code>hypertension</code> and <code>heart_disease</code> without any preprocessing</span>
 </dd>
 <dt data-target-cell="annotated-cell-29" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-cell="annotated-cell-29" data-code-lines="8" data-code-annotation="4">Passes through <code>hypertension</code> and <code>heart_disease</code> without any pre processing</span>
+<span data-code-cell="annotated-cell-29" data-code-lines="7" data-code-annotation="4">Makes a pipeline that first applies <code>SimpleImputer()</code> to replace missing values with the mean and then applies <code>StandardScaler()</code> to scale the numerical values</span>
 </dd>
 <dt data-target-cell="annotated-cell-29" data-target-annotation="5">5</dt>
 <dd>
-<span data-code-cell="annotated-cell-29" data-code-lines="9" data-code-annotation="5">Makes a pipeline that first applies <code>SimpleImputer()</code> to replace missing values with the mean and then applies <code>StandardScaler()</code> to scale the numerical values</span>
-</dd>
-<dt data-target-cell="annotated-cell-29" data-target-annotation="6">6</dt>
-<dd>
-<span data-code-cell="annotated-cell-29" data-code-lines="17" data-code-annotation="6">Prints out the missing values to ensure the <code>SimpleImputer()</code> has worked</span>
+<span data-code-cell="annotated-cell-29" data-code-lines="15" data-code-annotation="5">Prints out the missing values to ensure the <code>SimpleImputer()</code> has worked</span>
 </dd>
 </dl>
 </div>
@@ -2798,9 +3035,9 @@ The test set has shape (1022, 20) &amp; with 0 NAs.</code></pre>
 <h3 class="anchored" data-anchor-id="handling-unseen-categories">Handling unseen categories</h3>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="60">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb75"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb75-1"><a href="#cb75-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"gender"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="59">
+<div class="cell" data-execution_count="70">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb91"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb91-1"><a href="#cb91-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"gender"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="69">
 <pre><code>gender
 Female    1802
 Male      1264
@@ -2808,9 +3045,9 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="61">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb77"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb77-1"><a href="#cb77-1" aria-hidden="true" tabindex="-1"></a>X_val_raw[<span class="st">"gender"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="60">
+<div class="cell" data-execution_count="71">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb93"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb93-1"><a href="#cb93-1" aria-hidden="true" tabindex="-1"></a>X_val_raw[<span class="st">"gender"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="70">
 <pre><code>gender
 Female    615
 Male      406
@@ -2820,13 +3057,13 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<p>Because the way train and test was split, one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below. In the second row, the values given for <code>gender_Female</code> and <code>gender_Male</code> are both 0, implying a third category.</p>
+<p>Because of the way the train and test sets were split, the one-hot encoder could not pick up on the third category. This could interrupt the model performance. To avoid such confusions, we could either give instructions manually on how to tackle unseen categories. An example is given below. In the second row, the values given for <code>gender_Female</code> and <code>gender_Male</code> are both 0, implying a third category.</p>
 <div class="columns">
 <div class="column">
-<div class="cell" data-execution_count="62">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb79"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb79-1"><a href="#cb79-1" aria-hidden="true" tabindex="-1"></a>ind <span class="op">=</span> np.argmax(X_val_raw[<span class="st">"gender"</span>] <span class="op">==</span> <span class="st">"Other"</span>)</span>
-<span id="cb79-2"><a href="#cb79-2" aria-hidden="true" tabindex="-1"></a>X_val_raw.iloc[ind<span class="op">-</span><span class="dv">1</span>:ind<span class="op">+</span><span class="dv">3</span>][[<span class="st">"gender"</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="61">
+<div class="cell" data-execution_count="72">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb95"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb95-1"><a href="#cb95-1" aria-hidden="true" tabindex="-1"></a>ind <span class="op">=</span> np.argmax(X_val_raw[<span class="st">"gender"</span>] <span class="op">==</span> <span class="st">"Other"</span>)</span>
+<span id="cb95-2"><a href="#cb95-2" aria-hidden="true" tabindex="-1"></a>X_val_raw.iloc[ind<span class="op">-</span><span class="dv">1</span>:ind<span class="op">+</span><span class="dv">3</span>][[<span class="st">"gender"</span>]]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="71">
 <div>
 
 
@@ -2861,10 +3098,10 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div><div class="column">
-<div class="cell" data-execution_count="63">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb80"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb80-1"><a href="#cb80-1" aria-hidden="true" tabindex="-1"></a>gender_cols <span class="op">=</span> pd.DataFrame(X_val)[[<span class="st">"gender_Female"</span>, <span class="st">"gender_Male"</span>]]</span>
-<span id="cb80-2"><a href="#cb80-2" aria-hidden="true" tabindex="-1"></a>gender_cols.iloc[ind<span class="op">-</span><span class="dv">1</span>:ind<span class="op">+</span><span class="dv">3</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="62">
+<div class="cell" data-execution_count="73">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb96"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb96-1"><a href="#cb96-1" aria-hidden="true" tabindex="-1"></a>gender_cols <span class="op">=</span> pd.DataFrame(X_val)[[<span class="st">"gender_Female"</span>, <span class="st">"gender_Male"</span>]]</span>
+<span id="cb96-2"><a href="#cb96-2" aria-hidden="true" tabindex="-1"></a>gender_cols.iloc[ind<span class="op">-</span><span class="dv">1</span>:ind<span class="op">+</span><span class="dv">3</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="72">
 <div>
 
 
@@ -2914,30 +3151,29 @@ Name: count, dtype: int64</code></pre>
 </section>
 <section id="save-the-preprocessed-data-to-files" class="level3">
 <h3 class="anchored" data-anchor-id="save-the-preprocessed-data-to-files">Save the preprocessed data to files</h3>
-<div class="cell" data-execution_count="64">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb81"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb81-1"><a href="#cb81-1" aria-hidden="true" tabindex="-1"></a>PROCESSED_DATA_DIR <span class="op">=</span> Path(<span class="st">"stroke/processed"</span>)</span>
-<span id="cb81-2"><a href="#cb81-2" aria-hidden="true" tabindex="-1"></a>PROCESSED_DATA_DIR.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb81-3"><a href="#cb81-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb81-4"><a href="#cb81-4" aria-hidden="true" tabindex="-1"></a>X_train.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"x_train.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb81-5"><a href="#cb81-5" aria-hidden="true" tabindex="-1"></a>X_val.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"x_val.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb81-6"><a href="#cb81-6" aria-hidden="true" tabindex="-1"></a>X_test.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"x_test.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb81-7"><a href="#cb81-7" aria-hidden="true" tabindex="-1"></a>y_train.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"y_train.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb81-8"><a href="#cb81-8" aria-hidden="true" tabindex="-1"></a>y_val.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"y_val.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb81-9"><a href="#cb81-9" aria-hidden="true" tabindex="-1"></a>y_test.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"y_test.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="74">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb97"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb97-1"><a href="#cb97-1" aria-hidden="true" tabindex="-1"></a>PROCESSED_DATA_DIR <span class="op">=</span> Path(<span class="st">"stroke/processed"</span>)</span>
+<span id="cb97-2"><a href="#cb97-2" aria-hidden="true" tabindex="-1"></a>PROCESSED_DATA_DIR.mkdir(parents<span class="op">=</span><span class="va">True</span>, exist_ok<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb97-3"><a href="#cb97-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb97-4"><a href="#cb97-4" aria-hidden="true" tabindex="-1"></a>X_train.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"x_train.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb97-5"><a href="#cb97-5" aria-hidden="true" tabindex="-1"></a>X_val.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"x_val.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb97-6"><a href="#cb97-6" aria-hidden="true" tabindex="-1"></a>X_test.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"x_test.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb97-7"><a href="#cb97-7" aria-hidden="true" tabindex="-1"></a>y_train.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"y_train.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb97-8"><a href="#cb97-8" aria-hidden="true" tabindex="-1"></a>y_val.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"y_val.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb97-9"><a href="#cb97-9" aria-hidden="true" tabindex="-1"></a>y_test.to_csv(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"y_test.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="lastly-keep-the-preprocessor-around" class="level3 smaller">
 <h3 class="smaller anchored" data-anchor-id="lastly-keep-the-preprocessor-around">Lastly, keep the preprocessor around</h3>
 <p>Later want to make a prediction on some new data point. It has to go through the <strong>exact same</strong> preprocessing steps.</p>
 <p>We can save the preprocessing column transformer and save it to a file to use later.</p>
-<div class="cell" data-execution_count="65">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb82"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb82-1"><a href="#cb82-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> joblib</span>
-<span id="cb82-2"><a href="#cb82-2" aria-hidden="true" tabindex="-1"></a>joblib.dump(ct, PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"preprocessor.pkl"</span>)</span>
-<span id="cb82-3"><a href="#cb82-3" aria-hidden="true" tabindex="-1"></a>preprocessor <span class="op">=</span> joblib.load(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"preprocessor.pkl"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="75">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb98"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb98-1"><a href="#cb98-1" aria-hidden="true" tabindex="-1"></a>joblib.dump(ct, PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"preprocessor.pkl"</span>)</span>
+<span id="cb98-2"><a href="#cb98-2" aria-hidden="true" tabindex="-1"></a>preprocessor <span class="op">=</span> joblib.load(PROCESSED_DATA_DIR <span class="op">/</span> <span class="st">"preprocessor.pkl"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div class="cell" data-execution_count="66">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb83"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb83-1"><a href="#cb83-1" aria-hidden="true" tabindex="-1"></a>X_test_raw.head(<span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="65">
+<div class="cell" data-execution_count="76">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb99"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb99-1"><a href="#cb99-1" aria-hidden="true" tabindex="-1"></a>X_test_raw.head(<span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="75">
 <div>
 
 
@@ -2977,13 +3213,13 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<div class="cell" data-execution_count="67">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb84"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb84-1"><a href="#cb84-1" aria-hidden="true" tabindex="-1"></a>new_data <span class="op">=</span> X_test_raw.head(<span class="dv">1</span>).copy()</span>
-<span id="cb84-2"><a href="#cb84-2" aria-hidden="true" tabindex="-1"></a>new_data[<span class="st">"ever_married"</span>] <span class="op">=</span> <span class="st">"No"</span> <span class="co"># Let's pretend this is the new data point</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell" data-execution_count="77">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb100"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb100-1"><a href="#cb100-1" aria-hidden="true" tabindex="-1"></a>new_data <span class="op">=</span> X_test_raw.head(<span class="dv">1</span>).copy()</span>
+<span id="cb100-2"><a href="#cb100-2" aria-hidden="true" tabindex="-1"></a>new_data[<span class="st">"ever_married"</span>] <span class="op">=</span> <span class="st">"No"</span> <span class="co"># Let's pretend this is the new data point</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<div class="cell" data-execution_count="68">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb85"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb85-1"><a href="#cb85-1" aria-hidden="true" tabindex="-1"></a>ct.transform(new_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="67">
+<div class="cell" data-execution_count="78">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb101"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb101-1"><a href="#cb101-1" aria-hidden="true" tabindex="-1"></a>ct.transform(new_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="77">
 <div>
 
 
@@ -3043,9 +3279,9 @@ Name: count, dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<div class="cell" data-execution_count="69">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb86"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb86-1"><a href="#cb86-1" aria-hidden="true" tabindex="-1"></a>preprocessor.transform(new_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display" data-execution_count="68">
+<div class="cell" data-execution_count="79">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb102"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb102-1"><a href="#cb102-1" aria-hidden="true" tabindex="-1"></a>preprocessor.transform(new_data)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="78">
 <div>
 
 
