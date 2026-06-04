@@ -70,7 +70,7 @@ from sklearn.linear_model import LinearRegression
 
 ![Preprocessing refers to the transformations of the raw data before input to the network. Some steps are specific to neural networks (e.g. standardising continuous variables), others are necessary for every model (e.g. encoding categorical variables, handling missing data).](images/preprocessing_neural_network_diagram.svg)
 
-# Example 1: Continuous Variables
+# Standardising the numerical covariates {visibility="uncounted"}
 
 ## California housing dataset
 
@@ -262,7 +262,7 @@ Source: Melantha Wang (2022), ACTL3143 Project.
 ::: columns
 ::: column
 ```{python}
-X_test_raw.head(3)
+X_test_raw
 ```
 :::
 ::: column
@@ -319,7 +319,7 @@ X_test
 pandas.options.display.max_rows = 6
 ```
 
-# Example 2: Continuous and Categorical Variables {visibility="uncounted"}
+# Handling categorical variables {visibility="uncounted"}
 
 ## French motor dataset
 
@@ -507,10 +507,8 @@ for i, area in enumerate(enc.categories_[0]):
     print(f"The Area value {area} gets turned into {i}.")
 ```
 
-In other words,
-
 ```{python}
-print(" < ".join(enc.categories_[0]) + ", and ")
+print(f"In other words, {' < '.join(enc.categories_[0])}, and ")
 print(" = ".join(f"{r} - {l}" for l, r in zip(enc.categories_[0][:-1], enc.categories_[0][1:])))
 ```
 
@@ -674,10 +672,8 @@ for i, area in enumerate(enc_wrong.categories_[0]):
     print(f"The Area value {area} gets turned into {i}.")
 ```
 
-In other words,
-
 ```{python}
-print(" < ".join(enc_wrong.categories_[0]))
+print(f"In other words, {' < '.join(enc_wrong.categories_[0])}.")
 ```
 
 ## Aside: Manually set the order
@@ -698,17 +694,15 @@ for i, area in enumerate(enc_right.categories_[0]):
     print(f"The Area value {area} gets turned into {i}.")
 ```
 
-In other words,
-
 ```{python}
-print(" < ".join(enc_right.categories_[0]))
+print(f"In other words, {' < '.join(enc_right.categories_[0])}.")
 ```
 
 ```{python}
 X_train_raw = X_train_raw.drop("Area_In_Words", axis=1)
 ```
 
-# Example 3: Continuous and Categorical Variables and Missing Values
+# Missing values and rare observations
 
 ## Stroke prediction dataset {.smaller}
 
@@ -802,15 +796,12 @@ X_train_raw["smoking_status"].value_counts()
 :::
 :::
 
-::: {.callout-tip}
+
+## Group sparse categories {.smaller}
+
 Look for sparse categories.
 One common trick is to lump together all the small categories (e.g. < 5% or 10% each) into a new combined 'OTHER' or 'RARE' category.
-:::
-
-## Lumping rare categories automatically {.smaller}
-
-Rather than hand-coding an 'OTHER' category, `OneHotEncoder` can group infrequent levels for us (since scikit-learn 1.1).
-Here `Never_worked` is a very rare level of `work_type`:
+The `OneHotEncoder` can group infrequent levels for us.
 
 ::: columns
 ::: {.column width="35%"}
@@ -945,6 +936,34 @@ It's a very mild form of data leakage, though it may be justifiable in some case
 If we made the datasets, we'd have a better idea of whether it makes sense on a case-by-case basis.
 We struggle here as we (in this course) are just analysing datasets which we didn't collect.
 
+# Procedures to keep your data organised
+
+## Directory structure {.smaller}
+
+A popular convention (from [Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/)) splits `data/` by *how far along* the data is:
+
+::: columns
+::: {.column width="52%"}
+```
+data/
+├── raw/        # original, never edited
+├── interim/    # cleaned, still readable
+└── processed/  # final, model-ready
+```
+:::
+::: {.column width="48%"}
+- **`raw/`** is *immutable* — never overwrite it, so the whole pipeline can always be rebuilt from scratch.
+- **`interim/`** is data that can be recreated from raw & a preprocessing script.
+- **`processed/`** is what the model loads: split, encoded and scaled.
+:::
+:::
+
+`interim/` holds data that is **nearly model-ready but still human-readable** — after cleaning, joining and splitting, but *before* rescaling strips the units and one-hot encoding turns everything into a wall of 0s and 1s.
+
+- You can **open it and eyeball it**: ages still look like ages, premiums still in dollars.
+- It **caches** slow steps (parsing, joining, geocoding) so tweaking the final features doesn't re-run them.
+- It keeps `processed/` **unambiguous** — one obvious file per train/validation/test split.
+
 ## Save the preprocessed data to files
 
 ```{python}
@@ -959,7 +978,7 @@ y_val.to_csv(PROCESSED_DATA_DIR / "y_val.csv", index=False)
 y_test.to_csv(PROCESSED_DATA_DIR / "y_test.csv", index=False)
 ```
 
-## Lastly, keep the preprocessor around {.smaller}
+## Keep the preprocessor around {.smaller}
 
 Later want to make a prediction on some new data point.
 It has to go through the **exact same** preprocessing steps.
@@ -991,6 +1010,7 @@ ct.transform(new_data)
 preprocessor.transform(new_data)
 ```
 
+
 ## Glossary {.appendix data-visibility="uncounted"}
 
 - column transformer
@@ -999,4 +1019,5 @@ preprocessor.transform(new_data)
 - one-hot encoding
 - missing values
 - imputation
+- raw / interim / processed data
 - standardisation
