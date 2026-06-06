@@ -1,5 +1,5 @@
 ---
-title: Optimisation
+title: Classification & Optimisation
 ---
 
 ```{python}
@@ -7,24 +7,136 @@ title: Optimisation
 #| warning: false
 from setup import *
 
-
 def skip_empty(line):
     if line.strip() != "":
         print(line.strip())
 ```
 
-::: {.content-visible unless-format="revealjs"}
+
+## Overview
+
+In these slides, we'll start by giving some demonstrations of training classification models that: 1) predict a binary outcome, then 2) predict a categorical outcome with > 2 options or levels.
+
+Next, we'll step into the maths of how these classification models make predictions, then go look at the high-level ideas of how to "train" them, then finally look at the maths of this training process.
+
+## Imports needed for these demos
 
 ```{python}
-#| code-fold: true
-#| code-summary: Show the package imports
 import random
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
+
+from keras.models import Sequential
+from keras.layers import Dense, Input
+from keras.callbacks import EarlyStopping
+
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.compose import make_column_transformer
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import confusion_matrix, RocCurveDisplay, PrecisionRecallDisplay
+from sklearn import set_config
+
+set_config(transform_output="pandas")
 ```
 
+{{< include _stroke-prediction.qmd >}}
+
+{{< include _keras-iris-classification-demo.qmd >}}
+
+## Summary: Classification models in Keras
+
+::: {.content-visible unless-format="revealjs"}
+If the target is a categorical variable with only two options, this is a binary classification problem.
+The neural network's output layer should have **one neuron** with a **sigmoid activation** function.
+The loss function should be **binary cross-entropy**. In Keras, this is called `loss="binary_crossentropy"`.
+
+If the target has more than two options, this is a multi-class classification problem.
+The neural network's output layer should have **as many neurons as there are classes** with a **softmax activation** function.
+The loss function should be **categorical cross-entropy**. In Keras, this is done with `loss="sparse_categorical_crossentropy"`.
 :::
+
+If the number of classes is $c$, then:
+
+| Target | Output Layer | Loss Function |
+|--------|--------------|---------------|
+| Binary <br> $(c=2)$ | 1 neuron with `sigmoid` activation | Binary Cross-Entropy |
+| Multi-class <br> $(c > 2)$ | $c$ neurons with `softmax` activation | Categorical Cross-Entropy |
+
+
+## Summary: Optionally output logits
+
+::: {.content-visible unless-format="revealjs"}
+If you find that the training is unstable, you can try to use a **linear activation** in the final layer and have the loss functions implement the activation function.
+:::
+
+If the number of classes is $c$, then:
+
+| Target | Output Layer | Loss Function |
+|--------|--------------|---------------|
+| Binary <br> $(c=2)$ | 1 neuron with `linear` activation | Binary Cross-Entropy (`from_logits=True`) |
+| Multi-class <br> $(c > 2)$ | $c$ neurons with `linear` activation | Categorical Cross-Entropy (`from_logits=True`) |
+
+## Summary: Code examples {.smaller}
+
+::: columns
+::: column
+**Binary**
+
+```python
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(1, activation="sigmoid")
+])
+model.compile(loss="binary_crossentropy")
+```
+:::
+::: column
+**Multi-class**
+
+```python
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(n_classes, activation="softmax")
+])
+model.compile(loss="sparse_categorical_crossentropy")
+```
+:::
+:::
+
+::: columns
+::: column
+**Binary (logits)**
+
+```python
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(1, activation="linear")
+])
+loss = BinaryCrossentropy(from_logits=True)
+model.compile(loss=loss)
+```
+:::
+::: column
+**Multi-class (logits)**
+
+```python
+model = Sequential([
+  # Skipping the earlier layers
+  Dense(n_classes, activation="linear")
+])
+loss = SparseCategoricalCrossentropy(from_logits=True)
+model.compile(loss=loss)
+```
+:::
+:::
+
+Both `BinaryCrossentropy` and `SparseCategoricalCrossentropy` live in `keras.losses`.
 
 {{< include _maths-logistic-regression.qmd >}}
 
@@ -231,8 +343,34 @@ Source: Melissa Renard (2025), adapted from [Deep Learning for Computer Vision -
 
 {{< include _loss-and-derivatives.qmd >}}
 
+## Package Versions {.appendix data-visibility="uncounted"}
+
+```{python}
+from watermark import watermark
+print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch"))
+```
+
+## Recommended viewing
+
+Some very easy-to-follow explanations of these topics, plus catchy tunes:
+
+- [Softmax and argmax](https://youtu.be/KpKog-L9veg?si=BSKRiDXWO9zEV5N_)
+- [Cross entropy](https://youtu.be/6ArSys5qHAU?si=vVy6A3i8NKONPOTw)
+- [Cross entropy derivatives and backpropagation](https://youtu.be/xBEh66V9gZo?si=Ft0WCAM2PwIdbUok)
+
 ## Glossary {.appendix data-visibility="uncounted"}
 
+::: columns
+::: column
+- accuracy
+- classification problem
+- confusion matrix
+- cross-entropy loss
+- metrics
+- sigmoid activation function
+- softmax activation
+:::
+::: column
 - batch gradient descent
 - batches, batch size
 - global minimum, local minimum
@@ -241,3 +379,5 @@ Source: Melissa Renard (2025), adapted from [Deep Learning for Computer Vision -
 - plateau
 - stochastic gradient descent
 - mini-batch gradient descent
+:::
+:::
