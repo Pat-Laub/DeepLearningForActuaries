@@ -124,20 +124,24 @@ def compress(pdf):
     fd, tmp = tempfile.mkstemp(suffix=".pdf", dir=os.path.dirname(pdf) or ".")
     os.close(fd)
     try:
-        subprocess.run(
-            _gs_command(pdf, tmp), check=True, capture_output=True, text=True
-        )
+        try:
+            subprocess.run(
+                _gs_command(pdf, tmp), check=True, capture_output=True, text=True
+            )
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"gs failed on {pdf}\n{e.stdout or ''}\n{e.stderr or ''}")
         _repair_iccbased(tmp)  # fix Ghostscript's empty-ICC colour spaces
         after = os.path.getsize(tmp)
         if 0 < after < before:
             os.replace(tmp, pdf)  # atomic; same directory
             return pdf, before, after
-        os.remove(tmp)  # gs didn't shrink it — keep the original
-        return pdf, before, before
-    except subprocess.CalledProcessError as e:
+        return pdf, before, before  # gs didn't shrink it — keep the original
+    finally:
+        # Remove the temp on every exit path that didn't consume it (gs/pikepdf
+        # error, no-shrink, or an interrupt mid-run) so it can't linger in docs/.
+        # os.replace() above moves it away, so this is a no-op on success.
         if os.path.exists(tmp):
             os.remove(tmp)
-        raise Exception(f"gs failed on {pdf}\n{e.stdout or ''}\n{e.stderr or ''}")
 
 
 def _targets():
