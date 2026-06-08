@@ -1,0 +1,126 @@
+<script>
+// Runtime fixes for the reveal.js chalkboard plugin.
+//
+// 1. Drawing offset when the zoom plugin is active.
+//    Zoom applies a CSS transform to document.body, which the chalkboard's
+//    pageX/pageY-based coordinates don't account for. Map the pointer onto
+//    the canvas via getBoundingClientRect (the rendered, post-transform box)
+//    instead. This is a no-op when un-zoomed.
+//
+// 2. Blurry/pixelated ink on HiDPI ("Retina") displays.
+//    The plugin sizes its canvas backing store in CSS pixels, so on a 2x
+//    display every drawn pixel is upscaled by the browser. We transparently
+//    enlarge each chalkboard canvas's backing store by devicePixelRatio and
+//    scale its 2D context to match, keeping the plugin's logical coordinate
+//    system (and CSS size) unchanged so all of its drawing maths still works.
+(function () {
+  function isBoardCanvas(el) {
+    return el && el.tagName === 'CANVAS' && el.hasAttribute('data-chalkboard');
+  }
+
+  /* ---------- 1. Zoom-aware pointer mapping ---------- */
+  function mapToCanvas(canvas, clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) / rect.width * canvas.width,
+      y: (clientY - rect.top) / rect.height * canvas.height
+    };
+  }
+  function shadowPagePos(obj, x, y) {
+    try {
+      Object.defineProperty(obj, 'pageX', { configurable: true, get: function () { return x; } });
+      Object.defineProperty(obj, 'pageY', { configurable: true, get: function () { return y; } });
+    } catch (e) { /* some Touch implementations disallow this; ignore */ }
+  }
+  function onMouse(e) {
+    if (!isBoardCanvas(e.target)) return;
+    var p = mapToCanvas(e.target, e.clientX, e.clientY);
+    shadowPagePos(e, p.x, p.y);
+  }
+  function onTouch(e) {
+    if (!isBoardCanvas(e.target) || !e.touches || !e.touches.length) return;
+    var t = e.touches[0];
+    var p = mapToCanvas(e.target, t.clientX, t.clientY);
+    shadowPagePos(t, p.x, p.y);
+  }
+  // Capture phase on document so this runs before the chalkboard's own
+  // canvas-level listeners, which read pageX/pageY.
+  ['mousedown', 'mousemove'].forEach(function (type) {
+    document.addEventListener(type, onMouse, true);
+  });
+  ['touchstart', 'touchmove'].forEach(function (type) {
+    document.addEventListener(type, onTouch, true);
+  });
+
+  /* ---------- 2. HiDPI (Retina) sharpness ---------- */
+  var widthDesc = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'width');
+  var heightDesc = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'height');
+
+  function getDpr() { return window.devicePixelRatio || 1; }
+
+  function rescaleContext(canvas, dpr) {
+    // Assigning to canvas.width/height has just reset the context transform to
+    // identity; scale it so the plugin's logical coordinates fill the larger
+    // backing store at full device resolution.
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+  }
+
+  function patchCanvas(canvas) {
+    if (canvas._hidpiPatched) return;
+    canvas._hidpiPatched = true;
+
+    // Current (logical) attribute values set by the plugin.
+    var logicalW = widthDesc.get.call(canvas);
+    var logicalH = heightDesc.get.call(canvas);
+
+    Object.defineProperty(canvas, 'width', {
+      configurable: true,
+      get: function () {
+        return this._logicalWidth != null ? this._logicalWidth : widthDesc.get.call(this);
+      },
+      set: function (v) {
+        this._logicalWidth = v;
+        var dpr = getDpr();
+        widthDesc.set.call(this, Math.round(v * dpr));
+        this.style.width = v + 'px';
+        rescaleContext(this, dpr);
+      }
+    });
+    Object.defineProperty(canvas, 'height', {
+      configurable: true,
+      get: function () {
+        return this._logicalHeight != null ? this._logicalHeight : heightDesc.get.call(this);
+      },
+      set: function (v) {
+        this._logicalHeight = v;
+        var dpr = getDpr();
+        heightDesc.set.call(this, Math.round(v * dpr));
+        this.style.height = v + 'px';
+        rescaleContext(this, dpr);
+      }
+    });
+
+    // Re-apply at current size to enlarge the backing store immediately.
+    canvas.width = logicalW;
+    canvas.height = logicalH;
+  }
+
+  function patchExisting() {
+    document.querySelectorAll('canvas[data-chalkboard]').forEach(patchCanvas);
+  }
+
+  // The chalkboard canvases are created during plugin setup; catch them whether
+  // they already exist or appear later.
+  if (getDpr() !== 1) {
+    var observer = new MutationObserver(patchExisting);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    if (document.readyState !== 'loading') {
+      patchExisting();
+    } else {
+      document.addEventListener('DOMContentLoaded', patchExisting);
+    }
+  }
+})();
+</script>
