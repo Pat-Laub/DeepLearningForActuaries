@@ -1,14 +1,31 @@
 
-# Car Crash NLP Part II {visibility="uncounted"}
+# Car Crash NLP with RNNs {visibility="uncounted"}
 
 ::: footer
 Dataset source: [Dr Jürg Schelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
 :::
 
-## Predict injury severity
+```{python}
+#| echo: false
+from pathlib import Path
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+
+if not Path("data/NHTSA_NMVCCS_extract.parquet.gzip").exists():
+    import urllib.request
+    urllib.request.urlretrieve(
+        "https://github.com/JSchelldorfer/ActuarialDataScience/raw/master/12%20-%20NLP%20Using%20Transformers/NHTSA_NMVCCS_extract.parquet.gzip",
+        "data/NHTSA_NMVCCS_extract.parquet.gzip",
+    )
+
+df = pd.read_parquet("data/NHTSA_NMVCCS_extract.parquet.gzip")
+df["SUMMARY_EN"] = df["SUMMARY_EN"].map(lambda s: s.replace("\r", "\n"))
+```
+
+## Predict injury severity from crash reports
 
 ::: {.content-visible unless-format="revealjs"}
-Now we are note predicting the number of cars involved in a crash, but the injury severity.
+We revisit the NHTSA car crash dataset from the NLP lecture: free-text police reports (`SUMMARY_EN`) with a binary injury-severity target (`INJSEVB`). This time we feed the text to recurrent networks.
 :::
 
 ```{python}
@@ -20,70 +37,6 @@ X_main, X_test, y_main, y_test = \
 X_train, X_val, y_train, y_val = \
     train_test_split(X_main, y_main, test_size=0.25, random_state=1)
 X_train.shape, X_val.shape, X_test.shape
-```
-
-## Using TF-IDF Vectorization
-
-::: {.content-visible unless-format="revealjs"}
-Rather than BoW, we use TF-IDF (not removing stop-words). Now, words that appear frequently across the police reports are given less importance.
-:::
-
-```{python}
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-max_tokens = 1_000
-vect = TfidfVectorizer(
-    max_features=max_tokens,
-    lowercase=True,
-    token_pattern=r"(?u)\b\w+\b",  # Similar to "lower_and_strip_punctuation"
-)
-
-X_train_txt = vect.fit_transform(X_train).toarray()
-X_val_txt = vect.transform(X_val).toarray()
-X_test_txt = vect.transform(X_test).toarray()
-
-vocab = vect.get_feature_names_out()
-print(list(vocab[:50]))
-```
-
-## The TF-IDF vectors
-
-```{python}
-pd.DataFrame(X_train_txt, columns=vocab, index=X_train.index)
-```
-
-## Feed TF-IDF into an ANN
-
-```{python}
-random.seed(42)
-tfidf_model = keras.models.Sequential([
-    layers.Input((X_train_txt.shape[1],)),
-    layers.Dense(250, "relu"),
-    layers.Dense(1, "sigmoid")
-])
-
-tfidf_model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
-tfidf_model.summary()
-```
-
-## Fit & evaluate
-
-```{python}
-es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
-    monitor="val_accuracy", verbose=2)
-
-if not Path("models/tfidf-model.keras").exists():
-    tfidf_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=[es],
-        validation_data=(X_val_txt, y_val), verbose=0)
-    tfidf_model.save("models/tfidf-model.keras")
-else:
-    tfidf_model = keras.models.load_model("models/tfidf-model.keras")
-```
-```{python}
-tfidf_model.evaluate(X_train_txt, y_train, verbose=0, batch_size=1_000)
-```
-```{python}
-tfidf_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
 ```
 
 ## Keep text as sequence of tokens
