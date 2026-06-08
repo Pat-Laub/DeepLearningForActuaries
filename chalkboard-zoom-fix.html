@@ -1,0 +1,44 @@
+<script>
+// Fix chalkboard drawing offset when the zoom plugin is active.
+// Zoom applies a CSS transform to document.body, which the chalkboard's
+// pageX/pageY-based coordinates don't account for. Map the pointer onto
+// the canvas via getBoundingClientRect (the rendered, post-transform box)
+// instead. This is a no-op when un-zoomed.
+(function () {
+  function isBoardCanvas(el) {
+    return el && el.tagName === 'CANVAS' && el.hasAttribute('data-chalkboard');
+  }
+  function mapToCanvas(canvas, clientX, clientY) {
+    var rect = canvas.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) / rect.width * canvas.width,
+      y: (clientY - rect.top) / rect.height * canvas.height
+    };
+  }
+  function shadowPagePos(obj, x, y) {
+    try {
+      Object.defineProperty(obj, 'pageX', { configurable: true, get: function () { return x; } });
+      Object.defineProperty(obj, 'pageY', { configurable: true, get: function () { return y; } });
+    } catch (e) { /* some Touch implementations disallow this; ignore */ }
+  }
+  function onMouse(e) {
+    if (!isBoardCanvas(e.target)) return;
+    var p = mapToCanvas(e.target, e.clientX, e.clientY);
+    shadowPagePos(e, p.x, p.y);
+  }
+  function onTouch(e) {
+    if (!isBoardCanvas(e.target) || !e.touches || !e.touches.length) return;
+    var t = e.touches[0];
+    var p = mapToCanvas(e.target, t.clientX, t.clientY);
+    shadowPagePos(t, p.x, p.y);
+  }
+  // Capture phase on document so this runs before the chalkboard's own
+  // canvas-level listeners, which read pageX/pageY.
+  ['mousedown', 'mousemove'].forEach(function (type) {
+    document.addEventListener(type, onMouse, true);
+  });
+  ['touchstart', 'touchmove'].forEach(function (type) {
+    document.addEventListener(type, onTouch, true);
+  });
+})();
+</script>
