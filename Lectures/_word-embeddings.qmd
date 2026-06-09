@@ -1,30 +1,5 @@
 # Word Embeddings {visibility="uncounted"}
 
-## Overview
-
-::: {.notes}
-In order for deep learning models to process language, we need to supply that language to the model in a way it can digest, i.e. a __quantitative representation__ such as a 2-D matrix of numerical values.
-:::
-
-::: columns
-:::: {.column width="60%"}
-Popular methods for converting text into numbers include:
-
-- One-hot encoding
-- Bag of words
-- TF-IDF
-- Word vectors (_transfer learning_)
-
-::::
-:::: {.column width="40%"}
-![Assigning Numbers](images/xkcd-assigning_numbers_2x.png)
-::::
-:::
-
-::: footer
-Source: Randall Munroe (2022), [xkcd #2610: Assigning Numbers](https://xkcd.com/2610/).
-:::
-
 ## Word Vectors
 
 - One-hot representations capture word 'existence' only, whereas word vectors capture information about word meaning as well as location.
@@ -49,7 +24,7 @@ Word vectors are a type of word embedding which can return numerical representat
 Bogacz (2023), [_Text Vectorization, an Introduction_](https://www.theinformationlab.nl/2023/03/22/an-introduction-to-embeddings/), The Information Lab.
 :::
 
-## Remember this diagram?
+## Illustration of the embeddings being learned
 
 ![Embeddings will gradually improve during training.](images/entity-embeddings.png)
 
@@ -58,7 +33,7 @@ Embeddings are numerical representations of categorical data that were learned d
 :::
 
 ::: footer
-Source: Marcus Lautier (2022) !!!CHECK WITH PL
+Source: Marcus Lautier (2022).
 :::
 
 ## Word2Vec
@@ -73,7 +48,7 @@ Two algorithms are used to calculate embeddings:
 Predictions are made using a neural network with one hidden layer. Through backpropagation, we update a set of "weights" which become the word vectors.
 
 ::: footer
-Paper: Mikolov et al. (2013), [_Efficient estimation of word representations in vector space_](https://arxiv.org/pdf/1301.3781.pdf), arXiv:1301.3781.
+Paper: @mikolov2013efficient.
 :::
 
 ## Word2Vec training methods
@@ -92,6 +67,7 @@ Computerphile (2019), [Vectoring Words (Word Embeddings)](https://youtu.be/gQddt
 Source: Amit Chaudhary (2020), [Self Supervised Representation Learning in NLP](https://amitness.com/2020/05/self-supervised-learning-nlp/).
 :::
 
+<!--
 ## The skip-gram network
 
 ![The skip-gram model. Both the input vector $\boldsymbol{x}$ and the output $\boldsymbol{y}$ are one-hot encoded word representations. The hidden layer is the word embedding of size 
@@ -100,6 +76,8 @@ $N$.](images/lilianweng-word2vec-skip-gram.png)
 ::: footer
 Source: Lilian Weng (2017), [Learning Word Embedding](https://lilianweng.github.io/posts/2017-10-15-word-embedding/), Blog post, Figure 1.
 :::
+-->
+
 
 ## Word Vector Arithmetic
 
@@ -126,7 +104,7 @@ Relationships between words becomes vector math.
 Sources: PressBooks, [College Physics: OpenStax](https://pressbooks.bccampus.ca/collegephysics/chapter/vector-addition-and-subtraction-graphical-methods/), Chapter 17 Figure 9, and Krohn (2019), _Deep Learning Illustrated_, Figures 2-7 & 2-8.
 ::: 
 
-# Word Embeddings II {visibility="uncounted"}
+# Demo of Word Embeddings {visibility="uncounted"}
 
 ## Pretrained word embeddings
 
@@ -136,10 +114,6 @@ GloVe (**Gl**obal **Ve**ctors) are pre-trained word embeddings from Stanford, tr
 #| code-fold: true
 #| code-summary: "GloVe loading code"
 #| output: false
-from pathlib import Path
-from urllib.request import urlretrieve
-import zipfile, numpy as np
-
 _zip = Path("data/glove.6B.zip")
 if not _zip.exists():
     urlretrieve("https://downloads.cs.stanford.edu/nlp/data/glove.6B.zip", _zip)
@@ -292,42 +266,16 @@ sv = (vec("melbourne") + vec("has") + vec("better") + vec("coffee")) / 4
 len(sv), sv[:5]
 ```
 
-> As it turns out, averaging word embeddings is a surprisingly effective way to create word embeddings. It’s not perfect (as you’ll see), but it does a strong job of capturing what you might perceive to be complex relationships between words.
-
-::: footer
-Source: Trask (2019), Grokking Deep Learning, Chapter 12.
-:::
-
-## Recipe recommender
-
-::: columns
-::: {.column width="49%"}
-![Recipes are the average of the word vectors of the ingredients.](images/duarte-o-carmo-recipe-space-1.png)
-:::
-::: {.column width="51%"}
-![Nearest neighbours used to classify new recipes as potentially delicious.](images/duarte-o-carmo-recipe-space-2.png)
-:::
-:::
-
-::: footer
-Source: Duarte O.Carmo (2022), [A recipe recommendation system](https://duarteocarmo.com/blog/scandinavia-food-python-recommendation-systems), Blog post.
-:::
+> "As it turns out, averaging word embeddings is a surprisingly effective way to create word embeddings. It’s not perfect (as you’ll see), but it does a strong job of capturing what you might perceive to be complex relationships between words."
+>
+> ::: {style="text-align: right;"}
+> — @trask2019grokking [ch. 12]
+> :::
 
 ## Analogies with word vectors
 
-Obama is to America as ___ is to Australia.
-
-::: fragment
-$$ \text{Obama} - \text{America} + \text{Australia} = ? $$
-:::
-
-::: fragment
-```{python}
-analogy("america", "obama", "australia")
-```
-:::
-
-## Testing more associations 
+::: columns
+::: column
 
 ```{python}
 analogy("paris", "france", "london")
@@ -343,44 +291,40 @@ $$
 France is a country whose capital city is Paris. If we remove Paris and add London (a city), we are looking for the country for which London is the capital city.
 :::
 
-## Quickly get to bad associations
+:::
+::: column
 
 ```{python}
 analogy("man", "king", "woman")
 ```
 
-```{python}
-analogy("man", "programmer", "woman")
-```
-
-::: {.content-visible unless-format="revealjs"}
-What is the 'woman' version of a computer programmer? Seems a strange question to ask, and we get some even stranger responses...
+:::
 :::
 
-## Bias in NLP models {.smaller}
+## The embeddings learn biases from the training data {.smaller}
+
+
+The same arithmetic exposes biases baked into the training corpus. Famously, @bolukbasi2016man found that a word2vec embedding trained on Google News answered _"man is to computer programmer as woman is to ?"_ with **homemaker**:
+
+The most extreme occupations along the _she–he_ direction, and analogies the embedding generates automatically:
 
 ::: columns
 ::: column
-![](images/the-verge-banner-microsoft-tay.jpeg)
+**Extreme "she" occupations**
 
-The Verge (2016), [Twitter taught Microsoft's AI chatbot to be a racist a****** in less than a day](https://www.theverge.com/2016/3/24/11297050/tay-microsoft-chatbot-racist).
+homemaker, nurse, receptionist, librarian, socialite, hairdresser, nanny, bookkeeper, stylist, housekeeper
+
+**Extreme "he" occupations**
+
+maestro, skipper, protégé, philosopher, captain, architect, financier, warrior, broadcaster, magician
 :::
 ::: column
-> ... there are serious questions to answer, like how are we going to teach AI using public data without incorporating the worst traits of humanity? If we create bots that mirror their users, do we care if their users are human trash? There are plenty of examples of technology embodying — either accidentally or on purpose — the prejudices of society, and Tay's adventures on Twitter show that even big corporations like Microsoft forget to take any preventative measures against these problems.
+**Gender-stereotype _she–he_ analogies**
+
+sewing–carpentry, registered nurse–physician, housewife–shopkeeper, nurse–surgeon, interior designer–architect, softball–baseball, blond–burly, feminism–conservatism, cosmetics–pharmaceuticals, giggle–chuckle, vocalist–guitarist, petite–lanky, sassy–snappy, diva–superstar, charming–affable, volleyball–football, cupcakes–pizzas, lovely–brilliant
 :::
 :::
 
-## The `analogy` function cheats a little bit
-
-```{python}
-nearest(vec("programmer") - vec("man") + vec("woman"))
-```
-
-To get the 'nice' analogies, `analogy` ignores the input words as possible answers.
-
-```{python}
-#| eval: false
-# ignore (don't return) keys from the input
-if w not in exclude:
-    results.append((w, float(sims[i])))
-```
+::: footer
+Source: @bolukbasi2016man, Figure 1.
+:::

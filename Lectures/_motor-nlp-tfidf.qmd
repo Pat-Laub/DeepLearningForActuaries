@@ -1,46 +1,38 @@
 
-# TF-IDF {visibility="uncounted"}
+# Use a continuous representation {visibility="uncounted"}
+
+## Term Frequency-Inverse Document Frequency
+
+::: {.content-visible unless-format="revealjs"}
+A flaw of BoW and bag of n-grams is that each word is weighted equally. For example, the word 'the' has the same weight as the word 'intersection', even though 'intersection' provides a lot more information.
+
+_Term frequency-inverse document frequency_ measures the importance of a word across documents. It first computes the frequency of term _x_ in the document _y_ and weights it by a measure of how common it is. The intuition here is that, the more the word _x_ appears across documents, the less important it becomes.
+:::
+
+![Infographic explaining TF-IDF](images/tf-idf-graphic.png)
 
 ::: footer
-Dataset source: [Dr Jürg Schelldorfer's GitHub](https://github.com/JSchelldorfer/ActuarialDataScience/blob/master/12%20-%20NLP%20Using%20Transformers/Actuarial_Applications_of_NLP_Part_1.ipynb).
+Source: FiloTechnologia (2014), [A simple Java class for TF-IDF scoring](http://filotechnologia.blogspot.com/2014/01/a-simple-java-class-for-tfidf-scoring.html), Blog post.
 :::
 
-## Predict injury severity
+
+## Using TF-IDF vectorisation
 
 ::: {.content-visible unless-format="revealjs"}
-Now we are not predicting the number of cars involved in a crash, but the injury severity.
+Rather than the raw bag-of-words counts, we now weight each word by TF-IDF, so words that appear frequently across the police reports are given less importance. We keep the same number-of-vehicles target and the same train/validation/test split as before, swapping only the vectoriser.
 :::
 
 ```{python}
-features = df["SUMMARY_EN"]
-target = LabelEncoder().fit_transform(df["INJSEVB"])
-
-X_main, X_test, y_main, y_test = \
-    train_test_split(features, target, test_size=0.2, random_state=1)
-X_train, X_val, y_train, y_val = \
-    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
-X_train.shape, X_val.shape, X_test.shape
-```
-
-## Using TF-IDF Vectorization
-
-::: {.content-visible unless-format="revealjs"}
-Rather than BoW, we use TF-IDF (not removing stop-words). Now, words that appear frequently across the police reports are given less importance.
-:::
-
-```{python}
-from sklearn.feature_extraction.text import TfidfVectorizer
-
-max_tokens = 1_000
 vect = TfidfVectorizer(
-    max_features=max_tokens,
+    max_features=1_000,
     lowercase=True,
     token_pattern=r"(?u)\b\w+\b",  # Similar to "lower_and_strip_punctuation"
 )
+vect.fit(X_train["SUMMARY_EN_LEMMA"])
 
-X_train_txt = vect.fit_transform(X_train).toarray()
-X_val_txt = vect.transform(X_val).toarray()
-X_test_txt = vect.transform(X_test).toarray()
+X_train_tfidf = vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA")
+X_val_tfidf = vectorise_dataset(X_val, vect, "SUMMARY_EN_LEMMA")
+X_test_tfidf = vectorise_dataset(X_test, vect, "SUMMARY_EN_LEMMA")
 
 vocab = vect.get_feature_names_out()
 print(list(vocab[:50]))
@@ -49,39 +41,67 @@ print(list(vocab[:50]))
 ## The TF-IDF vectors
 
 ```{python}
-pd.DataFrame(X_train_txt, columns=vocab, index=X_train.index)
+vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", dataframe=True)
 ```
 
 ## Feed TF-IDF into an ANN
 
 ```{python}
-random.seed(42)
-tfidf_model = keras.models.Sequential([
-    layers.Input((X_train_txt.shape[1],)),
-    layers.Dense(250, "relu"),
-    layers.Dense(1, "sigmoid")
-])
-
-tfidf_model.compile("adam", "binary_crossentropy", metrics=["accuracy"])
+num_features = X_train_tfidf.shape[1]
+tfidf_model = build_model(num_features, num_cats)
 tfidf_model.summary()
 ```
 
 ## Fit & evaluate
 
 ```{python}
-es = keras.callbacks.EarlyStopping(patience=10, restore_best_weights=True,
+es = EarlyStopping(patience=10, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
 
 if not Path("models/tfidf-model.keras").exists():
-    tfidf_model.fit(X_train_txt, y_train, epochs=1_000, callbacks=[es],
-        validation_data=(X_val_txt, y_val), verbose=0)
+    tfidf_model.fit(X_train_tfidf, y_train, epochs=1_000, callbacks=[es],
+        validation_data=(X_val_tfidf, y_val), verbose=0)
     tfidf_model.save("models/tfidf-model.keras")
 else:
     tfidf_model = keras.models.load_model("models/tfidf-model.keras")
 ```
 ```{python}
-tfidf_model.evaluate(X_train_txt, y_train, verbose=0, batch_size=1_000)
+tfidf_model.evaluate(X_train_tfidf, y_train, verbose=0, batch_size=1_000)
 ```
 ```{python}
-tfidf_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
+tfidf_model.evaluate(X_val_tfidf, y_val, verbose=0, batch_size=1_000)
 ```
+
+```{python}
+#| echo: false
+_train_acc = tfidf_model.evaluate(X_train_tfidf, y_train, verbose=0, batch_size=1_000)[1]
+_val_loss, _val_acc, _val_top2 = tfidf_model.evaluate(X_val_tfidf, y_val, verbose=0, batch_size=1_000)
+model_results.append(("TF-IDF (top 1,000 lemmas)", num_features,
+    tfidf_model.count_params(), _train_acc, _val_acc, _val_loss, _val_top2))
+```
+
+## Comparing the models
+
+Same dense network throughout --- only the **text representation** changes.
+
+```{python}
+#| echo: false
+comparison = pd.DataFrame(
+    model_results,
+    columns=["Model", "Features", "Parameters",
+        "Train accuracy", "Val. accuracy", "Val. loss", "Val. top-2"],
+).sort_values(["Val. accuracy", "Val. loss"], ascending=[False, True])
+
+comparison.style.hide(axis="index").format({
+    "Features": "{:,.0f}",
+    "Parameters": "{:,.0f}",
+    "Train accuracy": "{:.1%}",
+    "Val. accuracy": "{:.1%}",
+    "Val. loss": "{:.3f}",
+    "Val. top-2": "{:.1%}",
+})
+```
+
+::: {.content-visible unless-format="revealjs"}
+The models are sorted by validation accuracy (ties broken by validation loss). The lemmatised bag-of-words model matches the full-vocabulary model's accuracy with ~19&times; fewer features, and has the lowest validation loss; TF-IDF is the weakest here despite the heavier weighting scheme.
+:::
