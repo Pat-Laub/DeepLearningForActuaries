@@ -124,3 +124,97 @@
   }
 })();
 </script>
+<script>
+// Arrow-key panning of the reveal.js zoom plugin.
+//
+// The zoom plugin (Alt/Option-click to magnify) is all-or-nothing: land on
+// slightly the wrong spot and you have to zoom out and try again. This lets you
+// nudge the magnified view with the arrow keys once zoomed in, so a near-miss
+// is a quick correction instead of a retry. Hold Shift for larger steps.
+//
+// We deliberately do NOT add click-and-drag panning: dragging is how the
+// chalkboard/pen tool draws, so the two would fight. Arrow keys stay clear of it.
+//
+// Implementation: the plugin magnifies by setting a CSS transform of the form
+//   translate(tx, ty) scale(s)
+// on document.body (and toggles the `zoomed` class on <html>). We read that
+// transform's *target* from the inline style — not getComputedStyle, which would
+// return a mid-animation value while the transition is running — then shift the
+// translation and write it back. Nudges use a snappier transition than zoom
+// in/out so repeated presses feel responsive.
+(function () {
+  var DEFAULT_TRANSITION = 'transform 0.8s ease'; // matches the zoom plugin
+  var NUDGE_TRANSITION = 'transform 0.12s ease';
+  var STEP = 0.06;       // fraction of the viewport panned per key press
+  var BIG_STEP = 0.18;   // ... while holding Shift
+
+  function isZoomed() {
+    return document.documentElement.classList.contains('zoomed');
+  }
+
+  // The modifier that triggers the zoom plugin (ctrl on Linux, otherwise alt),
+  // honouring an explicit `zoomKey` config if one is set.
+  function zoomModifierProp() {
+    var key = /Linux/.test(window.navigator.platform) ? 'ctrl' : 'alt';
+    if (window.Reveal && Reveal.getConfig && Reveal.getConfig().zoomKey) {
+      key = Reveal.getConfig().zoomKey;
+    }
+    return key + 'Key';
+  }
+
+  function currentTransform() {
+    // Prefer the inline style: it holds the final target the plugin set, even
+    // while the transition is still animating towards it.
+    var t = document.body.style.transform || getComputedStyle(document.body).transform;
+    if (!t || t === 'none') return null;
+    try { return new DOMMatrix(t); } catch (e) { return null; }
+  }
+
+  function nudge(dx, dy) {
+    var m = currentTransform();
+    if (!m) return;
+    document.body.style.transition = NUDGE_TRANSITION;
+    document.body.style.transform =
+      'translate(' + (m.e + dx) + 'px, ' + (m.f + dy) + 'px) scale(' + m.a + ')';
+  }
+
+  // Capture phase on window so we intercept the arrows before reveal.js uses
+  // them for slide navigation — but only while zoomed in.
+  window.addEventListener('keydown', function (e) {
+    if (!isZoomed()) return;            // un-zoomed: leave navigation untouched
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+    if (e.key === 'Escape') {
+      // Let the plugin's own zoom-out animate at the normal speed rather than
+      // the snappy nudge speed we may have just set.
+      document.body.style.transition = DEFAULT_TRANSITION;
+      return;
+    }
+
+    var step = e.shiftKey ? BIG_STEP : STEP;
+    var dx = window.innerWidth * step;
+    var dy = window.innerHeight * step;
+    var handled = true;
+    // Arrow = the direction the view pans towards (content slides the other way).
+    switch (e.key) {
+      case 'ArrowLeft':  nudge( dx,   0); break;
+      case 'ArrowRight': nudge(-dx,   0); break;
+      case 'ArrowUp':    nudge(  0,  dy); break;
+      case 'ArrowDown':  nudge(  0, -dy); break;
+      default: handled = false;
+    }
+    if (handled) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // An Alt/Option-click toggles zoom (in or out); make sure it animates at the
+  // normal speed regardless of any nudge transition left behind.
+  window.addEventListener('mousedown', function (e) {
+    if (e[zoomModifierProp()]) {
+      document.body.style.transition = DEFAULT_TRANSITION;
+    }
+  }, true);
+})();
+</script>
