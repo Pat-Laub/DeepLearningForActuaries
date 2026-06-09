@@ -1,5 +1,43 @@
 # Word Embeddings {visibility="uncounted"}
 
+## Each column used to be a word
+
+Both bag-of-words and TF-IDF give a **column for every word** in the vocabulary, so you can always read off what a number refers to:
+
+| Representation | Values | What the "crash" column holds |
+|:---|:---:|:---|
+| **Bag of words** | integers $0, 1, 2, \dots$ | number of times "crash" appears |
+| **TF-IDF** | continuous, $\ge 0$ | down-weighted count of "crash" |
+
+TF-IDF made the numbers *continuous*, but each column still **means one specific word**.
+
+::: {.content-visible unless-format="revealjs"}
+These vectors are *sparse* (mostly zeros) and *long* (one entry per vocabulary word, often tens of thousands), but every column has a clear, human-readable meaning --- you can point at column 412 and say "that's the word _skid_".
+:::
+
+## Word embeddings: continuous but unlabelled
+
+Word embeddings (Word2Vec, GloVe) are continuous too, but the resemblance stops there:
+
+- the vector is **short & dense** --- e.g. 300 numbers, almost all non-zero;
+- the columns are **learned dimensions**, not words.
+
+So a word becomes something like
+
+$$
+\text{crash} \;\longrightarrow\; [\,0.07,\; -0.42,\; 0.31,\; \ldots,\; -0.05\,]
+$$
+
+and there is **no way to say what dimension 137 means**. The meaning is spread across the *whole* vector --- it lives in the directions and distances between words, not in any single column.
+
+::: {.content-visible unless-format="revealjs"}
+With bag-of-words or TF-IDF you could point at a column and name the word it counts. With an embedding you cannot: the individual axes are not interpretable. What *is* meaningful is the geometry of the space --- similar words sit close together, and consistent directions encode relationships. That geometry is exactly what makes the word arithmetic on the next slides possible.
+:::
+
+::: {.notes}
+This is the key shift to land before introducing Word2Vec/GloVe: we move from a sparse, interpretable, one-column-per-word representation to a dense, *learned* representation where meaning is distributed across all the columns. Don't look for "the crash dimension" --- there isn't one.
+:::
+
 ## Word Vectors
 
 - One-hot representations capture word 'existence' only, whereas word vectors capture information about word meaning as well as location.
@@ -327,4 +365,23 @@ sewing–carpentry, registered nurse–physician, housewife–shopkeeper, nurse�
 
 ::: footer
 Source: @bolukbasi2016man, Figure 1.
+:::
+
+# Recap {visibility="uncounted"}
+
+## The vectorisation toolkit
+
+Every method turns text into numbers; they differ on **what** becomes a vector --- a single word or a whole document --- and **how** that vector looks (sparse vs dense):
+
+|  | One **word** $\to$ vector | One **document** $\to$ vector |
+|:--|:--:|:--:|
+| **Sparse** <br> <small>length \|V\|, one column per word</small> | one-hot encoding | bag of words, TF-IDF |
+| **Dense** <br> <small>short, learned dimensions</small> | word embeddings | averaged word embeddings |
+
+- **Sparse** vectors have one *interpretable* column per vocabulary word; **dense** embeddings are short and their columns are uninterpretable learned dimensions.
+- A **document** vector is just its word vectors *pooled*: sum the one-hots for bag of words; average the embeddings for a sentence vector.
+- Because embeddings are word-level, representing a whole document needs an extra step --- averaging them, or feeding the sequence into an RNN.
+
+::: {.content-visible unless-format="revealjs"}
+This pulls together the whole lecture. The **columns** of the table are about *granularity*: one-hot encoding and word embeddings each describe a single word, whereas bag of words and TF-IDF describe a whole document. The **rows** are about *form*: the sparse methods live in a space with one column per vocabulary word (often tens of thousands of mostly-zero entries), while dense embeddings use short vectors --- e.g. 300 numbers --- whose individual columns have no human-readable meaning. The bottom-right cell, averaging word embeddings, and the RNNs of the next section both exist to bridge the gap from word-level vectors to a single document-level representation.
 :::

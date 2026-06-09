@@ -229,7 +229,6 @@ Text vectorisation describes the process of converting text into a numerical rep
 
 Popular methods for vectorisation include:
 
-- One-hot encoding
 - Bag of words
 - TF-IDF
 - Word vectors
@@ -380,7 +379,7 @@ The following function is designed to select and vectorize the text column of a 
 ```{python}
 def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):              #<1>
     X_vects = vect.transform(X[txt_col]).toarray()                                  #<2>
-    X_other = X.drop(txt_col, axis=1)                                               #<3>
+    X_other = X[[f"WEATHER{i}" for i in range(1, 9)]]                               #<3>
 
     if not dataframe:                                                               #<4>
         return np.concatenate([X_vects, X_other], axis=1)                           
@@ -393,7 +392,7 @@ def vectorise_dataset(X, vect, txt_col="SUMMARY_EN", dataframe=False):          
 
 1. Defines the function `vectorise_dataset` which takes in the dataframe _X_, an instance of a fitted vectorizer, the name of the text column, a boolean function defining whether we want the output in dataframe format or numpy array format
 2. Transforms the text column based on a already fitted vectorizer function
-3. Drops the column containing text data from the dataframe
+3. Extracts just the numeric weather feature columns
 4. If `dataframe=False`, then returns a numpy array by concatenating non-textual data and vectorized text data
 5. Otherwise, extracts the unique words as a list
 6. Generates a dataframe, with columns names `vocab`, while preserving the index from the original dataset _X_
@@ -875,7 +874,7 @@ df["SUMMARY_EN_LEMMA"] = df["SUMMARY_EN"].map(lemmatize)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-Lemmatized version of the column is now stored in `SUMMARY_EN_LEMM`. Next we merge the non-textual columns of the dataset `df` with the lemmatized column and create the final dataset. This dataset will be split in to _train_, _val_ and _test_ sets for training the neural network.
+Lemmatized version of the column is now stored in `SUMMARY_EN_LEMMA`. We attach this new column to the existing _train_, _val_ and _test_ sets (matching on row index), so the same split and targets carry over --- only the text representation is new.
 :::
 
 ```{python}
@@ -891,23 +890,16 @@ else:
 ```
 
 ```{python}
-weather_cols = [f"WEATHER{i}" for i in range(1, 9)]                     #<1>
-features = df[["SUMMARY_EN_LEMMA"] + weather_cols]                      #<2>
+# The lemma column was computed after the train/val/test split, so attach it to
+# the existing sets (same rows, so y_train/y_val/y_test still apply).
+X_train["SUMMARY_EN_LEMMA"] = df.loc[X_train.index, "SUMMARY_EN_LEMMA"]  #<1>
+X_val["SUMMARY_EN_LEMMA"] = df.loc[X_val.index, "SUMMARY_EN_LEMMA"]
+X_test["SUMMARY_EN_LEMMA"] = df.loc[X_test.index, "SUMMARY_EN_LEMMA"]
 
-X_main, X_test, y_main, y_test = \
-    train_test_split(features, target, test_size=0.2, random_state=1)   #<3>
-
-# As 0.25 x 0.8 = 0.2
-X_train, X_val, y_train, y_val = \
-    train_test_split(X_main, y_main, test_size=0.25, random_state=1)    #<4>
-
-X_train.shape, X_val.shape, X_test.shape                                #<5>
+X_train.shape, X_val.shape, X_test.shape                                #<2>
 ```
-1. Defines the names of the columns that will be used for creating the final dataset
-2. Selects the relevant input feature columns and stores it in `features` column
-3. Splits the data in to _main_ and _test_ sets
-4. Further splits the _main_ set in to _train_ and _val_ sets
-5. Returns the dimensions of the datasets 
+1. Attaches the lemmatized summaries to the existing train/val/test sets, aligned by row index
+2. Returns the dataset dimensions (now with an extra `SUMMARY_EN_LEMMA` column)
 
 
 ## What is left?
@@ -948,7 +940,7 @@ The output after lemmatization, when compared with the previous output without l
 Create the $X$ matrices:
 
 ```{python}
-X_train_bow = vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA") 
+X_train_bow = vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA")
 X_val_bow = vectorise_dataset(X_val, vect, "SUMMARY_EN_LEMMA")
 X_test_bow = vectorise_dataset(X_test, vect, "SUMMARY_EN_LEMMA")
 ```

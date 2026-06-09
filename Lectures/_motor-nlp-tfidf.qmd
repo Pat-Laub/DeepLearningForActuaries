@@ -23,16 +23,12 @@ Rather than the raw bag-of-words counts, we now weight each word by TF-IDF, so w
 :::
 
 ```{python}
-vect = TfidfVectorizer(
-    max_features=1_000,
-    lowercase=True,
-    token_pattern=r"(?u)\b\w+\b",  # Similar to "lower_and_strip_punctuation"
-)
-vect.fit(X_train["SUMMARY_EN_LEMMA"])
+vect = TfidfVectorizer(max_features=1_000, stop_words="english")
+vect.fit(X_train["SUMMARY_EN"])
 
-X_train_tfidf = vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA")
-X_val_tfidf = vectorise_dataset(X_val, vect, "SUMMARY_EN_LEMMA")
-X_test_tfidf = vectorise_dataset(X_test, vect, "SUMMARY_EN_LEMMA")
+X_train_tfidf = vectorise_dataset(X_train, vect)
+X_val_tfidf = vectorise_dataset(X_val, vect)
+X_test_tfidf = vectorise_dataset(X_test, vect)
 
 vocab = vect.get_feature_names_out()
 print(list(vocab[:50]))
@@ -41,7 +37,7 @@ print(list(vocab[:50]))
 ## The TF-IDF vectors
 
 ```{python}
-vectorise_dataset(X_train, vect, "SUMMARY_EN_LEMMA", dataframe=True)
+vectorise_dataset(X_train, vect, dataframe=True)
 ```
 
 ## Feed TF-IDF into an ANN
@@ -76,7 +72,7 @@ tfidf_model.evaluate(X_val_tfidf, y_val, verbose=0, batch_size=1_000)
 #| echo: false
 _train_acc = tfidf_model.evaluate(X_train_tfidf, y_train, verbose=0, batch_size=1_000)[1]
 _val_loss, _val_acc, _val_top2 = tfidf_model.evaluate(X_val_tfidf, y_val, verbose=0, batch_size=1_000)
-model_results.append(("TF-IDF (top 1,000 lemmas)", num_features,
+model_results.append(("TF-IDF (top 1,000)", num_features,
     tfidf_model.count_params(), _train_acc, _val_acc, _val_loss, _val_top2))
 ```
 
@@ -103,5 +99,5 @@ comparison.style.hide(axis="index").format({
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The models are sorted by validation accuracy (ties broken by validation loss). The lemmatised bag-of-words model matches the full-vocabulary model's accuracy with ~19&times; fewer features, and has the lowest validation loss; TF-IDF is the weakest here despite the heavier weighting scheme.
+The models are sorted by validation accuracy (ties broken by validation loss). The lemmatised bag-of-words model matches the full-vocabulary model's accuracy with ~19&times; fewer features, and has the lowest validation loss.
 :::

@@ -144,8 +144,31 @@ Similarly to image information ranging from 0 to 255, ASCII characters range fro
 
 ```{=html}
 <style>
+/* ---- HTML target (no `.reveal` prefix) ----------------------------------
+   Lay the four tables out side-by-side like the Wikipedia figure, but as
+   real selectable/searchable text. The `.reveal` rules below have higher
+   specificity, so on slides they win and the layout is unchanged. */
+.ascii-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  justify-content: center;
+}
+.ascii-row table {
+  margin: 0 !important;
+  width: auto;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+.ascii-row th, .ascii-row td { padding: 0.05rem 0.55rem; white-space: nowrap; }
+.ascii-row tbody tr:nth-child(odd) { background: rgba(0, 0, 0, 0.04); }
+
+/* ---- revealjs slides (unchanged behaviour) ------------------------------ */
 .reveal .ascii-scroll {
-  width: 100%;
+  width: 92%;          /* leave a gap on the right so the scrollbar isn't jammed against the slide edge */
+  margin: 0 auto 0 0;  /* hug the left; the spare width (and the scrollbar) sits on the right */
   font-size: 0.75em;   /* ZOOM: how big the text is */
   line-height: 1.3;
   max-height: 28em;    /* ROWS: how many rows show before scrolling (em, so it tracks the zoom) */
@@ -154,16 +177,26 @@ Similarly to image information ranging from 0 to 255, ASCII characters range fro
 }
 .reveal .ascii-scroll .ascii-row {
   display: flex;
+  flex-wrap: nowrap;   /* one row of 4 columns; override the HTML wrap above */
   gap: 2em;
   width: 100%;
+  box-sizing: border-box;
+  padding-right: 1em;  /* breathing room between the last table and the scrollbar */
   align-items: flex-start;
 }
 /* Reveal centres tables with auto side-margins; zero them and let the tables
    grow to fill the full slide width (the descriptions column gets twice the share). */
-.reveal .ascii-scroll table { margin: 0 !important; width: 100%; }
-.reveal .ascii-scroll table:first-child { flex: 2 1 0; }
-.reveal .ascii-scroll table:not(:first-child) { flex: 1 1 0; }
-.reveal .ascii-scroll td, .reveal .ascii-scroll th { padding: 0.15em 0.6em; }
+.reveal .ascii-scroll table { margin: 0 !important; width: 100%; font-size: inherit; line-height: inherit; }
+.reveal .ascii-scroll table:first-child { flex: 2 1 0; }   /* descriptions column, widest */
+.reveal .ascii-scroll table:nth-child(2) { flex: 1 1 0; }
+/* Right two columns a bit narrower. */
+.reveal .ascii-scroll table:nth-child(3),
+.reveal .ascii-scroll table:nth-child(4) { flex: 0.8 1 0; }
+.reveal .ascii-scroll td, .reveal .ascii-scroll th { padding: 0.15em 0.6em; white-space: normal; }
+/* Zebra-stripe rows for readability (scoped to these 4 tables only, not the
+   whole deck). Stronger alpha than the HTML rule because the serif theme's
+   background is cream, where a faint tint barely shows. */
+.reveal .ascii-scroll tbody tr:nth-child(odd) { background: rgba(0, 0, 0, 0.06); }
 /* Keep the Dec/Char header visible while scrolling. */
 .reveal .ascii-scroll thead th {
   position: sticky;
@@ -177,7 +210,7 @@ Similarly to image information ranging from 0 to 255, ASCII characters range fro
 ::: {.ascii-scroll}
 ::: {.ascii-row}
 
-| Dec | Char | Escape |
+| Dec | Char | Esc |
 |----:|:-----|:-------|
 |   0 | \[Null\] | `\0` |
 |   1 | \[Start of Heading\] | |
@@ -315,9 +348,13 @@ Similarly to image information ranging from 0 to 255, ASCII characters range fro
 | 124 | \| |
 | 125 | } |
 | 126 | \~ |
-| 127 | \[Delete\] |
+| 127 | \[Del\] |
 
 :::
+:::
+
+::: {.fragment}
+[“I knew she’d have an ASCII table in there somewhere. All computer geeks do.” (The Martian)]{style="font-size: 0.8em;"}
 :::
 
 ## Random strings
@@ -453,7 +490,7 @@ graph TD;
 :::
 :::
 
-## Non-natural language processing IV
+## Non-natural language processing IV {.smaller}
 
 The abstract syntax tree is then compiled into bytecode.
 
