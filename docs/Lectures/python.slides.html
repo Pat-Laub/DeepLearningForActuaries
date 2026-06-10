@@ -99,7 +99,7 @@
     code span.vs { color: #4070a0; } /* VerbatimString */
     code span.wa { color: #4090c0; font-weight: bold; font-style: italic; } /* Warning */
   </style>
-  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-476f8152091a473501321f93897261ec.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-6e77ae82c4f49c3f9fa938ba232d062c.css">
   <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
   <script>document.addEventListener("DOMContentLoaded", function () {
  var mathElements = document.getElementsByClassName("math");
@@ -266,10 +266,10 @@ Patrick Laub
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -414,10 +414,10 @@ Namespaces are one honking great idea -- let's do more of those!</code></pre>
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -708,10 +708,10 @@ Hello Patrick Laub</code></pre>
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -1058,10 +1058,10 @@ Rainy</code></pre>
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -1388,10 +1388,10 @@ After i=4 count=10</code></pre>
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -1672,7 +1672,7 @@ After i=4 count=10</code></pre>
 </section></section>
 <section>
 <section id="import-syntax" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
-<h1>Import syntax</h1>
+<h1>Import Syntax</h1>
 <div class="agenda-heading">
 <p>Lecture Outline</p>
 </div>
@@ -1694,10 +1694,10 @@ After i=4 count=10</code></pre>
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-inactive agenda-post-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -1912,7 +1912,7 @@ After i=4 count=10</code></pre>
 </section></section>
 <section>
 <section id="lambda-functions" class="title-slide slide level1 agenda-slide center" data-visibility="uncounted">
-<h1>Lambda functions</h1>
+<h1>Lambda Functions</h1>
 <div class="agenda-heading">
 <p>Lecture Outline</p>
 </div>
@@ -1934,10 +1934,10 @@ After i=4 count=10</code></pre>
 <p>Python Functions</p>
 </div></li>
 <li><div class="agenda-inactive agenda-pre-active">
-<p>Import syntax</p>
+<p>Import Syntax</p>
 </div></li>
 <li><div class="agenda-active">
-<p>Lambda functions</p>
+<p>Lambda Functions</p>
 </div></li>
 </ul>
 </div>
@@ -2621,6 +2621,166 @@ torch     : 2.11.0
         } else {
           document.addEventListener('DOMContentLoaded', patchExisting);
         }
+      }
+    })();
+    </script>
+    <script>
+    // Arrow-key panning of the reveal.js zoom plugin.
+    //
+    // The zoom plugin (Alt/Option-click to magnify) is all-or-nothing: land on
+    // slightly the wrong spot and you have to zoom out and try again. This lets you
+    // nudge the magnified view with the arrow keys once zoomed in, so a near-miss
+    // is a quick correction instead of a retry. Hold Shift for larger steps.
+    //
+    // We deliberately do NOT add click-and-drag panning: dragging is how the
+    // chalkboard/pen tool draws, so the two would fight. Arrow keys stay clear of it.
+    //
+    // Implementation: the plugin magnifies by setting a CSS transform of the form
+    //   translate(tx, ty) scale(s)
+    // on document.body (and toggles the `zoomed` class on <html>). We read that
+    // transform's *target* from the inline style — not getComputedStyle, which would
+    // return a mid-animation value while the transition is running — then shift the
+    // translation and write it back. Nudges use a snappier transition than zoom
+    // in/out so repeated presses feel responsive.
+    (function () {
+      var DEFAULT_TRANSITION = 'transform 0.8s ease'; // matches the zoom plugin
+      var NUDGE_TRANSITION = 'transform 0.12s ease';
+      var STEP = 0.06;       // fraction of the viewport panned per key press
+      var BIG_STEP = 0.18;   // ... while holding Shift
+
+      function isZoomed() {
+        return document.documentElement.classList.contains('zoomed');
+      }
+
+      // The modifier that triggers the zoom plugin (ctrl on Linux, otherwise alt),
+      // honouring an explicit `zoomKey` config if one is set.
+      function zoomModifierProp() {
+        var key = /Linux/.test(window.navigator.platform) ? 'ctrl' : 'alt';
+        if (window.Reveal && Reveal.getConfig && Reveal.getConfig().zoomKey) {
+          key = Reveal.getConfig().zoomKey;
+        }
+        return key + 'Key';
+      }
+
+      function currentTransform() {
+        // Prefer the inline style: it holds the final target the plugin set, even
+        // while the transition is still animating towards it.
+        var t = document.body.style.transform || getComputedStyle(document.body).transform;
+        if (!t || t === 'none') return null;
+        try { return new DOMMatrix(t); } catch (e) { return null; }
+      }
+
+      function nudge(dx, dy) {
+        var m = currentTransform();
+        if (!m) return;
+        document.body.style.transition = NUDGE_TRANSITION;
+        document.body.style.transform =
+          'translate(' + (m.e + dx) + 'px, ' + (m.f + dy) + 'px) scale(' + m.a + ')';
+      }
+
+      // Capture phase on window so we intercept the arrows before reveal.js uses
+      // them for slide navigation — but only while zoomed in.
+      window.addEventListener('keydown', function (e) {
+        if (!isZoomed()) return;            // un-zoomed: leave navigation untouched
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+        if (e.key === 'Escape') {
+          // Let the plugin's own zoom-out animate at the normal speed rather than
+          // the snappy nudge speed we may have just set.
+          document.body.style.transition = DEFAULT_TRANSITION;
+          return;
+        }
+
+        var step = e.shiftKey ? BIG_STEP : STEP;
+        var dx = window.innerWidth * step;
+        var dy = window.innerHeight * step;
+        var handled = true;
+        // Arrow = the direction the view pans towards (content slides the other way).
+        switch (e.key) {
+          case 'ArrowLeft':  nudge( dx,   0); break;
+          case 'ArrowRight': nudge(-dx,   0); break;
+          case 'ArrowUp':    nudge(  0,  dy); break;
+          case 'ArrowDown':  nudge(  0, -dy); break;
+          default: handled = false;
+        }
+        if (handled) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      }, true);
+
+      // An Alt/Option-click toggles zoom (in or out); make sure it animates at the
+      // normal speed regardless of any nudge transition left behind.
+      window.addEventListener('mousedown', function (e) {
+        if (e[zoomModifierProp()]) {
+          document.body.style.transition = DEFAULT_TRANSITION;
+        }
+      }, true);
+    })();
+    </script>
+    <script>
+    // Immediate URL-hash sync for reveal.js (defeats its replaceState throttle).
+    //
+    // With `history: false` (our setting) reveal.js keeps the address-bar `#` in
+    // step with the current slide via history.replaceState — but it throttles that
+    // call to at most once per second (its MAX_REPLACE_STATE_FREQUENCY). When you
+    // cross two slide boundaries within a second the second write is *deferred* by
+    // up to a second, so the visible `#` lags a slide behind what's on screen. This
+    // is easy to trigger around slides with fragments, where you click through the
+    // build quickly: arrive at the slide, the hash update gets queued, and a refresh
+    // before it fires jumps you back to the previous (stale) slide.
+    //
+    // Fix: on every slide change write the correct hash ourselves, immediately and
+    // un-throttled. We stay in replaceState mode (history:false — no extra
+    // Back-button entries per slide); reveal's own deferred write lands on the same
+    // value a moment later, so the two never disagree. slideHash() mirrors reveal's
+    // internal getHash()/writeURL() so the string we write is byte-for-byte what it
+    // would have written.
+    (function () {
+      function slideHash() {
+        var slide = Reveal.getCurrentSlide();
+        var id = slide ? slide.getAttribute('id') : null;
+        if (id) id = encodeURIComponent(id);
+        var idx = Reveal.getIndices();
+        var cfg = Reveal.getConfig();
+        var f = cfg.fragmentInURL ? idx.f : undefined; // fragments excluded unless enabled
+        var hash = '/';
+        if (typeof id === 'string' && id.length) {
+          hash = '/' + id;
+          if (f >= 0) hash += '/' + f;
+        } else {
+          var base = cfg.hashOneBasedIndex ? 1 : 0;
+          if (idx.h > 0 || idx.v > 0 || f >= 0) hash += idx.h + base;
+          if (idx.v > 0 || f >= 0) hash += '/' + (idx.v + base);
+          if (f >= 0) hash += '/' + f;
+        }
+        return hash;
+      }
+
+      function syncHash() {
+        if (!window.Reveal || !Reveal.getCurrentSlide) return;
+        if (Reveal.getConfig().history) return; // history:true already writes immediately
+        var hash = slideHash();
+        // Mirror reveal: a root hash drops the `#` entirely, keeping path + query.
+        var url = hash === '/' ? location.pathname + location.search : '#' + hash;
+        history.replaceState(null, null, url);
+      }
+
+      var attached = false;
+      function attach() {
+        if (attached || !window.Reveal || !Reveal.on) return false;
+        attached = true;
+        // Only subsequent navigations are affected: reveal's *first* URL write at
+        // init isn't throttled, so the load-time hash (incl. a deep link) is already
+        // correct — we deliberately don't touch it here.
+        Reveal.on('slidechanged', syncHash);
+        return true;
+      }
+
+      // Reveal may not be initialised yet when this after-body script runs; wait for it.
+      if (!attach()) {
+        var iv = setInterval(function () { if (attach()) clearInterval(iv); }, 50);
+        setTimeout(function () { clearInterval(iv); }, 10000);
       }
     })();
     </script>
