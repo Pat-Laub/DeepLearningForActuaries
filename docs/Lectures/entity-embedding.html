@@ -59,7 +59,27 @@ div.sourceCode
 @media screen {
 pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
-</style>
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
 
 
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="../site_libs/quarto-nav/quarto-nav.js"></script>
@@ -617,13 +637,20 @@ window.Quarto = {
   <ul>
   <li><a href="#entity-embedding" id="toc-entity-embedding" class="nav-link active" data-scroll-target="#entity-embedding">Entity Embedding</a>
   <ul class="collapse">
+  <li><a href="#each-category-used-to-be-a-column" id="toc-each-category-used-to-be-a-column" class="nav-link" data-scroll-target="#each-category-used-to-be-a-column">Each category used to be a column</a></li>
+  <li><a href="#entity-embeddings-short-dense-learned" id="toc-entity-embeddings-short-dense-learned" class="nav-link" data-scroll-target="#entity-embeddings-short-dense-learned">Entity embeddings: short, dense &amp; learned</a></li>
+  <li><a href="#its-the-same-idea-as-word-embeddings" id="toc-its-the-same-idea-as-word-embeddings" class="nav-link" data-scroll-target="#its-the-same-idea-as-word-embeddings">It’s the same idea as word embeddings</a></li>
+  </ul></li>
+  <li><a href="#the-french-motor-dataset" id="toc-the-french-motor-dataset" class="nav-link" data-scroll-target="#the-french-motor-dataset">The French Motor Dataset</a>
+  <ul class="collapse">
+  <li><a href="#imports-needed-for-these-demos" id="toc-imports-needed-for-these-demos" class="nav-link" data-scroll-target="#imports-needed-for-these-demos">Imports needed for these demos</a></li>
   <li><a href="#revisit-the-french-motor-dataset" id="toc-revisit-the-french-motor-dataset" class="nav-link" data-scroll-target="#revisit-the-french-motor-dataset">Revisit the French motor dataset</a></li>
   <li><a href="#data-dictionary" id="toc-data-dictionary" class="nav-link" data-scroll-target="#data-dictionary">Data dictionary</a></li>
   <li><a href="#the-model" id="toc-the-model" class="nav-link" data-scroll-target="#the-model">The model</a></li>
   <li><a href="#what-values-do-we-see-in-the-data" id="toc-what-values-do-we-see-in-the-data" class="nav-link" data-scroll-target="#what-values-do-we-see-in-the-data">What values do we see in the data?</a></li>
   <li><a href="#how-we-preprocessed-last-time" id="toc-how-we-preprocessed-last-time" class="nav-link" data-scroll-target="#how-we-preprocessed-last-time">How we preprocessed last time</a></li>
   </ul></li>
-  <li><a href="#categorical-variables-entity-embeddings" id="toc-categorical-variables-entity-embeddings" class="nav-link" data-scroll-target="#categorical-variables-entity-embeddings">Categorical Variables &amp; Entity Embeddings</a>
+  <li><a href="#from-one-hot-encoding-to-embeddings" id="toc-from-one-hot-encoding-to-embeddings" class="nav-link" data-scroll-target="#from-one-hot-encoding-to-embeddings">From One-Hot Encoding to Embeddings</a>
   <ul class="collapse">
   <li><a href="#region-column" id="toc-region-column" class="nav-link" data-scroll-target="#region-column">Region column</a></li>
   <li><a href="#one-hot-encoding" id="toc-one-hot-encoding" class="nav-link" data-scroll-target="#one-hot-encoding">One-hot encoding</a></li>
@@ -634,8 +661,9 @@ window.Quarto = {
   <li><a href="#turn-the-region-into-an-index" id="toc-turn-the-region-into-an-index" class="nav-link" data-scroll-target="#turn-the-region-into-an-index">Turn the region into an index</a></li>
   <li><a href="#use-an-embedding-layer" id="toc-use-an-embedding-layer" class="nav-link" data-scroll-target="#use-an-embedding-layer">Use an Embedding layer</a></li>
   <li><a href="#keras-embedding-layer" id="toc-keras-embedding-layer" class="nav-link" data-scroll-target="#keras-embedding-layer">Keras’ Embedding Layer</a></li>
+  <li><a href="#the-embedding-dimension" id="toc-the-embedding-dimension" class="nav-link" data-scroll-target="#the-embedding-dimension">The embedding dimension</a></li>
   <li><a href="#the-learned-embeddings" id="toc-the-learned-embeddings" class="nav-link" data-scroll-target="#the-learned-embeddings">The learned embeddings</a></li>
-  <li><a href="#entity-embeddings" id="toc-entity-embeddings" class="nav-link" data-scroll-target="#entity-embeddings">Entity embeddings</a></li>
+  <li><a href="#embeddings-improve-during-training" id="toc-embeddings-improve-during-training" class="nav-link" data-scroll-target="#embeddings-improve-during-training">Embeddings improve during training</a></li>
   <li><a href="#embeddings-other-inputs" id="toc-embeddings-other-inputs" class="nav-link" data-scroll-target="#embeddings-other-inputs">Embeddings &amp; other inputs</a></li>
   </ul></li>
   <li><a href="#keras-functional-api" id="toc-keras-functional-api" class="nav-link" data-scroll-target="#keras-functional-api">Keras’ Functional API</a>
@@ -660,8 +688,10 @@ window.Quarto = {
   <li><a href="#just-take-continuous-variables" id="toc-just-take-continuous-variables" class="nav-link" data-scroll-target="#just-take-continuous-variables">Just take continuous variables</a></li>
   <li><a href="#make-fit-the-model" id="toc-make-fit-the-model" class="nav-link" data-scroll-target="#make-fit-the-model">Make &amp; fit the model</a></li>
   <li><a href="#plot-the-model" id="toc-plot-the-model" class="nav-link" data-scroll-target="#plot-the-model">Plot the model</a></li>
+  <li><a href="#further-reading" id="toc-further-reading" class="nav-link" data-scroll-target="#further-reading">Further reading</a></li>
   
   
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
   </ul></li>
   </ul>
 <div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="entity-embedding.slides.html"><i class="bi bi-file-slides"></i>Slides (html)</a></li><li><a href="entity-embedding.pdf"><i class="bi bi-file-pdf"></i>Slides (pdf)</a></li></ul></div></nav>
@@ -696,45 +726,104 @@ window.Quarto = {
 </header>
 
 
-<div class="cell">
-<details class="code-fold">
-<summary>Show the package imports</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, StandardScaler, OrdinalEncoder</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.impute <span class="im">import</span> SimpleImputer</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-</div>
 <section id="entity-embedding" class="level2" data-visibility="uncounted">
 <h2 data-visibility="uncounted" class="anchored" data-anchor-id="entity-embedding">Entity Embedding</h2>
 <p>Entity embedding is a new way of handling categorical variables.</p>
+<section id="each-category-used-to-be-a-column" class="level3">
+<h3 class="anchored" data-anchor-id="each-category-used-to-be-a-column">Each category used to be a column</h3>
+<p>When we preprocessed categorical variables, <em>one-hot encoding</em> gave a <em>column for every category</em>, so you could always read off what each number meant:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">One-hot vector</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><code>R11</code></td>
+<td style="text-align: left;"><span class="math inline">[\,1,\, 0,\, 0,\, \ldots,\, 0\,]</span></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><code>R24</code></td>
+<td style="text-align: left;"><span class="math inline">[\,0,\, 1,\, 0,\, \ldots,\, 0\,]</span></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><code>R93</code></td>
+<td style="text-align: left;"><span class="math inline">[\,0,\, 0,\, \ldots,\, 1,\, 0\,]</span></td>
+</tr>
+</tbody>
+</table>
+<p>Each column <em>means one specific category</em>, but the vector is <em>sparse</em> (mostly zeros) and <em>long</em> (one entry per category), and every category sits the <em>same distance</em> from every other.</p>
+<p>With 22 French regions that is already a 22-column block; for a variable like postcode or occupation it could be thousands of columns. And because the one-hot vectors are all orthogonal, the encoding treats <code>R11</code> as exactly as different from its neighbour <code>R24</code> as it is from a region on the opposite side of the country — it knows nothing about which regions are alike.</p>
+</section>
+<section id="entity-embeddings-short-dense-learned" class="level3">
+<h3 class="anchored" data-anchor-id="entity-embeddings-short-dense-learned">Entity embeddings: short, dense &amp; learned</h3>
+<p>An <em>entity embedding</em> <span class="citation" data-cites="guo2016entity">(<a href="#ref-guo2016entity" role="doc-biblioref">Guo &amp; Berkhahn, 2016</a>)</span> replaces that sparse column-per-category block with a <em>short, dense vector</em> that the network <em>learns during training</em>:</p>
+<p><span class="math display">
+\text{R11} \;\longrightarrow\; [\,0.07,\; -0.42\,], \qquad
+\text{R24} \;\longrightarrow\; [\,0.11,\; -0.39\,]
+</span></p>
+<ul>
+<li>the vector is <em>short</em> — e.g.&nbsp;2 numbers instead of 22 columns;</li>
+<li>the dimensions are <em>learned</em>, not categories — there is no “<code>R11</code> column”;</li>
+<li>categories with a <em>similar effect on the target</em> tend to cluster together.</li>
+</ul>
+<p>This is particularly useful when the categorical variable can take on a large number of different levels (it has high cardinality). Though, in that situation, <em>rare</em> levels are fit from very little data, so they may not be placed optimally.</p>
+<p>Just like word embeddings, the meaning is not in any single axis — you cannot say what dimension 1 “means”. What <em>is</em> meaningful is the geometry: regions that behave similarly for the prediction task drift close together during training. The encoding goes from sparse-and-interpretable to dense-and-learned, exactly the shift we saw moving from bag-of-words to word embeddings.</p>
+<div class="notes">
+<p>The shift to land: one-hot is a fixed, hand-specified, orthogonal encoding; an entity embedding is a <em>learned</em> lookup table that places each category in a continuous space, so the model can express that some categories are alike.</p>
+</div>
+</section>
+<section id="its-the-same-idea-as-word-embeddings" class="level3">
+<h3 class="anchored" data-anchor-id="its-the-same-idea-as-word-embeddings">It’s the same idea as word embeddings</h3>
+<p>You have already met this idea in the previous lecture, just under a different name.</p>
+<ul>
+<li>A <em>word embedding</em> is just an entity embedding where the “entity” is a <em>word</em>.</li>
+<li><em>Entity embedding</em> applies the same trick to <em>any</em> categorical variable: region, vehicle brand, occupation, postcode, …</li>
+<li>Typically word embeddings are <em>pre-trained</em> on huge text corpora — i.e.&nbsp;it is a <em>transfer learning</em> technique — though here we have labels so learn the embeddings as part of the supervised task.</li>
+</ul>
+<p>They are both, in essence, a <em>lookup table of learned vectors</em>.</p>
+</section>
+</section>
+<section id="the-french-motor-dataset" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="the-french-motor-dataset">The French Motor Dataset</h2>
+<section id="imports-needed-for-these-demos" class="level3">
+<h3 class="anchored" data-anchor-id="imports-needed-for-these-demos">Imports needed for these demos</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential, Model</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense, Input, Embedding, Reshape, Concatenate</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.utils <span class="im">import</span> plot_model</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_openml</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, OrdinalEncoder, StandardScaler</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
 <section id="revisit-the-french-motor-dataset" class="level3">
 <h3 class="anchored" data-anchor-id="revisit-the-french-motor-dataset">Revisit the French motor dataset</h3>
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_openml</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">"data/freq_data.csv"</span>).exists():</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> fetch_openml(data_id<span class="op">=</span><span class="dv">41214</span>, as_frame<span class="op">=</span><span class="va">True</span>).frame</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    freq.to_csv(<span class="st">"data/freq_data.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> pd.read_csv(<span class="st">"data/freq_data.csv"</span>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>freq</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">"data/freq_data.csv"</span>).exists():</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> fetch_openml(data_id<span class="op">=</span><span class="dv">41214</span>, as_frame<span class="op">=</span><span class="va">True</span>).frame</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    freq.to_csv(<span class="st">"data/freq_data.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span>:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    freq <span class="op">=</span> pd.read_csv(<span class="st">"data/freq_data.csv"</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>freq</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-display">
 <div>
@@ -923,6 +1012,7 @@ window.Quarto = {
 </tr>
 </tbody>
 </table>
+<p><em>* The three variables we single out later: <code>Region</code> &amp; <code>VehBrand</code> get embeddings, and <code>Exposure</code> becomes an offset.</em></p>
 <div class="footer">
 <p>Source: Nell et al.&nbsp;(2020), <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3164764">Case Study: French Motor Third-Party Liability Claims</a>, SSRN.</p>
 </div>
@@ -973,7 +1063,7 @@ Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\mathbf{x}_i)).
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Region"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="quarto-layout-panel" data-layout-ncol="2" data-layout-nrow="2">
 <div class="quarto-layout-row">
-<div id="7ac2b249" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="b3e41c42" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="cell-output cell-output-display">
 <pre><code>Area
 C    5514
@@ -984,7 +1074,7 @@ F     444
 Name: count, Length: 6, dtype: int64</code></pre>
 </div>
 </div>
-<div id="b4359843" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="0be35ba6" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="cell-output cell-output-display">
 <pre><code>VehBrand
 B1     4998
@@ -997,7 +1087,7 @@ Name: count, Length: 11, dtype: int64</code></pre>
 </div>
 </div>
 <div class="quarto-layout-row">
-<div id="38cff521" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="637e6fcc" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="cell-output cell-output-display">
 <pre><code>VehGas
 Regular    10658
@@ -1005,7 +1095,7 @@ Diesel      8092
 Name: count, dtype: int64</code></pre>
 </div>
 </div>
-<div id="caf62d89" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="8c6052a0" class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="cell-output cell-output-display">
 <pre><code>Region
 R24    6493
@@ -1023,15 +1113,13 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <h3 class="anchored" data-anchor-id="how-we-preprocessed-last-time">How we preprocessed last time</h3>
 <p>As a reminder, last time we preprocessed the categorical data through one-hot encoding/dummy encoding.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="columns">
 <div class="column">
@@ -1221,8 +1309,8 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </section>
 </section>
-<section id="categorical-variables-entity-embeddings" class="level2" data-visibility="uncounted">
-<h2 data-visibility="uncounted" class="anchored" data-anchor-id="categorical-variables-entity-embeddings">Categorical Variables &amp; Entity Embeddings</h2>
+<section id="from-one-hot-encoding-to-embeddings" class="level2" data-visibility="uncounted">
+<h2 data-visibility="uncounted" class="anchored" data-anchor-id="from-one-hot-encoding-to-embeddings">From One-Hot Encoding to Embeddings</h2>
 <section id="region-column" class="level3">
 <h3 class="anchored" data-anchor-id="region-column">Region column</h3>
 <div class="quarto-figure quarto-figure-center">
@@ -1411,39 +1499,36 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <h3 class="anchored" data-anchor-id="train-on-one-hot-inputs">Train on one-hot inputs</h3>
 <p>For the sake of explaining entity embeddings, we will train a neural network on just one categorical variable which is one-hot encoded.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-5"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-5" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-5-1" class="code-annotation-target"><a href="#annotated-cell-5-1" aria-hidden="true" tabindex="-1"></a>num_regions <span class="op">=</span> <span class="bu">len</span>(oh.categories_[<span class="dv">0</span>])</span>
-<span id="annotated-cell-5-2"><a href="#annotated-cell-5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-5-3"><a href="#annotated-cell-5-3" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-5" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-5-4" class="code-annotation-target"><a href="#annotated-cell-5-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
-<span id="annotated-cell-5-5"><a href="#annotated-cell-5-5" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">2</span>, input_dim<span class="op">=</span>num_regions),</span>
-<span id="annotated-cell-5-6"><a href="#annotated-cell-5-6" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
-<span id="annotated-cell-5-7"><a href="#annotated-cell-5-7" aria-hidden="true" tabindex="-1"></a>])</span>
-<span id="annotated-cell-5-8"><a href="#annotated-cell-5-8" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-5" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-5-9" class="code-annotation-target"><a href="#annotated-cell-5-9" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="annotated-cell-5-10"><a href="#annotated-cell-5-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-5-11"><a href="#annotated-cell-5-11" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
-<span id="annotated-cell-5-12"><a href="#annotated-cell-5-12" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(X_train_oh, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="annotated-cell-5-13"><a href="#annotated-cell-5-13" aria-hidden="true" tabindex="-1"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])                       </span>
-<span id="annotated-cell-5-14"><a href="#annotated-cell-5-14" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-6"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-6-1" class="code-annotation-target"><a href="#annotated-cell-6-1" aria-hidden="true" tabindex="-1"></a>num_regions <span class="op">=</span> <span class="bu">len</span>(oh.categories_[<span class="dv">0</span>])</span>
+<span id="annotated-cell-6-2"><a href="#annotated-cell-6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-6-3"><a href="#annotated-cell-6-3" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-6-4" class="code-annotation-target"><a href="#annotated-cell-6-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
+<span id="annotated-cell-6-5"><a href="#annotated-cell-6-5" aria-hidden="true" tabindex="-1"></a>  Input(shape<span class="op">=</span>(num_regions,)),</span>
+<span id="annotated-cell-6-6"><a href="#annotated-cell-6-6" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">2</span>),</span>
+<span id="annotated-cell-6-7"><a href="#annotated-cell-6-7" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="annotated-cell-6-8"><a href="#annotated-cell-6-8" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="annotated-cell-6-9"><a href="#annotated-cell-6-9" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-6-10" class="code-annotation-target"><a href="#annotated-cell-6-10" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="annotated-cell-6-11"><a href="#annotated-cell-6-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-6-12"><a href="#annotated-cell-6-12" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
+<span id="annotated-cell-6-13"><a href="#annotated-cell-6-13" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(X_train_oh, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>, validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
+<span id="annotated-cell-6-14"><a href="#annotated-cell-6-14" aria-hidden="true" tabindex="-1"></a>                           </span>
+<span id="annotated-cell-6-15"><a href="#annotated-cell-6-15" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-5" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-6" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-5" data-code-lines="1" data-code-annotation="1">Computes the number of unique categories in the encoded column and store it in <code>num_regions</code></span>
+<span data-code-cell="annotated-cell-6" data-code-lines="1" data-code-annotation="1">Computes the number of unique categories in the encoded column and store it in <code>num_regions</code></span>
 </dd>
-<dt data-target-cell="annotated-cell-5" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-6" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-5" data-code-lines="4" data-code-annotation="2">Constructs the neural network. This time, it is a neural network with 1 hidden layer and 1 output layer. <code>Dense(2, input_dim=num_regions)</code> takes in an input matrix with columns = <code>num_regions</code> and transforms it down to an output with 2 neurons</span>
+<span data-code-cell="annotated-cell-6" data-code-lines="4" data-code-annotation="2">Constructs the neural network. This time, it is a neural network with 1 hidden layer and 1 output layer. The <code>Input(shape=(num_regions,))</code> tells the model to expect an input matrix with columns = <code>num_regions</code>, and <code>Dense(2)</code> transforms it down to an output with 2 neurons</span>
 </dd>
-<dt data-target-cell="annotated-cell-5" data-target-annotation="3">3</dt>
+<dt data-target-cell="annotated-cell-6" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-5" data-code-lines="9" data-code-annotation="3">Steps 3-6 are similar to what we saw during training with ordinal encoded variables</span>
+<span data-code-cell="annotated-cell-6" data-code-lines="10" data-code-annotation="3">Steps 3-6 are similar to what we saw during training with ordinal encoded variables</span>
 </dd>
 </dl>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>/Users/z3535837/Library/CloudStorage/Dropbox/Lecturing/ACTL3143/DeepLearningForActuaries/.venv/lib/python3.14/site-packages/keras/src/layers/core/dense.py:107: UserWarning: Do not pass an `input_shape`/`input_dim` argument to a layer. When using Sequential models, prefer using an `Input(shape)` object as the first layer in the model instead.
-  super().__init__(activity_regularizer=activity_regularizer, **kwargs)</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Epoch 6: early stopping</code></pre>
@@ -1459,8 +1544,8 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.eye(num_regions)</span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(X, columns<span class="op">=</span>oh.categories_[<span class="dv">0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> np.eye(num_regions)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(X, columns<span class="op">=</span>oh.categories_[<span class="dv">0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 
@@ -1622,7 +1707,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>model.layers[<span class="dv">0</span>](X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>model.layers[<span class="dv">0</span>](X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>tensor([[-0.0646, -0.2346],
         [ 0.1463, -0.0323],
@@ -1654,24 +1739,24 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </section>
 <section id="the-first-layer" class="level3">
 <h3 class="anchored" data-anchor-id="the-first-layer">The first layer</h3>
-<p>We can also extract the layer, get its wieghts and compute manually.</p>
+<p>We can also extract the layer, get its weights and compute manually.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-6"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-6-1" class="code-annotation-target"><a href="#annotated-cell-6-1" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> model.layers[<span class="dv">0</span>]</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-6-2" class="code-annotation-target"><a href="#annotated-cell-6-2" aria-hidden="true" tabindex="-1"></a>W, b <span class="op">=</span> layer.get_weights()</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-6" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-6-3" class="code-annotation-target"><a href="#annotated-cell-6-3" aria-hidden="true" tabindex="-1"></a>X.shape, W.shape, b.shape</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-7"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-7-1" class="code-annotation-target"><a href="#annotated-cell-7-1" aria-hidden="true" tabindex="-1"></a>layer <span class="op">=</span> model.layers[<span class="dv">0</span>]</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-7-2" class="code-annotation-target"><a href="#annotated-cell-7-2" aria-hidden="true" tabindex="-1"></a>W, b <span class="op">=</span> layer.get_weights()</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-7" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-7-3" class="code-annotation-target"><a href="#annotated-cell-7-3" aria-hidden="true" tabindex="-1"></a>X.shape, W.shape, b.shape</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-6" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-6" data-code-lines="1" data-code-annotation="1">Extracts the layer</span>
+<span data-code-cell="annotated-cell-7" data-code-lines="1" data-code-annotation="1">Extracts the layer</span>
 </dd>
-<dt data-target-cell="annotated-cell-6" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-6" data-code-lines="2" data-code-annotation="2">Gets the weights and biases and stores the weights in <em>W</em> and biases in <em>b</em></span>
+<span data-code-cell="annotated-cell-7" data-code-lines="2" data-code-annotation="2">Gets the weights and biases and stores the weights in <em>W</em> and biases in <em>b</em></span>
 </dd>
-<dt data-target-cell="annotated-cell-6" data-target-annotation="3">3</dt>
+<dt data-target-cell="annotated-cell-7" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-6" data-code-lines="3" data-code-annotation="3">Returns the shapes of the matrices</span>
+<span data-code-cell="annotated-cell-7" data-code-lines="3" data-code-annotation="3">Returns the shapes of the matrices</span>
 </dd>
 </dl>
 </div>
@@ -1682,7 +1767,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>X <span class="op">@</span> W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>X <span class="op">@</span> W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[-0.06, -0.23],
        [ 0.15, -0.03],
@@ -1710,7 +1795,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[-0.06, -0.23],
        [ 0.15, -0.03],
@@ -1746,7 +1831,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>display(<span class="bu">list</span>(oh.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>display(<span class="bu">list</span>(oh.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>['R11',
  'R21',
@@ -1774,7 +1859,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[-0.06, -0.23],
        [ 0.15, -0.03],
@@ -1802,18 +1887,19 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div>
 </div>
+<p>Each category maps to one row of <code>W + b</code> — that row <em>is</em> its embedding. No matrix multiply needed.</p>
 <p>This is what <em>entity embedding</em> does.</p>
 </section>
 <section id="turn-the-region-into-an-index" class="level3">
 <h3 class="anchored" data-anchor-id="turn-the-region-into-an-index">Turn the region into an index</h3>
-<p>To use the entity embedding functionality, we need to turn the categories into indices. We can use the oridinal encoder to do so.</p>
+<p>To use the entity embedding functionality, we need to turn the categories into indices. We can use the ordinal encoder to do so.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>oe <span class="op">=</span> OrdinalEncoder()</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>X_train_reg <span class="op">=</span> oe.fit_transform(X_train_raw[[<span class="st">"Region"</span>]])</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>X_test_reg <span class="op">=</span> oe.transform(X_test_raw[[<span class="st">"Region"</span>]])</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, reg <span class="kw">in</span> <span class="bu">enumerate</span>(oe.categories_[<span class="dv">0</span>][:<span class="dv">3</span>]):</span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="ss">f"The Region value </span><span class="sc">{</span>reg<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>oe <span class="op">=</span> OrdinalEncoder()</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>X_train_reg <span class="op">=</span> oe.fit_transform(X_train_raw[[<span class="st">"Region"</span>]])</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>X_test_reg <span class="op">=</span> oe.transform(X_test_raw[[<span class="st">"Region"</span>]])</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i, reg <span class="kw">in</span> <span class="bu">enumerate</span>(oe.categories_[<span class="dv">0</span>][:<span class="dv">3</span>]):</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="bu">print</span>(<span class="ss">f"The Region value </span><span class="sc">{</span>reg<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The Region value R11 gets turned into 0.
 The Region value R21 gets turned into 1.
@@ -1825,22 +1911,22 @@ The Region value R22 gets turned into 2.</code></pre>
 <h3 class="anchored" data-anchor-id="use-an-embedding-layer">Use an Embedding layer</h3>
 <p>Feed this new version of the data into the NN, using an <em>embedding layer</em>.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Embedding</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>num_regions <span class="op">=</span> X_train_raw[<span class="st">"Region"</span>].nunique()</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>),</span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>])</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>num_regions <span class="op">=</span> X_train_raw[<span class="st">"Region"</span>].nunique()</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  Input(shape<span class="op">=</span>(<span class="dv">1</span>,)),</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>),</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(X_train_reg, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(X_train_reg, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Epoch 4: early stopping</code></pre>
 </div>
@@ -1849,11 +1935,12 @@ The Region value R22 gets turned into 2.</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>model.layers</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>model.layers</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>[&lt;Embedding name=embedding, built=True&gt;, &lt;Dense name=dense_2, built=True&gt;]</code></pre>
 </div>
 </div>
+<p>Aside: the output here is shaped <code>(None, 1, 1)</code>, not <code>(None, 1)</code> — a harmless extra axis from the <code>Embedding</code> that we will tidy up later.</p>
 <p>Embedding layer can learn the optimal representation for a category of a categorical variable, during training. In the above example, encoding the variable <em>Region</em> using ordinal encoding and passing it through an embedding layer learns the optimal representation for the region during training. Ordinal encoding followed with an embedding layer is a better alternative to one-hot encoding. It is computationally less expensive (compared to generating large matrices in one-hot encoding) particularly when the number of categories is high.</p>
 </section>
 <section id="keras-embedding-layer" class="level3">
@@ -1861,7 +1948,7 @@ The Region value R22 gets turned into 2.</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[ 0.05, -0.07],
        [-0.02,  0.03],
@@ -1889,7 +1976,7 @@ The Region value R22 gets turned into 2.</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Region"</span>].head(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>X_train_raw[<span class="st">"Region"</span>].head(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>0    R24
 1    R21
@@ -1899,8 +1986,8 @@ Name: Region, dtype: str</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb41"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>X_sample <span class="op">=</span> X_train_reg[:<span class="dv">4</span>].to_numpy()</span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>X_sample</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>X_sample <span class="op">=</span> X_train_reg[:<span class="dv">4</span>].to_numpy()</span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>X_sample</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[ 4.],
        [ 1.],
@@ -1909,8 +1996,8 @@ Name: Region, dtype: str</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb43"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb43-1"><a href="#cb43-1" aria-hidden="true" tabindex="-1"></a>enc_tensor <span class="op">=</span> model.layers[<span class="dv">0</span>](X_sample)</span>
-<span id="cb43-2"><a href="#cb43-2" aria-hidden="true" tabindex="-1"></a>keras.ops.convert_to_numpy(enc_tensor).squeeze()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>enc_tensor <span class="op">=</span> model.layers[<span class="dv">0</span>](X_sample)</span>
+<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>keras.ops.convert_to_numpy(enc_tensor).squeeze()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[ 0.24, -0.22],
        [-0.02,  0.03],
@@ -1920,34 +2007,52 @@ Name: Region, dtype: str</code></pre>
 </div>
 </div>
 </div>
-<p>The regions in get converted from text to index to vector representation in the embedding layer for each observation.</p>
-<p>Entity embedding is especially useful when there is a very large number of categories (such as 1,000 or 10,000) and you want to reduce the number of columns. If your categorical variable has <span class="math inline">n</span> categories, a simple rule of thumb is to use <span class="math inline">n^{1/4}</span> for the dimension of the entity embedding.</p>
-<p>In this case, the dimension chosen was 2. The intuition behind this is that regions can be represented easily over a 2-dimensional plane (by their geographical coordinates).</p>
+</section>
+<section id="the-embedding-dimension" class="level3">
+<h3 class="anchored" data-anchor-id="the-embedding-dimension">The embedding dimension</h3>
+<ul>
+<li>Entity embedding is especially useful when there is a very large number of categories (such as 1,000 or 10,000) and you want to reduce the number of columns.</li>
+<li>The embedding dimension is really a <em>hyperparameter to tune</em> (e.g.&nbsp;by validation loss); there is no settled formula for it.</li>
+<li>One heuristic is to use <span class="math inline">n^{1/4}</span> for a variable with <span class="math inline">n</span> categories <span class="citation" data-cites="tensorflow2017feature">(<a href="#ref-tensorflow2017feature" role="doc-biblioref">The TensorFlow Team, 2017</a>)</span>, but there’s no theoretical justification, and others disagree.</li>
+<li>In this case, a nice side benefit is that 2-dimensional embeddings can be plotted directly.</li>
+</ul>
 </section>
 <section id="the-learned-embeddings" class="level3">
 <h3 class="anchored" data-anchor-id="the-learned-embeddings">The learned embeddings</h3>
 <p>If we only have two-dimensional embeddings we can plot them.</p>
+<div class="columns">
+<div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>points <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span>
-<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a>plt.scatter(points[:,<span class="dv">0</span>], points[:,<span class="dv">1</span>])</span>
-<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_regions):</span>
-<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>  plt.text(points[i,<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.01</span>, points[i,<span class="dv">1</span>] , s<span class="op">=</span>oe.categories_[<span class="dv">0</span>][i])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>points <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">3</span>, <span class="dv">3</span>))</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>plt.scatter(points[:,<span class="dv">0</span>], points[:,<span class="dv">1</span>])</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_regions):</span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>  plt.text(points[i,<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.01</span>, points[i,<span class="dv">1</span>] , s<span class="op">=</span>oe.categories_[<span class="dv">0</span>][i])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="entity-embedding_files/figure-html/cell-30-output-1.png" width="1641" height="702" class="figure-img"></p>
+<p><img src="entity-embedding_files/figure-html/cell-30-output-1.png" width="1112" height="959" class="figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
-<p>While it not always the case, entity embeddings can at times be meaningful instead of just being useful representations. The above figure shows how plotting the learned embeddings help reveal regions which might be similar (e.g.&nbsp;coastal areas, hilly areas etc.).</p>
+</div><div class="column">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/guo-fig3.png" class="img-fluid figure-img"></p>
+<figcaption>Reproduced from the <span class="citation" data-cites="guo2016entity">Guo &amp; Berkhahn (<a href="#ref-guo2016entity" role="doc-biblioref">2016, p. 7</a>)</span>.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>While it is not always the case, entity embeddings can at times be meaningful instead of just being useful representations. The above figure shows how plotting the learned embeddings help reveal regions which might be similar (e.g.&nbsp;coastal areas, hilly areas etc.).</p>
 </section>
-<section id="entity-embeddings" class="level3">
-<h3 class="anchored" data-anchor-id="entity-embeddings">Entity embeddings</h3>
+<section id="embeddings-improve-during-training" class="level3">
+<h3 class="anchored" data-anchor-id="embeddings-improve-during-training">Embeddings improve during training</h3>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/entity-embeddings.png" class="img-fluid figure-img"></p>
-<figcaption>Embeddings will gradually improve during training.</figcaption>
+<figcaption>Embeddings move during training to wherever they need to be to minimise training loss.</figcaption>
 </figure>
 </div>
 <p>Each category is initially assigned a random vector, but they move during training. These movements follow some sort of logic, for example in this graph countries in Europe cluster together and countries in Asia cluster together.</p>
@@ -1957,7 +2062,7 @@ Name: Region, dtype: str</code></pre>
 </section>
 <section id="embeddings-other-inputs" class="level3">
 <h3 class="anchored" data-anchor-id="embeddings-other-inputs">Embeddings &amp; other inputs</h3>
-<p>Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data in to the neural network. Numerical variables are inherently numeric and do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.</p>
+<p>Often times, we deal with both categorical and numerical variables together. The following diagram shows a recommended way of inputting numerical and categorical data into the neural network. Numerical variables are inherently numeric and do not require entity embedding. On the other hand, categorical variables must undergo entity embedding to convert to number format.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="images/nn-with-entity-embedding-diagram.png" class="img-fluid figure-img"></p>
@@ -1976,19 +2081,38 @@ Name: Region, dtype: str</code></pre>
 <p>Sequential models are easy to use and do not require many specifications, however, they cannot model complex neural network architectures. Keras Functional API approach on the other hand allows the users to build complex architectures.</p>
 <section id="converting-sequential-models" class="level3">
 <h3 class="anchored" data-anchor-id="converting-sequential-models">Converting Sequential models</h3>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Model</span>
-<span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Input</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
 <div class="columns">
 <div class="column">
 <div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb45"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb45-1"><a href="#cb45-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
+<span id="cb45-2"><a href="#cb45-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-3"><a href="#cb45-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb45-4"><a href="#cb45-4" aria-hidden="true" tabindex="-1"></a>  Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],)),</span>
+<span id="cb45-5"><a href="#cb45-5" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>),</span>
+<span id="cb45-6"><a href="#cb45-6" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)</span>
+<span id="cb45-7"><a href="#cb45-7" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb45-8"><a href="#cb45-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-9"><a href="#cb45-9" aria-hidden="true" tabindex="-1"></a>model.compile(</span>
+<span id="cb45-10"><a href="#cb45-10" aria-hidden="true" tabindex="-1"></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
+<span id="cb45-11"><a href="#cb45-11" aria-hidden="true" tabindex="-1"></a>  loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb45-12"><a href="#cb45-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb45-13"><a href="#cb45-13" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(</span>
+<span id="cb45-14"><a href="#cb45-14" aria-hidden="true" tabindex="-1"></a>  X_train_oh, y_train,</span>
+<span id="cb45-15"><a href="#cb45-15" aria-hidden="true" tabindex="-1"></a>  epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb45-16"><a href="#cb45-16" aria-hidden="true" tabindex="-1"></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb45-17"><a href="#cb45-17" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<pre><code>0.7695862650871277</code></pre>
+</div>
+</div>
+</div><div class="column">
+<div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
 <span id="cb47-2"><a href="#cb47-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>),</span>
-<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>  Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)</span>
-<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb47-3"><a href="#cb47-3" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],))</span>
+<span id="cb47-4"><a href="#cb47-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inputs)</span>
+<span id="cb47-5"><a href="#cb47-5" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)(x)</span>
+<span id="cb47-6"><a href="#cb47-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(inputs, out)</span>
 <span id="cb47-7"><a href="#cb47-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb47-8"><a href="#cb47-8" aria-hidden="true" tabindex="-1"></a>model.compile(</span>
 <span id="cb47-9"><a href="#cb47-9" aria-hidden="true" tabindex="-1"></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
@@ -2000,34 +2124,11 @@ Name: Region, dtype: str</code></pre>
 <span id="cb47-15"><a href="#cb47-15" aria-hidden="true" tabindex="-1"></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
 <span id="cb47-16"><a href="#cb47-16" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
-<pre><code>0.7695862650871277</code></pre>
-</div>
-</div>
-</div><div class="column">
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">12</span>)</span>
-<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],))</span>
-<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inputs)</span>
-<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)(x)</span>
-<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(inputs, out)</span>
-<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-8"><a href="#cb49-8" aria-hidden="true" tabindex="-1"></a>model.compile(</span>
-<span id="cb49-9"><a href="#cb49-9" aria-hidden="true" tabindex="-1"></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
-<span id="cb49-10"><a href="#cb49-10" aria-hidden="true" tabindex="-1"></a>  loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb49-11"><a href="#cb49-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb49-12"><a href="#cb49-12" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit(</span>
-<span id="cb49-13"><a href="#cb49-13" aria-hidden="true" tabindex="-1"></a>  X_train_oh, y_train,</span>
-<span id="cb49-14"><a href="#cb49-14" aria-hidden="true" tabindex="-1"></a>  epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb49-15"><a href="#cb49-15" aria-hidden="true" tabindex="-1"></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb49-16"><a href="#cb49-16" aria-hidden="true" tabindex="-1"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-<div class="cell-output cell-output-display">
 <pre><code>0.7695212364196777</code></pre>
 </div>
 </div>
 </div>
 </div>
-<p>See <a href="https://pat-laub.github.io/DeepLearningForActuaries/Artificial-Intelligence/python.html#/one-length-tuples">one-length tuples</a>.</p>
 <p>The above code shows how to construct the same neural network using sequential models and Keras functional API. Every sequential model can be converted into the functional style, but not every functional model can be converted to the sequential style.</p>
 <p>In the functional API approach, we must specify the shape of the input layer, and explicitly define the inputs and outputs of a layer before specifying the model. <code>model = Model(inputs, out)</code> specifies the inputs and outputs of the model. This manner of specifying the inputs and outputs of the model allows the user to combine several inputs (inputs which are preprocessed in different ways) to finally build the model. One example would be combining entity embedded categorical variables, and scaled numerical variables.</p>
 </section>
@@ -2044,18 +2145,13 @@ Name: Region, dtype: str</code></pre>
 </div><div class="column" style="width:55%;">
 <p>Add a <em>skip connection</em> from input to output layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="op">\</span></span>
-<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>    <span class="im">import</span> Concatenate</span>
-<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a>inp <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
-<span id="cb51-5"><a href="#cb51-5" aria-hidden="true" tabindex="-1"></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inp)</span>
-<span id="cb51-6"><a href="#cb51-6" aria-hidden="true" tabindex="-1"></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(hidden1)</span>
-<span id="cb51-7"><a href="#cb51-7" aria-hidden="true" tabindex="-1"></a>concat <span class="op">=</span> Concatenate()(</span>
-<span id="cb51-8"><a href="#cb51-8" aria-hidden="true" tabindex="-1"></a>  [inp, hidden2])</span>
-<span id="cb51-9"><a href="#cb51-9" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> Dense(<span class="dv">1</span>)(concat)</span>
-<span id="cb51-10"><a href="#cb51-10" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(</span>
-<span id="cb51-11"><a href="#cb51-11" aria-hidden="true" tabindex="-1"></a>    inputs<span class="op">=</span>[inp],</span>
-<span id="cb51-12"><a href="#cb51-12" aria-hidden="true" tabindex="-1"></a>    outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>inp <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inp)</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(hidden1)</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>concat <span class="op">=</span> Concatenate()(</span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>  [inp, hidden2])</span>
+<span id="cb49-6"><a href="#cb49-6" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> Dense(<span class="dv">1</span>)(concat)</span>
+<span id="cb49-7"><a href="#cb49-7" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[inp], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 </div>
@@ -2068,27 +2164,24 @@ Name: Region, dtype: str</code></pre>
 <h3 class="anchored" data-anchor-id="naming-the-layers">Naming the layers</h3>
 <p>For complex networks, it is often useful to give meaningful names to the layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>input_ <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"input"</span>)</span>
-<span id="cb52-2"><a href="#cb52-2" aria-hidden="true" tabindex="-1"></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(input_)</span>
-<span id="cb52-3"><a href="#cb52-3" aria-hidden="true" tabindex="-1"></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(hidden1)</span>
-<span id="cb52-4"><a href="#cb52-4" aria-hidden="true" tabindex="-1"></a>concat <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([input_, hidden2])</span>
-<span id="cb52-5"><a href="#cb52-5" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> Dense(<span class="dv">1</span>, name<span class="op">=</span><span class="st">"output"</span>)(concat)</span>
-<span id="cb52-6"><a href="#cb52-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[input_], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb50"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb50-1"><a href="#cb50-1" aria-hidden="true" tabindex="-1"></a>input_ <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"input"</span>)</span>
+<span id="cb50-2"><a href="#cb50-2" aria-hidden="true" tabindex="-1"></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(input_)</span>
+<span id="cb50-3"><a href="#cb50-3" aria-hidden="true" tabindex="-1"></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(hidden1)</span>
+<span id="cb50-4"><a href="#cb50-4" aria-hidden="true" tabindex="-1"></a>concat <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([input_, hidden2])</span>
+<span id="cb50-5"><a href="#cb50-5" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> Dense(<span class="dv">1</span>, name<span class="op">=</span><span class="st">"output"</span>)(concat)</span>
+<span id="cb50-6"><a href="#cb50-6" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[input_], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="inspecting-a-complex-model" class="level3">
 <h3 class="anchored" data-anchor-id="inspecting-a-complex-model">Inspecting a complex model</h3>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.utils <span class="im">import</span> plot_model</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
 <div class="columns">
 <div class="column" style="width:30%;">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="entity-embedding_files/figure-html/cell-37-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="entity-embedding_files/figure-html/cell-35-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -2096,26 +2189,27 @@ Name: Region, dtype: str</code></pre>
 </div><div class="column" style="width:70%;">
 <div class="smaller">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a href="#cb55-1" aria-hidden="true" tabindex="-1"></a>model.summary(line_length<span class="op">=</span><span class="dv">75</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a href="#cb52-1" aria-hidden="true" tabindex="-1"></a>model.summary(line_length<span class="op">=</span><span class="dv">60</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "functional_5"</span>
 </pre>
 </div>
 <div class="cell-output cell-output-display">
-<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">┏━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━┓
-┃<span style="font-weight: bold"> Layer (type)        </span>┃<span style="font-weight: bold"> Output Shape      </span>┃<span style="font-weight: bold">   Param # </span>┃<span style="font-weight: bold"> Connected to      </span>┃
-┡━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━┩
-│ input (<span style="color: #0087ff; text-decoration-color: #0087ff">InputLayer</span>)  │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">39</span>)        │         <span style="color: #00af00; text-decoration-color: #00af00">0</span> │ -                 │
-├─────────────────────┼───────────────────┼───────────┼───────────────────┤
-│ hidden1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)     │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">30</span>)        │     <span style="color: #00af00; text-decoration-color: #00af00">1,200</span> │ input[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>]       │
-├─────────────────────┼───────────────────┼───────────┼───────────────────┤
-│ hidden2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)     │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">30</span>)        │       <span style="color: #00af00; text-decoration-color: #00af00">930</span> │ hidden1[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>]     │
-├─────────────────────┼───────────────────┼───────────┼───────────────────┤
-│ combined            │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">69</span>)        │         <span style="color: #00af00; text-decoration-color: #00af00">0</span> │ input[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>],      │
-│ (<span style="color: #0087ff; text-decoration-color: #0087ff">Concatenate</span>)       │                   │           │ hidden2[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>]     │
-├─────────────────────┼───────────────────┼───────────┼───────────────────┤
-│ output (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)      │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)         │        <span style="color: #00af00; text-decoration-color: #00af00">70</span> │ combined[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>]    │
-└─────────────────────┴───────────────────┴───────────┴───────────────────┘
+<pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace">┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃<span style="font-weight: bold"> Layer (type)    </span>┃<span style="font-weight: bold"> Output Shape </span>┃<span style="font-weight: bold"> Param # </span>┃<span style="font-weight: bold"> Connected to  </span>┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│ input           │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">39</span>)   │       <span style="color: #00af00; text-decoration-color: #00af00">0</span> │ -             │
+│ (<span style="color: #0087ff; text-decoration-color: #0087ff">InputLayer</span>)    │              │         │               │
+├─────────────────┼──────────────┼─────────┼───────────────┤
+│ hidden1 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>) │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">30</span>)   │   <span style="color: #00af00; text-decoration-color: #00af00">1,200</span> │ input[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>]   │
+├─────────────────┼──────────────┼─────────┼───────────────┤
+│ hidden2 (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>) │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">30</span>)   │     <span style="color: #00af00; text-decoration-color: #00af00">930</span> │ hidden1[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>] │
+├─────────────────┼──────────────┼─────────┼───────────────┤
+│ combined        │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">69</span>)   │       <span style="color: #00af00; text-decoration-color: #00af00">0</span> │ input[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>],  │
+│ (<span style="color: #0087ff; text-decoration-color: #0087ff">Concatenate</span>)   │              │         │ hidden2[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">0</span>] │
+├─────────────────┼──────────────┼─────────┼───────────────┤
+│ output (<span style="color: #0087ff; text-decoration-color: #0087ff">Dense</span>)  │ (<span style="color: #00d7ff; text-decoration-color: #00d7ff">None</span>, <span style="color: #00af00; text-decoration-color: #00af00">1</span>)    │      <span style="color: #00af00; text-decoration-color: #00af00">70</span> │ combined[<span style="color: #00af00; text-decoration-color: #00af00">0</span>][<span style="color: #00af00; text-decoration-color: #00af00">…</span> │
+└─────────────────┴──────────────┴─────────┴───────────────┘
 </pre>
 </div>
 <div class="cell-output cell-output-display">
@@ -2155,102 +2249,95 @@ Name: Region, dtype: str</code></pre>
 <h3 class="anchored" data-anchor-id="preprocess-all-french-motor-inputs">Preprocess all French motor inputs</h3>
 <p>Transform the categorical variables to integers:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-15"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-15-1" class="code-annotation-target"><a href="#annotated-cell-15-1" aria-hidden="true" tabindex="-1"></a>num_brands, num_regions <span class="op">=</span> X_train_raw[[<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]].nunique()</span>
-<span id="annotated-cell-15-2"><a href="#annotated-cell-15-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-15-3"><a href="#annotated-cell-15-3" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-15-4" class="code-annotation-target"><a href="#annotated-cell-15-4" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-15-5" class="code-annotation-target"><a href="#annotated-cell-15-5" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-15-6" class="code-annotation-target"><a href="#annotated-cell-15-6" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="annotated-cell-15-7"><a href="#annotated-cell-15-7" aria-hidden="true" tabindex="-1"></a>)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-15-8" class="code-annotation-target"><a href="#annotated-cell-15-8" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-15" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-15-9" class="code-annotation-target"><a href="#annotated-cell-15-9" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-13"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-13-1" class="code-annotation-target"><a href="#annotated-cell-13-1" aria-hidden="true" tabindex="-1"></a>num_brands, num_regions <span class="op">=</span> X_train_raw[[<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]].nunique()</span>
+<span id="annotated-cell-13-2"><a href="#annotated-cell-13-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="annotated-cell-13-3"><a href="#annotated-cell-13-3" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-13-4" class="code-annotation-target"><a href="#annotated-cell-13-4" aria-hidden="true" tabindex="-1"></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-13-5" class="code-annotation-target"><a href="#annotated-cell-13-5" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-13-6" class="code-annotation-target"><a href="#annotated-cell-13-6" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="annotated-cell-13-7"><a href="#annotated-cell-13-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-13-8" class="code-annotation-target"><a href="#annotated-cell-13-8" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-13" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-13-9" class="code-annotation-target"><a href="#annotated-cell-13-9" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-15" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-15" data-code-lines="1" data-code-annotation="1">Stores separately the number of unique categorical in the nominal variables, as would require these values later for entity embedding</span>
+<span data-code-cell="annotated-cell-13" data-code-lines="1" data-code-annotation="1">Stores separately the number of unique categories in the nominal variables, as we will need these values later for entity embedding</span>
 </dd>
-<dt data-target-cell="annotated-cell-15" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-15" data-code-lines="4" data-code-annotation="2">Contructs columns transformer by first ordinally encoding <em>all</em> categorical variables (ordinal and nominal). Nominal variables are ordinal encoded here just as an intermediate step before this is the required input format for entity embedding layers</span>
+<span data-code-cell="annotated-cell-13" data-code-lines="4" data-code-annotation="2">Contructs columns transformer by first ordinally encoding <em>all</em> categorical variables (ordinal and nominal). Nominal variables are ordinal encoded here just as an intermediate step before this is the required input format for entity embedding layers</span>
 </dd>
-<dt data-target-cell="annotated-cell-15" data-target-annotation="3">3</dt>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-15" data-code-lines="5" data-code-annotation="3">Applies standard scaling to all other numerical variables</span>
+<span data-code-cell="annotated-cell-13" data-code-lines="5" data-code-annotation="3">Applies standard scaling to all other numerical variables</span>
 </dd>
-<dt data-target-cell="annotated-cell-15" data-target-annotation="4">4</dt>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-cell="annotated-cell-15" data-code-lines="6" data-code-annotation="4">Choose the simpler style of column names for the transformed dataframes</span>
+<span data-code-cell="annotated-cell-13" data-code-lines="6" data-code-annotation="4">Choose the simpler style of column names for the transformed dataframes</span>
 </dd>
-<dt data-target-cell="annotated-cell-15" data-target-annotation="5">5</dt>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="5">5</dt>
 <dd>
-<span data-code-cell="annotated-cell-15" data-code-lines="8" data-code-annotation="5">Fits the column transformer to the train set and transforms it</span>
+<span data-code-cell="annotated-cell-13" data-code-lines="8" data-code-annotation="5">Fits the column transformer to the train set and transforms it</span>
 </dd>
-<dt data-target-cell="annotated-cell-15" data-target-annotation="6">6</dt>
+<dt data-target-cell="annotated-cell-13" data-target-annotation="6">6</dt>
 <dd>
-<span data-code-cell="annotated-cell-15" data-code-lines="9" data-code-annotation="6">Transforms the test set using the column transformer fitted using the train set</span>
+<span data-code-cell="annotated-cell-13" data-code-lines="9" data-code-annotation="6">Transforms the test set using the column transformer fitted using the train set</span>
 </dd>
 </dl>
 </div>
 </div>
 <p>Split the brand and region data apart from the rest:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>X_train_brand <span class="op">=</span> X_train[<span class="st">"VehBrand"</span>]</span>
-<span id="cb56-2"><a href="#cb56-2" aria-hidden="true" tabindex="-1"></a>X_train_region <span class="op">=</span> X_train[<span class="st">"Region"</span>]</span>
-<span id="cb56-3"><a href="#cb56-3" aria-hidden="true" tabindex="-1"></a>X_train_rest <span class="op">=</span> X_train.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb56-4"><a href="#cb56-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb56-5"><a href="#cb56-5" aria-hidden="true" tabindex="-1"></a>X_test_brand <span class="op">=</span> X_test[<span class="st">"VehBrand"</span>]</span>
-<span id="cb56-6"><a href="#cb56-6" aria-hidden="true" tabindex="-1"></a>X_test_region <span class="op">=</span> X_test[<span class="st">"Region"</span>]</span>
-<span id="cb56-7"><a href="#cb56-7" aria-hidden="true" tabindex="-1"></a>X_test_rest <span class="op">=</span> X_test.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>X_train_brand <span class="op">=</span> X_train[<span class="st">"VehBrand"</span>]</span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>X_train_region <span class="op">=</span> X_train[<span class="st">"Region"</span>]</span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>X_train_rest <span class="op">=</span> X_train.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>X_test_brand <span class="op">=</span> X_test[<span class="st">"VehBrand"</span>]</span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a>X_test_region <span class="op">=</span> X_test[<span class="st">"Region"</span>]</span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a>X_test_rest <span class="op">=</span> X_test.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="organise-the-inputs" class="level3">
 <h3 class="anchored" data-anchor-id="organise-the-inputs">Organise the inputs</h3>
 <p>Make a Keras <code>Input</code> for: vehicle brand, region, &amp; others.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>veh_brand <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"veh_brand"</span>)</span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>region <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"region"</span>)</span>
-<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>veh_brand <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"veh_brand"</span>)</span>
+<span id="cb54-2"><a href="#cb54-2" aria-hidden="true" tabindex="-1"></a>region <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"region"</span>)</span>
+<span id="cb54-3"><a href="#cb54-3" aria-hidden="true" tabindex="-1"></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Create embeddings and join them with the other inputs.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-18"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-18-1" class="code-annotation-target"><a href="#annotated-cell-18-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> Reshape</span>
-<span id="annotated-cell-18-2"><a href="#annotated-cell-18-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="annotated-cell-18-3"><a href="#annotated-cell-18-3" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1337</span>)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-18-4" class="code-annotation-target"><a href="#annotated-cell-18-4" aria-hidden="true" tabindex="-1"></a>veh_brand_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_brands, output_dim<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="annotated-cell-18-5"><a href="#annotated-cell-18-5" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"veh_brand_ee"</span>)(veh_brand)                                </span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-18-6" class="code-annotation-target"><a href="#annotated-cell-18-6" aria-hidden="true" tabindex="-1"></a>veh_brand_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(veh_brand_ee)</span>
-<span id="annotated-cell-18-7"><a href="#annotated-cell-18-7" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-18-8" class="code-annotation-target"><a href="#annotated-cell-18-8" aria-hidden="true" tabindex="-1"></a>region_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="annotated-cell-18-9"><a href="#annotated-cell-18-9" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"region_ee"</span>)(region)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-18-10" class="code-annotation-target"><a href="#annotated-cell-18-10" aria-hidden="true" tabindex="-1"></a>region_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(region_ee)</span>
-<span id="annotated-cell-18-11"><a href="#annotated-cell-18-11" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-18" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-18-12" class="code-annotation-target"><a href="#annotated-cell-18-12" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([veh_brand_ee, region_ee, other_inputs])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-16"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-16-1"><a href="#annotated-cell-16-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1337</span>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-16-2" class="code-annotation-target"><a href="#annotated-cell-16-2" aria-hidden="true" tabindex="-1"></a>veh_brand_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_brands, output_dim<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="annotated-cell-16-3"><a href="#annotated-cell-16-3" aria-hidden="true" tabindex="-1"></a>    name<span class="op">=</span><span class="st">"veh_brand_ee"</span>)(veh_brand)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-16-4" class="code-annotation-target"><a href="#annotated-cell-16-4" aria-hidden="true" tabindex="-1"></a>veh_brand_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(veh_brand_ee)</span>
+<span id="annotated-cell-16-5"><a href="#annotated-cell-16-5" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-16-6" class="code-annotation-target"><a href="#annotated-cell-16-6" aria-hidden="true" tabindex="-1"></a>region_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>, name<span class="op">=</span><span class="st">"region_ee"</span>)(region)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-16-7" class="code-annotation-target"><a href="#annotated-cell-16-7" aria-hidden="true" tabindex="-1"></a>region_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(region_ee)</span>
+<span id="annotated-cell-16-8"><a href="#annotated-cell-16-8" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-16" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-16-9" class="code-annotation-target"><a href="#annotated-cell-16-9" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([veh_brand_ee, region_ee, other_inputs])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-18" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-16" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="1" data-code-annotation="1">Imports <code>Reshape</code> class from <code>keras.layers</code> library</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="2" data-code-annotation="1">Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimensions we want the input to be summarised in to)</span>
 </dd>
-<dt data-target-cell="annotated-cell-18" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-16" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="4" data-code-annotation="2">Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension (the number of dimensions we want the input to be summarised in to)</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="4" data-code-annotation="2">Reshapes the output to match the format required at the model building step</span>
 </dd>
-<dt data-target-cell="annotated-cell-18" data-target-annotation="3">3</dt>
+<dt data-target-cell="annotated-cell-16" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="6" data-code-annotation="3">Reshapes the output to match the format required at the model building step</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="6" data-code-annotation="3">Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension</span>
 </dd>
-<dt data-target-cell="annotated-cell-18" data-target-annotation="4">4</dt>
+<dt data-target-cell="annotated-cell-16" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="8" data-code-annotation="4">Constructs the embedding layer by specifying the input dimension (the number of unique categories) and output dimension</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="7" data-code-annotation="4">Reshapes the output to match the format required at the model building step</span>
 </dd>
-<dt data-target-cell="annotated-cell-18" data-target-annotation="5">5</dt>
+<dt data-target-cell="annotated-cell-16" data-target-annotation="5">5</dt>
 <dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="10" data-code-annotation="5">Reshapes the output to match the format required at the model building step</span>
-</dd>
-<dt data-target-cell="annotated-cell-18" data-target-annotation="6">6</dt>
-<dd>
-<span data-code-cell="annotated-cell-18" data-code-lines="12" data-code-annotation="6">Combines the entity embedded matrices and other inputs together</span>
+<span data-code-cell="annotated-cell-16" data-code-lines="9" data-code-annotation="5">Combines the entity embedded matrices and other inputs together</span>
 </dd>
 </dl>
 </div>
@@ -2260,25 +2347,25 @@ Name: Region, dtype: str</code></pre>
 <h3 class="anchored" data-anchor-id="complete-the-model-and-fit-it">Complete the model and fit it</h3>
 <p>Feed the combined embeddings &amp; continuous inputs to some normal dense layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-19"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-19-1"><a href="#annotated-cell-19-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden"</span>)(x)</span>
-<span id="annotated-cell-19-2"><a href="#annotated-cell-19-2" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"out"</span>)(x)</span>
-<span id="annotated-cell-19-3"><a href="#annotated-cell-19-3" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-19-4" class="code-annotation-target"><a href="#annotated-cell-19-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model([veh_brand, region, other_inputs], out)</span>
-<span id="annotated-cell-19-5"><a href="#annotated-cell-19-5" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="annotated-cell-19-6"><a href="#annotated-cell-19-6" aria-hidden="true" tabindex="-1"></a></span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-19" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-19-7" class="code-annotation-target"><a href="#annotated-cell-19-7" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit((X_train_brand, X_train_region, X_train_rest),</span>
-<span id="annotated-cell-19-8"><a href="#annotated-cell-19-8" aria-hidden="true" tabindex="-1"></a>    y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="annotated-cell-19-9"><a href="#annotated-cell-19-9" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">5</span>)], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="annotated-cell-19-10"><a href="#annotated-cell-19-10" aria-hidden="true" tabindex="-1"></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-17"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><span id="annotated-cell-17-1"><a href="#annotated-cell-17-1" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden"</span>)(x)</span>
+<span id="annotated-cell-17-2"><a href="#annotated-cell-17-2" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"out"</span>)(x)</span>
+<span id="annotated-cell-17-3"><a href="#annotated-cell-17-3" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-17" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-17-4" class="code-annotation-target"><a href="#annotated-cell-17-4" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model([veh_brand, region, other_inputs], out)</span>
+<span id="annotated-cell-17-5"><a href="#annotated-cell-17-5" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="annotated-cell-17-6"><a href="#annotated-cell-17-6" aria-hidden="true" tabindex="-1"></a></span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-17" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-17-7" class="code-annotation-target"><a href="#annotated-cell-17-7" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit((X_train_brand, X_train_region, X_train_rest),</span>
+<span id="annotated-cell-17-8"><a href="#annotated-cell-17-8" aria-hidden="true" tabindex="-1"></a>    y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="annotated-cell-17-9"><a href="#annotated-cell-17-9" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">5</span>)], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="annotated-cell-17-10"><a href="#annotated-cell-17-10" aria-hidden="true" tabindex="-1"></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-19" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-17" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-19" data-code-lines="4" data-code-annotation="1">Model building stage requires all inputs to be passed in together</span>
+<span data-code-cell="annotated-cell-17" data-code-lines="4" data-code-annotation="1">Model building stage requires all inputs to be passed in together</span>
 </dd>
-<dt data-target-cell="annotated-cell-19" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-17" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-19" data-code-lines="7" data-code-annotation="2">Passes in the three sets of data, since the format defined at the model building stage requires 3 data sets</span>
+<span data-code-cell="annotated-cell-17" data-code-lines="7" data-code-annotation="2">Passes in the three sets of data, since the format defined at the model building stage requires 3 data sets</span>
 </dd>
 </dl>
 </div>
@@ -2290,11 +2377,11 @@ Name: Region, dtype: str</code></pre>
 <section id="plotting-this-model" class="level3">
 <h3 class="anchored" data-anchor-id="plotting-this-model">Plotting this model</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a href="#cb56-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="entity-embedding_files/figure-html/cell-44-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="entity-embedding_files/figure-html/cell-42-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
@@ -2303,14 +2390,17 @@ Name: Region, dtype: str</code></pre>
 <section id="why-we-need-to-reshape" class="level3">
 <h3 class="anchored" data-anchor-id="why-we-need-to-reshape">Why we need to reshape</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>, show_shapes<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>, show_shapes<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="entity-embedding_files/figure-html/cell-45-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="entity-embedding_files/figure-html/cell-43-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
+</div>
+<div class="footer">
+<p><code>Embedding</code> turns <code>(None, 1)</code> into <code>(None, 1, 2)</code>; <code>Reshape</code> drops the extra axis to <code>(None, 2)</code> so we can <code>Concatenate</code>.</p>
 </div>
 <p>The plotted model shows how, for example, <code>region</code> starts off as a matrix with <code>(None,1)</code> shape. This indicates that <code>region</code> was a column matrix with some number of rows. Entity embedding the <code>region</code> variable resulted in a 3D array of shape (<code>(None,1,2)</code>) which is not the required format for concatenating. Therefore, we reshape it using the <code>Reshape</code> function. This results in column array of shape, <code>(None,2)</code> which is what we need for concatenating.</p>
 </section>
@@ -2329,79 +2419,78 @@ Name: Region, dtype: str</code></pre>
 <h3 class="anchored" data-anchor-id="just-take-continuous-variables">Just take continuous variables</h3>
 <p>For convenience, the following code only considers the numerical variables during this implementation.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-22"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-22-1" class="code-annotation-target"><a href="#annotated-cell-22-1" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-22-2" class="code-annotation-target"><a href="#annotated-cell-22-2" aria-hidden="true" tabindex="-1"></a>  (<span class="st">"passthrough"</span>, [<span class="st">"Exposure"</span>]),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-22-3" class="code-annotation-target"><a href="#annotated-cell-22-3" aria-hidden="true" tabindex="-1"></a>  (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-22-4" class="code-annotation-target"><a href="#annotated-cell-22-4" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-22-5" class="code-annotation-target"><a href="#annotated-cell-22-5" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="annotated-cell-22-6"><a href="#annotated-cell-22-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-22-7" class="code-annotation-target"><a href="#annotated-cell-22-7" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
-<a class="code-annotation-anchor" data-target-cell="annotated-cell-22" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-22-8" class="code-annotation-target"><a href="#annotated-cell-22-8" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="annotated-cell-20"><pre class="sourceCode python code-annotation-code code-with-copy code-annotated"><code class="sourceCode python"><a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="1" onclick="event.preventDefault();">1</a><span id="annotated-cell-20-1" class="code-annotation-target"><a href="#annotated-cell-20-1" aria-hidden="true" tabindex="-1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="2" onclick="event.preventDefault();">2</a><span id="annotated-cell-20-2" class="code-annotation-target"><a href="#annotated-cell-20-2" aria-hidden="true" tabindex="-1"></a>  (<span class="st">"passthrough"</span>, [<span class="st">"Exposure"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="3" onclick="event.preventDefault();">3</a><span id="annotated-cell-20-3" class="code-annotation-target"><a href="#annotated-cell-20-3" aria-hidden="true" tabindex="-1"></a>  (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="4" onclick="event.preventDefault();">4</a><span id="annotated-cell-20-4" class="code-annotation-target"><a href="#annotated-cell-20-4" aria-hidden="true" tabindex="-1"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="5" onclick="event.preventDefault();">5</a><span id="annotated-cell-20-5" class="code-annotation-target"><a href="#annotated-cell-20-5" aria-hidden="true" tabindex="-1"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="annotated-cell-20-6"><a href="#annotated-cell-20-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="6" onclick="event.preventDefault();">6</a><span id="annotated-cell-20-7" class="code-annotation-target"><a href="#annotated-cell-20-7" aria-hidden="true" tabindex="-1"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
+<a class="code-annotation-anchor" data-target-cell="annotated-cell-20" data-target-annotation="7" onclick="event.preventDefault();">7</a><span id="annotated-cell-20-8" class="code-annotation-target"><a href="#annotated-cell-20-8" aria-hidden="true" tabindex="-1"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span><div class="code-annotation-gutter-bg"></div><div class="code-annotation-gutter"></div></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-annotation">
 <dl class="code-annotation-container-grid">
-<dt data-target-cell="annotated-cell-22" data-target-annotation="1">1</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="1">1</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="1" data-code-annotation="1">Starts defining the column transformer</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="1" data-code-annotation="1">Starts defining the column transformer</span>
 </dd>
-<dt data-target-cell="annotated-cell-22" data-target-annotation="2">2</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="2">2</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="2" data-code-annotation="2">Lets <code>Exposure</code> pass through the neural network as it is without peprocessing</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="2" data-code-annotation="2">Lets <code>Exposure</code> pass through the neural network as it is without preprocessing</span>
 </dd>
-<dt data-target-cell="annotated-cell-22" data-target-annotation="3">3</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="3">3</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="3" data-code-annotation="3">Drops the categorical variables (for the ease of implementation)</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="3" data-code-annotation="3">Drops the categorical variables (for the ease of implementation)</span>
 </dd>
-<dt data-target-cell="annotated-cell-22" data-target-annotation="4">4</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="4">4</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="4" data-code-annotation="4">Scales the remaining variables</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="4" data-code-annotation="4">Scales the remaining variables</span>
 </dd>
-<dt data-target-cell="annotated-cell-22" data-target-annotation="5">5</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="5">5</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="5" data-code-annotation="5">Choose the simpler style of column names for the transformed dataframes</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="5" data-code-annotation="5">Choose the simpler style of column names for the transformed dataframes</span>
 </dd>
-<dt data-target-cell="annotated-cell-22" data-target-annotation="6">6</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="6">6</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="7" data-code-annotation="6">Fits and transforms the train set</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="7" data-code-annotation="6">Fits and transforms the train set</span>
 </dd>
-<dt data-target-cell="annotated-cell-22" data-target-annotation="7">7</dt>
+<dt data-target-cell="annotated-cell-20" data-target-annotation="7">7</dt>
 <dd>
-<span data-code-cell="annotated-cell-22" data-code-lines="8" data-code-annotation="7">Only transforms the test set</span>
+<span data-code-cell="annotated-cell-20" data-code-lines="8" data-code-annotation="7">Only transforms the test set</span>
 </dd>
 </dl>
 </div>
 </div>
 <p>Split exposure apart from the rest:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>X_train_exp <span class="op">=</span> X_train[<span class="st">"Exposure"</span>]</span>
-<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>X_test_exp <span class="op">=</span> X_test[<span class="st">"Exposure"</span>]</span>
-<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>X_train_rest <span class="op">=</span> X_train.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a>X_test_rest <span class="op">=</span> X_test.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a href="#cb58-1" aria-hidden="true" tabindex="-1"></a>X_train_exp <span class="op">=</span> X_train[<span class="st">"Exposure"</span>]</span>
+<span id="cb58-2"><a href="#cb58-2" aria-hidden="true" tabindex="-1"></a>X_test_exp <span class="op">=</span> X_test[<span class="st">"Exposure"</span>]</span>
+<span id="cb58-3"><a href="#cb58-3" aria-hidden="true" tabindex="-1"></a>X_train_rest <span class="op">=</span> X_train.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb58-4"><a href="#cb58-4" aria-hidden="true" tabindex="-1"></a>X_test_rest <span class="op">=</span> X_test.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Organise the inputs:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a href="#cb62-1" aria-hidden="true" tabindex="-1"></a>exposure <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"exposure"</span>)</span>
-<span id="cb62-2"><a href="#cb62-2" aria-hidden="true" tabindex="-1"></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>exposure <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"exposure"</span>)</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="make-fit-the-model" class="level3">
 <h3 class="anchored" data-anchor-id="make-fit-the-model">Make &amp; fit the model</h3>
 <p>Feed the continuous inputs to some normal dense layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a href="#cb63-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1337</span>)</span>
-<span id="cb63-2"><a href="#cb63-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(other_inputs)</span>
-<span id="cb63-3"><a href="#cb63-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(x)</span>
-<span id="cb63-4"><a href="#cb63-4" aria-hidden="true" tabindex="-1"></a>lambda_ <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"lambda"</span>)(x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb60"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb60-1"><a href="#cb60-1" aria-hidden="true" tabindex="-1"></a>random.seed(<span class="dv">1337</span>)</span>
+<span id="cb60-2"><a href="#cb60-2" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(other_inputs)</span>
+<span id="cb60-3"><a href="#cb60-3" aria-hidden="true" tabindex="-1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(x)</span>
+<span id="cb60-4"><a href="#cb60-4" aria-hidden="true" tabindex="-1"></a>lambda_ <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"lambda"</span>)(x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> lambda_ <span class="op">*</span> exposure <span class="co"># In past, need keras.layers.Multiply()[lambda_, exposure]</span></span>
-<span id="cb64-2"><a href="#cb64-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model([exposure, other_inputs], out)</span>
-<span id="cb64-3"><a href="#cb64-3" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb64-4"><a href="#cb64-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb64-5"><a href="#cb64-5" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>, verbose<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb64-6"><a href="#cb64-6" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit((X_train_exp, X_train_rest),</span>
-<span id="cb64-7"><a href="#cb64-7" aria-hidden="true" tabindex="-1"></a>    y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb64-8"><a href="#cb64-8" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[es], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb64-9"><a href="#cb64-9" aria-hidden="true" tabindex="-1"></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a href="#cb61-1" aria-hidden="true" tabindex="-1"></a>out <span class="op">=</span> lambda_ <span class="op">*</span> exposure</span>
+<span id="cb61-2"><a href="#cb61-2" aria-hidden="true" tabindex="-1"></a>model <span class="op">=</span> Model([exposure, other_inputs], out)</span>
+<span id="cb61-3"><a href="#cb61-3" aria-hidden="true" tabindex="-1"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb61-4"><a href="#cb61-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb61-5"><a href="#cb61-5" aria-hidden="true" tabindex="-1"></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>, verbose<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb61-6"><a href="#cb61-6" aria-hidden="true" tabindex="-1"></a>hist <span class="op">=</span> model.fit((X_train_exp, X_train_rest), y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb61-7"><a href="#cb61-7" aria-hidden="true" tabindex="-1"></a>    callbacks<span class="op">=</span>[es], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb61-8"><a href="#cb61-8" aria-hidden="true" tabindex="-1"></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Epoch 29: early stopping
 Restoring model weights from the end of the best epoch: 19.</code></pre>
@@ -2414,25 +2503,38 @@ Restoring model weights from the end of the best epoch: 19.</code></pre>
 <section id="plot-the-model" class="level3">
 <h3 class="anchored" data-anchor-id="plot-the-model">Plot the model</h3>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a href="#cb67-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a href="#cb64-1" aria-hidden="true" tabindex="-1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="entity-embedding_files/figure-html/cell-51-output-1.png" class="img-fluid figure-img"></p>
+<p><img src="entity-embedding_files/figure-html/cell-49-output-1.png" class="img-fluid figure-img"></p>
 </figure>
 </div>
 </div>
 </div>
 </section>
+<section id="further-reading" class="level3">
+<h3 class="anchored" data-anchor-id="further-reading">Further reading</h3>
+<p><span class="citation" data-cites="avanzi2024machine">Avanzi et al. (<a href="#ref-avanzi2024machine" role="doc-biblioref">2024</a>)</span> focus on how to handle the case of high-cardinality categorical features, and propose a new architecture specifically tailored for actuarial purposes.</p>
+</section>
 
 
+<section id="references" class="level3" data-visibility="uncounted">
+<h3 data-visibility="uncounted" class="anchored" data-anchor-id="references">References</h3>
+<div class="{refs}">
+
+</div>
+
+
+
+</section>
 </section>
 
 <div id="quarto-appendix" class="default"><section id="package-versions" class="level3 appendix" data-visibility="uncounted"><h2 class="anchored quarto-appendix-heading">Package Versions</h2><div class="quarto-appendix-contents">
 
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb68"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb68-1"><a href="#cb68-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
-<span id="cb68-2"><a href="#cb68-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a href="#cb65-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb65-2"><a href="#cb65-2" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Python implementation: CPython
 Python version       : 3.14.5
@@ -2465,8 +2567,16 @@ torch     : 2.11.0
 </ul>
 </div>
 </div>
-
-
+</div></section><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" data-line-spacing="2" role="list">
+<div id="ref-avanzi2024machine" class="csl-entry" role="listitem">
+Avanzi, B., Taylor, G., Wang, M., &amp; Wong, B. (2024). Machine learning with high-cardinality categorical features in actuarial applications. <em>ASTIN Bulletin: The Journal of the IAA</em>, <em>54</em>(2), 213–238. <a href="https://doi.org/10.1017/asb.2024.7">https://doi.org/10.1017/asb.2024.7</a>
+</div>
+<div id="ref-guo2016entity" class="csl-entry" role="listitem">
+Guo, C., &amp; Berkhahn, F. (2016). Entity embeddings of categorical variables. <em>arXiv Preprint arXiv:1604.06737</em>.
+</div>
+<div id="ref-tensorflow2017feature" class="csl-entry" role="listitem">
+The TensorFlow Team. (2017). <em>Introducing <span>TensorFlow</span> feature columns</em>. Google Developers Blog. <a href="https://developers.googleblog.com/introducing-tensorflow-feature-columns/">https://developers.googleblog.com/introducing-tensorflow-feature-columns/</a>
+</div>
 </div></section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
