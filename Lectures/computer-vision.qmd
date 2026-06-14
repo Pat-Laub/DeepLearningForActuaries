@@ -7,38 +7,95 @@ title: Computer Vision
 #| warning: false
 from setup import *
 
+import json
+from sklearn.datasets import fetch_california_housing
+
 pandas.options.display.max_rows = 8
 ```
 
-::: {.content-visible unless-format="revealjs"}
+# Introduction {visibility="uncounted"}
+
+## What is Computer Vision?
+
+> "Little by little, we're giving sight to the machines. First, we teach them to see. Then, they help us to see better."
+>
+> ::: {style="text-align: right;"}
+> — Fei-Fei Li, creator of ImageNet
+> :::
+
+::: footer
+Source: Fei-Fei Li (2015), [How we're teaching computers to understand pictures](https://www.ted.com/talks/fei_fei_li_how_we_re_teaching_computers_to_understand_pictures), TED2015.
+:::
+
+Getting computers to _extract meaning from images and video_ — and act on what they see.
+
+<!-- ## Applications -->
+
+- _Image classification_ — one label per image (benign vs malignant lesion, pass/fail parts).
+- _Object detection_ — locate and label many objects at once (pedestrians and traffic lights for a self-driving car).
+- _Image segmentation_ — label _every pixel_ (outlining a tumour in a scan).
+- _Facial recognition_ — verify or identify a person (phone unlock, passport gates).
+
+## Computer vision for actuaries
+
+- _Claims automation_ — estimate motor repair costs from photos of the damage.
+- _Property underwriting_ — score roof condition and bushfire exposure from aerial imagery.
+- _Health & life_ — predict cardiovascular risk factors from retinal scans.
+- _Fraud detection_ — flag reused, stock, or AI-altered claim images.
+
+For an actuary the practical upshot is less about any individual architecture and more about _transfer learning_: a CNN trained on millions of images can be downloaded and reused on your own (much smaller) dataset.
+
+## Facial analytics and life insurance
+
+::: columns
+::: column
+
+![Since November 2015, created AI to predict mortality from photos.](images/lapetus-chronos-seattle-times.png){width="80%"}
+
+:::
+::: column
+
+![Lapetus shut down in August 31, 2025.](images/lapetus-serious-flaws-coventry.png)
+
+:::
+:::
+
+::: footer
+Source: [Seattle Times](https://www.seattletimes.com/business/how-your-selfie-could-affect-your-life-insurance/) & [Coventry](https://www.coventry.com/flaws-in-lapetus-life-expectancy-estimates-exposed-in-new-study-following-olshansky-buerger-debate-at-lisa-conference/).
+:::
+
+
+## Imports needed for these demos
 
 ```{python}
-#| code-fold: true
-#| code-summary: Show the package imports
-import json
 import random
 from pathlib import Path
+
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+from matplotlib.image import imread
+from matplotlib.pyplot import imshow
 import numpy as np
 import pandas as pd
 from PIL import Image
 
 import keras
-from keras.models import Sequential
-from keras.layers import Dense, Input
+from keras.models import Sequential, Model
+from keras.layers import (Dense, Input, Rescaling, Flatten,
+    Conv2D, MaxPooling2D, GlobalAveragePooling2D)
 from keras.callbacks import EarlyStopping
 from keras.utils import plot_model
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+
+from directory_tree import DisplayTree
+import optuna
 ```
 
-:::
+For PIL, you'll need to `pip install Pillow`.
 
-::: {.content-visible unless-format="revealjs"}
-Computer vision is a field of Artificial Intelligence (AI) that focuses on extracting meaningful information from visual data (images and videos). One of the primary goals of computer vision is to correctly identify and classify visual data. Convolutional Neural Networks (CNNs) are the most commonly used neural network architectures for computer vision related tasks.
-:::
-
-# Images {visibility="uncounted"}
+<!-- # Images {visibility="uncounted"} -->
 
 ## Shapes of data
 
@@ -61,14 +118,13 @@ Source: Kim et al (2021), [Data Hiding Method for Color AMBTC Compressed Images 
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-Since the position of a pixel (one small square) in a photo can be represented using 3 positional values, we call it a rank 3 tensor.
+A colour photo is stored as a rank 3 tensor: height × width × colour channels. The first two axes locate a pixel (its row and column), and the third holds that pixel's three colour intensities (red, green, and blue).
 :::
 
-## How the computer sees them {.smaller}
+## How the computer sees them
 
 ```{python}
 #| eval: false
-from matplotlib.image import imread
 img1 = imread('images/pu.gif'); img2 = imread('images/pl.gif')
 img3 = imread('images/pr.gif'); img4 = imread('images/pg.bmp')
 f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}."
@@ -76,8 +132,6 @@ f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}."
 
 ```{python}
 #| echo: false
-from matplotlib.image import imread
-
 inds = (0, 1, 2)
 img1 = imread("images/pu.gif")
 img1 = img1[:, :, inds]
@@ -97,26 +151,26 @@ f"Shapes are: {img1.shape}, {img2.shape}, {img3.shape}, {img4.shape}."
 ::: {.column width="25%"}
 
 ```{python}
-img1
+print(img1)
 ```
 
 :::
 ::: {.column width="25%"}
 ```{python}
-img2
+print(img2)
 ```
 
 :::
 ::: {.column width="25%"}
 
 ```{python}
-img3
+print(img3)
 ```
 
 :::
 ::: {.column width="25%"}
 ```{python}
-img4
+print(img4)
 ```
 :::
 :::
@@ -126,10 +180,6 @@ The above code reads 4 images and then shows how computers read those images. Ea
 :::
 
 ## How we see them
-
-```{python}
-from matplotlib.pyplot import imshow
-```
 
 ::: columns
 ::: {.column width="25%"}
@@ -180,32 +230,9 @@ np.array([-128, 1, 127, 128]).astype(np.int8)
 Alternatively, _hexadecimal_ numbers are used.
 E.g. 10100001 is split into 1010 0001, and 1010=A, 0001=1, so combined it is 0xA1.
 
-## Image editing with kernels
+# The Convolution Operation {visibility="uncounted"}
 
-Take a look at [https://setosa.io/ev/image-kernels/](https://setosa.io/ev/image-kernels/).
-
-
-![An example of an image kernel in action.](images/convolution.gif)
-
-
-::: footer
-Source: [Stanford's deep learning tutorial](http://deeplearning.stanford.edu/wiki/index.php/Feature_extraction_using_convolution) via [Stack Exchange](https://stats.stackexchange.com/a/188216).
-:::
-
-# Convolutional Layers {visibility="uncounted"}
-
-## 'Convolution' not 'complicated'
-
-Say $X_1, X_2 \sim f_X$ are i.i.d., and we look at $S = X_1 + X_2$.
-
-The density for $S$ is then
-
-$$
-f_S(s) = \int_{x_1=-\infty}^{\infty} f_X(x_1) \, f_X(s-x_1) \,\mathrm{d} x_1.
-$$
-
-This is the _convolution_ operation, $f_S = f_X \star f_X$.
-
+<!-- 
 ## Images are rank 3 tensors
 
 Height, width, and number of channels.
@@ -225,7 +252,28 @@ Each colour can be represented as a combination of three primary colours; red, g
 Example: Yellow = Red + Green. 
 
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
+:::
+ -->
+
+## The convolution operation
+
+![Scan the 3-channel input (colour image) with the neuron to produce a 1-channel output (grayscale image).](images/Glassner/16-4.png)
+
+The output is produced by *sweeping* the neuron over the input. This is called **convolution**.
+
+_Aside:_ you'd have seen the convolution operation when calculating the density of $S = X_1 + X_2$ for i.i.d. $X_1, X_2 \sim f_X$ as $f_S(s) = \int f_X(x_1)\, f_X(s - x_1)\,\mathrm{d}x_1 = (f_X \star f_X)(s)$. This is why they're named "convolutional".
+
+::: footer
+Source: @glassner2021deep, Chapter 16.
+:::
+
+## The weights and biases
+
+![Applying a neuron to an image pixel.](images/Glassner/16-3.png)
+
+::: footer
+Source: @glassner2021deep, Chapter 16.
 :::
 
 ## Example: Detecting yellow
@@ -236,42 +284,9 @@ Suppose we wish to detect if a picture has yellow colour in it. One option would
 Next, a standard multiplication between numeric values and weights is carried out, and the weighted sum is passed through the neuron.
 :::
 
-::: columns
-::: column
-![Applying a neuron to an image pixel.](images/Glassner/16-3.png)
-:::
-::: column
+<!-- Apply a neuron to each pixel in the image. -->
 
-<br>
-
-Apply a neuron to each pixel in the image.
-
-<br>
-
-If red/green $\nearrow$ or blue $\searrow$ then yellowness $\nearrow$.
-
-<br>
-
-Set RGB weights to 1, 1, -1.
-:::
-:::
-
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
-
-## Example: Detecting yellow II 
-
-![Scan the 3-channel input (colour image) with the neuron to produce a 1-channel output (grayscale image).](images/Glassner/16-4.png)
-
-The output is produced by *sweeping* the neuron over the input. This is called **convolution**.
-
-
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
-
-## Example: Detecting yellow III {data-visibility="uncounted"}
+If red/green $\nearrow$ or blue $\searrow$ then yellowness $\nearrow$. Set RGB weights to 1, 1, -1.
 
 ::: {.content-visible unless-format="revealjs"}
 The following picture demonstrates how yellow-coloured areas (in the colour picture) are transformed into a white colour (in the greyscale picture). This is a result of the way we assigned the weights. Since we assigned +1 weights to red and green, and -1 to blue, it ended up resulting in large positive values (for the weighted sum) for the pixels in the yellow-coloured areas. Large positive values in the greyscale correspond to white colour. Therefore, the areas which were yellow in the colour picture converted to white in the greyscale. In practice, we do not manually assign weights, instead, we let the neural network decide the optimal weights during training.
@@ -279,42 +294,96 @@ The following picture demonstrates how yellow-coloured areas (in the colour pict
 
 ![The more yellow the pixel in the colour image (left), the more white it is in the grayscale image.](images/Glassner/16-5.png)
 
-The neuron or its weights is called a **filter**. We *convolve* the image with a filter, i.e. a **convolutional filter**.
-
-## Terminology
-
-- The same neuron is used to sweep over the image, so we can store the weights in some shared memory and process the pixels in parallel. We say that the neurons are *weight sharing*.
-- In the previous example, the neuron only takes one pixel as input. Usually a larger filter containing a *block of weights* is used to process not only a pixel but also its neighboring pixels all at once.
-- The weights are called the filter **kernels**.
-- The cluster of pixels that forms the input of a filter is called its *footprint*.
-
-## Spatial filter
-
-![Example 3x3 filter](images/Glassner/16-9.png)
-
-
-When a filter's footprint is > 1 pixel, it is a **spatial filter**.
+This is about all we can detect by looking pixel-by-pixel. Typically we look at 3x3 or 5x5 blocks of pixels together.
 
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
+:::
+
+## Filters
+
+::: columns
+::: {.column width="60%"}
+![A _filter_ (also called a _kernel_) is a small block of weights (plus a bias) which we sweep over the input in the convolution operation.](images/Glassner/16-10.png){width="90%"}
+:::
+::: {.column width="40%"}
+- The patch of input pixels a filter covers at one location is its *footprint*. Applied there, the filter turns that patch into a single output number — which is exactly what one neuron does.
+- The *same* filter slides over every location instead of learning new weights per pixel. This *weight sharing* is why a convolution layer has so few parameters.
+:::
+:::
+
+::: footer
+Source: @glassner2021deep, Chapter 16.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-The above spatial filter is a 3x3 filter. Hence, there are 9 weights to learn. 
+The above figure shows how 9 inputs transform into one output. As a result, dimensions of the output matrix is smaller than the dimensions of the input matrix. There are some options we can use if we wish to keep the size of input and output matrices same.
 :::
+
+## Example filter
+
+![An example of filter convolution in action.](images/convolution.gif)
+
+Take a look at [https://setosa.io/ev/image-kernels/](https://setosa.io/ev/image-kernels/).
+
+::: footer
+Source: [Stanford's deep learning tutorial](http://deeplearning.stanford.edu/wiki/index.php/Feature_extraction_using_convolution) via [Stack Exchange](https://stats.stackexchange.com/a/188216).
+:::
+
+
+## Padding
+
+::: columns
+::: column
+![What happens when filters go off the edge of the input?](images/Glassner/16-15.png){width="80%"}
+:::
+::: column
+![Add a border of zeros ("zero padding") so the filter fits.](images/Glassner/16-17.png){width="80%"}
+:::
+:::
+
+Add zeros around the input so the filter's footprint doesn't fall off the edge. This lets the output keep the same size as the input (`padding="same"`).
+
+::: footer
+Source: @glassner2021deep, Chapter 16.
+:::
+
+## Striding
+
+::: {.content-visible unless-format="revealjs"}
+Striding modifies how the filter moves across the image. Instead of moving one pixel at a time, we can take larger steps.
+:::
+
+We don't have to move the filter one pixel across/down at a time — a larger _stride_ shrinks the output and saves computation.
+
+![A 3x3 filter with stride 3 in both directions, so no input element is used more than once.](images/Glassner/16-32.png)
+
+::: footer
+Source: @glassner2021deep, Chapter 16.
+:::
+
 
 ## Multidimensional convolution
 
-::: {.content-visible unless-format="revealjs"}
-In a multidimensional filter, the number of channels of the input must be equal to the number of channels in the filter (depths must be the same).
+A filter covers a *block* of pixels (e.g. a 3x3 filter has 9 weights), and must have the same number of channels as its input.
+
+<!-- Need $\# \text{ Channels in Input} = \# \text{ Channels in Filter}$. -->
+
+::: columns
+::: {.column width="60%"}
+![A 3x3 filter: 9 weights.](images/Glassner/16-9.png){width="80%"}
+:::
+::: {.column width="40%"}
+![A 3x3 filter over 3 channels: 27 weights.](images/Glassner/16-18.png){width="80%"}
+:::
 :::
 
-Need $\# \text{ Channels in Input} = \# \text{ Channels in Filter}$.
-
-![Example: a 3x3 filter with 3 channels, containing 27 weights.](images/Glassner/16-18.png)
-
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
+:::
+
+::: {.content-visible unless-format="revealjs"}
+In a multidimensional filter, the number of channels of the input must be equal to the number of channels in the filter (depths must be the same). The single-channel 3x3 filter has 9 weights; matching it to a 3-channel input gives 3x3x3 = 27 weights.
 :::
 
 ## Example: 3x3 filter over RGB input 
@@ -322,64 +391,31 @@ Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
 ![Each channel is multiplied separately & then added together.](images/Glassner/16-19.png)
 
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
 The above figure shows how we pick a 3x3x3 block from the image, and then apply the 3x3 filter. The multiplication is carried out channel-wise, i.e. we select the first channel of the filter and the first channel of the image and carry out the element-wise multiplication. Once the elementwise multiplications for the three pairs of channels are completed, we sum them all, and pass through the neuron.
 :::
 
-## Input-output relationship 
 
-![Matching the original image footprints against the output location.](images/Glassner/16-10.png)
+<!-- # Convolutional Layer Options {visibility="uncounted"} -->
 
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
-
-::: {.content-visible unless-format="revealjs"}
-The above figure shows how 9 inputs transform into one output. As a result, dimensions of the output matrix is smaller than the dimensions of the input matrix. There are some options we can use if we wish to keep the size of input and output matrices same.
-:::
-
-# Convolutional Layer Options {visibility="uncounted"}
-
-## Padding
-
-![What happens when filters go off the edge of the input?](images/Glassner/16-15.png)
- 
- - How to avoid the filter's receptive field falling off the side of the input.
- - If we only scan the filter over places of the input where the filter can fit perfectly, it will lead to loss of information, especially after many filters.
- 
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
-
-## Padding
-
-Add a border of extra elements around the input, called **padding**.
-Normally we place zeros in all the new elements, called **zero padding**.
-
-![Padded values can be added to the outside of the input.](images/Glassner/16-17.png)
-
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
 
 ## Convolution layer
 
 - Multiple filters are bundled together in one layer.
 - The filters are applied *simultaneously* and *independently* to the input.
-- Filters can have different footprints, but in practice we almost always use the same footprint for every filter in a convolution layer.
 - Number of channels in the output will be the same as the number of filters.
 
 ::: {.content-visible unless-format="revealjs"}
 The motivation behind applying filters *simultaneously* and *independently* is to let the filters learn different patterns in the input-output relationship. The idea is quite similar to using many neurons in one `Dense` layer (in a `Dense` layer, we would use multiple neurons so that different neurons can capture different patterns in the input-output relationship).
 :::
 
-## Example
+<!-- ## Example -->
 
 ::: columns
-::: column
+::: {.column width="30%"}
 In the image:
 
 - 6-channel input tensor
@@ -388,78 +424,27 @@ In the image:
 - four output tensors
 - final output tensor.
 :::
-::: column
-![Example network highlighting that the number of output channels equals the number of filters.](images/Glassner/16-21.png)
+::: {.column width="70%"}
+![A layer with four 3x3(x6) filters.](images/Glassner/16-21-edited.png)
 :::
 :::
 
 
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-The above picture shows how we take in an image with 6 channels, select a 3x3 block (in pink colour), apply 4 different filters of same dimensions (in pink, green, blue and yellow), retrieve the output with 1 channel (1 output for each filter) and finally stack them together to create 1 output tensor. Note that the number of channels in the output tensor is 4, which is equal to the number of spatial filters used.  
+The above picture shows how we take in an image with 6 channels, select a 3x3 block (in pink colour), apply 4 different filters of same dimensions (in pink, green, blue and yellow), retrieve the output with 1 channel (1 output for each filter) and finally stack them together to create 1 output tensor. Note that the number of channels in the output tensor is 4, which is equal to the number of filters used.  
 :::
 
-
-## 1x1 convolution
-
-- Feature reduction: Reduce the number of channels in the input tensor (removing correlated features) by using fewer filters than the number of channels in the input. This is because the number of channels in the output is always the same as number of filters.
-- 1x1 convolution: Convolution using 1x1 filters. 
-- When the channels are correlated, 1x1 convolution is very effective at reducing channels without loss of information.
-
-## Example of 1x1 convolution {.smaller}
-
-![Example network with 1x1 convolution.](images/Glassner/16-23.png)
-
-- Input tensor contains 300 channels.
-- Use 175 1x1 filters in the convolution layer (300 weights each).
-- Each filter produces a 1-channel output.
-- Final output tensor has 175 channels.
-
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
-
-## Striding
-
-::: {.content-visible unless-format="revealjs"}
-Striding allows us to modify the movement of the filter across the image. Instead of moving one step at a time (either horizontally or vertically), we can increase the number of steps using the *striding* option.
-:::
-
-We don't have to go one pixel across/down at a time.
-
-![Example: Use a stride of three horizontally and two vertically.](images/Glassner/16-29.png)
-
-Dimension of output will be smaller than input.
-
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
-
-## Choosing strides {.smaller}
-
-::: {layout-ncol=2}
-![](images/Glassner/16-31.png)
-
-![](images/Glassner/16-32.png)
-:::
-
-When a filter scans the input step by step, it processes the same input elements multiple times. Even with larger strides, this can still happen (left image).
-
-**If** we want to save time, we can choose strides that prevents input elements from being used more than once. Example (right image): 3x3 filter, stride 3 in both directions.
-
-::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
-:::
 
 ## Specifying a convolutional layer
 
 Need to choose:
 
 - number of filters,
-- their footprints (e.g. 3x3, 5x5, etc.),
+- their size/footprint (e.g. 3x3, 5x5, etc.),
 - activation functions,
 - padding & striding (optional).
 
@@ -467,32 +452,14 @@ All the filter weights are learned during training.
 
 # Convolutional Neural Networks {visibility="uncounted"}
 
-## Definition of CNN
-
-::: columns
-::: {.column width="60%"}
-
-<br>
-<br>
+## Convolutional Neural Networks
 
 A neural network that uses _convolution layers_ is called a _convolutional neural network_.
 
-:::
-::: {.column width="40%"}
-![](images/xkcd-trained_a_neural_net_2x.png)
-:::
-:::
+![A typical CNN structure.](images/mathworks-typical-cnn.svg)
 
 ::: footer
-Source: Randall Munroe (2019), [xkcd #2173: Trained a Neural Net](https://xkcd.com/2173/).
-:::
-
-## Architecture
-
-![Typical CNN architecture.](images/CNN-architecture.png)
-
-::: footer
-Source: Melissa Renard (2025)
+Source: MathWorks, [_Introducing Deep Learning with MATLAB_](https://au.mathworks.com/campaigns/offers/next/deep-learning-ebook.html), Ebook.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
@@ -503,19 +470,11 @@ A standard CNN architecture has the following components:
 * Sequence of classification layers (which include flattening and fully connected layers)
 * Final output layer
 
-Convolution layers are used to extract meaningful patterns from the input using spatial filters. Pooling layers are used to reduce the spatial dimensions of the feature maps generated from convolutional layers. The purpose of the feature extraction layers is to learn complex but meaningful, high levels patterns in data. The aim of classification layers is to receive the learned patterns and make decisions more closely related to the classification task at hand.
-:::
-
-## Architecture II
-
-![](images/mathworks-typical-cnn.svg)
-
-::: footer
-Source: MathWorks, [_Introducing Deep Learning with MATLAB_](https://au.mathworks.com/campaigns/offers/next/deep-learning-ebook.html), Ebook.
+Convolution layers are used to extract meaningful patterns from the input using filters. Pooling layers are used to reduce the spatial dimensions of the feature maps generated from convolutional layers. The purpose of the feature extraction layers is to learn complex but meaningful, high levels patterns in data. The aim of classification layers is to receive the learned patterns and make decisions more closely related to the classification task at hand.
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-On a high level, the idea would be to keep on increasing the number of channels (depth) and decrease the dimensions of the feature map. We can see how the depth increases, and spatial dimensions reduce from first convolution layer to the second pooling layer.
+On a high level, as we move deeper into the network the number of channels (the depth) tends to grow while the spatial dimensions (height and width) of the feature maps shrink.
 :::
 
 ## Pooling
@@ -531,7 +490,7 @@ On a high level, the idea would be to keep on increasing the number of channels 
 (e): Icon for a pooling layer
 
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
 :::
 
 
@@ -539,19 +498,14 @@ Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
 
 ![Pooling a multichannel input.](images/Glassner/16-28.png)
 
-- Input tensor: 6x6 with 1 channel, zero padding.
-- Convolution layer: Three 3x3 filters.
-- Convolution layer output: 6x6 with 3 channels.
-- Pooling layer: apply max pooling to each channel.
-- Pooling layer output: 3x3, 3 channels.
-
 ::: footer
-Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
+Source: @glassner2021deep, Chapter 16.
 :::
 
+<!--
 ## Why/why not use pooling?
 
-**Why?** Pooling *reduces the size* of tensors, therefore reduces memory usage and execution time (recall that 1x1 convolution *reduces the number of channels* in a tensor).
+**Why?** Pooling _reduces the size_ of tensors, therefore reduces memory usage and execution time.
 
 **Why not?**
 
@@ -560,10 +514,110 @@ Source: Glassner (2021), _Deep Learning: A Visual Approach_, Chapter 16.
 ::: footer
 Source: Hinton, [Reddit AMA](https://www.reddit.com/r/MachineLearning/comments/2lmo0l/comment/clyj4jv/?utm_source=share&utm_medium=web2x&context=3).
 :::
+-->
+
+## MNIST Dataset {visibility="uncounted"}
+
+![The MNIST dataset.](images/wiki-MnistExamples.png)
+
+::: footer
+Source: Wikipedia, [MNIST database](https://en.wikipedia.org/wiki/MNIST_database).
+:::
+
+## LeNet-5 (1998)
+
+| Layer | Type            | Channels | Size    | Kernel size | Stride | Activation |
+|-------|-----------------|------|---------|-------------|--------|------------|
+| In    | Input           | 1    | 32×32 | –           | –      | –          |
+| C1    | Convolution     | 6    | 28×28 | 5×5       | 1      | tanh       |
+| S2    | Avg pooling     | 6    | 14×14 | 2×2       | 2      | tanh       |
+| C3    | Convolution     | 16   | 10×10 | 5×5       | 1      | tanh       |
+| S4    | Avg pooling     | 16   | 5×5   | 2×2       | 2      | tanh       |
+| C5    | Convolution     | 120  | 1×1   | 5×5       | 1      | tanh       |
+| F6    | Fully connected | –    | 84      | –           | –      | tanh       |
+| Out   | Fully connected | –    | 10      | –           | –      | RBF        |
+
+::: {.callout-note}
+MNIST images are 28×28 pixels, and with zero-padding (for a 5×5 kernel) that becomes 32×32.
+:::
+
+::: footer
+Source: @geron2022hands, Chapter 14.
+:::
+
+## AlexNet (2012) {.smaller}
+
+| Layer | Type            | Channels    | Size      | Kernel | Stride | Padding | Activation |
+|-------|-----------------|---------|-----------|-------------|--------|---------|------------|
+| In    | Input           | 3       | 227×227 | –           | –      | –       | –          |
+| C1    | Convolution     | 96      | 55×55   | 11×11     | 4      | valid   | ReLU       |
+| S2    | Max pool     | 96      | 27×27   | 3×3       | 2      | valid   | –          |
+| C3    | Convolution     | 256     | 27×27   | 5×5       | 1      | same    | ReLU       |
+| S4    | Max pool     | 256     | 13×13   | 3×3       | 2      | valid   | –          |
+| C5    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| C6    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| C7    | Convolution     | 256     | 13×13   | 3×3       | 1      | same    | ReLU       |
+| S8    | Max pool     | 256     | 6×6     | 3×3       | 2      | valid   | –          |
+| F9    | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
+| F10   | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
+| Out   | Fully conn. | –       | 1,000     | –           | –      | –       | Softmax    |
+
+::: footer
+Winner of the ILSVRC 2012 challenge (top-five error 17%), developed by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton.
+:::
+
+<!--
+## A lineage of CNN architectures
+
+| Year | Architecture | Key idea |
+|------|--------------|----------|
+| 1998 | LeNet-5 | first working CNN — digit recognition |
+| 2012 | AlexNet | the ImageNet breakthrough (ReLU, dropout, GPUs) |
+| 2014 | VGG | very deep, uniform 3×3 stacks |
+| 2014 | GoogLeNet / Inception | parallel multi-scale filters |
+| 2015 | ResNet | residual / skip connections → 100s of layers |
+
+You don't need to memorise these — you'll meet them as a drop-down menu in [`keras.applications`](https://keras.io/api/applications/), where you load one with ImageNet weights and transfer-learn (next section).
+-->
+
+## Depth can be important for image tasks
+
+![Deeper models aren't just better because they have more parameters. ](images/goodfellow-depth-matters2.png)
+
+::: footer
+Source: Adapted from @goodfellow2014multi.
+:::
+
+## Residual connection
+
+![Illustration of a residual connection.](images/residual-connection.png)
+
+::: footer
+Source: [Wikimedia](https://commons.wikimedia.org/wiki/File:ResBlock.png)
+:::
+
+
+## Image augmentation
+
+::: {.content-visible unless-format="revealjs"}
+Image augmentation: start with an image and create new training examples from it by applying small, label-preserving transformations. Examples include:
+
+* Flipping/rotating
+* Zooming/translating/cropping
+* Adjusting contrast/brightness
+
+Image augmentation doesn't _add_ new information, but by training on many perturbed versions of each image it makes the model _less sensitive_ to such small changes. In effect, the model has more images to learn from.
+:::
+
+![One image becomes many training examples, using Keras' built-in augmentation layers.](images/image-augmentation.png)
+
+::: footer
+Base image: Grace Hopper (ships with Matplotlib).
+:::
 
 ## What do the CNN layers learn?
 
-![](images/distill-feature-visualisation.png)
+![Early layers learn simple patterns; deep layers, complex ones.](images/distill-feature-visualisation.png)
 
 ::: {.content-visible unless-format="revealjs"}
 CNN layers learn (sequentially):
@@ -579,15 +633,27 @@ CNN layers learn (sequentially):
 Source: Distill article, [Feature Visualization](https://distill.pub/2017/feature-visualization/).
 :::
 
-# Chinese Character Recognition Dataset {visibility="uncounted"}
+## How does that work?
 
-## MNIST Dataset
+![Start from a noise image and nudge its _pixels_ until a chosen layer fires hardest.](images/feature-visualisation-method.png)
 
-![The MNIST dataset.](images/wiki-MnistExamples.png)
+::: {.content-visible unless-format="revealjs"}
+The pictures above aren't real photos — they're _synthesised_ by the network itself:
+
+1. Take a pretrained CNN and _freeze_ its weights.
+2. Pick a target layer $\ell$, and start from a random-noise image $x$.
+3. Run a forward pass and measure how strongly that layer fires, $\mathcal{L}(x) = \mathrm{mean}\,A_\ell(x)$.
+4. Backpropagate, but apply the update to the _image_ rather than the weights: $x \leftarrow x + \eta\,\tfrac{\partial \mathcal{L}}{\partial x}$ (gradient _ascent_, so the activation grows).
+5. Repeat. The noise gradually morphs into the pattern that layer is most excited by.
+
+The takeaway: _early_ layers light up for simple things (edges, colours, textures), while _deeper_ layers respond to complex things (parts, whole objects). (The real method also needs regularisation — jittering and rescaling the image each step — or it produces high-frequency junk instead of recognisable patterns.)
+:::
 
 ::: footer
-Source: Wikipedia, [MNIST database](https://en.wikipedia.org/wiki/MNIST_database).
+Method from the Distill article, [Feature Visualization](https://distill.pub/2017/feature-visualization/).
 :::
+
+# Chinese Character Recognition Dataset {visibility="uncounted"}
 
 ## CASIA Chinese handwriting database
 
@@ -596,7 +662,7 @@ Dataset source: [Institute of Automation of Chinese Academy of Sciences (CASIA)]
 ![A 13 GB dataset of 3,999,571 handwritten characters.](images/Offlin1.jpg)
 
 ::: footer
-Source: Liu et al. (2011), [CASIA online and offline Chinese handwriting databases](https://nlpr.ia.ac.cn/databases/handwriting/Home.html), 2011 International Conference on Document Analysis and Recognition.
+Source: @liu2011casia. Dataset available [here](https://nlpr.ia.ac.cn/databases/handwriting/Home.html).
 :::
 
 ## Inspect a subset of characters
@@ -613,17 +679,11 @@ Pulling out 55 characters to experiment with.
 
 Inspect directory structure
 ```{python}
-#| output: false
-!pip install directory_tree
-```
-```{python}
 #| eval: false
-from directory_tree import DisplayTree
 DisplayTree("CASIA-Dataset")
 ```
 ```{python}
 #| echo: false
-from directory_tree import DisplayTree
 tree = DisplayTree("CASIA-Dataset", stringRep=True).split("\n")
 print("\n".join(tree[:12]))
 print("...")
@@ -638,7 +698,7 @@ print("\n".join(tree[-4:]))
 ```{python}
 def count_images_in_folders(root_folder):
     counts = {}
-    for folder in root_folder.iterdir():
+    for folder in root_folder.glob("*/"):
         counts[folder.name] = len(list(folder.glob("*.png")))
     return counts
 
@@ -663,9 +723,10 @@ A couple of characters have a lot less of both though.
 ## Checking the dimensions
 
 ```{python}
+#| code-fold: true
 def get_image_dimensions(root_folder):
     dimensions = []
-    for folder in root_folder.iterdir():
+    for folder in root_folder.glob("*/"):
         for image in folder.glob("*.png"):
             img = imread(image)
             dimensions.append(img.shape)
@@ -680,8 +741,6 @@ test_heights = [d[0] for d in test_dimensions]
 test_widths = [d[1] for d in test_dimensions]
 ```
 
-## Checking the dimensions II
-
 ```{python}
 plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights")
 plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths")
@@ -690,20 +749,9 @@ plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths")
 plt.legend();
 ```
 
-The images are taller than they are wide.
-We have more training images than test images.
+## Checking the dimensions II
 
-## Checking the dimensions III
-
-```{python}
-plt.hist(train_heights, bins=30, alpha=0.5, label="Train Heights", density=True)
-plt.hist(train_widths, bins=30, alpha=0.5, label="Train Widths", density=True)
-plt.hist(test_heights, bins=30, alpha=0.5, label="Test Heights", density=True)
-plt.hist(test_widths, bins=30, alpha=0.5, label="Test Widths", density=True)
-plt.legend();
-```
-
-## Checking the dimensions IV
+Using `density=True` removes the count imbalance, so we can compare the *shapes* of the distributions.
 
 ::: columns
 ::: column
@@ -723,7 +771,8 @@ plt.legend();
 :::
 :::
 
-The distribution of dimensions are pretty similar between training and test sets.
+- The images are taller than they are wide.
+- The distribution of dimensions are pretty similar between training and test sets.
 
 ## Keras image dataset loading
 
@@ -808,7 +857,6 @@ print(X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_te
 ```
 
 ```{python}
-import matplotlib.font_manager as fm
 CHINESE_FONT = fm.FontProperties(fname="STHeitiTC-Medium-01.ttf")
 
 def plot_mandarin_characters(X, y, class_names, n=5, title_font=CHINESE_FONT):
@@ -863,33 +911,26 @@ plt.imshow(dong);
 :::
 :::
 
-# Fitting a (Multinomial) Logistic Regression
+# Training Our Models {visibility="uncounted"}
 
-::: {.content-visible unless-format="revealjs"}
-What if, rather than deep learning, we wanted to fit a logistic regression to an image?
-:::
-
-## Make a logistic regression
+## Make simple baseline (multinomial) logistic regression
 
 ![Basically pretend it's not an image](images/flattening-image-to-vector.png)
 
 ::: {.content-visible unless-format="revealjs"}
-By flattening the image, we convert the matrix of information (tensor 2) into a vector (tensor 1), converting the dataset to tabular.
-A consequence is that we lose information about the dimensions of the image.
+By flattening the image, we convert the 2D grid of pixels (a rank-2 tensor) into a single long vector (a rank-1 tensor), turning the dataset into a tabular one.
+The pixel values are all still there, but the model loses track of which pixels were neighbours --- it can no longer exploit the 2D spatial structure that convolution relies on.
 :::
 
 ```{python}
-from keras.layers import Rescaling, Flatten     #<1>
-
-num_classes = np.unique(y_train).shape[0]       #<2>
+num_classes = np.unique(y_train).shape[0]       #<1>
 random.seed(123)
 model = Sequential([
   Input((img_height, img_width, 1)), Flatten(), Rescaling(1./255),
   Dense(num_classes, activation="softmax")
 ])
 ```
-1. Imports preprocessing layers from `keras.layers` useful for image data
-2. Specifies the number of unique categories in the train set
+1. Specifies the number of unique categories in the train set
 
 ::: {.callout-tip}
 The `Rescaling` layer will rescale the intensities to [0, 1].
@@ -915,33 +956,42 @@ Path("model.png").unlink(missing_ok=True)
 ## Fitting the model
 
 ```{python}
-#| code-line-numbers: "1-7,14-15|"
+#| eval: false
 loss = keras.losses.SparseCategoricalCrossentropy()
 topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)
 model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])  #<1>
 
-epochs = 100
 es = EarlyStopping(patience=15, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)                                  #<2>
-
-if Path("models/logistic.keras").exists():
-    model = keras.models.load_model("models/logistic.keras")
-    with open("models/logistic_history.json", "r") as json_file:
-        history = json.load(json_file)
-else:
-    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
-      epochs=epochs, callbacks=[es], verbose=0)                         #<3>
-    model.save("models/logistic.keras")
-    history = hist.history
-    with open("models/logistic_history.json", "w") as json_file:
-        json.dump(history, json_file)
+hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+    epochs=100, batch_size=128, callbacks=[es], verbose=0)                              #<3>
+history = hist.history
 ```
 
 1. Compile the model with specified optimizer (`"adam"`) and loss function (cross-entropy). The metrics we look at are accuracy and top-5 accuracy
 2. Perform early stopping to fit the parameters, using the accuracy on the validation set to determine the stopping point
 3. Fit the model with the optimized parameters
 
-Most of this last part is just to save time rendering this slides, you don't need it.
+```{python}
+#| echo: false
+# Train the model, or load it from the cache if we've already trained it.
+if Path("models/logistic.keras").exists():
+    model = keras.models.load_model("models/logistic.keras")
+    with open("models/logistic_history.json", "r") as json_file:
+        history = json.load(json_file)
+else:
+    loss = keras.losses.SparseCategoricalCrossentropy()
+    topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)
+    model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])
+    es = EarlyStopping(patience=15, restore_best_weights=True,
+        monitor="val_accuracy", verbose=2)
+    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+        epochs=100, batch_size=128, callbacks=[es], verbose=0)
+    model.save("models/logistic.keras")
+    history = hist.history
+    with open("models/logistic_history.json", "w") as json_file:
+        json.dump(history, json_file)
+```
 
 ## Plot the loss/accuracy curves
 
@@ -991,32 +1041,29 @@ Why is top-5 accuracy greater than accuracy?
 :::
 :::
 
-# Fitting a CNN {visibility="uncounted"}
-
 ## Make a CNN
 
 ```{python}
-from keras.layers import Conv2D, MaxPooling2D                          #<1>
-
 random.seed(123)
 
 model = Sequential([
   Input((img_height, img_width, 1)),
-  Rescaling(1./255),                                                    #<2>
-  Conv2D(16, 3, padding="same", activation="relu", name="conv1"),       #<3>
-  MaxPooling2D(name="pool1"),                                           #<4>
+  Rescaling(1./255),                                                    #<1>
+  Conv2D(16, 3, padding="same", activation="relu", name="conv1"),       #<2>
+  MaxPooling2D(name="pool1"),                                           #<3>
   Conv2D(32, 3, padding="same", activation="relu", name="conv2"),
   MaxPooling2D(name="pool2"),
   Conv2D(64, 3, padding="same", activation="relu", name="conv3"),
   MaxPooling2D(name="pool3", pool_size=(4, 4)),
-  Flatten(), Dense(64, activation="relu"), Dense(num_classes)           #<5>
+  Flatten(),                                                            #<4>
+  Dense(64, activation="relu"),
+  Dense(num_classes)           
 ])
 ```
-1. Imports CNN specific preprocessing layers from `keras.layers`
-2. Rescales the numeric representations of data which ranges from [0,255] into [0, 1] range
-3. Applies the convolution layer. Here `padding="same"` ensures that the dimensions of the input and output matrices remain same
-4. Applies `MaxPooling`, which reduces the spatial dimensions by carrying forward the maximum value over an input window
-5. Applies the `Flatten` layer to convert the 2D array (from pooling) into a single column vector, and passes through couple of `Dense` layers to train the neural network for the specific classification problem.
+1. Rescales the numeric representations of data which ranges from [0,255] into [0, 1] range
+2. Applies the convolution layer. Here `padding="same"` ensures that the dimensions of the input and output matrices remain same
+3. Applies `MaxPooling`, which reduces the spatial dimensions by carrying forward the maximum value over an input window
+4. Applies the `Flatten` layer to convert the 2D array (from pooling) into a single column vector, and passes through couple of `Dense` layers to train the neural network for the specific classification problem.
 Note that the output layer has number of neurons equal to `num_classes`, which corresponds to the number of unique classes in the output.
 
 ::: footer
@@ -1031,6 +1078,9 @@ model.summary()
 
 ## Plot the CNN
 
+::: columns
+::: {.column width="60%"}
+
 ```{python}
 plot_model(model, show_shapes=True)
 ```
@@ -1039,34 +1089,51 @@ plot_model(model, show_shapes=True)
 #| echo: false
 Path("model.png").unlink(missing_ok=True)
 ```
+:::
+::: {.column width="30%"}
+![Source: Randall Munroe (2019), [xkcd #2173: Trained a Neural Net](https://xkcd.com/2173/).](images/xkcd-trained_a_neural_net_2x.png)
+:::
+:::
 
 ## Fit the CNN
 
 ```{python}
+#| eval: false
 loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True)               #<1>
 topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)                           #<2>
 model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])            #<3>
 
-epochs = 100
 es = EarlyStopping(patience=15, restore_best_weights=True,
     monitor="val_accuracy", verbose=2)
-
-if Path("models/cnn.keras").exists():
-    model = keras.models.load_model("models/cnn.keras")
-    with open("models/cnn_history.json", "r") as json_file:
-        history = json.load(json_file)
-else:
-    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
-      epochs=epochs, callbacks=[es], verbose=0)
-    model.save("models/cnn.keras")
-    history = hist.history
-    with open("models/cnn_history.json", "w") as json_file:
-        json.dump(history, json_file)
+hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+    epochs=100, batch_size=128, callbacks=[es], verbose=0)
+history = hist.history
 ```
 
 1. Defines the loss function with an added command `from_logits=True`. Doing this instead of defining a `softmax` function at the output `Dense` layer of the neural network is expected to be more numerically stable
 2. Specifies a new metric to keep track of accuracy of the top 5 predicted classes. This means that, for each input image, the metric will consider whether the true class is among the top 5 predicted classes by the model
 3. Compiles the model as usual with an optimizer, a loss function and metrics to monitor
+
+```{python}
+#| echo: false
+# Train the model, or load it from the cache if we've already trained it.
+if Path("models/cnn.keras").exists():
+    model = keras.models.load_model("models/cnn.keras")
+    with open("models/cnn_history.json", "r") as json_file:
+        history = json.load(json_file)
+else:
+    loss = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    topk = keras.metrics.SparseTopKCategoricalAccuracy(k=5)
+    model.compile(optimizer='adam', loss=loss, metrics=['accuracy', topk])
+    es = EarlyStopping(patience=15, restore_best_weights=True,
+        monitor="val_accuracy", verbose=2)
+    hist = model.fit(X_train, y_train, validation_data=(X_val, y_val),
+        epochs=100, batch_size=128, callbacks=[es], verbose=0)
+    model.save("models/cnn.keras")
+    history = hist.history
+    with open("models/cnn_history.json", "w") as json_file:
+        json.dump(history, json_file)
+```
 
 ::: {.callout-tip}
 Instead of using softmax activation, just added `from_logits=True` to the loss function; this is more numerically stable.
@@ -1094,27 +1161,12 @@ print(f"Test Top 5 Accuracy: {top5_accuracy:.4f}")
 
 ## Predict on the test set
 
-```{python}
-#| error: true
-#| output: false
-model.predict(X_test[0], verbose=0);
-```
+Running `model.predict(X_test[0], verbose=0)` would crash. Why?
 
 ```{python}
-#| echo: false
-warn = """ValueError                                Traceback (most recent call last)
-Cell In[51], line 1
-----> 1 model.predict(X_test[0], verbose=0);
-ValueError: Exception encountered when calling MaxPooling2D.call().
-Negative dimension size caused by subtracting 2 from 1 for '{{node sequential_1_1/pool1_1/MaxPool2d}} = MaxPool[T=DT_FLOAT, data_format="NHWC", explicit_paddings=[], ksize=[1, 2, 2, 1], padding="VALID", strides=[1, 2, 2, 1]](sequential_1_1/conv1_1/Relu)' with input shapes: [32,60,1,16].
-Arguments received by MaxPooling2D.call():
-  • inputs=tf.Tensor(shape=(32, 60, 1, 16), dtype=float32)
-"""
-print(warn)
-```
-
-```{python}
-X_test[0].shape, X_test[0][np.newaxis, :].shape, X_test[[0]].shape
+print(X_test[0].shape)
+print(X_test[0][np.newaxis, :].shape)
+print(X_test[[0]].shape)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -1133,6 +1185,8 @@ Because we don't have the softmax activation function, the predicted values don'
 
 ## Predict on the test set II
 
+::: columns
+::: column
 ```{python}
 model.predict(X_test[[0]], verbose=0).argmax()
 ```
@@ -1140,10 +1194,14 @@ model.predict(X_test[[0]], verbose=0).argmax()
 ```{python}
 class_names[model.predict(X_test[[0]], verbose=0).argmax()]
 ```
+:::
+::: column
 
 ```{python}
 plt.imshow(X_test[0], cmap="gray");
 ```
+:::
+:::
 
 ::: {.content-visible unless-format="revealjs"}
 The predicted category appears to be correct.
@@ -1154,14 +1212,14 @@ The predicted category appears to be correct.
 ```{python}
 #| code-fold: true
 def plot_failed_predictions(X, y, class_names, max_errors = 20,
-            num_rows = 4, num_cols = 5, title_font=CHINESE_FONT):
+            num_rows = 2, num_cols = 5, title_font=CHINESE_FONT):
     plt.figure(figsize=(num_cols * 2, num_rows * 2))
     errors = 0
     y_pred = model.predict(X, verbose=0)
     y_pred_classes = y_pred.argmax(axis=1)
     y_pred_probs = keras.ops.convert_to_numpy(keras.ops.softmax(y_pred)).max(axis=1)
     for i in range(len(y_pred)):
-        if errors >= max_errors:
+        if errors >= min(max_errors, num_rows * num_cols):
             break
         if y_pred_classes[i] != y[i]:
             plt.subplot(num_rows, num_cols, errors + 1)
@@ -1223,35 +1281,45 @@ For incorrect guesses, the guesses were less confident on average, but most of t
 :::
 
 
-# Hyperparameter Tuning {visibility="uncounted"}
+# Hyperparameter Optimisation {visibility="uncounted"}
 
-## Trial & error
+## How do we pick the best hyperparameters?
 
-::: columns
-::: column
+Make a range potential values for hyperparameter, and try many combinations of them.
 
-<br>
-<br>
+> "hyper-parameter optimization should be regarded as a formal outer loop in the
+learning process"
+>
+> ::: {style="text-align: right;"}
+> — @bergstra2011algorithms [p. 1].
+> :::
 
-Frankly, a lot of this is just 'enlightened' trial and error.
-:::
-::: column
 
-![Or 'received wisdom' from experts...](images/twitter-advice.png)
+> "HPO faces several challenges which make it a hard problem in practice:
+>
+> - Function evaluations can be extremely expensive for large models (e.g., in deep learning), complex machine learning pipelines, or large datesets.
+> - The configuration space is often complex (comprising a mix of continuous, categorical and conditional hyperparameters) and high-dimensional. Furthermore, it is not always clear which of an algorithm’s hyperparameters need to be optimized, and in which ranges.
+> - We usually don’t have access to a gradient of the loss function with respect to the hyperparameters."
+> 
+> ::: {style="text-align: right;"}
+> — @feurer2019hyperparameter [p. 4]
+> :::
 
-:::
-:::
+
+## Could we just try every combination?
+
+This technique, called grid search, would be too slow. Better to take random selections.
+
+![Random search is safer to use than grid search.](images/bergstra-fig-1.png).
 
 ::: footer
-Source: [X](https://x.com/tetraduzione/status/1525501171221274627?s=20&t=ulVFesw-f7hCuG9KyaoYbQ).
+Source: Figure 1 directly from @bergstra2012random.
 :::
 
-## Optuna {.smaller}
+## Optuna
 
 ```{python}
 #| echo: false
-from sklearn.datasets import fetch_california_housing
-
 if not Path("california-features.csv").exists():
   features, target = fetch_california_housing(as_frame=True, return_X_y=True)
   features.to_csv("california-features.csv", index=False)
@@ -1277,56 +1345,27 @@ X_test_sc = sc.transform(X_test)
 ```
 
 ```{python}
-#| output: false
-!pip install optuna
-```
-
-```{python}
-import os
-import optuna
-optuna.logging.set_verbosity(optuna.logging.WARNING)
-
-os.makedirs("./optuna-artifacts", exist_ok=True)
-artifact_store = optuna.artifacts.FileSystemArtifactStore(
-    base_path="./optuna-artifacts")
-
 def objective(trial):
+    keras.utils.set_random_seed(trial.number) #<1>
     model = Sequential()
-    model.add(
-        Dense(
-            trial.suggest_categorical("neurons",
-                [4, 8, 16, 32, 64, 128, 256]),
-            activation=trial.suggest_categorical(
-                "activation",
-                ["relu", "leaky_relu", "tanh"]),
-        )
-    )
+    model.add(Dense(
+        trial.suggest_categorical("neurons", [4, 8, 16, 32, 64, 128, 256]),
+        activation=trial.suggest_categorical("activation",
+            ["relu", "leaky_relu", "tanh"]),
+    ))
     model.add(Dense(1, activation="exponential"))
 
-    learning_rate = trial.suggest_float("lr",
-        1e-4, 1e-2, log=True)
+    learning_rate = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
     opt = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=opt, loss="poisson")
 
-    es = EarlyStopping(patience=3,
-        restore_best_weights=True)
-    model.fit(X_train_sc, y_train, epochs=100,
-        callbacks=[es],
-        validation_data=(X_val_sc, y_val), verbose=0)
+    es = EarlyStopping(patience=3, restore_best_weights=True)
+    model.fit(X_train_sc, y_train, epochs=100, batch_size=256,
+        callbacks=[es], validation_data=(X_val_sc, y_val), verbose=0)
 
-    val_loss = model.evaluate(
-        X_val_sc, y_val, verbose=0)
-
-    model.save("_trial_model.keras")              #<1>
-    artifact_id = optuna.artifacts.upload_artifact(
-        artifact_store=artifact_store,
-        file_path="_trial_model.keras",
-        study_or_trial=trial)
-    trial.set_user_attr("artifact_id", artifact_id)
-
-    return val_loss
+    return model.evaluate(X_val_sc, y_val, verbose=0)
 ```
-1. Each trial's trained model is saved to Optuna's artifact store so the best model can be retrieved later
+1. Seeding with the trial number makes each model's weight initialisation and mini-batch shuffling reproducible, so the winning trial can be rebuilt exactly afterwards.
 
 ::: {.content-visible unless-format="revealjs"}
 The hyperparameters we are tuning are:
@@ -1342,9 +1381,7 @@ We give the model a few choices for the first two (the learning rate is continuo
 
 ```{python}
 sampler = optuna.samplers.RandomSampler(seed=123)
-study = optuna.create_study(
-    direction="minimize",
-    sampler=sampler)
+study = optuna.create_study(direction="minimize", sampler=sampler)
 
 study.optimize(objective, n_trials=10)
 ```
@@ -1356,58 +1393,57 @@ for k, v in study.best_trial.params.items():
     print(f"  {k}: {v}")
 ```
 
+::: {.content-visible unless-format="revealjs"}
+The model runs through 10 random combinations of the hyperparameters and returns the one where the loss on the validation set is minimised.
+:::
+
+## Recover the winning model
+
+Because each trial seeded itself with its own trial number, we can rebuild the *exact* winning model from its saved parameters --- no need to store the trained weights.
+
 ```{python}
-best_id = study.best_trial.user_attrs["artifact_id"]
-Path("best_random_model.keras").unlink(missing_ok=True)
-optuna.artifacts.download_artifact(
-    artifact_store=artifact_store,
-    file_path="best_random_model.keras",
-    artifact_id=best_id)
-best_model = keras.models.load_model(
-    "best_random_model.keras")
+p = study.best_trial.params
+keras.utils.set_random_seed(study.best_trial.number)
+
+best_model = Sequential([
+    Dense(p["neurons"], activation=p["activation"]),
+    Dense(1, activation="exponential"),
+])
+best_model.compile(optimizer=keras.optimizers.Adam(p["lr"]), loss="poisson")
+
+es = EarlyStopping(patience=3, restore_best_weights=True)
+best_model.fit(X_train_sc, y_train, epochs=100, batch_size=256,
+    callbacks=[es], validation_data=(X_val_sc, y_val), verbose=0)
+
+print(f"Rebuilt loss: {best_model.evaluate(X_val_sc, y_val, verbose=0):.4f}")
+print(f"Tuning best:  {study.best_trial.value:.4f}")
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The model runs through 10 random combinations of the hyperparameters and returns the one where the loss on the validation set is minimised. After the search, we retrieve the best trial's saved model from the artifact store.
+The rebuilt model's validation loss matches the value found during tuning, confirming we have recovered the same model. The seed must be set at the top of the function --- before the model is built and trained --- since it controls both the weight initialisation and the order the training data is shuffled in.
 :::
 
-## Tune layers separately {.smaller}
+## Tune layers separately
 
 ```{python}
 def objective(trial):
+    keras.utils.set_random_seed(trial.number)
     model = Sequential()
 
-    for i in range(trial.suggest_int(
-            "numHiddenLayers", 1, 3)):
-        model.add(
-            Dense(
-                trial.suggest_categorical(
-                    f"neurons_{i}", [8, 16, 32, 64]),
-                activation="relu"
-            )
-        )
+    for i in range(trial.suggest_int("numHiddenLayers", 1, 3)):
+        model.add(Dense(
+            trial.suggest_categorical(f"neurons_{i}", [8, 16, 32, 64]),
+            activation="relu"))
     model.add(Dense(1, activation="exponential"))
 
     opt = keras.optimizers.Adam(learning_rate=0.0005)
     model.compile(optimizer=opt, loss="poisson")
 
-    es = EarlyStopping(patience=3,
-        restore_best_weights=True)
-    model.fit(X_train_sc, y_train, epochs=100,
-        callbacks=[es],
-        validation_data=(X_val_sc, y_val), verbose=0)
+    es = EarlyStopping(patience=3, restore_best_weights=True)
+    model.fit(X_train_sc, y_train, epochs=100, batch_size=256,
+        callbacks=[es], validation_data=(X_val_sc, y_val), verbose=0)
 
-    val_loss = model.evaluate(
-        X_val_sc, y_val, verbose=0)
-
-    model.save("_trial_model.keras")
-    artifact_id = optuna.artifacts.upload_artifact(
-        artifact_store=artifact_store,
-        file_path="_trial_model.keras",
-        study_or_trial=trial)
-    trial.set_user_attr("artifact_id", artifact_id)
-
-    return val_loss
+    return model.evaluate(X_val_sc, y_val, verbose=0)
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -1417,14 +1453,12 @@ This time, we let the number of neurons in each hidden layer be tuned separately
 ## Do a Bayesian search
 
 ```{python}
-sampler = optuna.samplers.TPESampler(seed=123) #<1>
-study = optuna.create_study(
-    direction="minimize",
-    sampler=sampler)
+sampler = optuna.samplers.TPESampler(seed=123, n_startup_trials=5) #<1>
+study = optuna.create_study(direction="minimize", sampler=sampler)
 
 study.optimize(objective, n_trials=10)
 ```
-1. Optuna uses a _Tree-structured Parzen Estimator_ (TPE) by default, which is a Bayesian method. Passing a `seed` makes the search reproducible.
+1. Optuna uses a _Tree-structured Parzen Estimator_ (TPE) by default, which is a Bayesian method. Passing a `seed` makes the search reproducible. The first `n_startup_trials` are sampled randomly to seed the model (the default is 10); we lower it to 5 so the later trials are actually chosen by TPE.
 
 ```{python}
 print(f"Best value: {study.best_trial.value:.4f}")
@@ -1433,32 +1467,48 @@ for k, v in study.best_trial.params.items():
     print(f"  {k}: {v}")
 ```
 
+::: {.callout-tip}
+Neural networks are sensitive to their random initialisation: a hyperparameter combination that looks good (or bad) on a single run might just have been lucky. A more robust approach is to train 3--5 models with the same hyperparameters but different random seeds, and average the validation loss --- selecting architectures that perform well _and_ reliably.
+:::
+
 ::: {.content-visible unless-format="revealjs"}
 Bayesian search is not purely random, and updates its beliefs about the optimal hyperparameter values based on past models. Bayesian search balances *exploration* of new hyperparameter values and *exploitation* of the values that are expected to be optimal. Optuna's default sampler is the Tree-structured Parzen Estimator (TPE), which is a Bayesian optimization algorithm. Passing a `seed` to the sampler ensures the same sequence of hyperparameters is tried each time.
-:::
 
-## Averaging over random seeds
-
-::: {.callout-tip}
-Neural networks are sensitive to their random initialisation. A hyperparameter combination that looks good (or bad) on a single run might just have been lucky (or unlucky).
-
-A more robust approach is to train 3--5 models with the same hyperparameters but different random seeds, and average the validation loss. This way you select architectures that perform well *and* reliably, rather than ones that happened to land on a favourable starting point.
-:::
-
-::: {.content-visible unless-format="revealjs"}
 In the objective function, instead of returning the loss from a single fit, you would loop over a few seeds, refit each time, and return the mean validation loss. This is slower but gives you much more confidence that the chosen hyperparameters are genuinely good rather than a fluke.
 :::
 
-# Benchmark Problems {visibility="uncounted"}
+::: footer
+See @bergstra2011algorithms [Sec. 4] for details of the Tree-structured Parzen Estimator approach.
+:::
+
+<!--
+# Leverage Past Work {visibility="uncounted"}
+
+## Benchmarks
+
+[CIFAR-10 / CIFAR-100 dataset](https://www.cs.toronto.edu/~kriz/cifar.html) from Canadian Institute for Advanced Research
+
+- 10 classes: 60000 32x32 colour images
+- 100 classes: 60000 32x32 colour images
+
+[ImageNet](https://www.image-net.org/index.php) and the _ImageNet Large Scale Visual Recognition Challenge (ILSVRC)_; originally [1,000 synsets](https://image-net.org/challenges/LSVRC/2014/browse-synsets).
+
+- In 2022: 14,197,122 labelled images from 21,841 synsets.
+- See [Keras applications](https://keras.io/api/applications/) for downloadable models.
+-->
+
+
+# Transfer Learning {visibility="uncounted"}
+
 
 ## Demo: Object classification
 
 ::: columns
 ::: column
-![Example object classification run.](images/teach-images.png)
+![[Example object classification app](https://teachablemachine.withgoogle.com/train)](images/teach-images.png){width="65%"}
 :::
 ::: column
-![Example of object classification.](https://info.deeplearning.ai/hs-fs/hubfs/NOCODE.gif?width=1199&upscale=true&name=NOCODE.gif)
+![](https://info.deeplearning.ai/hs-fs/hubfs/NOCODE.gif?width=1200&upscale=true&name=NOCODE.gif){width="80%"}
 :::
 :::
 
@@ -1466,148 +1516,19 @@ In the objective function, instead of returning the loss from a single fit, you 
 How are these classification models so accurate?
 :::
 
-::: footer
-Source: Teachable Machine, [https://teachablemachine.withgoogle.com/](https://teachablemachine.withgoogle.com/).
-:::
+<!-- ## How does that work? -->
 
-## How does that work?
-
-> ... these models use a technique called transfer learning. There’s a pretrained neural network, and when you create your own classes, you can sort of picture that your classes are becoming the last layer or step of the neural net. Specifically, both the image and pose models are learning off of pretrained mobilenet models ...
-
-[Teachable Machine FAQ](https://teachablemachine.withgoogle.com/faq#Diving-Deeper)
-
-## Benchmarks
-
-[CIFAR-11 / CIFAR-100 dataset](https://www.cs.toronto.edu/~kriz/cifar.html) from Canadian Institute for Advanced Research
-
-- 9 classes: 60000 32x32 colour images
-- 99 classes: 60000 32x32 colour images
-
-[ImageNet](https://www.image-net.org/index.php) and the _ImageNet Large Scale Visual Recognition Challenge (ILSVRC)_; originally [1,000 synsets](https://image-net.org/challenges/LSVRC/2014/browse-synsets).
-
-- In 2021: 14,197,122 labelled images from 21,841 synsets.
-- See [Keras applications](https://keras.io/api/applications/) for downloadable models.
-
-## LeNet-6 (1998) {.smaller}
-
-| Layer | Type            | Channels | Size    | Kernel size | Stride | Activation |
-|-------|-----------------|------|---------|-------------|--------|------------|
-| In    | Input           | 0    | 32×32 | –           | –      | –          |
-| C0    | Convolution     | 6    | 28×28 | 5×5       | 1      | tanh       |
-| S1    | Avg pooling     | 6    | 14×14 | 2×2       | 2      | tanh       |
-| C2    | Convolution     | 16   | 10×10 | 5×5       | 1      | tanh       |
-| S3    | Avg pooling     | 16   | 5×5   | 2×2       | 2      | tanh       |
-| C4    | Convolution     | 120  | 1×1   | 5×5       | 1      | tanh       |
-| F5    | Fully connected | –    | 84      | –           | –      | tanh       |
-| Out   | Fully connected | –    | 9      | –           | –      | RBF        |
-
-::: {.callout-note}
-MNIST images are 27×28 pixels, and with zero-padding (for a 5×5 kernel) that becomes 32×32.
-:::
+> "... these models use a technique called transfer learning. There’s a pretrained neural network, and when you create your own classes, you can sort of picture that your classes are becoming the last layer or step of the neural net. Specifically, both the image and pose models are learning off of pretrained mobilenet models ..."
 
 ::: footer
-Source: Aurélien Géron (2018), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, Chapter 14.
+Source: [Teachable Machine FAQ](https://teachablemachine.withgoogle.com/faq#Diving-Deeper)
 :::
-
-## AlexNet (2011) {.smaller}
-
-| Layer | Type            | Channels    | Size      | Kernel | Stride | Padding | Activation |
-|-------|-----------------|---------|-----------|-------------|--------|---------|------------|
-| In    | Input           | 2       | 227×227 | –           | –      | –       | –          |
-| C0    | Convolution     | 96      | 55×55   | 11×11     | 4      | valid   | ReLU       |
-| S1    | Max pool     | 96      | 27×27   | 3×3       | 2      | valid   | –          |
-| C2    | Convolution     | 256     | 27×27   | 5×5       | 1      | same    | ReLU       |
-| S3    | Max pool     | 256     | 13×13   | 3×3       | 2      | valid   | –          |
-| C4    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
-| C5    | Convolution     | 384     | 13×13   | 3×3       | 1      | same    | ReLU       |
-| C6    | Convolution     | 256     | 13×13   | 3×3       | 1      | same    | ReLU       |
-| S7    | Max pool     | 256     | 6×6     | 3×3       | 2      | valid   | –          |
-| F8    | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
-| F9   | Fully conn. | –       | 4,096     | –           | –      | –       | ReLU       |
-| Out   | Fully conn. | –       | 1,000     | –           | –      | –       | Softmax    |
-
-::: footer
-Winner of the ILSVRC 2012 challenge (top-five error 17%), developed by Alex Krizhevsky, Ilya Sutskever, and Geoffrey Hinton.
-:::
-
-## Data Augmentation
-
-::: {.content-visible unless-format="revealjs"}
-Data augmentation: start with an image, and make new images from it by extracting certain information. Examples include: 
-
-* De-texturising
-* De-colorising
-* Flipping/rotating
-
-Data augmentation doesn't *add* new information, but it can make the model robust and sensitive to small changes in the images. In a way the model has more images to learn from.
-:::
-
-![Examples of data augmentation.](images/data-augmentation.png)
-
-::: footer
-Source: Buah et al. (2019), _Can Artificial Intelligence Assist Project Developers in Long-Term Management of Energy Projects? The Case of CO2 Capture and Storage_.
-:::
-
-## Inception module (2013)
-
-Used in ILSVRC 2013 winning solution (top-5 error < 7%).
-
-::: columns
-::: {.column width="59%"}
-![](images/inception-module-fig-2b.png)
-:::
-::: {.column width="39%"}
-
-<br>
-
-![](images/inception-meme.jpeg)
-:::
-:::
-
-VGGNet was the runner-up.
-
-::: footer
-Source: Szegedy, C. et al. (2014), [_Going deeper with convolutions_](https://arxiv.org/pdf/1409.4842.pdf).
-and [KnowYourMeme.com](https://knowyourmeme.com/memes/we-need-to-go-deeper)
-:::
-
-## GoogLeNet / Inception_v0 (2014)
-
-![Schematic of the GoogLeNet architecture.](images/Zhang-googlenet-architecture.png)
-
-::: footer
-Source: Zhang et al. (2018), [Can deep learning identify tomato leaf disease?](https://doi.org/10.1155/2018/6710865), Advances in Multimedia.
-:::
-
-## Depth is important for image tasks
-
-![Deeper models aren't just better because they have more parameters. ](images/goodfellow-depth-matters2.png)
-
-::: footer
-Source: Adapted from Goodfellow et al. (2014), [Multi-digit Number Recognition from Street View Imagery using Deep Convolutional Neural Networks](https://doi.org/10.48550/arXiv.1312.6082)
-:::
-
-## Residual connection
-
-![Illustration of a residual connection.](images/residual-connection.png)
-
-::: footer
-Source: [Wikimedia](https://commons.wikimedia.org/wiki/File:ResBlock.png)
-:::
-
-
-## ResNet (2014)
-
-ResNet won the ILSVRC 2014 challenge (top-5 error 3.6%), developed by [Kaiming He et al.](https://arxiv.org/abs/1512.03385) (see Figure 14-17 of Géron; 2018).
-
-# Transfer Learning {visibility="uncounted"}
 
 ::: {.content-hidden unless-format="revealjs"}
 
 {{< include _imagenet-examples.qmd >}}
 
 :::
-
 
 ## Transfer learned model
 
@@ -1802,13 +1723,14 @@ The model has 155 layers.
 <img src="images/mobilenet-model.png">
 </div>
 
+
 ## Transfer learning
 
 ```python
 # Pull in the base model we are transferring from.
 base_model = keras.applications.Xception(
     weights="imagenet",  # Load weights pre-trained on ImageNet.
-    input_shape=(149, 150, 3),
+    input_shape=(150, 150, 3),
     include_top=False,
 )  # Discard the ImageNet classifier at the top.
 
@@ -1816,11 +1738,11 @@ base_model = keras.applications.Xception(
 base_model.trainable = False
 
 # Make our new model on top of the base model.
-inputs = keras.Input(shape=(149, 150, 3))
+inputs = Input(shape=(150, 150, 3))
 x = base_model(inputs, training=False)
-x = keras.layers.GlobalAveragePooling1D()(x)
-outputs = keras.layers.Dense(0)(x)
-model = keras.Model(inputs, outputs)
+x = GlobalAveragePooling2D()(x)
+outputs = Dense(1)(x)
+model = Model(inputs, outputs)
 
 # Compile and fit on our data.
 model.compile(
@@ -1828,11 +1750,11 @@ model.compile(
     loss=keras.losses.BinaryCrossentropy(from_logits=True),
     metrics=[keras.metrics.BinaryAccuracy()],
 )
-model.fit(new_dataset, epochs=19, callbacks=..., validation_data=...)
+model.fit(new_dataset, epochs=2, callbacks=..., validation_data=...)
 ```
 
 ::: footer
-Source: François Chollet (2019), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
+Source: François Chollet (2020), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
 :::
 
 ## Fine-tuning
@@ -1845,13 +1767,13 @@ base_model.trainable = True
 # to the `trainable` attribute of any inner layer, so that your changes
 # are take into account
 model.compile(
-    optimizer=keras.optimizers.Adam(0e-5),  # Very low learning rate
+    optimizer=keras.optimizers.Adam(1e-5),  # Very low learning rate
     loss=keras.losses.BinaryCrossentropy(from_logits=True),
     metrics=[keras.metrics.BinaryAccuracy()],
 )
 
 # Train end-to-end. Be careful to stop before you overfit!
-model.fit(new_dataset, epochs=9, callbacks=..., validation_data=...)
+model.fit(new_dataset, epochs=1, callbacks=..., validation_data=...)
 ```
 
 ::: {.callout-caution}
@@ -1859,7 +1781,7 @@ Keep the learning rate low, otherwise you may accidentally throw away the useful
 :::
 
 ::: footer
-Source: François Chollet (2019), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
+Source: François Chollet (2020), [Transfer learning & fine-tuning](https://keras.io/guides/transfer_learning/), Keras documentation.
 :::
 
 ## Package Versions {.appendix data-visibility="uncounted"}
@@ -1875,19 +1797,15 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 ::: column
 
 - AlexNet
-- benchmark problems
 - channels
-- CIFAR-10 / CIFAR-100
 - computer vision
 - convolutional layer
 - convolutional network
 - filter
-- GoogLeNet & Inception
-
-:::
-::: column
 - ImageNet challenge
 - fine-tuning
+:::
+::: column
 - flatten layer
 - kernel
 - max pooling
@@ -1896,4 +1814,9 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - tensor (rank)
 - transfer learning
 :::
+:::
+
+## References {visibility="uncounted"}
+
+::: {refs}
 :::
