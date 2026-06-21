@@ -1,47 +1,51 @@
 ---
-title: Time Series & Recurrent Neural Networks
+title: "Time Series & Recurrent Neural Networks"
 ---
 
 ```{python}
 #| echo: false
 #| warning: false
 from setup import *
-
-
-# Custom add_diagonal_line for this notebook that extends the line to cover both axes
-def add_diagonal_line():
-    xl = plt.xlim()
-    yl = plt.ylim()
-    min_left = min(xl[0], yl[0])
-    max_right = max(xl[1], yl[1])
-    plt.plot([min_left, max_right], [min_left, max_right], color="black", linestyle="--")
-    plt.xlim([min_left, max_right])
-    plt.ylim([min_left, max_right])
 ```
 
-::: {.content-visible unless-format="revealjs"}
+# Introduction {visibility="uncounted"}
+
+## A lecture on sequence modelling
+
+This is really a lecture about _sequences_ — ordered data where the _order itself carries meaning_.
+
+- _Time series_: stock prices, claim counts, mortality rates, temperatures.
+- _Text_: a sentence is a sequence of words; a document a sequence of sentences.
+
+The common thread: to predict the next element we must use what came _before_.
+
+## Imports needed for these demos
 
 ```{python}
-#| code-fold: true
-#| code-summary: Show the package imports
+import re
 import random
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
 
+import keras
 from keras.models import Sequential
-from keras.layers import Dense, Input, Rescaling
+from keras.layers import (Dense, Input, Rescaling, Reshape,
+    SimpleRNN, GRU, LSTM, Bidirectional, Embedding)
 from keras.callbacks import EarlyStopping
 ```
 
-:::
 
-# Time Series {visibility="uncounted"}
+# Time series data
 
 ## Tabular data vs time series data
 
@@ -94,64 +98,73 @@ What will be the temperature in Berlin tomorrow?
 What information would you use to make a prediction?
 :::
 
-## Australian financial stocks {.smaller}
+## The forecasting problem
+
+We stand at a _reference time_ $t$: we have seen the series up to now, and want the next $h$ values.
+
+![We need to know all covariates at time $t$ to make a prediction at $t+1$.](images/ts_forecasting_problem.png)
+
+## Three kinds of forecasting models
+
+![A schematic contrasting local univariate models (one series predicts itself), global univariate models (multiple series predict one), or multivariate models (multiple inputs, multiple targets).](images/ts_forecasting_types.png)
+
+For local models, you would have a separate model for each time series. 
+Global models allow for _cross-learning_, and are more promising for deep forecasting techniques.
+
+::: footer
+See @benidis2022deep [p. 4].
+:::
+
+## Time series for actuaries
+
+Applications:
+
+- _Claims reserving_ — project future claim payments given a notified claim.
+- _Mortality forecasting_ — extrapolate mortality rates from life tables, e.g., @richman2019lee.
+- _Economic scenario generation_ — simulate interest rates, inflation, and asset returns.
+
+Neural networks or traditional models:
+
+- _Traditional_ models (ARIMA, Lee–Carter) can be hard to beat on a _single, short, well-structured_ series — decades of refinement, few parameters, robust.
+- _Neural networks_ work best with global cross-learning, and rich covariates.
+
+Think about the fundamental predictability of the data:
+
+- _Share prices_ are close to a _random walk_, hopeless to predict.
+- _Weather_ is often genuinely predictable, especially in the short-term.
+
+# Australian financial stocks
+
+::: {.content-visible unless-format="revealjs"}
+
+## Downloading the data {.smaller}
+
+The `yfinance` package can download daily price histories from Yahoo Finance. We grab several ASX-listed financials plus the ASX200 index.
 
 ```python
-# First, install yfinance if you haven't already:
 # pip install yfinance
 import yfinance as yf
-import pandas as pd
 from datetime import date
 
-# 1. Define the ASX tickers (Yahoo uses “.AX” for Australian stocks
-#    and “^AXJO” for the S&P/ASX 200 index)
+# Yahoo uses ".AX" for ASX stocks and "^AXJO" for the S&P/ASX 200 index
 tickers = {
-    "ANZ":    "ANZ.AX",
-    "BOQ":    "BOQ.AX",
-    "CBA":    "CBA.AX",
-    "NAB":    "NAB.AX",
-    "QBE":    "QBE.AX",
-    "SUN":    "SUN.AX",
-    "WBC":    "WBC.AX",
-    "ASX200": "^AXJO"
+    "ANZ": "ANZ.AX", "BOQ": "BOQ.AX", "CBA": "CBA.AX", "NAB": "NAB.AX",
+    "QBE": "QBE.AX", "SUN": "SUN.AX", "WBC": "WBC.AX", "ASX200": "^AXJO",
 }
 
-# 2. Choose your date range
-start = "1999-01-01"
-end   = date.today().isoformat()  # e.g. "2025-06-29"
+raw = yf.download(list(tickers.values()),
+    start="1999-01-01", end=date.today().isoformat(), progress=False)
 
-# 3. Download the data
-#    This returns a Panel-like DataFrame: columns are tickers, rows are trading dates.
-raw_data = yf.download(
-    tickers=list(tickers.values()),
-    start=start,
-    end=end,
-    progress=False
-)
-
-raw_data.to_csv("asx_raw_data.csv")  # Optional: Save raw data for inspection
-
-data = raw_data["Close"]
-
-# 4. Rename columns to the simple names
-data.rename(columns={v: k for k, v in tickers.items()}, inplace=True)
-
-cols = ["ANZ", "ASX200", "BOQ", "CBA", "NAB", "QBE", "SUN", "WBC"]
-data = data[cols]
-
-# 5. (Optional) Inspect the first few rows
-print(data.head())
-
-# 6. Save to CSV
-output_path = "data/aus_fin_stocks.csv"
-data.to_csv(output_path)
-print(f"Saved daily close prices to {output_path}")
+data = raw["Close"].rename(columns={v: k for k, v in tickers.items()})
+data.to_csv("data/interim/aus_fin_stocks.csv")
 ```
+
+:::
 
 ## Australian financial stocks {.smaller}
 
 ```{python}
-stocks = pd.read_csv("data/aus_fin_stocks.csv")
+stocks = pd.read_csv("data/interim/aus_fin_stocks.csv")
 stocks
 ```
 
@@ -161,16 +174,17 @@ stocks
 stocks.plot()
 ```
 
-::: {.content-visible unless-format="revealjs"}
 ::: {.callout-note}
 ## Question
 What is wrong with this plot?
-
-*Answer*: The main issues are
-* $x$-axis is unclear: should show the _date_, not the observation number
-* The ASX200 has much larger value than the individual stocks; it should be plotted separately.
-* The legend shouldn't be overlapping and hiding half of the plot.
 :::
+
+::: {.content-visible unless-format="revealjs"}
+*Answer*: The main issues are
+
+- $x$-axis is unclear: should show the _date_, not the observation number
+- The ASX200 index has much larger values than the individual stocks; it should be plotted separately.
+- The legend shouldn't be overlapping and hiding half of the plot.
 :::
 
 ## Data types and NA values
@@ -197,7 +211,7 @@ asx200 = stocks.pop("ASX200")
 
 ```{python}
 stocks["Date"] = pd.to_datetime(stocks["Date"])
-stocks = stocks.set_index("Date") # or `stocks.set_index("Date", inplace=True)`
+stocks = stocks.set_index("Date")
 stocks
 ```
 
@@ -207,12 +221,12 @@ By setting the index to the date (and converting the date to a proper date forma
 
 ## Plot II
 ```{python}
-stocks.plot()
+stocks.plot() # This plot can still be improved.. why?
 plt.ylabel("Stock Price ($)")
-plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
+plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.4), ncol=4);
 ```
 
-## Can index using dates I {.smaller}
+## Can index using dates I
 
 ::: {.content-visible unless-format="revealjs"}
 We can filter our data nicely using the dates that are now indexed.
@@ -242,7 +256,7 @@ Rather than looking directly at the time series, we can remove the effect of the
 ```{python}
 stocks.diff().plot()
 plt.ylabel("Daily Price Changes ($)")
-plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
+plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.4), ncol=4);
 ```
 
 ::: {.content-visible unless-format="revealjs"}
@@ -258,7 +272,7 @@ We can normalise the differences by taking the percentage changes.
 ```{python}
 stocks.pct_change().plot()
 plt.ylabel("Daily Returns (%)")
-plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.5), ncol=4);
+plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.4), ncol=4);
 ```
 
 ## Focus on one stock
@@ -281,6 +295,37 @@ stock.isna().sum()
 ```
 :::
 :::
+
+## Fill in the missing values
+
+::: {.content-visible unless-format="revealjs"}
+Some of the data has missing values. Here, we fill in the missing values by taking the value from the previous day. If the previous day also has a missing value, then you do the same thing until all values are filled. This is called _forward-filling_.
+:::
+
+```{python}
+asx200 = pd.DataFrame(asx200).set_index(stocks.index)
+missing_day = asx200.index[asx200["ASX200"].isna()][1]
+prev_day = missing_day - pd.Timedelta(days=1)
+after = missing_day + pd.Timedelta(days=3)
+```
+
+::: columns
+::: column
+```{python}
+asx200.loc[prev_day:after]
+```
+:::
+::: column
+```{python}
+asx200 = asx200.ffill()
+asx200.loc[prev_day:after]
+```
+:::
+:::
+
+```{python}
+stock = stock.ffill()
+```
 
 ## Convert to log returns
 
@@ -306,46 +351,134 @@ plt.title("CBA Daily Log Returns");
 ```{python}
 #| code-fold: true
 # Distribution of log returns
-stock_log.hist(bins=50, alpha=0.7)
+returns = stock_log["CBA"]
+plt.hist(returns, bins=100, alpha=0.7)
 plt.xlabel("Daily Log Return")
 plt.ylabel("Frequency")
-plt.title("Distribution of CBA Daily Log Returns");
+plt.title("Distribution of CBA daily log returns");
 ```
 :::
 :::
 
-## Fill in the missing values
+The returns are tiny and roughly symmetric about zero. Neural networks train best on inputs near unit scale, so when we build the models we rescale the returns by the standard deviation of the _training_ returns — computed at that point, so nothing leaks from the test period.
 
-::: {.content-visible unless-format="revealjs"}
-Some of the data has missing values. Here, we fill in the missing values by taking the value from the previous day. If the previous day also has missing value, then you do the same thing until all values are filled. This is called _foward-filling_.
-:::
+## Splitting in time {.smaller}
+
+We never shuffle a time series: train on the oldest data, validate on the middle, and keep the most recent years to test on. The cutoffs live in one place — change these lines to re-split.
 
 ```{python}
-asx200 = pd.DataFrame(asx200).set_index(stocks.index)
-missing_day = asx200.index[asx200["ASX200"].isna()][1]
-prev_day = missing_day - pd.Timedelta(days=1)
-after = missing_day + pd.Timedelta(days=3)
+# Train through *_train_end, validate through *_val_end, test after.
+cba_train_end,  cba_val_end  = "2014", "2020"   # ~60/20/20 (finance data ends 2026)
+cba_val_start,  cba_test_start  = str(int(cba_train_end) + 1),  str(int(cba_val_end) + 1)
 ```
+
+```{python}
+#| code-fold: true
+import matplotlib.dates as mdates
+fig, ax = plt.subplots(figsize=(6, 2.6))
+for label, lo, hi in [("Train", None, cba_train_end), ("Val", cba_val_start, cba_val_end), ("Test", cba_test_start, None)]:
+    ax.plot(stock["CBA"].loc[lo:hi].index, stock["CBA"].loc[lo:hi], label=label)
+ax.set_ylabel("CBA price ($)")
+ax.xaxis.set_major_locator(mdates.YearLocator(5))
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+ax.legend(loc="upper left", fontsize=7);
+```
+
+# Sydney weather
+
+## Sydney Airport weather {.smaller}
+
+The Bureau of Meteorology records daily weather at Sydney Airport (station 066037).
+
+```{python}
+TMAX = "Maximum temperature in 24 hours after 9am (local time) in Degrees C"
+weather = pd.read_csv("data/raw/BoM/DC02D_Data_066037_9999999910249598.csv", low_memory=False)
+weather
+```
+
+## The maximum temperature series
+
+We forecast the _daily maximum temperature_. First build a proper date index.
+
+```{python}
+weather["Date"] = pd.to_datetime(weather[["Year", "Month", "Day"]])
+temps = weather.set_index("Date")[[TMAX]].rename(columns={TMAX: "Temp"})
+temps["Temp"] = pd.to_numeric(temps["Temp"], errors="coerce")
+temps
+```
+
+## Plot
+
+```{python}
+temps.plot()
+plt.ylabel("Max temperature (°C)");
+```
+
+::: {.content-visible unless-format="revealjs"}
+Unlike stock prices, temperature has a strong, regular _yearly seasonality_ — hot summers and cool winters repeat every year. That is genuine structure a model can learn.
+:::
+
+## Data types and NA values
 
 ::: columns
 ::: column
 ```{python}
-asx200.loc[prev_day:after]
+temps.info()
 ```
 :::
 ::: column
 ```{python}
-asx200 = asx200.ffill()
-asx200.loc[prev_day:after]
+temps.isna().sum()
 ```
 :::
 :::
 
-# Baseline Forecasts
+```{python}
+temps = temps.dropna()
+```
+
+## Zooming into one summer
+
+```{python}
+temps.loc["2019-12":"2020-02"].plot()
+plt.ylabel("Max temperature (°C)");
+```
+
+## Splitting in time {.smaller}
+
+```{python}
+temp_train_end, temp_val_end = "2009", "2015"   # ~60/20/20 (weather data ends 2022)
+temp_val_start, temp_test_start = str(int(temp_train_end) + 1), str(int(temp_val_end) + 1)
+```
+
+```{python}
+#| code-fold: true
+import matplotlib.dates as mdates
+fig, ax = plt.subplots(figsize=(6, 2.6))
+for label, lo, hi in [("Train", None, temp_train_end), ("Val", temp_val_start, temp_val_end), ("Test", temp_test_start, None)]:
+    ax.plot(temps["Temp"].loc[lo:hi].index, temps["Temp"].loc[lo:hi], label=label)
+ax.set_ylabel("Max temp (°C)")
+ax.xaxis.set_major_locator(mdates.YearLocator(5))
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y"))
+ax.legend(loc="upper left", fontsize=7);
+```
+
+# Naive baseline forecasts
 
 ::: {.content-visible unless-format="revealjs"}
-We look at some baseline forecast methods.
+Before any neural network we set up _baselines_ that need no training; a model only earns its keep if it beats them. The simplest assume _nothing changes_; for each series we also build one smarter, structural forecast — a _trend_ for the share price and a _seasonal average_ for the temperature.
 :::
+
+## Three naive forecasting ideas
+
+The simplest forecast assumes _nothing changes_ — but that has two readings, differing in how far ahead they look and where they re-anchor:
+
+- _Persistence_ (one-step): tomorrow equals today, $\hat{y}_t = y_{t-1}$, re-anchored to the _true_ latest value every day. The yardstick for _one-step_ models.
+- _Constant_ (multi-step): the entire future is held _constant_ at the last value we saw, $\hat{y}_{t+h} = y_t$ for all $h$ — anchored _once_ at the forecast origin, giving a flat line. The yardstick for _multi-step_ models.
+
+Both are the same _random-walk_ idea (also called _last observation carried forward_): they agree on the first step and only diverge after it.
+
+The last basic forecast is to just extrapolate the trend seen in the training data.
 
 ## Helper functions
 
@@ -356,7 +489,7 @@ def log_to_price(log_returns, initial_price):
     # P_t = P_0 * exp(sum of log returns from 1 to t)
     cumulative_log_returns = log_returns.cumsum()
     prices = initial_price * np.exp(cumulative_log_returns)
-    
+
     return prices
 
 def get_last_price(stock_df, cutoff_date):
@@ -365,23 +498,24 @@ def get_last_price(stock_df, cutoff_date):
     return stock_df.loc[last_known_date, "CBA"]
 ```
 
-## Persistence forecast
+## Constant forecast
 
-Predict the next value to be the same as the current value.
+The whole validation period is held _constant_ at the last price we saw just before it.
+This is the multi-step naïve forecast (zero log returns from the origin onward).
 
 ```{python}
-last_price = get_last_price(stock, cutoff_date="2024-12")
-log_persistence = pd.Series(0.0, index=stock_log.loc["2025":].index)
-persistence_prices = log_to_price(log_persistence, last_price)
+last_price = get_last_price(stock, cutoff_date=f"{cba_train_end}-12")
+constant_log = pd.Series(0.0, index=stock_log.loc[cba_val_start:cba_val_end].index)
+constant_prices = log_to_price(constant_log, last_price)
 ```
 
 ```{python}
 #| code-fold: true
-start = "2024-12"
-end = "2025"
+start = f"{cba_train_end}-12"
+end = cba_val_end
 stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.plot(label="Persistence")
-plt.axvline("2025-01", color="black", linestyle="--")
+constant_prices.plot(label="Constant")
+plt.axvline(f"{cba_val_start}-01", color="black", linestyle="--")
 plt.ylabel("Stock Price ($)")
 plt.legend()
 ```
@@ -389,39 +523,40 @@ plt.legend()
 ## Extrapolate the trend
 
 ```{python}
-recent_log_returns = stock_log.loc["2022-01":"2024-12"]
-trend_log = recent_log_returns.mean().values[0]
+train_log_returns = stock_log.loc[:cba_train_end]   # estimate the trend on training data only
+trend_log = train_log_returns.mean().values[0]
 print(f"Average daily log return: {trend_log:.6f}")
 ```
 
 ```{python}
-log_trend = pd.Series(trend_log, index=stock_log.loc["2025":].index)
+#| echo: false
+log_trend = pd.Series(trend_log, index=stock_log.loc[cba_val_start:cba_val_end].index)
 trend_prices = log_to_price(log_trend, last_price)
 ```
 
 ```{python}
 #| code-fold: true
-# Plot the trend line over the top of the 'recent_log_returns' data
-recent_log_returns.plot()
-plt.axhline(trend_log, color="red", linestyle="--", label="Trend (mean log return)")
+# Plot the mean daily log return over the training-period returns
+train_log_returns.plot()
+plt.axhline(trend_log, color=COLOURS[1], linestyle="--", label="Trend (mean log return)")
 plt.ylabel("Daily Log Return");
 ```
 
 ## Trend fitted
 
 ```{python}
-# Create trend forecast for the recent period to show fitted trend
-recent_trend_log = pd.Series(trend_log, index=recent_log_returns.index)
-trend_start_price = get_last_price(stock, cutoff_date=recent_log_returns.index[0].strftime('%Y-%m-%d'))
-recent_trend_prices = log_to_price(recent_trend_log, trend_start_price)
+# Create trend forecast over the training period to show the fitted trend
+train_trend_log = pd.Series(trend_log, index=train_log_returns.index)
+trend_start_price = get_last_price(stock, cutoff_date=train_log_returns.index[0].strftime('%Y-%m-%d'))
+train_trend_prices = log_to_price(train_trend_log, trend_start_price)
 ```
 
 ```{python}
 #| code-fold: true
-stock.loc[recent_log_returns.index, ["CBA"]].plot(label="CBA")
-recent_trend_prices.plot(label="Trend")
-plt.axvline(recent_log_returns.index[0], color="gray", linestyle=":", linewidth=1)
-plt.axvline(recent_log_returns.index[-1], color="gray", linestyle=":", linewidth=1)
+stock.loc[train_log_returns.index, ["CBA"]].plot(label="CBA")
+train_trend_prices.plot(label="Trend")
+plt.axvline(train_log_returns.index[0], color="gray", linestyle=":", linewidth=1)
+plt.axvline(train_log_returns.index[-1], color="gray", linestyle=":", linewidth=1)
 plt.ylabel("Stock Price ($)")
 plt.legend();
 ```
@@ -431,51 +566,114 @@ plt.legend();
 ```{python}
 #| code-fold: true
 stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.loc[start:end].plot(label="Persistence")
+constant_prices.loc[start:end].plot(label="Constant")
 trend_prices.loc[start:end].plot(label="Trend")
-plt.axvline("2025-01", color="black", linestyle="--")
+plt.axvline(f"{cba_val_start}-01", color="black", linestyle="--")
 plt.ylabel("Stock Price ($)")
 plt.legend(ncol=3, loc="upper center", bbox_to_anchor=(0.5, 1.3));
 ```
 
 ## Which is better?
 
-If we look at the mean squared error (MSE) of the two models:
+If we look at the root mean squared error (RMSE) of the two models:
 
 ```{python}
-# Calculate MSE using the actual forecasts we computed
-actual_prices = stock.loc["2025":, "CBA"]
-persistence_mse = mean_squared_error(actual_prices, persistence_prices)
-trend_mse = mean_squared_error(actual_prices, trend_prices)
-persistence_mse, trend_mse
+# Calculate RMSE using the actual forecasts we computed
+actual_prices = stock.loc[cba_val_start:cba_val_end, "CBA"]
+constant_rmse = mean_squared_error(actual_prices, constant_prices) ** 0.5
+trend_rmse = mean_squared_error(actual_prices, trend_prices) ** 0.5
+constant_rmse, trend_rmse
 ```
 
 ::: {.content-visible unless-format="revealjs"}
 ::: {.callout-tip}
 ## Question
-What are the units of the calculated MSE?
+Why report RMSE rather than MSE?
 
-*Answer*: Since the forecasts are in $, and we square the differences, the units are in _squared_ $.
-
-By taking the root MSE (RMSE), the unit is back in $ which is more interpretable.
+*Answer*: MSE squares the differences, so its units are _squared_ dollars — hard to interpret. Taking the square root (RMSE) brings the units back to dollars, directly comparable to the share price.
 :::
 :::
 
-## Use the history
+## Persistence forecast (one-step)
 
-::: {.content-visible unless-format="revealjs"}
-Now let's work with log returns instead of raw prices to create lagged features:
-:::
+Now two baselines for the _temperature_ series. First, _persistence_: predict tomorrow's maximum temperature to be the _same as today's_, $\hat{y}_t = y_{t-1}$.
 
 ```{python}
-cba_log_shifted = stock_log["CBA"].head().shift(1)                                                  
-both = pd.concat([stock_log["CBA"].head(), cba_log_shifted], axis=1, keys=["Today", "Yesterday"]) 
-both
+persistence = temps["Temp"].shift(1)
+```
+
+```{python}
+#| code-fold: true
+ax = temps.loc[f"{temp_test_start}-01":f"{temp_test_start}-03", "Temp"].plot(label="Actual", x_compat=True)
+persistence.loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(ax=ax, label="Persistence", x_compat=True)
+ax.set_ylabel("Max temperature (°C)")
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+ax.set_xlabel("")
+ax.legend();
+```
+
+## A seasonal baseline
+
+A smarter baseline uses the _seasonality_: predict each day's historical average over all years in the training period.
+
+```{python}
+train_temps = temps.loc[:temp_train_end, "Temp"]
+seasonal_average = train_temps.groupby(train_temps.index.dayofyear).mean()
+seasonal = pd.Series(temps.index.dayofyear, index=temps.index).map(seasonal_average)
+```
+
+```{python}
+#| code-fold: true
+seasonal_average.plot()
+plt.xlabel("Day of year")
+plt.ylabel("Average max temp (°C)");
+```
+
+## Seasonal forecast
+
+```{python}
+#| code-fold: true
+ax = temps.loc[temp_test_start, "Temp"].plot(label="Actual", x_compat=True)
+seasonal.loc[temp_test_start].plot(ax=ax, label="Seasonal", x_compat=True)
+ax.set_ylabel("Max temperature (°C)")
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+ax.set_xlabel("")
+ax.legend();
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-This code creates a new variable that is the log return from the previous day.
+The seasonal average captures the annual cycle but misses the day-to-day weather. Persistence does the opposite. A good model should combine both.
 :::
+
+## Which is better?
+
+We compare the forecasts over the _validation_ years using the root mean squared error (RMSE), in °C.
+
+```{python}
+actual_val = temps["Temp"].loc[temp_val_start:temp_val_end]
+persistence_rmse_val = mean_squared_error(actual_val, persistence.loc[temp_val_start:temp_val_end]) ** 0.5
+seasonal_rmse_val = mean_squared_error(actual_val, seasonal.loc[temp_val_start:temp_val_end]) ** 0.5
+persistence_rmse_val, seasonal_rmse_val
+```
+
+::: {.content-visible unless-format="revealjs"}
+The RMSE is in °C, so it is directly interpretable: a typical forecast is off by a few degrees. The seasonal baseline clearly beats persistence — there is real structure to exploit. For the share price, by contrast, persistence is already about as good as it gets.
+:::
+
+# Use the recent history {visibility="uncounted"}
+
+::: {.content-visible unless-format="revealjs"}
+The baselines used only yesterday (persistence) or the calendar (seasonal / trend). Now we hand a model a genuine _window_ of recent history — the last 40 values — and let it learn the mapping to the next value. This turns the series into an ordinary supervised-learning problem that any regressor can tackle, starting with a linear model and a feedforward network.
+:::
+
+## Lagged features {.smaller}
+
+We turn each series into a table: the previous 40 values become the features `T-40, …, T-1`, and the value to predict is `T`.
+
+::: columns
+::: column
 
 ```{python}
 def lagged_timeseries(df, target, window=40):
@@ -486,11 +684,18 @@ def lagged_timeseries(df, target, window=40):
     return lagged
 ```
 
-::: {.content-visible unless-format="revealjs"}
-This code does the same thing as above, but for 40 days, i.e. the log returns for the previous 40 days.
+:::
+::: column
+
+```{python}
+temp_lagged = lagged_timeseries(temps, "Temp", 40)
+cba_lagged = lagged_timeseries(stock_log, "CBA", 40)
+```
+
+:::
 :::
 
-## Lagged time series {.smaller}
+The temperature design matrix — each row is one 40-day window (the first rows include `NaN` until 40 days of history exist):
 
 ```{python}
 #| echo: false
@@ -498,8 +703,8 @@ pandas.options.display.max_rows = 4
 ```
 
 ```{python}
-df_lags = lagged_timeseries(stock_log, "CBA", 40)
-df_lags
+#| echo: false
+temp_lagged
 ```
 
 ```{python}
@@ -507,504 +712,153 @@ df_lags
 pandas.options.display.max_rows = 6
 ```
 
-## Split into training and testing
+## Building the design matrix {.smaller}
 
-::: {.content-visible unless-format="revealjs"}
-We can't split the data randomly, as the timing of the data matters. We need to fit on older data and try to predict forward in time. Here we define:
+We turn each split into a supervised table of lagged features. We can't shuffle — the timing matters — so we fit on older data and forecast forward. The same recipe applies to both series.
 
-* Training data: up to 2021
-* Validation data: 2022-2024
-* Test data: 2025
+::: columns
+::: column
+_Weather_ — predict the temperature (time-ordered split; cutoffs set above).
+```{python}
+X_train_temp = temp_lagged.loc[:temp_train_end].dropna()
+X_val_temp = temp_lagged.loc[temp_val_start:temp_val_end].dropna()
+X_test_temp = temp_lagged.loc[temp_test_start:].dropna()
+y_train_temp = X_train_temp.pop("T")
+y_val_temp = X_val_temp.pop("T")
+y_test_temp = X_test_temp.pop("T")
+```
+:::
+::: column
+_Finance_ — predict the log return (same time-ordered split; cutoffs set above).
+```{python}
+X_train_cba = cba_lagged.loc[:cba_train_end].dropna()
+X_val_cba = cba_lagged.loc[f"{cba_val_start}-01":f"{cba_val_end}-12"].dropna()
+X_test_cba = cba_lagged.loc[cba_test_start:].dropna()
+y_train_cba = X_train_cba.pop("T")
+y_val_cba = X_val_cba.pop("T")
+y_test_cba = X_test_cba.pop("T")
+```
+:::
 :::
 
 ```{python}
-# Split the data in time
-X_train = df_lags.loc[:"2021"]
-X_val = df_lags.loc["2022-01":"2024-12"]  # 2022-2024
-X_test = df_lags.loc["2025":]  # 2025
+#| echo: false
+def w_rmse(pred):
+    return mean_squared_error(y_test_temp, np.asarray(pred).flatten()) ** 0.5
+def s_rmse(pred_log):
+    s = pd.Series(np.asarray(pred_log).flatten(), index=y_test_cba.index)
+    pred_price = stock["CBA"].shift(1).reindex(y_test_cba.index) * np.exp(s)
+    return mean_squared_error(stock["CBA"].reindex(y_test_cba.index), pred_price) ** 0.5
+def load_or_fit(path, make, X_tr, y_tr, X_va, y_va):
+    if Path(path).exists():
+        return keras.models.load_model(path)
+    m = make(); m.compile(optimizer="adam", loss="mean_absolute_error")
+    m.fit(X_tr, y_tr, validation_data=(X_va, y_va), epochs=500,
+          callbacks=[EarlyStopping(patience=15, restore_best_weights=True)], verbose=0)
+    m.save(path); return m
 
-# Remove any with NAs and split into X and y
-X_train = X_train.dropna()
-X_val = X_val.dropna()
-X_test = X_test.dropna()
+s_shift = mean_squared_error(stock["CBA"].reindex(y_test_cba.index), stock["CBA"].shift(1).reindex(y_test_cba.index)) ** 0.5
+w_scores = {
+    "Persistence (1-step)": mean_squared_error(temps["Temp"].loc[temp_test_start:], persistence.loc[temp_test_start:]) ** 0.5,
+    "Seasonal": mean_squared_error(temps["Temp"].loc[temp_test_start:], seasonal.loc[temp_test_start:]) ** 0.5,
+}
+s_scores = {"Persistence (1-step)": s_shift}
 
-y_train = X_train.pop("T")
-y_val = X_val.pop("T")
-y_test = X_test.pop("T")
+# Observed std of the training-period log returns, used to rescale the NN inputs.
+finance_scale = y_train_cba.std()
 ```
 
-::: {.content-visible unless-format="revealjs"}
-We want to predict today's stock price. We need to remove today's stock price (`"T"`) from the features and define it as the target.
-:::
+## A linear model {.smaller}
 
+::: columns
+::: column
 ```{python}
-X_train.shape, y_train.shape, X_val.shape, y_val.shape, X_test.shape, y_test.shape
+lr_s = LinearRegression().fit(X_train_cba, y_train_cba)
+y_pred_cba = lr_s.predict(X_test_cba)
+s_scores["Linear"] = s_rmse(y_pred_cba)
 ```
-
-## Inspect the split data {.smaller}
-
-```{python}
-X_train
-```
-
-## Plot the split
+CBA log-return forecasts (Q1 of test set)
 
 ```{python}
 #| code-fold: true
-y_train.plot()
-y_val.plot()
-y_test.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(["Train", "Validation", "Test"], loc="center left", bbox_to_anchor=(1, 0.5));
+pd.DataFrame({"Actual": y_test_cba, "Linear": y_pred_cba}, index=y_test_cba.index).loc[f"{cba_test_start}-01":f"{cba_test_start}-03"].plot()
+plt.ylabel("Log return"); plt.legend();
 ```
-
-<!--
-## Train on more recent data
-
-```python
-X_train = X_train.loc["2012":]
-y_train = y_train.loc["2012":]
-```
-
-```python
-#| code-fold: true
-y_train.plot()
-y_val.plot()
-y_test.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(["Train", "Validation", "Test"], loc="center left", bbox_to_anchor=(1, 0.5));
-```
--->
-
-## Fit a linear model
-
+:::
+::: column
 ```{python}
-lr = LinearRegression()
-lr.fit(X_train, y_train);
+lr_w = LinearRegression().fit(X_train_temp, y_train_temp)
+y_pred_temp = lr_w.predict(X_test_temp)
+w_scores["Linear"] = w_rmse(y_pred_temp)
 ```
-
-Make a forecast for the test data:
-
-```{python}
-y_pred = lr.predict(X_test)
-```
-
-## Plot predictions in log return space
+Temperature forecasts (Q1 of test set)
 
 ```{python}
 #| code-fold: true
-log_forecasts_df = pd.DataFrame({
-    "Actual": y_test,
-    "Linear": y_pred
-}, index=y_test.index)
-
-log_forecasts_df.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+ax = pd.DataFrame({"Actual": y_test_temp, "Linear": y_pred_temp}, index=y_test_temp.index).loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(x_compat=True)
+ax.set_ylabel("Max temp (°C)")
+ax.set_xlabel("")
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b"))
+ax.legend();
 ```
-
-::: {.content-visible unless-format="revealjs"}
-The actual log returns are far more volatile than what the linear model predicted. But let's convert the actual and predicted returns to raw prices.
+:::
 :::
 
-## Convert to raw prices and plot
+## A feedforward network {.smaller}
 
-```{python}
-linear_log_forecasts = pd.Series(y_pred, index=y_test.index)
-prev_price = stock.shift(1).loc["2025", "CBA"]
-linear_price_forecasts = prev_price * np.exp(linear_log_forecasts)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.reindex(stock.loc[start:end].index).plot(label="Persistence")
-trend_prices.reindex(stock.loc[start:end].index).plot(label="Trend")
-linear_price_forecasts.reindex(stock.loc[start:end].index).plot(label="Linear")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-::: {.content-visible unless-format="revealjs"}
-The raw prices from the linear regression are surprisingly accurate. Why is linear regression be so much better than the persistence and trend forecasts?
-
-This is because the regression uses the last 40 days of log return data to make further predictions, unlike the persistence (assumes constant price) and trend (assume constant return) forecasts.
-:::
-
-## Distribution of log return predictions
-
-```{python}
-#| code-fold: true
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
-
-# Actual log returns
-y_val.hist(bins=30, alpha=0.7, ax=ax1, label="Actual")
-ax1.set_xlabel("Daily Log Return")
-ax1.set_ylabel("Frequency")
-ax1.set_title("Actual Log Returns")
-
-# Predicted log returns
-pd.Series(y_pred).hist(bins=30, alpha=0.7, ax=ax2, label="Predicted", color="orange")
-ax2.set_xlabel("Daily Log Return")
-ax2.set_ylabel("Frequency")
-ax2.set_title("Predicted Log Returns")
-
-plt.tight_layout()
-```
-
-::: {.content-visible unless-format="revealjs"}
-The variance of the predicted log returns is much smaller than the variance of the actual log returns.
-:::
-
-```{python}
-# Calculate MSE on raw prices using explicit forecast calculation
-test_actual_prices = stock.loc["2025":, "CBA"]
-test_linear_prices = linear_price_forecasts.loc["2025":]
-linear_mse = mean_squared_error(test_actual_prices, test_linear_prices)
-linear_mse
-```
-
-```{python}
-persistence_mse, trend_mse, linear_mse
-```
-
-# Multi-Step Forecasts
-
-## Comparing apples to apples {.smaller}
-
-The linear model is only producing _one-step-ahead_ forecasts.
-
-The other models are producing _multi-step-ahead_ forecasts.
-
-```{python}
-shifted_forecast = stock["CBA"].shift(1).loc["2025":]
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-linear_price_forecasts.reindex(stock.loc[start:end].index).plot(label="Linear")
-shifted_forecast.reindex(stock.loc[start:end].index).plot(label="Shifted")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-```{python}
-shifted_mse = mean_squared_error(stock.loc["2025":, "CBA"], shifted_forecast)
-persistence_mse, trend_mse, linear_mse, shifted_mse
-```
-
-::: {.content-visible unless-format="revealjs"}
-In fact, the linear model is not any better than just assuming that today's stock price will be the same as yesterday's.
-
-What if we want to produce multi-step-ahead linear forecasts?
-:::
-
-## Autoregressive forecasts
-
-The linear model needs the last 90 days to make a forecast.
-
-**Idea**: Make the first forecast, then use that to make the next forecast, and so on.
-
-$$
-\begin{aligned}
-    \hat{y}_t &= \beta_0 + \beta_1 y_{t-1} + \beta_2 y_{t-2} + \ldots + \beta_n y_{t-n} \\
-    \hat{y}_{t+1} &= \beta_0 + \beta_1 \hat{y}_t + \beta_2 y_{t-1} + \ldots + \beta_n y_{t-n+1} \\
-    \hat{y}_{t+2} &= \beta_0 + \beta_1 \hat{y}_{t+1} + \beta_2 \hat{y}_t + \ldots + \beta_n y_{t-n+2}
-\end{aligned}
-$$
-$$\vdots$$
-$$
-\hat{y}_{t+k} = \beta_0 + \beta_1 \hat{y}_{t+k-1} + \beta_2 \hat{y}_{t+k-2} + \ldots + \beta_n \hat{y}_{t+k-n}
-$$
-
-## Autoregressive forecasting function
-```{python}
-def autoregressive_forecast(model, X_val, suppress=False):
-    """
-    Generate a multi-step forecast using the given model.
-    """
-    multi_step = pd.Series(index=X_val.index, name="Multi Step")
-
-    # Initialize the input data for forecasting
-    input_data = X_val.iloc[0].values.reshape(1, -1)
-
-    for i in range(len(multi_step)):
-        # Ensure input_data has the correct feature names
-        input_df = pd.DataFrame(input_data, columns=X_val.columns)
-        if suppress:
-            next_value = model.predict(input_df, verbose=0)
-        else:
-            next_value = model.predict(input_df) 
-
-        multi_step.iloc[i] = next_value.flatten()[0]
-
-        # Append that prediction to the input for the next forecast
-        if i + 1 < len(multi_step):
-            input_data = np.append(input_data[:, 1:], next_value).reshape(1, -1)
-
-    return multi_step
-```
-
-## Look at the autoregressive linear forecasts
-
-```{python}
-lr_forecast = autoregressive_forecast(lr, X_test)
-lr_multi_step_prices = log_to_price(lr_forecast, last_price)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.reindex(stock.loc[start:end].index).plot(label="Persistence")
-trend_prices.reindex(stock.loc[start:end].index).plot(label="Trend")
-lr_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS Linear")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-::: {.content-visible unless-format="revealjs"}
-The multi-step-ahead linear forecast doesn't look very good.
-:::
-
-## Compare log return forecasts
-
-```{python}
-#| code-fold: true
-log_forecasts_multistep = pd.DataFrame({
-    "Actual": y_test,
-    "One-step Linear": y_pred,
-    "Multi-step Linear": lr_forecast
-}, index=y_test.index)
-
-log_forecasts_multistep.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-```
-
-::: {.content-visible unless-format="revealjs"}
-The variability in the one-step-ahead forecast is already small. The multi-step-ahead forecast reflects that and in fact the variance converges to 0 over time.
-:::
-
-## Metrics
-
-One-step-ahead forecasts:
-
-```{python}
-linear_mse, shifted_mse
-```
-
-Multi-step-ahead forecasts:
-
-```{python}
-multi_step_linear_mse = mean_squared_error(stock.loc["2025":, "CBA"], lr_multi_step_prices.loc["2025":])
-persistence_mse, trend_mse, multi_step_linear_mse
-```
-
-::: {.content-visible unless-format="revealjs"}
-We explicitly see that the mlti-step-ahead linear forecast is worse than the trend forecast.
-:::
-
-## Prefer only short windows
-
-```{python}
-#| code-fold: true
-stock.loc["2025-01":"2025-01", ["CBA"]].plot(label="CBA")
-persistence_prices.loc["2025-01":"2025-01"].plot(label="Persistence")
-trend_prices.loc["2025-01":"2025-01"].plot(label="Trend")
-lr_multi_step_prices.loc["2025-01":"2025-01"].plot(label="MS Linear")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-::: {.content-visible unless-format="revealjs"}
-It's best not to make predictions too far in the future. There is a lot of uncertainty, and that is evident in this plot and previous plots.
-:::
-
-> "It's tough to make predictions, especially about the future."
-
-::: footer
-Yogi Berra
-:::
-
-# Neural Network Forecasts
-
-## Simple feedforward neural network
-
-::: {.content-visible unless-format="revealjs"}
-We can fit a simple feedforward NN. This is not much more complex than a linear model. 
-:::
-
-```{python}
-model = Sequential([
-        Rescaling(1/0.02),
-        Dense(32, activation="leaky_relu"),
-        Dense(1)])  # Linear activation for log returns
-model.compile(optimizer="adam", loss="mean_absolute_error")
-```
-
-::: {.content-visible unless-format="revealjs"}
-The above code does the following (NN architecture):
-1. Rescale the data
-2. Add one hidden layer with 32 neurons
-3. Final output layer is 1 neuron
-4. Compile the model with selected optimizer and loss function
-:::
+Same architecture for both; only the input rescaling differs: temperatures are divided by 40 (their rough maximum), log returns by their training-set standard deviation (`finance_scale` ≈ 0.014).
 
 ```{python}
 #| eval: false
-es = EarlyStopping(patience=15, restore_best_weights=True)
-model.fit(X_train, y_train, validation_data=(X_val, y_val),
-    epochs=500, callbacks=[es], verbose=0)
-model.summary()
+scale = 1 / finance_scale  # for weather: 1/40
+model = Sequential([Rescaling(scale), Dense(32, activation="leaky_relu"), Dense(1)])
+model.compile(optimizer="adam", loss="mean_absolute_error")
+model.fit(X_train_cba, y_train_cba, validation_data=(X_val_cba, y_val_cba), epochs=500,
+    callbacks=[EarlyStopping(patience=15, restore_best_weights=True)], verbose=0)
 ```
 
 ```{python}
 #| echo: false
-if Path("models/aus_fin_fnn_model.keras").exists():
-    model = keras.models.load_model("models/aus_fin_fnn_model.keras")
-else:
-    es = EarlyStopping(patience=15, restore_best_weights=True)
-    model.fit(X_train, y_train, validation_data=(X_val, y_val),
-        epochs=500, callbacks=[es], verbose=0)
-    model.save("models/aus_fin_fnn_model.keras")
-model.summary()
+fnn_w = load_or_fit("models/bom_fnn.keras",
+    lambda: Sequential([Rescaling(1/40), Dense(32, activation="leaky_relu"), Dense(1)]),
+    X_train_temp, y_train_temp, X_val_temp, y_val_temp)
+fnn_s = load_or_fit("models/aus_fin_fnn_model.keras",
+    lambda: Sequential([Rescaling(1/finance_scale), Dense(32, activation="leaky_relu"), Dense(1)]),
+    X_train_cba, y_train_cba, X_val_cba, y_val_cba)
+y_pred_temp = fnn_w.predict(X_test_temp.to_numpy(), verbose=0).flatten()
+y_pred_cba = fnn_s.predict(X_test_cba.to_numpy(), verbose=0).flatten()
+w_scores["FNN"] = w_rmse(y_pred_temp); s_scores["FNN"] = s_rmse(y_pred_cba)
 ```
 
-::: {.content-visible unless-format="revealjs"}
-The parameters are fitted using early stopping to minimise the mean absolute error (MAE).
-:::
-
-## Forecast and plot
-
-```{python}
-y_pred = model.predict(X_test, verbose=0)
-```
+::: columns
+::: column
+CBA log-return forecasts (Q1 of test set)
 
 ```{python}
 #| code-fold: true
-# Show log return predictions
-log_forecasts_nn = pd.DataFrame({
-    "Actual": y_test,
-    "Linear": lr.predict(X_test),
-    "FNN": y_pred.flatten()
-}, index=y_test.index)
-
-log_forecasts_nn.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+pd.DataFrame({"Actual": y_test_cba, "FNN": y_pred_cba}, index=y_test_cba.index).loc[f"{cba_test_start}-01":f"{cba_test_start}-03"].plot()
+plt.ylabel("Log return"); plt.legend();
 ```
-
-::: {.content-visible unless-format="revealjs"}
-The variance of the predicted log returns from the NN is higher; a better reflection of actual log returns.
 :::
-
-## Plot forecasts in raw price space
-
-```{python}
-fnn_log_forecasts = pd.Series(y_pred.flatten(), index=y_test.index)
-fnn_price_forecasts = prev_price * np.exp(fnn_log_forecasts)
-```
+::: column
+Temperature forecasts (Q1 of test set)
 
 ```{python}
 #| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-linear_price_forecasts.reindex(stock.loc[start:end].index).plot(label="Linear")
-fnn_price_forecasts.reindex(stock.loc[start:end].index).plot(label="FNN")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
+ax = pd.DataFrame({"Actual": y_test_temp, "FNN": y_pred_temp}, index=y_test_temp.index).loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(x_compat=True)
+ax.set_ylabel("Max temp (°C)")
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+ax.set_xlabel("")
+ax.legend();
 ```
-
-## Distribution of log return predictions
-
-```{python}
-#| code-fold: true
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3))
-
-# Actual log returns
-y_test.hist(bins=30, alpha=0.7, ax=ax1, label="Actual")
-ax1.set_xlabel("Daily Log Return")
-ax1.set_ylabel("Frequency")
-ax1.set_title("Actual Log Returns")
-
-# Predicted log returns
-pd.Series(y_pred.flatten()).hist(bins=30, alpha=0.7, ax=ax2, label="Predicted", color="orange")
-ax2.set_xlabel("Daily Log Return")
-ax2.set_ylabel("Frequency")
-ax2.set_title("Predicted Log Returns")
-
-plt.tight_layout()
-```
-
-## Autoregressive forecasts
-
-```{python}
-fnn_forecast = autoregressive_forecast(model, X_test, True)
-fnn_multi_step_prices = log_to_price(fnn_forecast, last_price)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.reindex(stock.loc[start:end].index).plot(label="Persistence")
-trend_prices.reindex(stock.loc[start:end].index).plot(label="Trend")
-lr_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS Linear")
-fnn_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS FNN")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-::: {.content-visible unless-format="revealjs"}
-The predictions look okay for the first 2-3 months but then after that is more optimistic. Although, at the end of the forecast, the MS FNN prediction converges again to the actual price.
+:::
 :::
 
-## Compare multi-step log return forecasts
+# Simple Recurrent Neural Networks {visibility="uncounted"}
 
-```{python}
-#| code-fold: true
-log_forecasts_multistep_nn = pd.DataFrame({
-    "Actual": y_test,
-    "Multi-step Linear": lr_forecast,
-    "Multi-step FNN": fnn_forecast
-}, index=y_test.index)
-
-log_forecasts_multistep_nn.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-::: {.content-visible unless-format="revealjs"}
-Again, for the multi-step predictions the variance converges to 0 over time.
-:::
-
-## Metrics
-
-One-step-ahead forecasts (MSE on raw prices):
-
-```{python}
-nn_mse = mean_squared_error(stock.loc["2025":, "CBA"], fnn_price_forecasts.loc["2025":])
-linear_mse, nn_mse
-```
-
-Multi-step-ahead forecasts (MSE on raw prices):
-
-```{python}
-multi_step_fnn_mse = mean_squared_error(stock.loc["2025":, "CBA"], fnn_multi_step_prices.loc["2025":])
-persistence_mse, trend_mse, multi_step_linear_mse, multi_step_fnn_mse
-```
-
-::: {.content-visible unless-format="revealjs"}
-Based on MSE the FNN is better than the persistence forecast but worse than the other two.
-:::
-
-# Recurrent Neural Networks {visibility="uncounted"}
-
-## Basic facts of RNNs
+## Introduction
 
 - A recurrent neural network is a type of neural network that is designed to process sequences of data (e.g. time series, sentences).
 - A recurrent neural network is any network that contains a recurrent layer.
@@ -1012,32 +866,17 @@ Based on MSE the FNN is better than the persistence forecast but worse than the 
 - An RNN can have one or more recurrent layers.
 - Weights are shared over time; this allows the model to be used on arbitrary-length sequences.
 
-## Applications
+On the name of RNNs:
 
-- _Forecasting_: revenue forecast, weather forecast, predict disease rate from medical history, etc. 
-- _Classification_: given a time series of the activities of a visitor on a website, classify whether the visitor is a bot or a human.
-- _Event detection_: given a continuous data stream, identify the occurrence of a specific event. Example: Detect utterances like "Hey Alexa" from an audio stream.
-- _Anomaly detection_: given a continuous data stream, detect anything unusual happening. Example: Detect unusual activity on the corporate network.
+The "recurrent" comes from a _recurrence relation_: each element of a sequence is defined in terms of the previous one(s). When only the immediately preceding element matters, this looks like
 
-## Origin of the name of RNNs
-
-> A recurrence relation is an equation that expresses each element of a sequence as a function of the preceding ones. More precisely, in the case where only the immediately preceding element is involved, a recurrence relation has the form
-> 
-> $$ u_n = \psi(n, u_{n-1}) \quad \text{ for } \quad n > 0.$$
+$$ u_n = \psi(n, u_{n-1}) \quad \text{ for } \quad n > 0.$$
 
 __Example__: Factorial $n! = n (n-1)!$ for $n > 0$ given $0! = 1$.
 
-::: footer
-Source: Wikipedia, [Recurrence relation](https://en.wikipedia.org/wiki/Recurrence_relation#Definition). 
-:::
-
-<!-- 
-# Recurrent Cells {visibility="uncounted"}
--->
-
 ## Diagram of an RNN cell
 
-The RNN processes each data in the sequence one by one, while keeping memory of what came before.
+The RNN processes each data point in the sequence one by one, while keeping memory of what came before.
 
 ![Schematic of a recurrent neural network. E.g. SimpleRNN, LSTM, or GRU.](images/rnn-diagram.png)
 
@@ -1059,400 +898,15 @@ All the outputs before the final one are often discarded.
 Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
 :::
 
-## LSTM internals
-
-::: {.content-visible unless-format="revealjs"}
-Simple RNN structures encounter vanishing gradient problems, hence, struggle with learning long term dependencies. LSTM are designed to overcome this problem. LSTMs have a more complex network structure (contains more memory cells and gating mechanisms) and can better regulate the information flow. 
-:::
-
-![Diagram of an LSTM cell.](images/colah-LSTM3-chain.png)
-![Notation for the diagram.](images/colah-LSTM2-notation.png)
-
-::: footer
-Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
-:::
-
-## GRU internals
-
-::: {.content-visible unless-format="revealjs"}
-GRUs are simpler compared to LSTM, hence, computationally more efficient than LSTMs. 
-:::
-
-![Diagram of a GRU cell.](images/colah-LSTM3-var-GRU.png)
-
-::: footer
-Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
-:::
-
-# Stock Prediction with Recurrent Networks {visibility="uncounted"}
-
-## SimpleRNN
-
-```{python}
-from keras.layers import SimpleRNN, Reshape
-model = Sequential([
-        Rescaling(1/0.02),
-        Reshape((-1, 1)),
-        SimpleRNN(64, activation="tanh"),
-        Dense(1)])  # Linear activation for log returns
-model.compile(optimizer="adam", loss="mean_absolute_error")
-```
-
-```{python}
-#| eval: false
-es = EarlyStopping(patience=15, restore_best_weights=True)
-model.fit(X_train, y_train, validation_data=(X_val, y_val),
-    epochs=500, callbacks=[es], verbose=0)
-model.summary()
-```
-
-```{python}
-#| echo: false
-if Path("models/aus_fin_simplernn_model.keras").exists():
-    model = keras.models.load_model("models/aus_fin_simplernn_model.keras")
-else:
-    es = EarlyStopping(patience=15, restore_best_weights=True)
-    model.fit(X_train, y_train, validation_data=(X_val, y_val),
-        epochs=500, callbacks=[es], verbose=0)
-    model.save("models/aus_fin_simplernn_model.keras")
-model.summary()
-```
-
-## Forecast and plot
-
-```{python}
-y_pred = model.predict(X_test.to_numpy(), verbose=0)
-```
-
-```{python}
-#| code-fold: true
-# Show log return predictions
-log_forecasts_rnn = pd.DataFrame({
-    "Actual": y_test,
-    "FNN": fnn_forecast.values[:len(y_test)],  # Use the FNN forecast from previous section
-    "SimpleRNN": y_pred.flatten()
-}, index=y_test.index)
-
-log_forecasts_rnn.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-```
-
-## Plot forecasts in raw price space
-
-```{python}
-rnn_log_forecasts = pd.Series(y_pred.flatten(), index=y_test.index)
-rnn_price_forecasts = prev_price * np.exp(rnn_log_forecasts)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-linear_price_forecasts.reindex(stock.loc[start:end].index).plot(label="Linear")
-fnn_price_forecasts.reindex(stock.loc[start:end].index).plot(label="FNN")
-rnn_price_forecasts.reindex(stock.loc[start:end].index).plot(label="SimpleRNN")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-## Multi-step forecasts
-
-```{python}
-rnn_forecast = autoregressive_forecast(model, X_test, True)
-rnn_multi_step_prices = log_to_price(rnn_forecast, last_price)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.reindex(stock.loc[start:end].index).plot(label="Persistence")
-trend_prices.reindex(stock.loc[start:end].index).plot(label="Trend")
-lr_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS Linear")
-fnn_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS FNN")
-rnn_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS RNN")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-## Metrics
-
-One-step-ahead forecasts (MSE on raw prices):
-
-```{python}
-rnn_mse = mean_squared_error(stock.loc["2025":, "CBA"], rnn_price_forecasts.loc["2025":])
-linear_mse, nn_mse, rnn_mse
-```
-
-Multi-step-ahead forecasts (MSE on raw prices):
-
-```{python}
-multi_step_rnn_mse = mean_squared_error(stock.loc["2025":, "CBA"], rnn_multi_step_prices.loc["2025":])
-persistence_mse, trend_mse, multi_step_linear_mse, multi_step_fnn_mse, multi_step_rnn_mse
-```
-
-::: {.content-visible unless-format="revealjs"}
-Based on MSE, the RNN performs the best out of one-step forecasts, and the second best for multi-step forecasts (after the trend forecast).
-:::
-
-## GRU
-
-::: {.content-visible unless-format="revealjs"}
-The gated recurrent unit (GRU) is a type of RNN. We can select GRU in the model specification step.
-:::
-
-```{python}
-from keras.layers import GRU
-
-model = Sequential([
-        Rescaling(1/0.02),
-        Reshape((-1, 1)),
-        GRU(16, activation="tanh"),
-        Dense(1)])  # Linear activation for log returns
-model.compile(optimizer="adam", loss="mean_absolute_error")
-```
-
-```{python}
-#| eval: false
-es = EarlyStopping(patience=15, restore_best_weights=True)
-model.fit(X_train, y_train, validation_data=(X_val, y_val),
-    epochs=500, callbacks=[es], verbose=0)
-model.summary()
-```
-
-```{python}
-#| echo: false
-if Path("models/aus_fin_gru_model.keras").exists():
-    model = keras.models.load_model("models/aus_fin_gru_model.keras")
-else:
-    es = EarlyStopping(patience=15, restore_best_weights=True)
-    model.fit(X_train, y_train, validation_data=(X_val, y_val),
-        epochs=500, callbacks=[es], verbose=0)
-    model.save("models/aus_fin_gru_model.keras")
-model.summary()
-```
-
-## Forecast and plot
-
-```{python}
-y_pred = model.predict(X_test, verbose=0)
-```
-
-```{python}
-#| code-fold: true
-# Show log return predictions
-log_forecasts_gru = pd.DataFrame({
-    "Actual": y_test,
-    "SimpleRNN": rnn_forecast.values[:len(y_test)],  # Use the RNN forecast from previous section
-    "GRU": y_pred.flatten()
-}, index=y_test.index)
-
-log_forecasts_gru.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-```
-
-## Plot forecasts in raw price space
-
-```{python}
-gru_log_forecasts = pd.Series(y_pred.flatten(), index=y_test.index)
-gru_price_forecasts = prev_price * np.exp(gru_log_forecasts)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-linear_price_forecasts.reindex(stock.loc[start:end].index).plot(label="Linear")
-fnn_price_forecasts.reindex(stock.loc[start:end].index).plot(label="FNN")
-rnn_price_forecasts.reindex(stock.loc[start:end].index).plot(label="SimpleRNN")
-gru_price_forecasts.reindex(stock.loc[start:end].index).plot(label="GRU")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-## Multi-step forecasts
-
-```{python}
-gru_forecast = autoregressive_forecast(model, X_test, True)
-gru_multi_step_prices = log_to_price(gru_forecast, last_price)
-```
-
-```{python}
-#| code-fold: true
-stock.loc[start:end, ["CBA"]].plot(label="CBA")
-persistence_prices.reindex(stock.loc[start:end].index).plot(label="Persistence")
-trend_prices.reindex(stock.loc[start:end].index).plot(label="Trend")
-lr_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS Linear")
-fnn_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS FNN")
-rnn_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS RNN")
-gru_multi_step_prices.reindex(stock.loc[start:end].index).plot(label="MS GRU")
-plt.axvline("2025-01", color="black", linestyle="--")
-plt.ylabel("Stock Price ($)")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
-```
-
-## All multi-step log return forecasts
-
-```{python}
-#| code-fold: true
-log_forecasts_all = pd.DataFrame({
-    "Actual": y_test,
-    "Linear": lr_forecast,
-    "FNN": fnn_forecast,
-    "SimpleRNN": rnn_forecast,
-    "GRU": gru_forecast
-}, index=y_test.index)
-
-log_forecasts_all.plot()
-plt.ylabel("Daily Log Return")
-plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-```
-
-## Metrics
-
-One-step-ahead forecasts (MSE on raw prices):
-
-```{python}
-gru_mse = mean_squared_error(stock.loc["2025":, "CBA"], gru_price_forecasts.loc["2025":])
-linear_mse, nn_mse, rnn_mse, gru_mse
-```
-
-Multi-step-ahead forecasts (MSE on raw prices):
-
-```{python}
-multi_step_gru_mse = mean_squared_error(stock.loc["2025":, "CBA"], gru_multi_step_prices.loc["2025":])
-persistence_mse, trend_mse, multi_step_linear_mse, multi_step_fnn_mse, multi_step_rnn_mse, multi_step_gru_mse
-```
-
-## Summary of all model performance
-
-::: columns
-::: column
-
-**One-step forecasts**
-
-```{python}
-#| echo: false
-model_summary = pd.DataFrame({"MSE": [shifted_mse, linear_mse, nn_mse, rnn_mse, gru_mse]}, index=["Shifted", "Linear", "FNN", "SimpleRNN", "GRU"])
-
-model_summary
-```
-
-:::
-::: column
-**Multi-step forecasts**
-
-```{python}
-#| echo: false
-model_summary = pd.DataFrame({"MSE": [persistence_mse, trend_mse,
-multi_step_linear_mse, multi_step_fnn_mse, multi_step_rnn_mse, multi_step_gru_mse]}, index=["Persistence", "Trend", "Linear", "FNN", "SimpleRNN", "GRU"])
-
-model_summary
-```
-:::
-:::
-
-
-# Internals of the SimpleRNN {visibility="uncounted"}
-
-<!--
-
-## Shapes of data
-
-![Illustration of tensors of different rank.](images/medium-tensor-rank.png)
-
-::: footer
-Source: Paras Patidar (2019), [Tensors — Representation of Data In Neural Networks](https://medium.com/mlait/tensors-representation-of-data-in-neural-networks-bbe8a711b93b), Medium article.
-:::
-
-
-## The `axis` argument in numpy
-
-Starting with a $(3, 4)$-shaped matrix:
-```{python}
-X = np.arange(12).reshape(3, 4)
-X
-```
-
-::: {.content-visible unless-format="revealjs"}
-The above code creates an array with values from 0 to 11 and converts that array into a matrix with 3 rows and 4 columns.
-:::
-
-::: columns
-::: column
-`axis=0`: $(3, 4) \leadsto (4,)$.
-```{python}
-X.sum(axis=0)
-```
-
-::: {.content-visible unless-format="revealjs"}
-The above code returns the column sum. This changes the shape of the matrix from $(3,4)$ to $(4,)$. Similarly, `X.sum(axis=1)` returns row sums and will change the shape of the matrix from $(3,4)$ to $(3,)$.
-:::
-
-:::
-::: column
-`axis=1`: $(3, 4) \leadsto (3,)$.
-```{python}
-X.prod(axis=1)
-```
-:::
-:::
-
-The return value's rank is one less than the input's rank.
-
-::: {.callout-important}
-The `axis` parameter tells us which dimension is removed.
-:::
-
-## Using `axis` & `keepdims`
-
-With `keepdims=True`, the rank doesn't change.
-
-```{python}
-X = np.arange(12).reshape(3, 4)
-X
-```
-
-::: columns
-::: column
-`axis=0`: $(3, 4) \leadsto (1, 4)$.
-```{python}
-X.sum(axis=0, keepdims=True)
-```
-:::
-::: column
-`axis=1`: $(3, 4) \leadsto (3, 1)$.
-```{python}
-X.prod(axis=1, keepdims=True)
-```
-:::
-:::
-
-::: columns
-::: column
-```{python}
-#| error: true
-X / X.sum(axis=1)
-```
-:::
-::: column
-```{python}
-X / X.sum(axis=1, keepdims=True)
-```
-:::
-:::
-
--->
-
 ## The rank of a time series
 
+::: columns
+::: column
 Say we had $n$ observations of a time series $x_1, x_2, \dots, x_n$. 
 
 This $\boldsymbol{x} = (x_1, \dots, x_n)$ would have shape $(n,)$ & rank 1.
 
-If instead we had a batch of $b$ time series'
+If instead we had a batch of $b$ time series
 
 $$
 \boldsymbol{X} = \begin{pmatrix}
@@ -1464,37 +918,23 @@ x_3 & x_4 & \dots & x_{3+n-1} \\
 $$
 
 the batch $\boldsymbol{X}$ would have shape $(b, n)$ & rank 2.
-
-## Multivariate time series
-
-::: {.content-visible unless-format="revealjs"}
-Multivariate time series consists of more than 1 variable observation at a given time point. Following example has two variables `x` and `y`. 
 :::
-
-::: columns
-::: {.column width="35%"}
+::: column
 
 <center>
 
-```{python}
-#| echo: false
-from IPython.display import Markdown
-
-t = range(4)
-x = [f"$x_{i}$" for i in t]
-y = [f"$y_{i}$" for i in t]
-df = pandas.DataFrame({"$x$": x, "$y$": y})
-df.index.name = "$t$"
-Markdown(df.to_markdown())
-```
-
+|   $t$ | $x$   | $y$   |
+|------:|:------|:------|
+|     0 | $x_0$ | $y_0$ |
+|     1 | $x_1$ | $y_1$ |
+|     2 | $x_2$ | $y_2$ |
+|     3 | $x_3$ | $y_3$ |
 </center>
 
-:::
-::: {.column width="65%"}
-Say $n$ observations of the $m$ time series, would be a shape $(n, m)$ matrix of rank 2.
+Say $n$ observations of the $m$ time series would be a shape $(n, m)$ matrix of rank 2.
 
 In Keras, a batch of $b$ of these time series has shape $(b, n, m)$ and has rank 3.
+
 :::
 :::
 
@@ -1502,7 +942,6 @@ In Keras, a batch of $b$ of these time series has shape $(b, n, m)$ and has rank
 Use $\boldsymbol{x}_t \in \mathbb{R}^{1 \times m}$ to denote the vector of all time series at time $t$.
 Here, $\boldsymbol{x}_t = (x_t, y_t)$.
 :::
-
 
 ## SimpleRNN
 
@@ -1527,10 +966,6 @@ In a simple RNN, the output at time $(t-1)$ is the same as the hidden state at t
 
 ## SimpleRNN (in batches)
 
-::: {.content-visible unless-format="revealjs"}
-The difference between RNN and RNNs with batch processing lies in the way how the neural network handles sequences of input data. With batch processing, the model processes multiple ($b$) input sequences simultaneously. The training data is grouped into batches, and the weights are updated based on the average error across the entire batch. Batch processing often results in more stable weight updates, as the model learns from a diverse set of examples in each batch, reducing the impact of noise in individual sequences. 
-:::
-
 Say we operate on batches of size $b$, then $\boldsymbol{Y}_t \in \mathbb{R}^{b \times d}$.
 
 The main equation of a SimpleRNN, given $\boldsymbol{Y}_0 = \boldsymbol{0}$, is
@@ -1543,9 +978,7 @@ $$
 \end{aligned}
 $$
 
-::: footer
 Remember, $\boldsymbol{X} \in \mathbb{R}^{b \times n \times m}$, $\boldsymbol{Y} \in \mathbb{R}^{b \times d}$, and $\boldsymbol{X}_t$ is equivalent to `X[:, t, :]`.
-:::
 
 ## Simple Keras demo
 
@@ -1588,22 +1021,19 @@ X[2:]  # <1>
 As usual, the `SimpleRNN` is just a layer in Keras. 
 
 ```{python}
-from keras.layers import SimpleRNN  # <1>
+random.seed(1234)  # <1>
+model = Sequential([SimpleRNN(output_size, activation="sigmoid")])  # <2>
+model.compile(loss="binary_crossentropy", metrics=["accuracy"])  # <3>
 
-random.seed(1234)  # <2>
-model = Sequential([SimpleRNN(output_size, activation="sigmoid")])  # <3>
-model.compile(loss="binary_crossentropy", metrics=["accuracy"])  # <4>
-
-hist = model.fit(X, y, epochs=500, verbose=False)  # <5>
-model.evaluate(X, y, verbose=False)  # <6>
+hist = model.fit(X, y, epochs=500, verbose=False)  # <4>
+model.evaluate(X, y, verbose=False)  # <5>
 ```
 
-1. Imports the SimpleRNN layer from the Keras library
-2. Sets the seed for the random number generator to ensure reproducibility
-3. Defines a simple RNN with one output node and sigmoid activation function
-4. Specifies binary crossentropy as the loss function (usually used in classification problems), and specifies "accuracy" as the metric to be monitored during training
-5. Trains the model for 500 epochs and saves output as `hist`
-6. Evaluates the model to obtain a value for the loss and accuracy
+1. Sets the seed for the random number generator to ensure reproducibility
+2. Defines a simple RNN with one output node and sigmoid activation function
+3. Specifies binary crossentropy as the loss function (usually used in classification problems), and specifies "accuracy" as the metric to be monitored during training
+4. Trains the model for 500 epochs and saves output as `hist`
+5. Evaluates the model to obtain a value for the loss and accuracy
 
 
 The predicted probabilities on the training set are:
@@ -1638,28 +1068,40 @@ for t in range(num_time_steps):
 Y
 ```
 
-# Other Recurrent Network Variants {visibility="uncounted"}
+# Recurrent Neural Networks
 
-## Input and output sequences
 
-![Categories of recurrent neural networks: sequence to sequence, sequence to vector, vector to sequence, encoder-decoder network.](images/rnn-types2.png)
+## LSTM internals
 
-::: footer
-Source: Melissa Renard (2025)
+<center>
+
+![Diagram of an LSTM cell.](images/colah-LSTM3-chain.png){width="80%"}
+![Notation for the diagram.](images/colah-LSTM2-notation.png){width="80%"}
+
+</center>
+
+::: {.content-visible unless-format="revealjs"}
+Simple RNN structures encounter vanishing gradient problems, hence, struggle with learning long term dependencies. LSTM models were designed to overcome this problem. LSTMs have a more complex network structure (contains more memory cells and gating mechanisms) and can better regulate the information flow.
 :::
 
 
-## Input and output sequences
+::: footer
+Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
+:::
 
-- Sequence to sequence: Useful for predicting time series such as using prices over the last $N$ days to output the prices shifted one day into the future (i.e. from $N-1$ days ago to tomorrow.)
-- Sequence to vector: ignore all outputs in the previous time steps except for the last one. Example: give a sentiment score to a sequence of words corresponding to a movie review.
+## GRU internals
 
-## Input and output sequences
+::: {.content-visible unless-format="revealjs"}
+GRUs are simpler compared to LSTM, hence, computationally more efficient than LSTMs. 
+:::
 
-- Vector to sequence: feed the network the same input vector over and over at each time step and let it output a sequence. Example: given that the input is an image, find a caption for it. The image is treated as an input vector (pixels in an image do not follow a sequence). The caption is a sequence of textual description of the image. A dataset containing images and their descriptions is the input of the RNN.
-- The Encoder-Decoder: The encoder is a sequence-to-vector network. The decoder is a vector-to-sequence network. Example: Feed the network a sequence in one language. Use the encoder to convert the sentence into a single vector representation. The decoder decodes this vector into the translation of the sentence in another language.
+![Diagram of a GRU cell.](images/colah-LSTM3-var-GRU.png)
 
-## Recurrent layers can be stacked.
+::: footer
+Source: Christopher Olah (2015), [Understanding LSTM Networks](http://colah.github.io/posts/2015-08-Understanding-LSTMs), Colah's Blog.
+:::
+
+## Recurrent layers can be stacked
 
 ![_Deep RNN_ unrolled through time.](images/rnn-stacked2.png)
 
@@ -1671,25 +1113,373 @@ The output from a hidden state can be used as input for another hidden layer of 
 Source: Melissa Renard (2025)
 :::
 
-## Beyond RNNs
+## Fitting the SimpleRNN {.smaller}
 
-RNNs are **foundational** and the concepts transfer everywhere, but in practice they have been largely overtaken by newer architectures:
+```{python}
+#| echo: false
+rnn_w = load_or_fit("models/bom_simplernn.keras",
+    lambda: Sequential([Rescaling(1/40), Reshape((-1, 1)), SimpleRNN(64, activation="tanh"), Dense(1)]),
+    X_train_temp, y_train_temp, X_val_temp, y_val_temp)
+rnn_s = load_or_fit("models/aus_fin_simplernn_model.keras",
+    lambda: Sequential([Rescaling(1/finance_scale), Reshape((-1, 1)), SimpleRNN(64, activation="tanh"), Dense(1)]),
+    X_train_cba, y_train_cba, X_val_cba, y_val_cba)
+y_pred_temp = rnn_w.predict(X_test_temp.to_numpy(), verbose=0).flatten()
+y_pred_cba = rnn_s.predict(X_test_cba.to_numpy(), verbose=0).flatten()
+w_scores["SimpleRNN"] = w_rmse(y_pred_temp); s_scores["SimpleRNN"] = s_rmse(y_pred_cba)
+```
 
-- **Attention / Transformers** (Vaswani et al., 2017): instead of processing a sequence step-by-step, attention lets every position look at every other position simultaneously. This avoids the vanishing gradient problem over long sequences and enables massive parallelism during training.
-- **State-space models** (e.g. Mamba, 2023): process sequences in linear time rather than the quadratic cost of full attention, while still capturing long-range dependencies.
+```{python}
+#| eval: false
+scale = 1 / finance_scale  # for weather: 1/40
+model = Sequential([Rescaling(scale), Reshape((-1, 1)), SimpleRNN(64, activation="tanh"), Dense(1)])
+model.compile(optimizer="adam", loss="mean_absolute_error")
+model.fit(X_train_cba, y_train_cba, validation_data=(X_val_cba, y_val_cba), epochs=500,
+    callbacks=[EarlyStopping(patience=15, restore_best_weights=True)], verbose=0)
+```
 
-::: {.content-visible unless-format="revealjs"}
-In this course we teach RNNs because the sequential processing intuition is valuable and the architectures are simple enough to fully understand. In industry, you would likely reach for a pretrained transformer (for NLP) or a state-space model (for long time series) as a first choice, but the concepts of hidden states, gating, and sequence modelling that you learned here still underpin how these newer models work.
+::: columns
+::: column
+CBA stock price forecasts (test set)
+
+```{python}
+#| code-fold: true
+pd.DataFrame({"Actual": y_test_cba, "SimpleRNN": y_pred_cba}, index=y_test_cba.index).plot()
+plt.ylabel("Log return"); plt.legend();
+```
+:::
+::: column
+Temperature forecasts (test set)
+
+```{python}
+#| code-fold: true
+ax = pd.DataFrame({"Actual": y_test_temp, "SimpleRNN": y_pred_temp}, index=y_test_temp.index).loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(x_compat=True)
+ax.set_ylabel("Max temp (°C)")
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+ax.set_xlabel("")
+ax.legend();
+```
+:::
 :::
 
-## Why learn RNNs then?
+## Fitting a GRU {.smaller}
 
-- The **hidden state** concept carries directly into transformers (which use it differently) and state-space models
-- **Gating** (LSTM/GRU) was a key insight that influenced later architectures
-- RNNs remain a strong, simple baseline for short sequences and small datasets
-- Understanding RNNs makes it easier to appreciate _why_ attention was such a breakthrough
+```{python}
+#| echo: false
+gru_w = load_or_fit("models/bom_gru.keras",
+    lambda: Sequential([Rescaling(1/40), Reshape((-1, 1)), GRU(16, activation="tanh"), Dense(1)]),
+    X_train_temp, y_train_temp, X_val_temp, y_val_temp)
+gru_s = load_or_fit("models/aus_fin_gru_model.keras",
+    lambda: Sequential([Rescaling(1/finance_scale), Reshape((-1, 1)), GRU(16, activation="tanh"), Dense(1)]),
+    X_train_cba, y_train_cba, X_val_cba, y_val_cba)
+y_pred_temp = gru_w.predict(X_test_temp.to_numpy(), verbose=0).flatten()
+y_pred_cba = gru_s.predict(X_test_cba.to_numpy(), verbose=0).flatten()
+w_scores["GRU"] = w_rmse(y_pred_temp); s_scores["GRU"] = s_rmse(y_pred_cba)
+```
 
-{{< include _houseprice-demo.qmd >}}
+```{python}
+#| eval: false
+scale = 1 / finance_scale  # for weather: 1/40
+model = Sequential([Rescaling(scale), Reshape((-1, 1)), GRU(16, activation="tanh"), Dense(1)])
+model.compile(optimizer="adam", loss="mean_absolute_error")
+model.fit(X_train_cba, y_train_cba, validation_data=(X_val_cba, y_val_cba), epochs=500,
+    callbacks=[EarlyStopping(patience=15, restore_best_weights=True)], verbose=0)
+```
+
+::: columns
+::: column
+CBA stock price forecasts (test set)
+
+```{python}
+#| code-fold: true
+pd.DataFrame({"Actual": y_test_cba, "GRU": y_pred_cba}, index=y_test_cba.index).plot()
+plt.ylabel("Log return"); plt.legend();
+```
+:::
+::: column
+Temperature forecasts (test set)
+
+```{python}
+#| code-fold: true
+ax = pd.DataFrame({"Actual": y_test_temp, "GRU": y_pred_temp}, index=y_test_temp.index).loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(x_compat=True)
+ax.set_ylabel("Max temp (°C)")
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+ax.set_xlabel("")
+ax.legend();
+```
+:::
+
+:::
+
+## Metrics on the validation set
+
+```{python}
+#| echo: false
+# Same models and baselines, scored on the *validation* split.
+def w_rmse_val(pred):
+    return mean_squared_error(y_val_temp, np.asarray(pred).flatten()) ** 0.5
+def s_rmse_val(pred_log):
+    s = pd.Series(np.asarray(pred_log).flatten(), index=y_val_cba.index)
+    pred_price = stock["CBA"].shift(1).reindex(y_val_cba.index) * np.exp(s)
+    return mean_squared_error(stock["CBA"].reindex(y_val_cba.index), pred_price) ** 0.5
+
+w_val = temps["Temp"].loc[temp_val_start:temp_val_end]
+v_idx = y_val_cba.index
+w_scores_val = {
+    "Persistence (1-step)": mean_squared_error(w_val, persistence.loc[temp_val_start:temp_val_end]) ** 0.5,
+    "Seasonal": mean_squared_error(w_val, seasonal.loc[temp_val_start:temp_val_end]) ** 0.5,
+}
+s_scores_val = {
+    "Persistence (1-step)": mean_squared_error(stock["CBA"].reindex(v_idx), stock["CBA"].shift(1).reindex(v_idx)) ** 0.5,
+}
+w_scores_val["Linear"] = w_rmse_val(lr_w.predict(X_val_temp))
+s_scores_val["Linear"] = s_rmse_val(lr_s.predict(X_val_cba))
+for _name, _mw, _ms in [("FNN", fnn_w, fnn_s), ("SimpleRNN", rnn_w, rnn_s), ("GRU", gru_w, gru_s)]:
+    w_scores_val[_name] = w_rmse_val(_mw.predict(X_val_temp.to_numpy(), verbose=0).flatten())
+    s_scores_val[_name] = s_rmse_val(_ms.predict(X_val_cba.to_numpy(), verbose=0).flatten())
+```
+
+::: columns
+::: column
+Stock price forecasting
+
+```{python}
+#| echo: false
+pd.DataFrame({"RMSE ($)": s_scores_val}).sort_values("RMSE ($)", ascending=False).round(2)
+```
+:::
+::: column
+Temperature forecasting
+
+```{python}
+#| echo: false
+pd.DataFrame({"RMSE (°C)": w_scores_val}).sort_values("RMSE (°C)", ascending=False).round(2)
+```
+:::
+:::
+
+## Metrics on the test set
+
+::: columns
+::: column
+Stock price forecasting
+
+```{python}
+#| echo: false
+# Only the model that won on the validation set.
+pd.DataFrame({"RMSE ($)": {"Persistence (1-step)": s_scores["Persistence (1-step)"]}}).round(2)
+```
+:::
+::: column
+Temperature forecasting
+
+```{python}
+#| echo: false
+# Only the model that won on the validation set.
+pd.DataFrame({"RMSE (°C)": {"GRU": w_scores["GRU"]}}).round(2)
+```
+:::
+:::
+
+::: {.content-visible unless-format="revealjs"}
+For the weather, every learned model beats the baselines and the GRU is best. For the share price, nothing meaningfully beats persistence — there is no signal to extract.
+:::
+
+# Multi-step forecasting and multivariate forecasting {visibility="uncounted"}
+
+<!--
+::: {.content-visible unless-format="revealjs"}
+Everything so far was _one-step_: predict tomorrow from the real last 40 days. To forecast further out, we would have to feed a model its own predictions.
+:::
+
+## Three ways to forecast further ahead
+
+- **Recursive / autoregressive** — feed a one-step model its own output, one step at a time.
+- **Direct** — train the network to output the next `h` values at once.
+- **Encoder–decoder (seq2seq)** — encode the history into a vector, then decode the whole horizon (out of scope).
+-->
+
+## Autoregressive forecasts
+
+Every model so far is _one-step_: it maps the last 40 days to a single next value. To forecast further out, we can feed the model _its own predictions_.
+
+**Idea**: make the first forecast, then treat it as if it were real and use it to make the next forecast, and so on. For the linear model this reads:
+
+$$
+\begin{aligned}
+    \hat{y}_t &= \beta_0 + \beta_1 y_{t-1} + \beta_2 y_{t-2} + \ldots + \beta_n y_{t-n} \\
+    \hat{y}_{t+1} &= \beta_0 + \beta_1 \hat{y}_t + \beta_2 y_{t-1} + \ldots + \beta_n y_{t-n+1} \\
+    \hat{y}_{t+2} &= \beta_0 + \beta_1 \hat{y}_{t+1} + \beta_2 \hat{y}_t + \ldots + \beta_n y_{t-n+2}
+\end{aligned}
+$$
+$$\vdots$$
+$$
+\hat{y}_{t+k} = \beta_0 + \beta_1 \hat{y}_{t+k-1} + \beta_2 \hat{y}_{t+k-2} + \ldots + \beta_n \hat{y}_{t+k-n}
+$$
+
+After $n$ steps the window holds _only_ predictions — the model is running entirely on its own output. The same recursion works for _any_ one-step model.
+
+## Autoregressive forecasting function
+
+Each step predicts one value, appends it to the window, and drops the oldest input — so the 40-day window slides forward one day at a time.
+
+```{python}
+def autoregressive_forecast(model, window, n_steps):
+    """Roll a one-step model forward, feeding each prediction back in."""
+    window = np.asarray(window, dtype="float32").copy()
+    preds = []
+    for _ in range(n_steps):
+        next_value = model.predict(window.reshape(1, -1), verbose=0).flatten()[0]
+        preds.append(next_value)
+        window = np.append(window[1:], next_value)  # drop oldest, add prediction
+    return np.array(preds)
+```
+
+## Forecasting a few weeks ahead
+
+Start the model with the last 40 real days, then forecast the next four weeks.
+Over a short horizon the errors may be small enough.
+
+```{python}
+#| code-fold: true
+horizon = 28
+seed = X_test_temp.iloc[0].to_numpy()
+short = pd.Series(autoregressive_forecast(fnn_w, seed, horizon),
+                  index=y_test_temp.index[:horizon])
+y_test_temp.iloc[:horizon].plot(label="Actual", marker=".", x_compat=True)
+short.plot(label="Recursive FNN", marker=".", color="#CC91BC", x_compat=True)
+plt.ylabel("Max temp (°C)")
+ax = plt.gca()
+ax.xaxis.set_major_locator(mdates.DayLocator(interval=7))
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d"))
+plt.xlabel("")
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
+```
+
+## Forecasting a year ahead
+
+Keep unrolling for the _whole_ test period and the small errors compound. The forecast drifts off, loses the seasonal cycle, and settles on a flat plateau, much worse than the trivial baseline.
+
+```{python}
+#| code-fold: true
+long = pd.Series(autoregressive_forecast(fnn_w, X_test_temp.iloc[0].to_numpy(), len(y_test_temp)),
+                 index=y_test_temp.index)
+y_test_temp.plot(label="Actual")
+seasonal.reindex(y_test_temp.index).plot(label="Seasonal baseline")
+long.plot(label="Recursive FNN", color="#CC91BC")
+plt.ylabel("Max temp (°C)")
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5));
+```
+
+<!-- 
+# Input and output shapes {visibility="uncounted"}
+
+
+::: {.content-visible unless-format="revealjs"}
+Multi-step forecasting stretched the output along _time_. The other axis is _shape_: how many series go in, and how many come out. An RNN handles each case with the same machinery — only the input and output heads change.
+:::
+
+## Input and output sequences
+
+![Categories of recurrent neural networks: sequence to sequence, sequence to vector, vector to sequence, encoder-decoder network.](images/rnn-types2.png){width="70%"}
+
+- _Sequence → sequence_ — forecast a series one step shifted (last $N$ days → days $2$ to $N{+}1$).
+- _Sequence → vector_ — read a whole sequence, output one summary (e.g. a sentiment score for a movie review).
+- _Vector → sequence_ — feed one input in at every step, output a sequence (e.g. caption an image).
+- _Encoder–decoder_ — a seq → vector encoder feeds a vector → seq decoder (e.g. translate a sentence).
+
+::: footer
+Source: Melissa Renard (2025)
+::: -->
+
+## Multivariate forecast model
+
+Every model so far ended in `Dense(1)` — it predicted a _single_ number/time series.
+
+Often we want to forecast _several related series at once_ — e.g. the big-four banks, or house-price indices across multiple cities.
+
+An RNN does this with almost no change: feed it a _multivariate_ sequence and _widen the output head_ so it predicts a vector.
+
+::: columns
+::: column
+_One series out_ — scalar target.
+```python
+model = Sequential([
+    Input((seq_len, num_series)),
+    GRU(16),
+    Dense(1),
+])
+```
+:::
+::: column
+_Many series out_ — vector target.
+```python
+model = Sequential([
+    Input((seq_len, num_series)),
+    GRU(16),
+    Dense(num_series),
+])
+```
+:::
+:::
+
+- The input shape `(seq_len, num_series)` is the same — the RNN reads all the series at each step.
+- Only the final `Dense` layer changes from `1` to `num_series`, and the loss is averaged over all outputs — so the model can exploit _correlations across series_.
+
+## A multivariate example
+
+```{python}
+#| echo: false
+station_files = {
+    "Sydney Airport": "066037",
+    "Parramatta": "066124",
+    "Bankstown": "066137",
+    "Badgerys Creek": "067108",
+}
+dfs_mt = []
+for _name, _sid in station_files.items():
+    _w = pd.read_csv(f"data/raw/BoM/DC02D_Data_{_sid}_9999999910249598.csv", low_memory=False)
+    _w["Date"] = pd.to_datetime(_w[["Year", "Month", "Day"]])
+    _col = _w.set_index("Date")[[TMAX]].rename(columns={TMAX: _name})
+    _col[_name] = pd.to_numeric(_col[_name], errors="coerce")
+    dfs_mt.append(_col)
+mt_temps = pd.concat(dfs_mt, axis=1).ffill().dropna()
+
+mt_arr = mt_temps.to_numpy("float32")
+mt_idx = mt_temps.index
+seq_len_mt = 40
+X_mt = np.stack([mt_arr[i - seq_len_mt:i] for i in range(seq_len_mt, len(mt_arr))])
+y_mt = mt_arr[seq_len_mt:]
+mt_idx = mt_idx[seq_len_mt:]
+yr_mt = mt_idx.year
+tr_mt = yr_mt <= int(temp_train_end)
+va_mt = (yr_mt >= int(temp_val_start)) & (yr_mt <= int(temp_val_end))
+te_mt = yr_mt >= int(temp_test_start)
+mv_w = load_or_fit("models/bom_multivariate_gru.keras",
+    lambda: Sequential([Rescaling(1/40), GRU(16, activation="tanh"), Dense(len(station_files))]),
+    X_mt[tr_mt], y_mt[tr_mt], X_mt[va_mt], y_mt[va_mt])
+pred_mt = pd.DataFrame(mv_w.predict(X_mt[te_mt], verbose=0), index=mt_idx[te_mt], columns=list(station_files))
+actual_mt = pd.DataFrame(y_mt[te_mt], index=mt_idx[te_mt], columns=list(station_files))
+```
+
+```{python}
+#| code-fold: true
+fig, axs = plt.subplots(2, 2, figsize=(5.5, 3.5), sharex=True)
+for ax, s in zip(axs.flat, station_files):
+    actual_mt[s].loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(ax=ax, label="Actual", x_compat=True)
+    pred_mt[s].loc[f"{temp_test_start}-01":f"{temp_test_start}-03"].plot(ax=ax, label="GRU", x_compat=True)
+    ax.set_title(s, fontsize=9); ax.set_ylabel("Max temp (°C)"); ax.set_xlabel("")
+axs[0, 0].legend(fontsize=7)
+for ax in [axs[1, 0], axs[1, 1]]:
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+plt.tight_layout();
+```
+
+::: {.content-visible unless-format="revealjs"}
+The same single model serves all four Sydney-region stations at once — the only change from the single-station case is the wider output head.
+:::
 
 {{< include _motor-nlp-rnn.qmd >}}
 
@@ -1710,3 +1500,9 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - persistence forecast
 - recurrent neural networks
 - SimpleRNN
+
+
+## References {visibility="uncounted"}
+
+::: {refs}
+:::

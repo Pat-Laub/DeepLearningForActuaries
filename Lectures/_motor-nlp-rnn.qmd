@@ -7,10 +7,6 @@ Dataset source: [Dr Jürg Schelldorfer's GitHub](https://github.com/JSchelldorfe
 
 ```{python}
 #| echo: false
-from pathlib import Path
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-
 if not Path("data/NHTSA_NMVCCS_extract.parquet.gzip").exists():
     import urllib.request
     urllib.request.urlretrieve(
@@ -32,35 +28,36 @@ We revisit the NHTSA car crash dataset from the NLP lecture: free-text police re
 features = df["SUMMARY_EN"]
 target = LabelEncoder().fit_transform(df["INJSEVB"])
 
-X_main, X_test, y_main, y_test = \
-    train_test_split(features, target, test_size=0.2, random_state=1)
-X_train, X_val, y_train, y_val = \
-    train_test_split(X_main, y_main, test_size=0.25, random_state=1)
+X_main, X_test, y_main, y_test = train_test_split(features, target, test_size=0.2, random_state=1)
+X_train, X_val, y_train, y_val = train_test_split(X_main, y_main, test_size=0.25, random_state=1)
 X_train.shape, X_val.shape, X_test.shape
 ```
 
-## Keep text as sequence of tokens
+Keep text as sequence of tokens
 
 ```{python}
-from sklearn.feature_extraction.text import CountVectorizer
-import re
-
 max_length = 500
 max_tokens = 1_000
 
 # Build vocabulary using CountVectorizer
-count_vect = CountVectorizer(max_features=max_tokens-1, lowercase=True,
+count_vect = CountVectorizer(max_features=max_tokens-2, lowercase=True,
     token_pattern=r"(?u)\b\w+\b")
 count_vect.fit(X_train)
-vocab = [""] + list(count_vect.get_feature_names_out())  # Index 0 reserved for padding
+vocab = ["", "[UNK]"] + list(count_vect.get_feature_names_out())  # 0 = padding, 1 = unknown
 word_to_idx = {word: idx for idx, word in enumerate(vocab)}
+```
 
+_Note_: on the TensorFlow backend you'd replace this manual `CountVectorizer` + `texts_to_sequences` pipeline with a single `keras.layers.TextVectorization` layer, which builds the vocabulary, tokenises, and pads — reserving `0` for padding and `1` for the unknown token automatically. This project runs the PyTorch backend (where that layer isn't available), so we reproduce the same convention by hand.
+
+## Tokenise
+
+```{python}
 def texts_to_sequences(texts, word_to_idx, max_length):
     sequences = []
     for text in texts:
         tokens = re.findall(r"(?u)\b\w+\b", text.lower())
-        seq = [word_to_idx.get(t, 0) for t in tokens][:max_length]
-        seq = seq + [0] * (max_length - len(seq))  # Pad with zeros
+        seq = [word_to_idx.get(t, 1) for t in tokens][:max_length]  # unknown words -> 1
+        seq = seq + [0] * (max_length - len(seq))  # pad with zeros
         sequences.append(seq)
     return np.array(sequences)
 
@@ -68,10 +65,10 @@ X_train_txt = texts_to_sequences(X_train, word_to_idx, max_length)
 X_val_txt = texts_to_sequences(X_val, word_to_idx, max_length)
 X_test_txt = texts_to_sequences(X_test, word_to_idx, max_length)
 
-print(vocab[:50])
+print(vocab[:5], vocab[len(vocab)//2:(len(vocab)//2 + 5)], vocab[-5:])
 ```
 
-## A sequence of integers
+## The input data is a sequence of integers
 
 ```{python}
 X_train_txt[0]
@@ -80,10 +77,12 @@ X_train_txt[0]
 ## Feed LSTM a sequence of one-hots
 
 ```{python}
-from keras.layers import CategoryEncoding, Bidirectional, LSTM
 random.seed(42)
 one_hot_model = Sequential([Input(shape=(max_length,), dtype="int64"),
-    CategoryEncoding(num_tokens=max_tokens, output_mode="one_hot"),
+    # A frozen identity-matrix embedding maps each token id to its one-hot vector,
+    # while mask_zero lets the LSTM skip the padding (0) positions.
+    Embedding(max_tokens, max_tokens, embeddings_initializer="identity",
+        trainable=False, mask_zero=True),
     Bidirectional(LSTM(24)),
     Dense(1, activation="sigmoid")])
 one_hot_model.compile(optimizer="adam",
@@ -124,8 +123,9 @@ one_hot_model.evaluate(X_val_txt, y_val, verbose=0, batch_size=1_000)
 ## Custom embeddings
 
 ```{python}
-from keras.layers import Embedding
 embed_lstm = Sequential([Input(shape=(max_length,), dtype="int64"),
+    # mask_zero masks only padding (0); the unknown token (1) keeps its own
+    # learnable embedding, so "a rare word appeared here" stays a usable signal.
     Embedding(input_dim=max_tokens, output_dim=32, mask_zero=True),
     Bidirectional(LSTM(24)),
     Dense(1, activation="sigmoid")])
