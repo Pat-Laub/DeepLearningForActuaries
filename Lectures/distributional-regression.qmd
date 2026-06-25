@@ -7,40 +7,12 @@ title: Distributional Regression
 #| warning: false
 from setup import *
 
+# scipy.stats isn't provided by setup, but the early illustrative plots need it
+# (the visible imports slide later re-imports it for the students).
+import scipy.stats as stats
+
 pandas.options.display.max_rows = 5
 ```
-
-::: {.content-visible unless-format="revealjs"}
-
-```{python}
-#| code-fold: true
-#| code-summary: Show the package imports
-import os
-import random
-import matplotlib.pyplot as plt
-import numpy as np
-import numpy.random as rnd
-import pandas as pd
-
-import keras
-from keras.callbacks import EarlyStopping
-from keras.models import Sequential, Model
-from keras.layers import Input, Dense, Concatenate
-from keras.initializers import Constant
-
-from sklearn.model_selection import train_test_split
-from sklearn.compose import make_column_transformer
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import OrdinalEncoder
-from sklearn.linear_model import LinearRegression
-from sklearn import set_config
-set_config(transform_output="pandas")
-
-import scipy.stats as stats
-import statsmodels.api as sm
-```
-
-:::
 
 # Introduction {visibility="uncounted"}
 
@@ -115,7 +87,7 @@ These claim size predictions are not genuine future predictions --- the next cla
 :::
 
 ```{python}
-#| code-fold: true
+#| echo: false
 data = [
     (25, 3, "🚙", 1200),  # (Driver Age, Car Age, Type of Car, Repair Cost)
     (40, 5, "🚐", 2500),
@@ -123,7 +95,7 @@ data = [
     (60, 10, "🚘", 800)
 ]
 
-x = np.linspace(0, 5000, 1000)
+x = numpy.linspace(0, 5000, 1000)
 
 def draw_gamma_distribution(mean, shape, color, customer_id):
   scale = mean / shape
@@ -139,7 +111,7 @@ def draw_gamma_distribution(mean, shape, color, customer_id):
 
 Customer 1 = (25, 3, 🚙)
 ```{python}
-#| code-fold: true
+#| echo: false
 draw_gamma_distribution(1200, 2, COLOURS[0], 0)
 ```
 
@@ -149,36 +121,36 @@ What we are trying to predict is fundamentally unpredictable. Rather than making
 Based on the distribution output, actuaries can obtain risk measures such as expected claim size, variance, Value at Risk, etc. 
 :::
 
-## Distributional regression {data-visibility=uncounted}
+## Distributional regression {data-visibility=uncounted .unlisted}
 
 Customer 2 = (40, 5, 🚐)
 ```{python}
-#| code-fold: true
+#| echo: false
 draw_gamma_distribution(2500, 2, COLOURS[1], 1)
 ```
 
-## Distributional regression {data-visibility=uncounted}
+## Distributional regression {data-visibility=uncounted .unlisted}
 
 Customer 3 = (19, 1, 🏎️)
 ```{python}
-#| code-fold: true
+#| echo: false
 draw_gamma_distribution(3800, 2, COLOURS[2], 2)
 ```
 
-## Distributional regression {data-visibility=uncounted}
+## Distributional regression {data-visibility=uncounted .unlisted}
 
 Customer 4 = (60, 10, 🚘)
 ```{python}
-#| code-fold: true
+#| echo: false
 draw_gamma_distribution(800, 2, COLOURS[3], 3)
 ```
 
-## Distributional regression {data-visibility=uncounted}
+## Distributional regression {data-visibility=uncounted .unlisted}
 
 All customers
 
 ```{python}
-#| code-fold: true
+#| echo: false
 # Plot all on the same graph
 plt.figure()
 for i, (age, car_age, car_type, cost) in enumerate(data):
@@ -313,9 +285,9 @@ GLMs can be bad at _distributional regression_ because they are restricted to a 
 
 
 ```{python}
-#| code-fold: true
-ages = np.linspace(18, 80, 200)  # Driver ages from 18 to 80
-claim_sizes = 1000 * (1 - np.exp(-((ages - 35) / 20)**2)) 
+#| echo: false
+ages = numpy.linspace(18, 80, 200)  # Driver ages from 18 to 80
+claim_sizes = 1000 * (1 - numpy.exp(-((ages - 35) / 20)**2))
 
 # Create the updated plot
 # plt.figure(figsize=(8, 6))
@@ -340,11 +312,11 @@ GLMs cannot (easily) do this $\longrightarrow$ Use a neural network
 ## Example 2: Multi-modality
 
 ```{python}
-#| code-fold: true
-x = np.linspace(0, 20*500, 500)  # Range restricted to positive real numbers
+#| echo: false
+x = numpy.linspace(0, 20*500, 500)  # Range restricted to positive real numbers
 
 # Adjust the components to ensure a bimodal mixture
-pdf1 = stats.lognorm.pdf(x, s=0.3, scale=np.exp(1)*500)  # Sharper log-normal distribution
+pdf1 = stats.lognorm.pdf(x, s=0.3, scale=numpy.exp(1)*500)  # Sharper log-normal distribution
 pdf2 = stats.gamma.pdf(x, a=10, scale=0.8*500)  # Narrower gamma distribution
 mixture_pdf = 0.3 * pdf1 + 0.7 * pdf2  # Equal weights to emphasize bimodality
 
@@ -408,12 +380,44 @@ Classifiers already give us a probability, which is a big step up compared to re
 
 However, neural networks' "probabilities" can be overconfident.
 
-![We [already saw](https://pat-laub.github.io/DeepLearningForActuaries/Computer-Vision/computer-vision.html#confidence-of-predictions) a case of this.](images/example-of-overconfidence.png)
+![We [already saw](computer-vision.html#confidence-of-predictions) a case of this.](images/example-of-overconfidence.png)
 
-See Guo et al. (2017), [On Calibration of Modern Neural Networks](https://arxiv.org/pdf/1706.04599).
+See @guo2017calibration.
 
 
 # Traditional Regression {visibility="uncounted"}
+
+## Package imports
+
+```{python}
+import os
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+import keras
+from keras.models import Sequential, Model
+from keras.layers import Input, Dense, Concatenate, Dropout
+from keras.callbacks import EarlyStopping
+from keras.initializers import Constant
+from keras.regularizers import L1, L2
+
+from sklearn.model_selection import train_test_split
+from sklearn.compose import make_column_transformer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler, OrdinalEncoder
+from sklearn.linear_model import LinearRegression
+from sklearn.datasets import fetch_california_housing
+from sklearn import set_config
+set_config(transform_output="pandas")
+
+import scipy.stats as stats
+import statsmodels.api as sm
+
+from torch.distributions import Gamma, MixtureSameFamily, Categorical
+```
 
 ## Notation
 
@@ -739,7 +743,7 @@ def lagged_timeseries(df, target, window=30):
     return lagged
 
 
-stocks = pd.read_csv("data/aus_fin_stocks.csv")
+stocks = pd.read_csv("data/interim/aus_fin_stocks.csv")
 stocks["Date"] = pd.to_datetime(stocks["Date"])
 stocks = stocks.set_index("Date")
 _ = stocks.pop("ASX200")
@@ -888,7 +892,7 @@ plot_forecasts(stock)
 This noisy forecast seems much more realistic than the non-noisy AR forecast.
 :::
 
-## With noise {visibility="uncounted"}
+## With noise {visibility="uncounted" .unlisted}
 
 ```{python}
 np.random.seed(2)
@@ -902,7 +906,7 @@ stock.loc[price_noisy.index, "AR Noisy Log-Return"] = price_noisy
 plot_forecasts(stock)
 ```
 
-## With noise {visibility="uncounted"}
+## With noise {visibility="uncounted" .unlisted}
 
 ```{python}
 np.random.seed(3)
@@ -1150,7 +1154,8 @@ sev
 ```{python}
 X_train, X_test, y_train, y_test = train_test_split(
   sev.drop("ClaimAmount", axis=1), sev["ClaimAmount"], random_state=2023)   #<1>
-ct = make_column_transformer((OrdinalEncoder(), ["Area", "VehGas"]),
+ct = make_column_transformer(
+    (make_pipeline(OrdinalEncoder(), StandardScaler()), ["Area", "VehGas"]),
     ("drop", ["VehBrand", "Region"]), remainder=StandardScaler())           #<2>
 X_train = ct.fit_transform(X_train)                                         #<3>
 X_test = ct.transform(X_test)                                               #<4>
@@ -1158,7 +1163,7 @@ plt.hist(y_train[y_train < 5000], bins=30);
 ```
 
 1. Split the data into train and test sets
-2. Apply ordinal encoding to `Area` and `VehGas` variables, and apply standard scaling to all remaining numerical variables. To simplify things, `VehBrand` and `Region` variables are dropped from the dataframe.
+2. Ordinal-encode `Area` and `VehGas` and then standardise them, and apply standard scaling to all remaining numerical variables, so every input is on a mean 0 / std 1 scale. To simplify things, `VehBrand` and `Region` variables are dropped from the dataframe.
 3. Fit the column transformer to the train set and apply it
 4. Apply the column trainsformer to the test set
 
@@ -1271,8 +1276,6 @@ In Python, we can fit a Gamma GLM as follows:
 
 
 ```{python}
-import statsmodels.api as sm
-
 # Add a column of ones to include an intercept in the model
 X_train_design = sm.add_constant(X_train)
 
@@ -1323,11 +1326,37 @@ The only difference is that the input neurons are not the raw data values; they 
 Then we can consider the first part of the NN to simply be the feature engineering process.
 :::
 
+## Deep GLM
+
+A GLM has a _linear_ predictor. A _deep GLM_ [@tran2020bayesian] swaps that for a neural network --- a non-linear mean --- but keeps the _same Gamma loss_, so it still predicts a single Gamma distribution.
+
+```{python}
+def gamma_loss(y_true, y_pred):                                         #<1>
+    return keras.ops.mean(keras.ops.log(y_pred) + y_true / y_pred)
+
+random.seed(1)
+deep_glm = Sequential([
+    Dense(64, activation="leaky_relu"),
+    Dense(64, activation="leaky_relu"),
+    Dense(1, activation="exponential")                                  #<2>
+])
+deep_glm.compile(optimizer="adam", loss=gamma_loss)
+deep_glm.fit(X_train, y_train, epochs=100, batch_size=64, verbose=0,
+    callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
+    validation_split=0.2);
+```
+1. The Gamma negative log-likelihood (the dispersion is a nuisance parameter) --- identical to the GLM's loss.
+2. The `exponential` activation plays the role of the GLM's inverse log link.
+
+::: {.content-visible unless-format="revealjs"}
+Unlike the GLM, the mean can be an arbitrary non-linear function of the inputs. Unlike the MDN (coming up), the response is still a single Gamma distribution with one constant dispersion. The CANN sits in between: it keeps the GLM and _adds_ a network on top.
+:::
+
 # Combined Actuarial Neural Network {visibility="uncounted"}
 
 ## CANN
 
-The Combined Actuarial Neural Network is an actuarial neural network architecture proposed by [Schelldorfer and Wüthrich (2019)](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525). We summarise the CANN approach as follows:
+The Combined Actuarial Neural Network is an actuarial neural network architecture proposed by @schelldorfer2019nesting. We summarise the CANN approach as follows:
 
 - Find coefficients $\boldsymbol{\beta}$ of the GLM with a link function $g(\cdot)$.
 - Find weights $\boldsymbol{w} = (\boldsymbol{w}^{(1)}, \dots, \boldsymbol{w}^{(K+1)})$ of a neural network $s:\mathbb{R}^{p}\to\mathbb{R}$.
@@ -1390,7 +1419,7 @@ One copy of the variables is processed through many dense hidden layers (NN comp
 :::
 
 ::: footer
-Source: Schelldorfer and Wüthrich (2019), [Nesting Classical Actuarial Models into Neural Networks](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=3320525), SSRN, Figure 8.
+Source: Figure 8 of @schelldorfer2019nesting.
 :::
 
 ## Code: Architecture
@@ -1419,23 +1448,18 @@ cann = Model(inputs, mu)
 3. Specify the neural network layers (1 dense hidden layer and the output neuron).
 4. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
 
-Since this CANN predicts Gamma distributions, we use the Gamma NLL loss function.
-
-```{python}
-def cann_negative_log_likelihood(y_true, y_pred):
-    return keras.ops.mean(keras.ops.log(y_pred) + y_true/y_pred)
-```
+Since this CANN predicts Gamma distributions, we reuse the same `gamma_loss` from the deep GLM.
 
 ## Code: Model Training
 
 ```{python}
 #| eval: false
-cann.compile(optimizer="adam", loss=cann_negative_log_likelihood)       #<1>
+cann.compile(optimizer="adam", loss=gamma_loss)                         #<1>
 hist = cann.fit(X_train, y_train,
-    epochs=100, 
-    callbacks=[EarlyStopping(patience=10)],  
+    epochs=100,
+    callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
     verbose=0,
-    batch_size=64, 
+    batch_size=64,
     validation_split=0.2)                                               #<2>
 ```
 1. Compiles the model with adam optimizer and the custom loss function
@@ -1444,17 +1468,17 @@ hist = cann.fit(X_train, y_train,
 ```{python}
 #| echo: false
 if not os.path.exists("models/cann.keras"):
-    cann.compile(optimizer="adam", loss=cann_negative_log_likelihood)
+    cann.compile(optimizer="adam", loss=gamma_loss)
     cann.fit(X_train, y_train,
-      epochs=100, 
-      callbacks=[EarlyStopping(patience=10)],  
+      epochs=100,
+      callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
       verbose=0,
-      batch_size=64, 
+      batch_size=64,
       validation_split=0.2)
     cann.save("models/cann.keras")
 else:
-    cann = keras.models.load_model("models/cann.keras", 
-                                      custom_objects={"cann_negative_log_likelihood": cann_negative_log_likelihood})
+    cann = keras.models.load_model("models/cann.keras",
+                                      custom_objects={"gamma_loss": gamma_loss})
 ```
 
 Find the dispersion parameter.
@@ -1500,7 +1524,7 @@ $$
 
 ## Mixture Density Network
 
-A mixture density network (MDN) $\text{MDN}(\boldsymbol{x})$ outputs each distribution component's mixing weights and parameters of $Y$ given the input features $\boldsymbol{x}$, i.e.,
+A mixture density network (MDN) [@bishop1994mixture] $\text{MDN}(\boldsymbol{x})$ outputs each distribution component's mixing weights and parameters of $Y$ given the input features $\boldsymbol{x}$, i.e.,
 $$
     \text{MDN}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
 $$
@@ -1532,6 +1556,10 @@ $$
 $$
 where $\pi_1(\boldsymbol{x})$ is the probability of a Type I claim given $\boldsymbol{x}$.
 
+::: footer
+Gamma MDNs for insurance claim amounts: @delong2021gamma; MDNs for loss reserving: @al2022stochastic.
+:::
+
 ## Output
 
 The aim is to find the optimum weights
@@ -1561,39 +1589,24 @@ $$
 The following code implements the gamma MDN from the previous slide.
 
 ```{python}
-import torch                                                                            #<1>
-import torch.nn as nn
-
 random.seed(1)
-torch.manual_seed(1)
 
-class GammaMDN(nn.Module):                                                              #<2>
-    def __init__(self, input_dim, hidden_dim=64, n_components=2):
-        super().__init__()
-        self.hidden = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),                                            #<3>
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-        self.pi_layer = nn.Linear(hidden_dim, n_components)                              #<4>
-        self.alpha_layer = nn.Linear(hidden_dim, n_components)
-        self.beta_layer = nn.Linear(hidden_dim, n_components)
+n_components = 2
+inputs = Input(shape=X_train.shape[1:])
 
-    def forward(self, x):
-        h = self.hidden(x)
-        pis = torch.softmax(self.pi_layer(h), dim=-1)
-        alphas = torch.exp(self.alpha_layer(h))
-        betas = torch.exp(self.beta_layer(h))
-        return pis, alphas, betas                                                        #<5>
+x = Dense(64, activation="relu")(inputs)                                                 #<1>
+x = Dense(64, activation="relu")(x)
 
-gamma_mdn = GammaMDN(X_train.shape[1])
+pis = Dense(n_components, activation="softmax")(x)                                       #<2>
+alphas = Dense(n_components, activation="softplus")(x)
+betas = Dense(n_components, activation="softplus")(x)
+
+outputs = Concatenate()([pis, alphas, betas])                                            #<3>
+gamma_mdn = Model(inputs, outputs)
 ```
-1. Import PyTorch
-2. Defines the MDN as a PyTorch `nn.Module`
-3. Specifies the hidden layers of the neural network
-4. Specifies the output heads. `softmax` is used for $\pi$ values as they must sum to 1. `exp` is used for $\alpha$'s and $\beta$'s as they must be positive.
-5. Returns the mixing weights, shape parameters, and rate parameters separately.
+1. Specifies the shared hidden layers of the neural network using Keras' functional API.
+2. Specifies the output heads. `softmax` is used for the $\pi$ values as they must sum to 1. `softplus` is used for the $\alpha$'s and $\beta$'s as they must be positive.
+3. Concatenates the three heads into a single output of $3 \times K$ values (mixing weights, shapes, rates), which the loss function will split apart.
 
 ## Loss Function
 
@@ -1620,109 +1633,88 @@ This loss function is quite complex, and for more complicated mixture distributi
 `torch.distributions` to the rescue.
 
 ::: {.content-visible unless-format="revealjs"}
-`torch.distributions` does all the hard work of mathematically describing the mixture distribution.
+`torch.distributions` does all the hard work of mathematically describing the mixture distribution, so we only need a single loss _function_ (no custom classes).
 :::
 
 ```{python}
-from torch.distributions import Gamma, MixtureSameFamily, Categorical      #<1>
-
-def gamma_mixture_nll(pis, alphas, betas, y_true):                          #<2>
+def gamma_mixture_nll(y_true, y_pred):                                      #<1>
+    pis = y_pred[:, :n_components]                                          #<2>
+    alphas = y_pred[:, n_components:2*n_components]
+    betas = y_pred[:, 2*n_components:]
     mixture = MixtureSameFamily(
         mixture_distribution=Categorical(probs=pis),
         component_distribution=Gamma(concentration=alphas, rate=betas))     #<3>
-    return -mixture.log_prob(y_true).mean()                                 #<4>
+    return -keras.ops.mean(mixture.log_prob(keras.ops.squeeze(y_true)))     #<4>
 ```
-1. Import distribution classes from `torch.distributions`
-2. The loss function takes the MDN outputs (mixing weights, shapes, rates) and observed values
-3. Specify the mixture distribution using the predicted model components
-4. Calculate the mean negative log-likelihood given the observed data
+1. The loss takes the observed values and the MDN's concatenated output, matching Keras' `(y_true, y_pred)` signature.
+2. Split the output back into the mixing weights, shapes, and rates.
+3. Specify the mixture distribution using the predicted model components.
+4. Calculate the mean negative log-likelihood given the observed data.
+
+We can now train it like any other Keras model.
 
 ```{python}
 #| eval: false
-# Convert data to PyTorch tensors
-X_train_t = torch.tensor(X_train.values, dtype=torch.float32)
-y_train_t = torch.tensor(y_train.values, dtype=torch.float32)
-
-# Split into train and validation (80/20)
-n_val = int(0.2 * len(X_train_t))
-X_val_mdn, y_val_mdn = X_train_t[-n_val:], y_train_t[-n_val:]
-X_trn_mdn, y_trn_mdn = X_train_t[:-n_val], y_train_t[:-n_val]
-
-optimizer = torch.optim.Adam(gamma_mdn.parameters())                       #<1>
-loader = torch.utils.data.DataLoader(
-    torch.utils.data.TensorDataset(X_trn_mdn, y_trn_mdn),
-    batch_size=64, shuffle=True)
-
-best_val_loss, patience_counter, best_state = float('inf'), 0, None
-
-for epoch in range(100):                                                    #<2>
-    gamma_mdn.train()
-    for xb, yb in loader:
-        pis, alphas, betas = gamma_mdn(xb)
-        loss = gamma_mixture_nll(pis, alphas, betas, yb)
-        optimizer.zero_grad(); loss.backward(); optimizer.step()
-
-    gamma_mdn.eval()
-    with torch.no_grad():
-        pis_v, alphas_v, betas_v = gamma_mdn(X_val_mdn)
-        val_loss = gamma_mixture_nll(pis_v, alphas_v, betas_v, y_val_mdn)
-
-    if val_loss < best_val_loss:                                            #<3>
-        best_val_loss = val_loss
-        best_state = {k: v.clone() for k, v in gamma_mdn.state_dict().items()}
-        patience_counter = 0
-    else:
-        patience_counter += 1
-        if patience_counter >= 10: break
-
-gamma_mdn.load_state_dict(best_state)
+gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)                 #<1>
+gamma_mdn.fit(X_train, y_train,
+    epochs=100,
+    callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
+    verbose=0,
+    batch_size=64,
+    validation_split=0.2)                                                   #<2>
 ```
-1. Uses the Adam optimiser
-2. Fits the model with a manual training loop, evaluating on a validation split each epoch
-3. Early stopping with patience of 10 epochs, restoring the best weights
+1. Compile the model with the Adam optimiser and our custom loss function.
+2. Fit the model, with early stopping on a 20% validation split.
 
 ```{python}
 #| echo: false
-mdn_path = "models/gamma_mdn.pt"
-if not os.path.exists(mdn_path):
-    X_train_t = torch.tensor(X_train.values, dtype=torch.float32)
-    y_train_t = torch.tensor(y_train.values, dtype=torch.float32)
-    n_val = int(0.2 * len(X_train_t))
-    X_val_mdn, y_val_mdn = X_train_t[-n_val:], y_train_t[-n_val:]
-    X_trn_mdn, y_trn_mdn = X_train_t[:-n_val], y_train_t[:-n_val]
-
-    optimizer = torch.optim.Adam(gamma_mdn.parameters())
-    loader = torch.utils.data.DataLoader(
-        torch.utils.data.TensorDataset(X_trn_mdn, y_trn_mdn),
-        batch_size=64, shuffle=True)
-
-    best_val_loss, patience_counter, best_state = float('inf'), 0, None
-    for epoch in range(100):
-        gamma_mdn.train()
-        for xb, yb in loader:
-            pis, alphas, betas = gamma_mdn(xb)
-            loss = gamma_mixture_nll(pis, alphas, betas, yb)
-            optimizer.zero_grad(); loss.backward(); optimizer.step()
-        gamma_mdn.eval()
-        with torch.no_grad():
-            pis_v, alphas_v, betas_v = gamma_mdn(X_val_mdn)
-            val_loss = gamma_mixture_nll(pis_v, alphas_v, betas_v, y_val_mdn)
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_state = {k: v.clone() for k, v in gamma_mdn.state_dict().items()}
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            if patience_counter >= 10: break
-    gamma_mdn.load_state_dict(best_state)
-    torch.save(gamma_mdn.state_dict(), mdn_path)
+if not os.path.exists("models/gamma_mdn.keras"):
+    gamma_mdn.compile(optimizer="adam", loss=gamma_mixture_nll)
+    gamma_mdn.fit(X_train, y_train,
+        epochs=100,
+        callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
+        verbose=0,
+        batch_size=64,
+        validation_split=0.2)
+    gamma_mdn.save("models/gamma_mdn.keras")
 else:
-    gamma_mdn.load_state_dict(torch.load(mdn_path, weights_only=True))
+    gamma_mdn = keras.models.load_model("models/gamma_mdn.keras",
+        custom_objects={"gamma_mixture_nll": gamma_mixture_nll})
 ```
 
 <!--
 # Calibration
 -->
+
+
+# Distributional Refinement Network {visibility="uncounted"}
+
+## The DRN architecture
+
+TODO: Need to fill in.
+
+::: footer
+Source: @avanzi2026distributional.
+:::
+
+## One package, every model
+
+The [`drn`](https://github.com/EricTianDong/drn) package fits everything from today's lecture --- and the DRN itself --- behind a single `.fit` API:
+
+```{python}
+#| eval: false
+from drn import GLM, CANN, MDN, DRN
+
+glm = GLM("gamma").fit(X_train, y_train)                      # the GLM
+cann = CANN(glm).fit(X_train, y_train)                        # the CANN
+mdn = MDN("gamma", num_components=2).fit(X_train, y_train)    # the MDN
+
+drn = DRN(glm).fit(X_train, y_train)                          # refine the whole distribution
+```
+
+::: footer
+Source: @avanzi2026distributional.
+:::
 
 # Metrics for Distributional Regression {visibility="uncounted"}
 
@@ -1815,7 +1807,7 @@ In this example the observed value is in red and the green line is the predicted
 When fitting the model by trying to maximise the likelihood, you want to balance the trade-off between making an accurate prediction and making a confident prediction. 
 :::
 
-## Code: NLL
+## Gamma NLL
 
 ```{python}
 def gamma_nll(mean, dispersion, y):
@@ -1826,7 +1818,11 @@ def gamma_nll(mean, dispersion, y):
     gamma_dist = stats.gamma(a=shape, scale=scale)
     
     return -np.mean(gamma_dist.logpdf(y))
+```
 
+## NLL metrics
+
+```{python}
 # GLM
 X_test_design = sm.add_constant(X_test)
 mus = gamma_glm.predict(X_test_design)
@@ -1837,17 +1833,10 @@ mus = cann.predict(X_test, verbose=0)
 nll_cann = gamma_nll(mus, phi_cann, y_test)
 
 # MDN
-gamma_mdn.eval()
-with torch.no_grad():
-    X_test_t = torch.tensor(X_test.values, dtype=torch.float32)
-    y_test_t = torch.tensor(y_test.values, dtype=torch.float32)
-    pis, alphas, betas = gamma_mdn(X_test_t)
-    nll_mdn = gamma_mixture_nll(pis, alphas, betas, y_test_t).item()
-```
+mdn_pred = gamma_mdn.predict(X_test, verbose=0)
+nll_mdn = gamma_mixture_nll(y_test.values, keras.ops.convert_to_tensor(mdn_pred))
+nll_mdn = float(nll_mdn)
 
-<!-- ## Model Comparisons -->
-
-```{python}
 print(f'GLM: {round(nll_glm, 2)}')
 print(f'CANN: {round(nll_cann, 2)}')
 print(f'MDN: {round(nll_mdn, 2)}')
@@ -1856,7 +1845,6 @@ print(f'MDN: {round(nll_mdn, 2)}')
 ::: {.content-visible unless-format="revealjs"}
 The above results show that MDN provides the lowest value for the Logarithmic Score (NLL). Low values for NLL indicate better fits. One possible reason for the better performance of the MDN model (compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
 :::
-
 
 # Aleatoric and Epistemic Uncertainty {visibility="uncounted"}
 
@@ -1955,7 +1943,6 @@ We can perform regularisation in Keras with the same intuition as for the contex
 
 ```{python}
 #| code-fold: true
-from sklearn.datasets import fetch_california_housing
 features, target = fetch_california_housing(as_frame=True, return_X_y=True)
 
 NUM_FEATURES = len(features.columns)
@@ -1974,8 +1961,6 @@ X_test_sc = scaler.transform(X_test)
 ```
 
 ```{python}
-from keras.regularizers import L1, L2
-
 def l1_model(regulariser_strength=0.01):
   random.seed(123)
   model = Sequential([
@@ -2128,10 +2113,8 @@ Dropout is just another layer in Keras.
 The following code shows how we can apply a dropout to each hidden layer in the neural network. The dropout rate for each layer is 0.2. There is also an option called `seed` in the `Dropout` function, which can be used to ensure reproducibility. 
 :::
 
-```{python} 
-from keras.layers import Dropout
-
-random.seed(2); 
+```{python}
+random.seed(2);
 
 model = Sequential([
     Dense(30, activation="leaky_relu"),
@@ -2173,14 +2156,14 @@ We can make the model think it is still training:
 ::: columns
 ::: column
 ```{python}
-model(X_train_sc.head(3),
-    training=True).detach().numpy()
+keras.ops.convert_to_numpy(
+    model(X_train_sc.head(3), training=True))
 ```
 :::
 ::: column
 ```{python}
-model(X_train_sc.head(3),
-    training=True).detach().numpy()
+keras.ops.convert_to_numpy(
+    model(X_train_sc.head(3), training=True))
 ```
 :::
 :::
@@ -2300,4 +2283,9 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 - Monte Carlo dropout
 - proper scoring rule
 :::
+:::
+
+## References {visibility="uncounted"}
+
+::: {#refs}
 :::
