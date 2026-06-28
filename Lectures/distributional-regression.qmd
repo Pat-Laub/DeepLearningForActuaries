@@ -12,13 +12,15 @@ from setup import *
 import scipy.stats as stats
 
 pandas.options.display.max_rows = 5
+
+import os
 ```
 
 # Introduction {visibility="uncounted"}
 
 ## Why actuaries avoid neural networks
 
-They're not _inherently interpretable_, so just we have to look at inputs and outputs from the black box.
+They're not _inherently interpretable_, so we just have to look at inputs and outputs from the black box.
 
 ::: fragment
 Neural network models typically just output a prediction without any sense of its _confidence_.
@@ -83,7 +85,7 @@ What's wrong? Not enough rows? Not enough columns?
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-These claim size predictions are not genuine future predictions --- the next claim that a 40-year-old with a 5-year-old SUV will probably not be $2,500. That's only a _best guess_.
+These claim size predictions are not genuine future predictions --- the next claim that a 40-year-old with a 5-year-old SUV makes will probably not be $2,500. That's only a _best guess_.
 :::
 
 ```{python}
@@ -390,9 +392,7 @@ See @guo2017calibration.
 ## Package imports
 
 ```{python}
-import os
 import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -415,7 +415,6 @@ set_config(transform_output="pandas")
 
 import scipy.stats as stats
 import statsmodels.api as sm
-
 from torch.distributions import Gamma, MixtureSameFamily, Categorical
 ```
 
@@ -735,7 +734,7 @@ This last point is particularly important for analysing worst-case scenarios.
 
 ```{python}
 #| code-fold: true
-def lagged_timeseries(df, target, window=30):
+def lagged_timeseries(df, target, window):
     lagged = pd.DataFrame()
     for i in range(window, 0, -1):
         lagged[f"T-{i}"] = df[target].shift(i)
@@ -765,15 +764,18 @@ def get_last_price(stock_df, cutoff_date):
 # Create lagged features from log returns
 df_lags = lagged_timeseries(stock_log, "CBA", 40)
 
-# Split the data in time
-X_train = df_lags.loc[:"2024"]
-X_test = df_lags.loc["2025":]
+# Split the data in time (same cutoffs as the Time Series lecture)
+X_train = df_lags.loc[:"2014"]
+X_val = df_lags.loc["2015":"2020"]
+X_test = df_lags.loc["2021":]
 
 # Remove any with NAs and split into X and y
 X_train = X_train.dropna()
+X_val = X_val.dropna()
 X_test = X_test.dropna()
 
 y_train = X_train.pop("T")
+y_val = X_val.pop("T")
 y_test = X_test.pop("T")
 
 lr = LinearRegression()
@@ -808,32 +810,17 @@ This time, add _noise_ to the forecasts.
 :::
 
 ```{python}
-def noisy_autoregressive_forecast(model, X_val, sigma, suppress=False):
-    """
-    Generate a multi-step forecast using the given model.
-    """
-    multi_step = pd.Series(index=X_val.index, name="Multi Step")
-
-    # Initialize the input data for forecasting
-    input_data = X_val.iloc[0].values.reshape(1, -1)
-
-    for i in range(len(multi_step)):
-        # Ensure input_data has the correct feature names
-        input_df = pd.DataFrame(input_data, columns=X_val.columns)
-        if suppress:
-            next_value = model.predict(input_df, verbose=0)
-        else:
-            next_value = model.predict(input_df)
-
-        next_value += np.random.normal(0, sigma)                                    #<1>
-
-        multi_step.iloc[i] = next_value
-
-        # Append that prediction to the input for the next forecast
-        if i + 1 < len(multi_step):
-            input_data = np.append(input_data[:, 1:], next_value).reshape(1, -1)
-
-    return multi_step
+def noisy_autoregressive_forecast(model, X_val, sigma):
+    """Roll a one-step model forward, feeding each (noisy) prediction back in."""
+    window = np.asarray(X_val.iloc[0], dtype="float32").copy()
+    preds = []
+    for _ in range(len(X_val)):
+        X_next = pd.DataFrame(window.reshape(1, -1), columns=X_val.columns)
+        next_value = model.predict(X_next).flatten()[0]
+        next_value += np.random.normal(0, sigma)  #<1>
+        preds.append(next_value)
+        window = np.append(window[1:], next_value)  # drop oldest, add prediction
+    return pd.Series(preds, index=X_val.index, name="Multi Step")
 ```
 
 1. Add random normal noise with a specified variance to the prediction.
@@ -852,7 +839,7 @@ which is what we see in the code.
 
 ```{python}
 lr_forecast = noisy_autoregressive_forecast(lr, X_test, 0)
-last_price = get_last_price(stock, cutoff_date="2024-12")
+last_price = get_last_price(stock, cutoff_date="2020-12")
 price_forecast = log_to_price(lr_forecast, last_price)
 ```
 
@@ -861,8 +848,8 @@ price_forecast = log_to_price(lr_forecast, last_price)
 stock.loc[price_forecast.index, "AR Log-Return"] = price_forecast
 
 def plot_forecasts(stock):
-    stock.loc["2024-12":"2025"].plot()
-    plt.axvline("2025", color="black", linestyle="--")
+    stock.loc["2020-12":].plot()
+    plt.axvline("2021", color="black", linestyle="--")
     plt.ylabel("Stock Price ($)")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
@@ -870,7 +857,7 @@ plot_forecasts(stock)
 ```
 
 ```{python}
-residuals = y_train.loc["2015":] - lr.predict(X_train.loc["2015":])
+residuals = y_val - lr.predict(X_val)
 sigma = np.std(residuals)
 ```
 
@@ -923,24 +910,23 @@ plot_forecasts(stock)
 ## Many noisy forecasts {visibility="uncounted"}
 
 ```{python}
-num_forecasts = 300
+num_forecasts = 100
 forecasts = []
 for i in range(num_forecasts):
-    log_sim = noisy_autoregressive_forecast(lr, X_test, sigma)
-    price_sim = log_to_price(log_sim, last_price)
-    forecasts.append(price_sim)
+    sim = log_to_price(noisy_autoregressive_forecast(lr, X_test, sigma), last_price)
+    forecasts.append(sim)
 noisy_forecasts = pd.concat(forecasts, axis=1)
 noisy_forecasts.index = X_test.index
 ```
 
 ```{python}
 #| code-fold: true
-noisy_forecasts.loc["2024-12":"2025"].plot(legend=False, alpha=0.4)
+noisy_forecasts.plot(legend=False, alpha=0.4)
 plt.ylabel("Stock Price");
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-This plot contains 300 simulated forecasts of the stock price over time. We see that the variance in the predictions increases with time. This makes sense as we are accumulating the random components ove time.
+This plot contains 300 simulated forecasts of the stock price over time. We see that the variance in the predictions increases with time. This makes sense as we are accumulating the random components over time.
 :::
 
 ## 95% "prediction intervals"
@@ -957,7 +943,7 @@ mean_forecast = noisy_forecasts.mean(axis=1)
 # Plot the mean forecast
 plt.figure(figsize=(8, 3))
 
-plt.plot(stock.loc["2024-12":"2025"].index, stock.loc["2024-12":"2025"]["CBA"], label="CBA")
+plt.plot(stock.loc["2020-12":].index, stock.loc["2020-12":]["CBA"], label="CBA")
 
 plt.plot(mean_forecast, label="Mean")
 
@@ -968,7 +954,7 @@ plt.fill_between(mean_forecast.index,
                  color="grey", alpha=0.2)
 
 # Plot settings
-plt.axvline(pd.Timestamp("2025-01-01"), color="black", linestyle="--")
+plt.axvline(pd.Timestamp("2021-01-01"), color="black", linestyle="--")
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.xlabel("Date")
 plt.ylabel("Stock Price")
@@ -976,7 +962,7 @@ plt.tight_layout();
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The model predicts with 95% confidence that the stock price in 6 months time will be somewhere between $120 and $200. 
+The band fans out as the horizon grows, because each day's random shock accumulates: a year into the test period the 95% interval is already roughly \$50–\$120, and by the end (over five years out) it spans something like \$50–\$400. That is honest about how little we can say about a near-random-walk so far ahead — but notice the realised price stays inside the band the whole way.
 :::
 
 ## Residuals 
@@ -1010,10 +996,10 @@ plt.plot(x, stats.norm.pdf(x, 0, 1));
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-How do we choose the value for `sigma`? 
-Here, `sigma` was chosen to be the standard deviation of the residuals of the original AR (non-noisy) forecast model.
+How do we choose the value for `sigma`?
+Here, `sigma` is the standard deviation of the model's one-step residuals on the _validation_ set — data held out from fitting, so it gives an honest estimate of the prediction spread without touching the test set.
 
-The plot above shows the histogram of the standardised residuals and the standard normal curve. Based on this plot and the Shapiro test, it appears that the residuals are _not_ normally distributed.
+The plot above shows the histogram of the standardised residuals (on the training set) and the standard normal curve. Based on this plot and the Shapiro test, it appears that the residuals are _not_ normally distributed.
 :::
 
 
@@ -1057,7 +1043,7 @@ plt.tight_layout();
 Heteroskedasticity!
 
 ::: {.content-visible unless-format="revealjs"}
-The variance of the standardised residuals changes over time. Higher variance occurs during significantly volatile economic periods (e.g. the global financial crisis in 2007-2009 and COVID).
+The variance of the standardised residuals changes over time. Higher variance occurs during significantly volatile economic periods — most visibly the global financial crisis of 2008-2009, which dominates the training period. (The other obvious episode, the COVID crash of 2020, now falls in the held-out validation/test period rather than the training set.)
 :::
 
 ## Retrain on less data
@@ -1065,8 +1051,8 @@ The variance of the standardised residuals changes over time. Higher variance oc
 
 ```{python}
 #| code-fold: true
-# Drop 2008-2009 and also 2020-2021
-mask = ~((y_train.index.year >= 2008) & (y_train.index.year <= 2009)) & ~((y_train.index.year >= 2020) & (y_train.index.year <= 2021))
+# Drop the GFC years (2008-2009) from the training set
+mask = ~((y_train.index.year >= 2008) & (y_train.index.year <= 2009))
 X2 = X_train.loc[mask]
 y2 = y_train.loc[mask]
 
@@ -1082,7 +1068,7 @@ plt.ylabel("Standardised Residuals")
 plt.tight_layout();
 ```
 
-Refit the model without these crisis years.
+Refit the model without the GFC crisis years.
 
 ## Residual diagnostics {visibility="uncounted"}
 
@@ -1129,7 +1115,7 @@ set_rectangular_figures()
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-While the distribution looks closer, it is still significantly farr off of normally distributed. At this point, we should question the validity of the normal distribution assumption we made.
+While the distribution looks closer, it is still significantly far from normally distributed. At this point, we should question the validity of the normal distribution assumption we made.
 :::
 
 # GLMs and Neural Networks {visibility="uncounted"}
@@ -1146,7 +1132,7 @@ cov = pd.read_csv('data/freMTPL2freq.csv').drop(columns=['ClaimNb'])
 sev = pd.merge(sev, cov, on='IDpol', how='left').drop(columns=["IDpol"]).dropna()  #<1>
 sev
 ```
-1. Merges the severity dataframe `sev` with the covariates in `cov` by matching the `IDpol` column. Assigning `how='left'` ensures that all rows from the left dataset `sev` is considered, and only the matching columns from `cov` are selected. Also drops the policy ID column and any rows with missing values.
+1. Merges the severity dataframe `sev` with the covariates in `cov` by matching the `IDpol` column. Assigning `how='left'` ensures that all rows from the left dataset `sev` are considered, and only the matching columns from `cov` are selected. Also drops the policy ID column and any rows with missing values.
 
 
 ## Preprocessing
@@ -1165,7 +1151,7 @@ plt.hist(y_train[y_train < 5000], bins=30);
 1. Split the data into train and test sets
 2. Ordinal-encode `Area` and `VehGas` and then standardise them, and apply standard scaling to all remaining numerical variables, so every input is on a mean 0 / std 1 scale. To simplify things, `VehBrand` and `Region` variables are dropped from the dataframe.
 3. Fit the column transformer to the train set and apply it
-4. Apply the column trainsformer to the test set
+4. Apply the column transformer to the test set
 
 ::: {.content-visible unless-format="revealjs"}
 Plotting the empirical distribution of the target variable `ClaimAmount` helps us to get an understanding of the inherent variability associated with the data.
@@ -1436,8 +1422,10 @@ glm_part = Dense(1, activation='linear', trainable=False,
                      bias_initializer=Constant(glm_bias))(inputs)       #<2>         
 
 # Neural network part
-x = Dense(64, activation='leaky_relu')(inputs)                          
-nn_part = Dense(1, activation='linear')(x)                              #<3>
+x = Dense(64, activation='leaky_relu')(inputs)
+nn_part = Dense(1, activation='linear',
+                    kernel_initializer="zeros",
+                    bias_initializer="zeros")(x)                        #<3>
 
 # Combine GLM and CANN estimates
 mu = keras.ops.exp(glm_part + nn_part)                                  #<4>
@@ -1445,7 +1433,7 @@ cann = Model(inputs, mu)
 ```
 1. Fit a GLM directly to the train data, and extract the fitted coefficients.
 2. Add a `Dense` layer with just one neuron, to store the model output (before inverse link function) from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
-3. Specify the neural network layers (1 dense hidden layer and the output neuron).
+3. Specify the neural network layers (1 dense hidden layer and the output neuron). The output neuron is initialised with _zero_ weights and bias, so that at the start of training the network part contributes nothing and the CANN's predictions are exactly those of the fitted GLM. Gradient descent then only _adds_ the structure the GLM missed (cf. the initialisation in @schelldorfer2019nesting).
 4. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
 
 Since this CANN predicts Gamma distributions, we reuse the same `gamma_loss` from the deep GLM.
@@ -1491,12 +1479,55 @@ phi_cann = np.sum(residuals**2/mus**2) / dof
 print(phi_cann)
 ```
 
+# Mean-Variance Network {visibility="uncounted"}
+
+## Predicting the mean and the spread
+
+Make a neural network that assumes $Y \mid \boldsymbol{x} \;\sim\; \mathcal{N}\bigl(\mu(\boldsymbol{x}),\, \sigma^2(\boldsymbol{x})\bigr)$.
+
+```{python}
+#| code-fold: true
+y_pred = np.polyval(coefficients, X_toy[:4])
+y_pred[2] *= 1.1
+sigma_preds = sigma_toy * np.array([1.0, 3.0, 0.5, 0.5])
+fig, axes = plt.subplots(1, 4, figsize=(5.0, 3.0), sharey=True)
+
+x_min = y_pred[:4].min() - 4*sigma_toy
+x_max = y_pred[:4].max() + 4*sigma_toy
+x_grid = np.linspace(x_min, x_max, 100)
+
+# Plot each normal distribution with different means vertically
+for i, ax in enumerate(axes):
+    y_grid = stats.norm.pdf(x_grid, y_pred[i], sigma_preds[i])
+    ax.plot(x_grid, y_grid)
+    ax.plot([y_toy[i], y_toy[i]], [0, stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color='red', linestyle='--')
+    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color='red', zorder=10)
+    ax.set_title(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
+    ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
+    # ax.set_ylim(0, 0.25)
+
+    # Turn off the y axes
+    ax.yaxis.set_visible(False)
+
+plt.tight_layout();
+```
+
+::: {.content-visible unless-format="revealjs"}
+In this example the observed value is in red and the green line is the predicted distribution. For overconfident predictions (low variance), we can either be rewarded greatly if we are right ($\mu_4$). We can also be penalised heavily if our confident prediction is wrong ($\mu_3$). For underconfident predictions, the reward does not change significantly between predictions, and we are penalised for not being confident enough.
+
+When fitting the model by trying to maximise the likelihood, you want to balance the trade-off between making an accurate prediction and making a confident prediction.
+:::
+
+::: footer
+Mean-variance estimation networks: @nix1994estimating.
+:::
+
 # Mixture Density Network {visibility="uncounted"}
 
 ## Mixture Distribution
 
 ::: {.content-visible unless-format="revealjs"}
-One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value it self. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multimodal. In such situations, assuming a mixture distribution is more intuitive.    
+One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value itself. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multimodal. In such situations, assuming a mixture distribution is more intuitive.    
 :::
 
 Given a finite set of resulting random variables $(Y_1, \ldots, Y_{K})$, one can generate a multinomial random variable $Y\sim \text{Multinomial}(1, \boldsymbol{\pi})$. Meanwhile, $Y$ can be regarded as a mixture of $Y_1, \ldots, Y_{K}$, i.e.,
@@ -1691,159 +1722,71 @@ else:
 
 ## The DRN architecture
 
-TODO: Need to fill in.
+Start from a _trusted_ parametric baseline (e.g. a GLM), then let a neural network make _small adjustments_ to the whole distribution.
+
+![The DRN keeps the baseline's shape but flexibly _refines_ it using the features.](images/drn-schematic.png)
 
 ::: footer
 Source: @avanzi2026distributional.
 :::
 
-## One package, every model
+## Refining the distribution {visibility="uncounted"}
 
-The [`drn`](https://github.com/EricTianDong/drn) package fits everything from today's lecture --- and the DRN itself --- behind a single `.fit` API:
+Discretise the baseline into bins, then multiply each bin's mass by a learned adjustment factor $\hat{a}_k$.
 
-```{python}
-#| eval: false
-from drn import GLM, CANN, MDN, DRN
+::: columns
+::: {.column width="50%"}
 
-glm = GLM("gamma").fit(X_train, y_train)                      # the GLM
-cann = CANN(glm).fit(X_train, y_train)                        # the CANN
-mdn = MDN("gamma", num_components=2).fit(X_train, y_train)    # the MDN
+![_Baseline_: discretised masses $\hat{b}_k$.](images/drn-baseline-masses.png)
 
-drn = DRN(glm).fit(X_train, y_train)                          # refine the whole distribution
-```
+:::
+::: {.column width="50%"}
+
+![_Refined_: adjusted masses $\hat{a}_k \cdot \hat{b}_k$.](images/drn-adjusted-masses.png)
+
+:::
+:::
+
+A penalty keeps the adjustments _faithful_ to the baseline, so the model stays interpretable and trustworthy.
 
 ::: footer
 Source: @avanzi2026distributional.
 :::
 
-# Metrics for Distributional Regression {visibility="uncounted"}
+## Implemented in the `drn` package
 
-::: {.content-visible unless-format="revealjs"}
-How do we assess the distributional regression model?
-:::
+The [`drn`](https://github.com/EricTianDong/drn) package fits the DRN architecture along with today's earlier models:
 
-## Proper Scoring Rules
+```{python}
+#| echo: false
+#| output: false
+import logging
+for _name in ["lightning", "lightning.pytorch",
+              "lightning.pytorch.utilities", "pytorch_lightning"]:
+    logging.getLogger(_name).setLevel(logging.ERROR)
 
-::: {.content-visible unless-format="revealjs"}
-Proper scoring rules provide a summary measure for the performance of the probabilistic predictions. They are useful in comparing performances across models. 
-:::
+import lightning as L
+L.seed_everything(1, verbose=False)
+```
 
-Definition
+```{python}
+#| warning: false
+#| output: false
+from drn import GLM, CANN, MDN, DRN, nll
 
-:   A _scoring rule_ is the equivalent of a loss function for distributional regression.
+glm  = GLM("gamma").fit(X_train, y_train)
+cann = CANN(glm).fit(X_train, y_train)
+mdn  = MDN("gamma", num_components=2).fit(X_train, y_train)
+drn  = DRN(glm).fit(X_train, y_train)
+```
 
-    Denote $S(F, y)$ to be the score given to the forecasted distribution $F$ and an observation $y \in \mathbb{R}$.
-
-Definition
-
-:   A scoring rule is called _proper_ if
-    $$
-    \mathbb{E}_{Y \sim Q} S(Q, Y) \le \mathbb{E}_{Y \sim Q} S(F, Y)
-    $$
-    for all $F$ and $Q$ distributions.
-    
-    It is called _strictly proper_ if equality holds only if $F = Q$.
-
-::: {.content-visible unless-format="revealjs"}
-::: {.callout-note}
-$Y \sim Q$: the true distribution of $Y$ is $Q$.
-:::
-:::
-
-## Example Proper Scoring Rules
-
-Logarithmic Score (NLL)
-
-:   The logarithmic score is defined as
-    $$
-        \mathrm{LogS}(f, y) = - \log f(y),
-    $$
-    where $f$ is the predictive density.
-
-Continuous Ranked Probability Score (CRPS)
-
-:   The continuous ranked probability score is defined as
-    $$
-        \mathrm{crps}(F, y) = \int_{-\infty}^{\infty} (F(t) - {1}_{t\ge y})^2 \ \mathrm{d}t,
-    $$
-    where $F$ is the predicted c.d.f.
+```{python}
+for name, model in {"GLM": glm, "CANN": cann, "MDN": mdn, "DRN": drn}.items():
+    print(f"{name}: {nll(model.predict(X_test), y_test):.2f}")
+```
 
 ::: footer
-See, e.g., Taggart (2023), [Estimation of CRPS for precipitation forecasts...](https://nla.gov.au/nla.obj-3160938615/view), BoM Research Report 079.
-:::
-
-## Likelihoods
-
-```{python}
-#| code-fold: true
-y_pred = np.polyval(coefficients, X_toy[:4])
-y_pred[2] *= 1.1
-sigma_preds = sigma_toy * np.array([1.0, 3.0, 0.5, 0.5])
-fig, axes = plt.subplots(1, 4, figsize=(5.0, 3.0), sharey=True)
-
-x_min = y_pred[:4].min() - 4*sigma_toy
-x_max = y_pred[:4].max() + 4*sigma_toy
-x_grid = np.linspace(x_min, x_max, 100)
-
-# Plot each normal distribution with different means vertically
-for i, ax in enumerate(axes):
-    y_grid = stats.norm.pdf(x_grid, y_pred[i], sigma_preds[i])
-    ax.plot(x_grid, y_grid)
-    ax.plot([y_toy[i], y_toy[i]], [0, stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color='red', linestyle='--')
-    ax.scatter([y_toy[i]], [stats.norm.pdf(y_toy[i], y_pred[i], sigma_preds[i])], color='red', zorder=10)
-    ax.set_title(f'$f(y ; \\boldsymbol{{x}}_{{{i+1}}})$')
-    ax.set_xticks([y_pred[i]], labels=[r'$\mu_{' + str(i+1) + r'}$'])
-    # ax.set_ylim(0, 0.25)
-
-    # Turn off the y axes
-    ax.yaxis.set_visible(False)
-    
-plt.tight_layout();
-```
-
-::: {.content-visible unless-format="revealjs"}
-In this example the observed value is in red and the green line is the predicted distribution. For overconfiedent predictions (low variance), we can either be rewarded greatly if we are right ($\mu_4$). We can also be penalised heavily if our confident prediction is wrong ($\mu_3$). For underconfident predictions, the reward does not change significantly between predictions, and we are penalised for not being confident enough.
-
-When fitting the model by trying to maximise the likelihood, you want to balance the trade-off between making an accurate prediction and making a confident prediction. 
-:::
-
-## Gamma NLL
-
-```{python}
-def gamma_nll(mean, dispersion, y):
-    # Calculate shape and scale parameters from mean and dispersion
-    shape = 1 / dispersion; scale = mean * dispersion
-
-    # Create a gamma distribution object
-    gamma_dist = stats.gamma(a=shape, scale=scale)
-    
-    return -np.mean(gamma_dist.logpdf(y))
-```
-
-## NLL metrics
-
-```{python}
-# GLM
-X_test_design = sm.add_constant(X_test)
-mus = gamma_glm.predict(X_test_design)
-nll_glm = gamma_nll(mus, phi_glm, y_test)
-
-# CANN
-mus = cann.predict(X_test, verbose=0)
-nll_cann = gamma_nll(mus, phi_cann, y_test)
-
-# MDN
-mdn_pred = gamma_mdn.predict(X_test, verbose=0)
-nll_mdn = gamma_mixture_nll(y_test.values, keras.ops.convert_to_tensor(mdn_pred))
-nll_mdn = float(nll_mdn)
-
-print(f'GLM: {round(nll_glm, 2)}')
-print(f'CANN: {round(nll_cann, 2)}')
-print(f'MDN: {round(nll_mdn, 2)}')
-```
-
-::: {.content-visible unless-format="revealjs"}
-The above results show that MDN provides the lowest value for the Logarithmic Score (NLL). Low values for NLL indicate better fits. One possible reason for the better performance of the MDN model (compared to the Gamma model) is the added flexibility from multiple modelling components. The multiple modelling components in the MDN model, together, can capture the inherent variation in the data better.
+Source: @avanzi2026distributional.
 :::
 
 # Aleatoric and Epistemic Uncertainty {visibility="uncounted"}
@@ -1908,7 +1851,59 @@ Noisy data, inconsistent data, data with missing values or data with missing imp
 3. Model error $\rightarrow$ epistemic uncertainty.
 4. Data uncertainty $\rightarrow$ epistemic uncertainty.
 
-<!-- # Avoiding Overfitting {visibility="uncounted"} -->
+<!--
+## Proper Scoring Rules
+
+::: {.content-visible unless-format="revealjs"}
+Proper scoring rules provide a summary measure for the performance of the probabilistic predictions. They are useful in comparing performances across models. 
+:::
+
+Definition
+
+:   A _scoring rule_ is the equivalent of a loss function for distributional regression.
+
+    Denote $S(F, y)$ to be the score given to the forecasted distribution $F$ and an observation $y \in \mathbb{R}$.
+
+Definition
+
+:   A scoring rule is called _proper_ if
+    $$
+    \mathbb{E}_{Y \sim Q} S(Q, Y) \le \mathbb{E}_{Y \sim Q} S(F, Y)
+    $$
+    for all $F$ and $Q$ distributions.
+    
+    It is called _strictly proper_ if equality holds only if $F = Q$.
+
+::: {.content-visible unless-format="revealjs"}
+::: {.callout-note}
+$Y \sim Q$: the true distribution of $Y$ is $Q$.
+:::
+:::
+
+## Example Proper Scoring Rules
+
+Logarithmic Score (NLL)
+
+:   The logarithmic score is defined as
+    $$
+        \mathrm{LogS}(f, y) = - \log f(y),
+    $$
+    where $f$ is the predictive density.
+
+Continuous Ranked Probability Score (CRPS)
+
+:   The continuous ranked probability score is defined as
+    $$
+        \mathrm{crps}(F, y) = \int_{-\infty}^{\infty} (F(t) - {1}_{t\ge y})^2 \ \mathrm{d}t,
+    $$
+    where $F$ is the predicted c.d.f.
+
+::: footer
+See, e.g., Taggart (2023), [Estimation of CRPS for precipitation forecasts...](https://nla.gov.au/nla.obj-3160938615/view), BoM Research Report 079.
+:::
+-->
+
+# Regularisation and Dropout {visibility="uncounted"}
 
 ## Traditional regularisation
 
@@ -2017,7 +2012,7 @@ plt.hist(weights, bins=100);
 ::: 
 
 ::: {.content-visible unless-format="revealjs"}
-May of the weights are much closer to 0 (but never exactly 0).
+Many of the weights are much closer to 0 (but never exactly 0).
 :::
 
 ## Weights before & after $L^1$
@@ -2064,8 +2059,6 @@ A form of regularisation that we've already been doing is early-stopping. The mo
 ::: footer
 Source: Géron (2019), Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow, 3rd Edition, Chapters 4 and 10.
 :::
-
-# Dropout
 
 ## Dropout
 
@@ -2168,7 +2161,7 @@ keras.ops.convert_to_numpy(
 :::
 :::
 
-By setting the `training=True`, we can let dropout happen during prediction stage as well. This will change predictions for the same output different. This is known as the _Monte Carlo dropout_ and can be used to generate a distribution of predictions.
+By setting the `training=True`, we can let dropout happen during prediction stage as well. This will change predictions for the same output differently. This is known as the _Monte Carlo dropout_ and can be used to generate a distribution of predictions.
 
 ## Dropout Limitation
 
@@ -2262,7 +2255,7 @@ Now that we have multiple predictions for each NN, we can obtain a distribution 
 
 ```{python}
 from watermark import watermark
-print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch"))
+print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,scipy,torch,drn"))
 ```
 
 ## Glossary {.appendix data-visibility="uncounted"}
@@ -2270,18 +2263,17 @@ print(watermark(python=True, packages="keras,matplotlib,numpy,pandas,seaborn,sci
 ::: columns
 ::: column
 - aleatoric and epistemic uncertainty
-- combined actuarial neural network
-- dead ReLU
-- deep ensembles
+- Combined Actuarial Neural Network
+- Deep GLM
+- Deep Ensembles
 - distributional forecasts
-- dropout
 :::
 ::: column
-- generalised linear model
-- mixture density network
+- Distributional Refinement Network
+- dropout
+- Mixture Density Network
 - mixture distribution
 - Monte Carlo dropout
-- proper scoring rule
 :::
 :::
 
