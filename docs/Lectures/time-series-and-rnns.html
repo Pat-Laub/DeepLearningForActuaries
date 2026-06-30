@@ -650,7 +650,6 @@ window.Quarto = {
   <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction">Introduction</a>
   <ul class="collapse">
   <li><a href="#a-lecture-on-sequence-modelling" id="toc-a-lecture-on-sequence-modelling" class="nav-link" data-scroll-target="#a-lecture-on-sequence-modelling">A lecture on sequence modelling</a></li>
-  <li><a href="#imports-needed-for-these-demos" id="toc-imports-needed-for-these-demos" class="nav-link" data-scroll-target="#imports-needed-for-these-demos">Imports needed for these demos</a></li>
   </ul></li>
   <li><a href="#time-series-data" id="toc-time-series-data" class="nav-link" data-scroll-target="#time-series-data">Time series data</a>
   <ul class="collapse">
@@ -662,6 +661,7 @@ window.Quarto = {
   </ul></li>
   <li><a href="#australian-financial-stocks" id="toc-australian-financial-stocks" class="nav-link" data-scroll-target="#australian-financial-stocks">Australian financial stocks</a>
   <ul class="collapse">
+  <li><a href="#imports-needed-for-these-demos" id="toc-imports-needed-for-these-demos" class="nav-link" data-scroll-target="#imports-needed-for-these-demos">Imports needed for these demos</a></li>
   <li><a href="#downloading-the-data" id="toc-downloading-the-data" class="nav-link" data-scroll-target="#downloading-the-data">Downloading the data</a></li>
   <li><a href="#australian-financial-stocks-1" id="toc-australian-financial-stocks-1" class="nav-link" data-scroll-target="#australian-financial-stocks-1">Australian financial stocks</a></li>
   <li><a href="#plot" id="toc-plot" class="nav-link" data-scroll-target="#plot">Plot</a></li>
@@ -711,6 +711,7 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#introduction-1" id="toc-introduction-1" class="nav-link" data-scroll-target="#introduction-1">Introduction</a></li>
   <li><a href="#diagram-of-an-rnn-cell" id="toc-diagram-of-an-rnn-cell" class="nav-link" data-scroll-target="#diagram-of-an-rnn-cell">Diagram of an RNN cell</a></li>
+  <li><a href="#intuitiondemo-fizz-buzz" id="toc-intuitiondemo-fizz-buzz" class="nav-link" data-scroll-target="#intuitiondemo-fizz-buzz">Intuition/demo: Fizz Buzz</a></li>
   <li><a href="#a-simplernn-cell" id="toc-a-simplernn-cell" class="nav-link" data-scroll-target="#a-simplernn-cell">A SimpleRNN cell</a></li>
   <li><a href="#the-rank-of-a-time-series" id="toc-the-rank-of-a-time-series" class="nav-link" data-scroll-target="#the-rank-of-a-time-series">The rank of a time series</a></li>
   <li><a href="#simplernn" id="toc-simplernn" class="nav-link" data-scroll-target="#simplernn">SimpleRNN</a></li>
@@ -794,31 +795,6 @@ window.Quarto = {
 <li><em>Text</em>: a sentence is a sequence of words; a document a sequence of sentences.</li>
 </ul>
 <p>The common thread: to predict the next element we must use what came <em>before</em>.</p>
-</section>
-<section id="imports-needed-for-these-demos" class="level3">
-<h3 class="anchored" data-anchor-id="imports-needed-for-these-demos">Imports needed for these demos</h3>
-<div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> mean_squared_error</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> LabelEncoder</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.feature_extraction.text <span class="im">import</span> CountVectorizer</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> keras</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> (Dense, Input, Rescaling, Reshape,</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    SimpleRNN, GRU, LSTM, Bidirectional, Embedding)</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</div>
 </section>
 </section>
 <section id="time-series-data" class="level2">
@@ -966,6 +942,31 @@ window.Quarto = {
 </section>
 <section id="australian-financial-stocks" class="level2">
 <h2 class="anchored" data-anchor-id="australian-financial-stocks">Australian financial stocks</h2>
+<section id="imports-needed-for-these-demos" class="level3">
+<h3 class="anchored" data-anchor-id="imports-needed-for-these-demos">Imports needed for these demos</h3>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> re</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> random</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.dates <span class="im">as</span> mdates</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.linear_model <span class="im">import</span> LinearRegression</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> mean_squared_error</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> LabelEncoder</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.feature_extraction.text <span class="im">import</span> CountVectorizer</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> keras</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.layers <span class="im">import</span> (Dense, Input, Rescaling, Reshape,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    SimpleRNN, GRU, LSTM, Bidirectional, Embedding)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
 <section id="downloading-the-data" class="level3 smaller">
 <h3 class="smaller anchored" data-anchor-id="downloading-the-data">Downloading the data</h3>
 <p>The <code>yfinance</code> package can download daily price histories from Yahoo Finance. We grab several ASX-listed financials plus the ASX200 index.</p>
@@ -1770,7 +1771,6 @@ dtype: int64</code></pre>
 </div>
 </div>
 </div>
-<p>The returns are tiny and roughly symmetric about zero. Neural networks train best on inputs near unit scale, so when we build the models we rescale the returns by the standard deviation of the <em>training</em> returns — computed at that point, so nothing leaks from the test period.</p>
 </section>
 <section id="splitting-in-time" class="level3 smaller">
 <h3 class="smaller anchored" data-anchor-id="splitting-in-time">Splitting in time</h3>
@@ -2786,6 +2786,17 @@ dtype: int64</code></pre>
 <p>Source: Melissa Renard (2025)</p>
 </div>
 </section>
+<section id="intuitiondemo-fizz-buzz" class="level3">
+<h3 class="anchored" data-anchor-id="intuitiondemo-fizz-buzz">Intuition/demo: Fizz Buzz</h3>
+<p>Play <em>Fizz Buzz</em>: count up, but say “Fizz” on multiples of 3, “Buzz” on multiples of 5, and “Fizz Buzz” on multiples of both.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="images/fizz-buzz-rnn.svg" class="img-fluid figure-img"></p>
+<figcaption>A vector-to-sequence RNN playing Fizz Buzz: one <code>START</code> input, the running count is the hidden state passed to the right, the spoken word is the output at each step.</figcaption>
+</figure>
+</div>
+<p>Each player only needs the count from their neighbour (the hidden state) to know what to say and what to pass on — no separate input per step.</p>
+</section>
 <section id="a-simplernn-cell" class="level3">
 <h3 class="anchored" data-anchor-id="a-simplernn-cell">A SimpleRNN cell</h3>
 <div class="quarto-figure quarto-figure-center">
@@ -3511,7 +3522,7 @@ Note
 <span id="cb92-8"><a href="#cb92-8" aria-hidden="true" tabindex="-1"></a>vocab <span class="op">=</span> [<span class="st">""</span>, <span class="st">"[UNK]"</span>] <span class="op">+</span> <span class="bu">list</span>(count_vect.get_feature_names_out())  <span class="co"># 0 = padding, 1 = unknown</span></span>
 <span id="cb92-9"><a href="#cb92-9" aria-hidden="true" tabindex="-1"></a>word_to_idx <span class="op">=</span> {word: idx <span class="cf">for</span> idx, word <span class="kw">in</span> <span class="bu">enumerate</span>(vocab)}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
-<p><em>Note</em>: on the TensorFlow backend you’d replace this manual <code>CountVectorizer</code> + <code>texts_to_sequences</code> pipeline with a single <code>keras.layers.TextVectorization</code> layer, which builds the vocabulary, tokenises, and pads — reserving <code>0</code> for padding and <code>1</code> for the unknown token automatically. This project runs the PyTorch backend (where that layer isn’t available), so we reproduce the same convention by hand.</p>
+<p><em>Note</em>: on the TensorFlow backend, you could just use a <code>keras.layers.TextVectorization</code> layer, which builds the vocabulary, tokenises, and pads (using <code>0</code> for padding and <code>1</code> for the unknown token) automatically.</p>
 </section>
 <section id="tokenise" class="level3">
 <h3 class="anchored" data-anchor-id="tokenise">Tokenise</h3>
@@ -3727,7 +3738,7 @@ Note
 Hochreiter, S., &amp; Schmidhuber, J. (1997). Long short-term memory. <em>Neural Computation</em>, <em>9</em>(8), 1735–1780.
 </div>
 <div id="ref-richman2019lee" class="csl-entry" role="listitem">
-Richman, R., &amp; Wuthrich, M. V. (2019). Lee and carter go machine learning: Recurrent neural networks. <em>Available at SSRN 3441030</em>.
+Richman, R., &amp; Wuthrich, M. V. (2019). <span>L</span>ee and <span>C</span>arter go machine learning: Recurrent neural networks. <em>Available at SSRN 3441030</em>.
 </div>
 </div>
 
