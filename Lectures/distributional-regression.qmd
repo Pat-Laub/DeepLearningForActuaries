@@ -311,7 +311,7 @@ This doesn't compare to the automated and complex feature engineering that neura
 
 GLMs cannot (easily) do this $\longrightarrow$ Use a neural network
 
-## Example 2: Multi-modality
+## Example 2: Multimodality
 
 ```{python}
 #| echo: false
@@ -339,7 +339,7 @@ None
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The distribution of the output cannot always be easily represented with the limited distributions available for GLMs. For example, if the distribution of the claim size is multi-modal... Gamma/Weibull/Pareto distributions cannot capture this.
+The distribution of the output cannot always be easily represented with the limited distributions available for GLMs. For example, if the distribution of the claim size is multimodal... Gamma/Weibull/Pareto distributions cannot capture this.
 
 ::: {.callout-note}
 ## Mixture distribution
@@ -440,11 +440,10 @@ $$\mathbf{X} = \begin{pmatrix} x_{11} & \cdots & x_{1p} \\ \vdots & \ddots & \vd
 - $\boldsymbol{x}_i = (1, x_{i1}, x_{i2}, \ldots, x_{ip})$ is the feature vector for the $i$th observation,
 - $y_i$ is the response variable for the $i$th observation,
 - $\hat{y}_i$ is the predicted value for the $i$th observation,
-- probability density functions (p.d.f.), probability mass functions (p.m.f.), cumulative distribution functions (c.d.f.).
 
 <!-- - the error $\varepsilon$ random variable is not capitalised, -->
 
-## Traditional Regression
+## Traditional regression
 
 Multiple linear regression assumes the data-generating process is
 
@@ -569,7 +568,7 @@ $$
 &= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{NLL}(\boldsymbol{\beta}) \\
 &= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 \\
 &= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \frac{1}{n} \sum_{i=1}^n \Bigl( y_i - \hat{y}_i(\boldsymbol{x}_i; \boldsymbol{\beta}) \Bigr)^2 \\
-&= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{MSE}\bigl( \boldsymbol{y}, \hat{\boldsymbol{y}}(\boldsymbol{\mathbf{X}}; \boldsymbol{\beta}) \bigr).
+&= \underset{\boldsymbol{\beta}}{\operatorname{arg\,min}}\,\, \text{MSE}\bigl( \boldsymbol{y}, \hat{\boldsymbol{y}}(\mathbf{X}; \boldsymbol{\beta}) \bigr).
 \end{aligned}
 $$
 
@@ -1155,7 +1154,7 @@ plt.hist(y_train[y_train < 5000], bins=30);
 
 ::: {.content-visible unless-format="revealjs"}
 Plotting the empirical distribution of the target variable `ClaimAmount` helps us to get an understanding of the inherent variability associated with the data.
-The data appears to be multi-modal.
+The data appears to be multimodal.
 :::
 
 ## Doesn't prove that $Y | \boldsymbol{X} = \boldsymbol{x}$ is multimodal
@@ -1238,7 +1237,7 @@ A GLM can model any other exponential family distribution using an appropriate l
 
 If $Y|\boldsymbol{X}=\boldsymbol{x}$ is a Gamma r.v. with mean $\mu(\boldsymbol{x}; \boldsymbol{\beta})$ and dispersion parameter $\phi$, we can minimise the negative log-likelihood (NLL)
 $$
-    \text{NLL} \propto \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} + \text{const},
+    \text{NLL} \propto \sum_{i=1}^{n}\left[ \log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} \right] + \text{const},
 $$
 i.e., we ignore the dispersion parameter $\phi$ while estimating the regression coefficients.
 
@@ -1246,7 +1245,7 @@ i.e., we ignore the dispersion parameter $\phi$ while estimating the regression 
 
 Step 1. Use the advanced second derivative iterative method to find the regression coefficients:
 $$
-    \boldsymbol{\beta}^* = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})}
+    \boldsymbol{\beta}^* = \underset{\boldsymbol{\beta}}{\text{arg\,min}} \ \sum_{i=1}^{n}\left[ \log \mu (\boldsymbol{x}_i; \boldsymbol{\beta})+\frac{y_i}{\mu (\boldsymbol{x}_i; \boldsymbol{\beta})} \right]
 $$
 
 Step 2. Estimate the dispersion parameter:
@@ -1256,7 +1255,7 @@ $$
 
 (Here, $p$ is the number of coefficients in the model. If this $p$ doesn't include the intercept, then the scaling should be $\frac{1}{n-(p+1)}$.)
 
-## Code: Gamma GLM
+## Gamma GLM
 
 In Python, we can fit a Gamma GLM as follows:
 
@@ -1408,7 +1407,7 @@ One copy of the variables is processed through many dense hidden layers (NN comp
 Source: Figure 8 of @schelldorfer2019nesting.
 :::
 
-## Code: Architecture
+## CANN architecture
 
 ```{python}
 random.seed(1)
@@ -1438,7 +1437,7 @@ cann = Model(inputs, mu)
 
 Since this CANN predicts Gamma distributions, we reuse the same `gamma_loss` from the deep GLM.
 
-## Code: Model Training
+## Training the CANN
 
 ```{python}
 #| eval: false
@@ -1479,18 +1478,75 @@ phi_cann = np.sum(residuals**2/mus**2) / dof
 print(phi_cann)
 ```
 
-# Mean-Variance Network {visibility="uncounted"}
+# Mean-Variance Estimation Network {visibility="uncounted"}
 
-## Predicting the mean and the spread
+## Generating normal distribution parameters
 
-Make a neural network that assumes $Y \mid \boldsymbol{x} \;\sim\; \mathcal{N}\bigl(\mu(\boldsymbol{x}),\, \sigma^2(\boldsymbol{x})\bigr)$.
+Our model is
+
+$$Y \mid \boldsymbol{x} \;\sim\; \mathcal{N}\bigl(\mu(\boldsymbol{x}),\, \sigma^2(\boldsymbol{x})\bigr) .$$
+
+<!-- We can make a neural network that takes features $\boldsymbol{x}$ and outputs the $\mu$ and $\sigma$ that pin down this observation's distribution. -->
+
+```{python}
+#| echo: false
+from matplotlib.patches import FancyBboxPatch
+
+def draw_meanvar_schematic(out_lines, y, density, dist_heading):
+    fig, ax = plt.subplots(figsize=(10.0, 5.0))
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
+
+    # Row 1: features -> neural network -> distributional parameters
+    ax.text(0.17, 0.94, "Features", ha="center", va="center", fontsize=13)
+    ax.text(0.17, 0.72, "$\\boldsymbol{x}_i = [1.5,\\ 3.6,\\ -2.1]$",
+            ha="center", va="center", fontsize=13)
+    ax.annotate("", xy=(0.42, 0.72), xytext=(0.30, 0.72),
+                arrowprops=dict(arrowstyle="-|>", color="black", lw=1.5))
+
+    ax.add_patch(FancyBboxPatch((0.43, 0.63), 0.14, 0.18,
+                 boxstyle="round,pad=0.008,rounding_size=0.02",
+                 lw=1.5, edgecolor="black", facecolor=COLOURS[0], alpha=0.55))
+    ax.text(0.50, 0.72, "Neural\nnetwork", ha="center", va="center", fontsize=13)
+    ax.annotate("", xy=(0.70, 0.72), xytext=(0.58, 0.72),
+                arrowprops=dict(arrowstyle="-|>", color="black", lw=1.5))
+
+    ax.text(0.83, 0.94, "Distributional parameters", ha="center", va="center",
+            fontsize=12.5)
+    ax.text(0.83, 0.72, "\n".join(out_lines), ha="center", va="center",
+            ma="center", fontsize=12.5, linespacing=1.8)
+
+    # Row 2: the predicted distribution (full width)
+    ax.text(0.50, 0.46, dist_heading, ha="center", va="center", fontsize=13)
+    inset = ax.inset_axes([0.13, 0.07, 0.74, 0.32])
+    inset.plot(y, density, color=COLOURS[2], lw=2.0)
+    inset.fill_between(y, density, color=COLOURS[2], alpha=0.15)
+    inset.set_yticks([]); inset.set_xticks([])
+    inset.set_xlabel("$y$", fontsize=11, labelpad=1)
+    for s in ["left", "top", "right"]:
+        inset.spines[s].set_visible(False)
+    plt.show()
+
+y_mv = np.linspace(-1, 6, 400)
+density_mv = stats.norm.pdf(y_mv, 2.5, 0.8)
+draw_meanvar_schematic(
+    [r"Mean $\mu = 2.5$",
+     r"Std dev $\sigma = 0.8$"],
+    y_mv, density_mv,
+    r"Predicted distribution of $Y\mid\boldsymbol{x}_i$",
+)
+```
+
+## In-class exercise
+
+Make a neural network that models $Y \mid \boldsymbol{x} \;\sim\; \mathcal{N}\bigl(\mu(\boldsymbol{x}),\, \sigma^2(\boldsymbol{x})\bigr)$.
+
 
 ```{python}
 #| code-fold: true
 y_pred = np.polyval(coefficients, X_toy[:4])
 y_pred[2] *= 1.1
 sigma_preds = sigma_toy * np.array([1.0, 3.0, 0.5, 0.5])
-fig, axes = plt.subplots(1, 4, figsize=(5.0, 3.0), sharey=True)
+fig, axes = plt.subplots(1, 4, figsize=(5.0, 2.0), sharey=True)
 
 x_min = y_pred[:4].min() - 4*sigma_toy
 x_max = y_pred[:4].max() + 4*sigma_toy
@@ -1512,6 +1568,8 @@ for i, ax in enumerate(axes):
 plt.tight_layout();
 ```
 
+*Task*: Assume you have `X_train` and `y_train` loaded and write the following code, everything up to the `model.fit(X_train, y_train)` line.
+
 ::: {.content-visible unless-format="revealjs"}
 In this example the observed value is in red and the green line is the predicted distribution. For overconfident predictions (low variance), we can either be rewarded greatly if we are right ($\mu_4$). We can also be penalised heavily if our confident prediction is wrong ($\mu_3$). For underconfident predictions, the reward does not change significantly between predictions, and we are penalised for not being confident enough.
 
@@ -1524,98 +1582,127 @@ Mean-variance estimation networks: @nix1994estimating.
 
 # Mixture Density Network {visibility="uncounted"}
 
-## Mixture Distribution
+## Mixture density network
+
+The mean-variance network outputs the parameters of a _single_ normal. But our data may be _multimodal_, or have some other shape which no single normal or gamma can capture.
+
+A _mixture density network_ (MDN) operates the same way, except now we model $Y \mid \boldsymbol{x}$ as a _mixture_ of $K$ components. The network outputs the mixing weights $\boldsymbol{\pi}(\boldsymbol{x})$ and each component's parameters, giving the density
+$$
+    f_{Y|\boldsymbol{X}}(y \mid \boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x})\, f_{k}(y \mid \boldsymbol{x}), \qquad \pi_k(\boldsymbol{x}) \ge 0,\ \ \sum_{k=1}^{K}\pi_k(\boldsymbol{x})=1 .
+$$
+Each component $f_k$ can be any parametric family (normal, gamma, etc.).
 
 ::: {.content-visible unless-format="revealjs"}
-One intuitive way to capture uncertainty using neural networks would be to estimate the parameters of the target distribution, instead of predicting the value itself. For example, suppose we want to predict $y$ coming from a Gaussian distribution. Most common method would be to predict $(\hat{y})$ directly using a single neuron at the output layer. Another possible way would be to estimate the parameters ($\mu$ and $\sigma$) of the $y$ distribution using 2 neurons at the output layer. Estimating parameters of the distribution instead of point estimates for $y$ can help us get an idea about the uncertainty. However, assuming distributional properties at times could be too restrictive. For example, it is possible that the actual distribution of $y$ values is bimodal or multimodal. In such situations, assuming a mixture distribution is more intuitive.    
+As before, the weights are trained by minimising the negative log-likelihood.
 :::
 
-Given a finite set of resulting random variables $(Y_1, \ldots, Y_{K})$, one can generate a multinomial random variable $Y\sim \text{Multinomial}(1, \boldsymbol{\pi})$. Meanwhile, $Y$ can be regarded as a mixture of $Y_1, \ldots, Y_{K}$, i.e.,
-$$
-  Y = \begin{cases} 
-      Y_1 & \text{w.p. } \pi_1, \\ 
-      \vdots & \vdots\\
-      Y_K & \text{w.p. } \pi_K, \\ 
-  \end{cases}
-$$
-where we define a finite set of weights $\boldsymbol{\pi}=(\pi_{1} \ldots, \pi_{K})$ such that $\pi_k \ge 0$ for $k \in \{1, \ldots, K\}$ and $\sum_{k=1}^{K}\pi_k=1$.
+::: footer
+Mixture density networks: @bishop1994mixture.
+:::
 
-## Mixture Distribution
+## A two-component normal MDN
 
-Let $f_k$ and $F_k$ be the p.d.f. and the c.d.f of $Y_k|\boldsymbol{X}$ for all $k \in \{1, \ldots, K\}$.
+```{python}
+#| echo: false
+def draw_mdn_schematic(out_lines, y, weighted_curves, dist_heading, yaxis_line=False):
+    fig, ax = plt.subplots(figsize=(10.0, 5.0))
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
 
-The random variable $Y|\boldsymbol{X}$, which mixes $Y_k|\boldsymbol{X}$'s with weights $\pi_k$'s, has the density function
-$$
-    f_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) f_{k}(y|\boldsymbol{x}),
-$$
-and the cumulative distribution function
-$$
-    F_{Y|\boldsymbol{X}}(y|\boldsymbol{x}) = \sum_{k=1}^{K}\pi_k(\boldsymbol{x}) F_{k}(y|\boldsymbol{x}).
-$$
+    # Row 1: features -> neural network -> distributional parameters
+    ax.text(0.17, 0.94, "Features", ha="center", va="center", fontsize=13)
+    ax.text(0.17, 0.72, "$\\boldsymbol{x}_i = [1.5,\\ 3.6,\\ -2.1]$",
+            ha="center", va="center", fontsize=13)
+    ax.annotate("", xy=(0.42, 0.72), xytext=(0.30, 0.72),
+                arrowprops=dict(arrowstyle="-|>", color="black", lw=1.5))
 
-## Mixture Density Network
+    ax.add_patch(FancyBboxPatch((0.43, 0.63), 0.14, 0.18,
+                 boxstyle="round,pad=0.008,rounding_size=0.02",
+                 lw=1.5, edgecolor="black", facecolor=COLOURS[0], alpha=0.55))
+    ax.text(0.50, 0.72, "Neural\nnetwork", ha="center", va="center", fontsize=13)
+    ax.annotate("", xy=(0.70, 0.72), xytext=(0.58, 0.72),
+                arrowprops=dict(arrowstyle="-|>", color="black", lw=1.5))
 
-A mixture density network (MDN) [@bishop1994mixture] $\text{MDN}(\boldsymbol{x})$ outputs each distribution component's mixing weights and parameters of $Y$ given the input features $\boldsymbol{x}$, i.e.,
-$$
-    \text{MDN}(\boldsymbol{x})=(\boldsymbol{\pi}(\boldsymbol{x};\boldsymbol{w}^*), \boldsymbol{\theta}(\boldsymbol{x};\boldsymbol{w}^*)),
-$$
-where $\boldsymbol{w}^*$ is the networks' weights found by minimising the following negative log-likelihood loss function, i.e.,
-$$
-    \boldsymbol{w}^* = \underset{\boldsymbol{w}}{\text{arg\,min}} \
-    \mathcal{L}(\mathcal{D}, \boldsymbol{w})= - \sum_{i=1}^{n} \log f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}),
-$$
-where $\mathcal{D}=\{(\boldsymbol{x}_i,y_i)\}_{i=1}^{n}$ is the training dataset.
+    ax.text(0.83, 0.94, "Distributional parameters", ha="center", va="center",
+            fontsize=12.5)
+    ax.text(0.83, 0.72, "\n".join(out_lines), ha="center", va="center",
+            ma="center", fontsize=12.5, linespacing=1.8)
 
-## Mixture Density Network
+    # Row 2: the predicted distribution (full width)
+    ax.text(0.50, 0.46, dist_heading, ha="center", va="center", fontsize=13)
+    inset = ax.inset_axes([0.13, 0.07, 0.74, 0.32])
+    mixture = sum(weighted_curves)
+    for c in weighted_curves:
+        inset.plot(y, c, color="0.65", lw=1.0, ls="--")
+    inset.plot(y, mixture, color=COLOURS[2], lw=2.0)
+    inset.fill_between(y, mixture, color=COLOURS[2], alpha=0.15)
+    inset.set_yticks([]); inset.set_xticks([])
+    inset.set_xlabel("$y$", fontsize=11, labelpad=1)
+    if yaxis_line:
+        inset.set_xlim(left=0)  # pin the y-axis to data y=0, not the padded edge
+    hidden = ["top", "right"] if yaxis_line else ["left", "top", "right"]
+    for s in hidden:
+        inset.spines[s].set_visible(False)
+    plt.show()
 
-![An MDN that outputs the parameters for a $K$ component mixture distribution. $\boldsymbol{\theta}_k(\boldsymbol{x}; \boldsymbol{w}^*)= (\theta_{k,1}(\boldsymbol{x}; \boldsymbol{w}^*), \ldots, \theta_{k,|\boldsymbol{\theta}_k|}(\boldsymbol{x}; \boldsymbol{w}^*))$ consists of the parameter estimates for the $k$th mixture component.](images/MDN.png)
+y_norm = np.linspace(-4, 6, 400)
+norm_curves = [
+    0.35 * stats.norm.pdf(y_norm, -1.0, 0.80),
+    0.65 * stats.norm.pdf(y_norm,  2.5, 0.70),
+]
+draw_mdn_schematic(
+    [r"Weights $\boldsymbol{\pi}=(0.35,\,0.65)$",
+     r"Means $\boldsymbol{\mu}=(-1.0,\,2.5)$",
+     r"Std devs $\boldsymbol{\sigma}=(0.80,\,0.70)$"],
+    y_norm, norm_curves,
+    r"Predicted distribution of $Y\mid\boldsymbol{x}_i$",
+)
+```
 
-## Model Specification
+## A two-component Gamma mixture
 
 Suppose there are two types of claims:
 
 - Type I: $Y_1|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))$ and,
-- Type II: $Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))$.
+- Type II: $Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))$,
 
-The density of the actual claim amount $Y|\boldsymbol{X}=\boldsymbol{x}$ follows
+so the claim amount $Y|\boldsymbol{X}=\boldsymbol{x}$ has density
 $$
     \begin{align*}
         f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
         &= \pi_1(\boldsymbol{x})\cdot \frac{\beta_1(\boldsymbol{x})^{\alpha_1(\boldsymbol{x})}}{\Gamma(\alpha_1(\boldsymbol{x}))}\mathrm{e}^{-\beta_1(\boldsymbol{x})y}y^{\alpha_1(\boldsymbol{x})-1} \\
-        &\quad + (1-\pi_1(\boldsymbol{x}))\cdot \frac{\beta_2(\boldsymbol{x})^{\alpha_2(\boldsymbol{x})}}{\Gamma(\alpha_2(\boldsymbol{x}))}\mathrm{e}^{-\beta_2(\boldsymbol{x})y}y^{\alpha_2(\boldsymbol{x})-1}.
+        &\quad + \pi_2(\boldsymbol{x})\cdot \frac{\beta_2(\boldsymbol{x})^{\alpha_2(\boldsymbol{x})}}{\Gamma(\alpha_2(\boldsymbol{x}))}\mathrm{e}^{-\beta_2(\boldsymbol{x})y}y^{\alpha_2(\boldsymbol{x})-1},
     \end{align*}
 $$
-where $\pi_1(\boldsymbol{x})$ is the probability of a Type I claim given $\boldsymbol{x}$.
+where $\pi_1(\boldsymbol{x})$ is the probability of a Type I claim. So here the network's six outputs are the mixing weights, shapes and rates:
+$$
+    \text{MDN}(\boldsymbol{x}; \boldsymbol{w}^*)
+    = \bigl( \pi_1, \pi_2,\ \alpha_1, \alpha_2,\ \beta_1, \beta_2 \bigr).
+$$
 
 ::: footer
 Gamma MDNs for insurance claim amounts: @delong2021gamma; MDNs for loss reserving: @al2022stochastic.
 :::
 
-## Output
+## The Gamma MDN
 
-The aim is to find the optimum weights
-$$
-    \boldsymbol{w}^* = \underset{w}{\text{arg\,min}} \ \mathcal{L}(\mathcal{D}, \boldsymbol{w})
-$$
-for the Gamma mixture density network $\text{MDN}(\boldsymbol{x})$ that outputs the mixing weights, shapes and scales of $Y$ given the input features $\boldsymbol{x}$, i.e.,
-$$
-    \begin{align*}
-        \text{MDN}(\boldsymbol{x})
-        = ( &\pi_1(\boldsymbol{x}; \boldsymbol{w}^*),
-             \pi_2(\boldsymbol{x}; \boldsymbol{w}^*), \\
-            &\alpha_1(\boldsymbol{x}; \boldsymbol{w}^*),
-            \alpha_2(\boldsymbol{x}; \boldsymbol{w}^*), \\ 
-            &\beta_1(\boldsymbol{x}; \boldsymbol{w}^*),
-            \beta_2(\boldsymbol{x}; \boldsymbol{w}^*)
-        ).
-    \end{align*}
-$$
+```{python}
+#| echo: false
+y_gam = np.linspace(0, 14, 400)
+gam_curves = [
+    0.30 * stats.gamma.pdf(y_gam, a=2.0, scale=1/1.0),
+    0.70 * stats.gamma.pdf(y_gam, a=9.0, scale=1/1.2),
+]
+draw_mdn_schematic(
+    [r"Weights $\boldsymbol{\pi}=(0.30,\,0.70)$",
+     r"Shapes $\boldsymbol{\alpha}=(2.0,\,9.0)$",
+     r"Rates $\boldsymbol{\beta}=(1.0,\,1.2)$"],
+    y_gam, gam_curves,
+    r"Predicted distribution of $Y\mid\boldsymbol{x}_i$",
+    yaxis_line=True,
+)
+```
 
-## Architecture
-
-![We demonstrate the structure of a Gamma MDN that outputs the parameters for a Gamma mixture with two components.](images/Gamma_MDN.png)
-
-## Code: Architecture
+## Gamma MDN architecture
 
 The following code implements the gamma MDN from the previous slide.
 
@@ -1639,27 +1726,7 @@ gamma_mdn = Model(inputs, outputs)
 2. Specifies the output heads. `softmax` is used for the $\pi$ values as they must sum to 1. `softplus` is used for the $\alpha$'s and $\beta$'s as they must be positive.
 3. Concatenates the three heads into a single output of $3 \times K$ values (mixing weights, shapes, rates), which the loss function will split apart.
 
-## Loss Function
-
-The negative log-likelihood loss function is given by
-
-$$
-    \mathcal{L}(\mathcal{D}, \boldsymbol{w})
-    = - \frac{1}{n} \sum_{i=1}^{n} \log \  f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w}) 
-$$
-where the $f_{Y|\boldsymbol{X}}(y_i|\boldsymbol{x}, \boldsymbol{w})$ is defined by
-$$
-\begin{align*}
-    &\pi_1(\boldsymbol{x};\boldsymbol{w})\cdot \frac{\beta_1(\boldsymbol{x};\boldsymbol{w})^{\alpha_1(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_1(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_1(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_1(\boldsymbol{x};\boldsymbol{w})-1} \\
-    & \quad + (1-\pi_1(\boldsymbol{x};\boldsymbol{w}))\cdot \frac{\beta_2(\boldsymbol{x};\boldsymbol{w})^{\alpha_2(\boldsymbol{x};\boldsymbol{w})}}{\Gamma(\alpha_2(\boldsymbol{x};\boldsymbol{w}))}\mathrm{e}^{-\beta_2(\boldsymbol{x};\boldsymbol{w})y}y^{\alpha_2(\boldsymbol{x};\boldsymbol{w})-1} 
-\end{align*}
-$$
-
-::: {.content-visible unless-format="revealjs"}
-This loss function is quite complex, and for more complicated mixture distributions the loss function would be impossible to write in closed-form.
-:::
-
-## Code: Loss & training
+## Loss & training
 
 `torch.distributions` to the rescue.
 
@@ -1781,6 +1848,7 @@ drn  = DRN(glm).fit(X_train, y_train)
 ```
 
 ```{python}
+#| warning: false
 for name, model in {"GLM": glm, "CANN": cann, "MDN": mdn, "DRN": drn}.items():
     print(f"{name}: {nll(model.predict(X_test), y_test):.2f}")
 ```
@@ -1789,7 +1857,7 @@ for name, model in {"GLM": glm, "CANN": cann, "MDN": mdn, "DRN": drn}.items():
 Source: @avanzi2026distributional.
 :::
 
-# Aleatoric and Epistemic Uncertainty {visibility="uncounted"}
+# Uncertainty and Regularisation {visibility="uncounted"}
 
 ::: {.content-visible unless-format="revealjs"}
 Uncertainty in deep learning refers to the level of doubt one would have about the predictions made by an AI-driven algorithm.
@@ -1902,8 +1970,6 @@ Continuous Ranked Probability Score (CRPS)
 See, e.g., Taggart (2023), [Estimation of CRPS for precipitation forecasts...](https://nla.gov.au/nla.obj-3160938615/view), BoM Research Report 079.
 :::
 -->
-
-# Regularisation and Dropout {visibility="uncounted"}
 
 ## Traditional regularisation
 
@@ -2060,6 +2126,8 @@ A form of regularisation that we've already been doing is early-stopping. The mo
 Source: Géron (2019), Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow, 3rd Edition, Chapters 4 and 10.
 :::
 
+# Dropout and Ensembles
+
 ## Dropout
 
 ::: {.content-visible unless-format="revealjs"}
@@ -2072,21 +2140,14 @@ Dropout is one of the most popular methods for reducing the risk of overfitting.
 Sources: Marcus Lautier (2022).
 :::
 
-## Dropout quote #1
+## Dropout quote
 
 > It's surprising at first that this destructive technique works at all.
 Would a company perform better if its employees were told to toss a coin every morning to decide whether or not to go to work?
 Well, who knows; perhaps it would!
 The company would be forced to adapt its organization; it could not rely on any single person to work the coffee machine or perform any other critical tasks, so this expertise would have to be spread across several people.
 Employees would have to learn to cooperate with many of their coworkers, not just a handful of them.
-
-::: footer
-Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
-:::
-
-## Dropout quote #2
-
-> The company would become much more resilient.
+The company would become much more resilient.
 If one person quit, it wouldn't make much of a difference.
 It's unclear whether this idea would actually work for companies, but it certainly does for neural networks.
 Neurons trained with dropout cannot co-adapt with their neighboring neurons; they have to be as useful as possible on their own.
@@ -2098,7 +2159,7 @@ In the end, you get a more robust network that generalizes better.
 Source: Aurélien Géron (2019), _Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow_, 2nd Edition, p. 366
 :::
 
-## Code: Dropout 
+## Dropout
 
 Dropout is just another layer in Keras.
 
@@ -2121,7 +2182,7 @@ model.compile("adam", "mse")
 model.fit(X_train_sc, y_train, epochs=4, verbose=0);
 ```
 
-## Code: Dropout after training
+## Dropout after training
 
 Making predictions is the same as any other model:
 
@@ -2162,13 +2223,6 @@ keras.ops.convert_to_numpy(
 :::
 
 By setting the `training=True`, we can let dropout happen during prediction stage as well. This will change predictions for the same output differently. This is known as the _Monte Carlo dropout_ and can be used to generate a distribution of predictions.
-
-## Dropout Limitation
-
-- Increased Training Time: Since dropout introduces noise into the training process, it can make the training process slower.
-- Sensitivity to Dropout Rates: the performance of dropout is highly dependent on the chosen dropout rate. 
-
-# Ensembles 
 
 ## Ensembles
 
