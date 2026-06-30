@@ -662,6 +662,29 @@ Y | \mathbf{X} &amp;\sim \mathrm{Gamma}(\ldots, \ldots) \\
 </div></li>
 </ul>
 </div>
+<style>
+/* ── MLE "recipe" step colours ───────────────────────────────
+   One colour per stage of the maximum-likelihood recipe, reused across the
+   Traditional / Logistic / Poisson / Gamma slides so the same procedure is
+   visible every time. Only the prose label of each step is coloured; the
+   display equations stay plain. Base values are tuned for a white background
+   (slides, decktape PDFs, light website). The dark website (OS dark mode)
+   gets lighter tints, scoped to #quarto-content so the always-white slides
+   are never affected. Tweak the five hexes here. */
+.step-density { color: #1d4ed8; }  /* specify the density     — blue    */
+.step-lik     { color: #7c3aed; }  /* likelihood              — violet  */
+.step-loglik  { color: #0f766e; }  /* log-likelihood          — teal    */
+.step-nll     { color: #b45309; }  /* negative log-likelihood — amber   */
+.step-loss    { color: #be123c; }  /* simplified NLL / loss    — crimson */
+
+@media (prefers-color-scheme: dark) {
+  #quarto-content .step-density { color: #8ab4f8; }
+  #quarto-content .step-lik     { color: #c4b5fd; }
+  #quarto-content .step-loglik  { color: #5ec9b7; }
+  #quarto-content .step-nll     { color: #e0b87a; }
+  #quarto-content .step-loss    { color: #f2879f; }
+}
+</style>
 </section>
 <section id="package-imports" class="slide level2">
 <h2>Package imports</h2>
@@ -772,9 +795,9 @@ Y | \mathbf{X} &amp;\sim \mathrm{Gamma}(\ldots, \ldots) \\
 <h2>The probabilistic view</h2>
 <p><span class="math display">Y_i \sim \mathcal{N}(\mu_i, \sigma^2)</span></p>
 <p>where <span class="math inline">\mu_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip}</span>, and the <span class="math inline">\sigma^2</span> is known.</p>
-<p>The <span class="math inline">\mathcal{N}(\mu, \sigma^2)</span> normal distribution has p.d.f.</p>
+<p><span class="step-density">The <span class="math inline">\mathcal{N}(\mu, \sigma^2)</span> normal distribution has p.d.f.</span></p>
 <p><span class="math display">f(y) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y - \mu)^2}{2\sigma^2}\right) .</span></p>
-<p>The likelihood function is</p>
+<p><span class="step-lik">The likelihood function is</span></p>
 <p><span class="math display">
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - \mu_i)^2}{2\sigma^2}\right)
 </span> <span class="math display">
@@ -817,12 +840,12 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\
 </section>
 <section id="the-machine-learning-view" class="slide level2">
 <h2>The machine learning view</h2>
-<p>The negative log-likelihood <span class="math inline">\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})</span> is to be minimised:</p>
+<p><span class="step-nll">The negative log-likelihood <span class="math inline">\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})</span> is to be minimised:</span></p>
 <p><span class="math display">
 \text{NLL}(\boldsymbol{\beta})
 = \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
 </span></p>
-<p>As <span class="math inline">\sigma^2</span> is fixed, minimising NLL is equivalent to minimising MSE:</p>
+<p>As <span class="math inline">\sigma^2</span> is fixed, minimising NLL is equivalent to minimising <span class="step-loss">MSE</span>:</p>
 <p><span class="math display">
 \begin{aligned}
 \boldsymbol{\beta}^*
@@ -850,7 +873,7 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\
 </section>
 <section id="logistic-regression" class="slide level2">
 <h2>Logistic regression</h2>
-<p>A Bernoulli distribution with parameter <span class="math inline">p</span> has p.m.f.</p>
+<p><span class="step-density">A Bernoulli distribution with parameter <span class="math inline">p</span> has p.m.f.</span></p>
 <p><span class="math display">
 f(y)\ =\ \begin{cases}
 p &amp; \text{if } y = 1 \\
@@ -878,24 +901,24 @@ L(\boldsymbol{\beta})
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i}
 \Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 </span></p>
-<p>The negative log-likelihood is</p>
+<p><span class="step-nll">The negative log-likelihood is</span></p>
 <p><span class="math display">
 \text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 </span></p>
-<p>The binary cross-entropy loss is basically identical: <span class="math display">
+<p><span class="step-loss">The binary cross-entropy loss</span> is basically identical: <span class="math display">
 \text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = - \frac{1}{n} \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 </span></p>
 </section>
 <section id="poisson-regression" class="slide level2">
 <h2>Poisson regression</h2>
-<p>A Poisson distribution with rate <span class="math inline">\lambda</span> has p.m.f. <span class="math display">
+<p><span class="step-density">A Poisson distribution with rate <span class="math inline">\lambda</span> has p.m.f.</span> <span class="math display">
 f(y) = \frac{\lambda^y \exp(-\lambda)}{y!}.
 </span></p>
 <p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is Poisson distributed with parameter</p>
 <p><span class="math display">
 \mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right) .
 </span></p>
-<p>The likelihood function is</p>
+<p><span class="step-lik">The likelihood function is</span></p>
 <p><span class="math display">
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
 </span> <span class="math display">
@@ -904,22 +927,22 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
 </section>
 <section id="poisson-loss" class="slide level2">
 <h2>Poisson loss</h2>
-<p>The negative log-likelihood is</p>
+<p><span class="step-nll">The negative log-likelihood is</span></p>
 <p><span class="math display">
 \text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) + \log(y_i!) \Bigr) .
 </span></p>
-<p>The Poisson loss is</p>
+<p><span class="step-loss">The Poisson loss</span> is</p>
 <p><span class="math display">
 \text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \frac{1}{n} \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
 </span></p>
 </section>
 <section id="gamma-regression" class="slide level2">
 <h2>Gamma regression</h2>
-<p>A Gamma distribution with mean <span class="math inline">\mu</span> and dispersion <span class="math inline">\phi</span> has p.d.f. <span class="math display">
+<p><span class="step-density">A Gamma distribution with mean <span class="math inline">\mu</span> and dispersion <span class="math inline">\phi</span> has p.d.f.</span> <span class="math display">
 f(y; \mu, \phi) = \frac{(\mu \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y^{\frac{1}{\phi} - 1} \mathrm{e}^{-\frac{y}{\mu \phi}}
 </span></p>
 <p>Our model is <span class="math inline">Y|\boldsymbol{X}=\boldsymbol{x}</span> is Gamma distributed with a dispersion of <span class="math inline">\phi</span> and a mean of <span class="math inline">\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)</span>.</p>
-<p>The likelihood function is <span class="math display">
+<p><span class="step-lik">The likelihood function is</span> <span class="math display">
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y_i^{\frac{1}{\phi} - 1} \exp\left(-\frac{y_i}{\mu_i \phi}\right)
 </span></p>
 <p><span class="math display">
@@ -928,7 +951,7 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gam
 </section>
 <section id="gamma-loss" class="slide level2">
 <h2>Gamma loss</h2>
-<p>The negative log-likelihood is</p>
+<p><span class="step-nll">The negative log-likelihood is</span></p>
 <p><span class="math display">
 \text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i \phi) + \log \Gamma\left(\frac{1}{\phi}\right) - \left(\frac{1}{\phi} - 1\right) \log(y_i) + \frac{y_i}{\mu_i \phi} \right].
 </span></p>

@@ -389,6 +389,32 @@ See @guo2017calibration.
 
 # Traditional Regression {visibility="uncounted"}
 
+```{=html}
+<style>
+/* ── MLE "recipe" step colours ───────────────────────────────
+   One colour per stage of the maximum-likelihood recipe, reused across the
+   Traditional / Logistic / Poisson / Gamma slides so the same procedure is
+   visible every time. Only the prose label of each step is coloured; the
+   display equations stay plain. Base values are tuned for a white background
+   (slides, decktape PDFs, light website). The dark website (OS dark mode)
+   gets lighter tints, scoped to #quarto-content so the always-white slides
+   are never affected. Tweak the five hexes here. */
+.step-density { color: #1d4ed8; }  /* specify the density     — blue    */
+.step-lik     { color: #7c3aed; }  /* likelihood              — violet  */
+.step-loglik  { color: #0f766e; }  /* log-likelihood          — teal    */
+.step-nll     { color: #b45309; }  /* negative log-likelihood — amber   */
+.step-loss    { color: #be123c; }  /* simplified NLL / loss    — crimson */
+
+@media (prefers-color-scheme: dark) {
+  #quarto-content .step-density { color: #8ab4f8; }
+  #quarto-content .step-lik     { color: #c4b5fd; }
+  #quarto-content .step-loglik  { color: #5ec9b7; }
+  #quarto-content .step-nll     { color: #e0b87a; }
+  #quarto-content .step-loss    { color: #f2879f; }
+}
+</style>
+```
+
 ## Package imports
 
 ```{python}
@@ -508,11 +534,11 @@ $$Y_i \sim \mathcal{N}(\mu_i, \sigma^2)$$
 where $\mu_i = \beta_0 + \beta_1 x_{i1} + \ldots + \beta_p x_{ip}$,
 and the $\sigma^2$ is known.
 
-The $\mathcal{N}(\mu, \sigma^2)$ normal distribution has p.d.f.
+[The $\mathcal{N}(\mu, \sigma^2)$ normal distribution has p.d.f.]{.step-density}
 
 $$f(y) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y - \mu)^2}{2\sigma^2}\right) .$$
 
-The likelihood function is
+[The likelihood function is]{.step-lik}
 
 $$
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left(-\frac{(y_i - \mu_i)^2}{2\sigma^2}\right)
@@ -553,14 +579,14 @@ $\sigma^2$ is known, fixed and the same for all observations. For each observati
 
 ## The machine learning view
 
-The negative log-likelihood $\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})$ is to be minimised:
+[The negative log-likelihood $\text{NLL}(\boldsymbol{\beta}) := -\ell(\boldsymbol{\beta})$ is to be minimised:]{.step-nll}
 
 $$
 \text{NLL}(\boldsymbol{\beta})
 = \frac{n}{2}\log(2\pi) + \frac{n}{2}\log(\sigma^2) + \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mu_i)^2 .
 $$
 
-As $\sigma^2$ is fixed, minimising NLL is equivalent to minimising MSE:
+As $\sigma^2$ is fixed, minimising NLL is equivalent to minimising [MSE]{.step-loss}:
 
 $$
 \begin{aligned}
@@ -591,7 +617,7 @@ Common GLM distributions for the response variable include:
 
 ## Logistic regression
 
-A Bernoulli distribution with parameter $p$ has p.m.f.
+[A Bernoulli distribution with parameter $p$ has p.m.f.]{.step-density}
 
 $$
 f(y)\ =\ \begin{cases}
@@ -625,20 +651,20 @@ L(\boldsymbol{\beta}) = \prod_{i=1}^n \mu_i^{y_i} (1 - \mu_i)^{1 - y_i}
 \Rightarrow \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 $$
 
-The negative log-likelihood is
+[The negative log-likelihood is]{.step-nll}
 
 $$
 \text{NLL}(\boldsymbol{\beta}) = -\sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 $$
 
-The binary cross-entropy loss is basically identical:
+[The binary cross-entropy loss]{.step-loss} is basically identical:
 $$
 \text{BCE}(\boldsymbol{y}, \boldsymbol{\mu}) = - \frac{1}{n} \sum_{i=1}^n \Bigl( y_i \log(\mu_i) + (1 - y_i) \log(1 - \mu_i) \Bigr).
 $$
 
 ## Poisson regression
 
-A Poisson distribution with rate $\lambda$ has p.m.f.
+[A Poisson distribution with rate $\lambda$ has p.m.f.]{.step-density}
 $$
 f(y) = \frac{\lambda^y \exp(-\lambda)}{y!}.
 $$
@@ -649,7 +675,7 @@ $$
 \mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right) .
 $$
 
-The likelihood function is
+[The likelihood function is]{.step-lik}
 
 $$
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{ \mu_i^{y_i} \exp(-\mu_i) }{y_i!}
@@ -660,13 +686,13 @@ $$
 
 ## Poisson loss
 
-The negative log-likelihood is
+[The negative log-likelihood is]{.step-nll}
 
 $$
 \text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) + \log(y_i!) \Bigr) .
 $$
 
-The Poisson loss is
+[The Poisson loss]{.step-loss} is
 
 $$
 \text{Poisson}(\boldsymbol{y}, \boldsymbol{\mu}) = \frac{1}{n} \sum_{i=1}^n \Bigl( \mu_i - y_i \log(\mu_i) \Bigr).
@@ -674,7 +700,7 @@ $$
 
 ## Gamma regression
 
-A Gamma distribution with mean $\mu$ and dispersion $\phi$ has p.d.f.
+[A Gamma distribution with mean $\mu$ and dispersion $\phi$ has p.d.f.]{.step-density}
 $$
 f(y; \mu, \phi) = \frac{(\mu \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y^{\frac{1}{\phi} - 1} \mathrm{e}^{-\frac{y}{\mu \phi}}
 $$
@@ -682,7 +708,7 @@ $$
 Our model is $Y|\boldsymbol{X}=\boldsymbol{x}$ is Gamma distributed with a dispersion of $\phi$ and a mean of
 $\mu(\boldsymbol{x}; \boldsymbol{\beta}) = \exp\left(\left\langle \boldsymbol{\beta}, \boldsymbol{x} \right\rangle\right)$.
 
-The likelihood function is
+[The likelihood function is]{.step-lik}
 $$
 L(\boldsymbol{\beta}) = \prod_{i=1}^n \frac{(\mu_i \phi)^{-\frac{1}{\phi}}}{\Gamma\left(\frac{1}{\phi}\right)} y_i^{\frac{1}{\phi} - 1} \exp\left(-\frac{y_i}{\mu_i \phi}\right)
 $$
@@ -693,7 +719,7 @@ $$
 
 ## Gamma loss
 
-The negative log-likelihood is
+[The negative log-likelihood is]{.step-nll}
 
 $$
 \text{NLL}(\boldsymbol{\beta}) = \sum_{i=1}^n \left[ \frac{1}{\phi} \log(\mu_i \phi) + \log \Gamma\left(\frac{1}{\phi}\right) - \left(\frac{1}{\phi} - 1\right) \log(y_i) + \frac{y_i}{\mu_i \phi} \right].
