@@ -22,12 +22,19 @@
   --text-muted: #b8b0a4;
   --text-faint: #817a70;
 
+  --heading-soft: #d8d0c4;  // section headings — brighter than text-muted so
+                            // the page reads less flat, still softer than body
+
   --accent: #7aa2c7;         // muted academic blue
   --accent-hover: #9bbbd7;
   --accent-soft: rgba(122, 162, 199, 0.16);
 
   --border: #343b45;
   --border-soft: #28303a;
+  --table-frame: #586270;    // visible card frame around tables (tune here)
+  --figure-paper: #ffffff;   // backing for transparent (PNG/SVG) figures — white
+                             // to match the opaque white-canvas code plots so
+                             // the two never clash side by side
 }
 
 // Explicit fallback for browsers that don't fully honour color-scheme
@@ -118,7 +125,7 @@ h2::after {
 }
 
 h3 {
-  color: var(--text-muted);
+  color: var(--heading-soft);
 }
 
 // ── Links (body content) ──
@@ -239,9 +246,56 @@ code span.va { color: $hl-text; }
 code span.vs { color: $hl-string; }
 code span.wa { color: $hl-meta; }
 
+// ── Code annotations ──
+// Quarto hardcodes the annotation gutter strips to near-white
+// (`.code-annotation-gutter-bg { #fafaf7 }`, `.code-annotation-gutter { #f4f3ef }`)
+// — absolutely-positioned bars on the right edge of annotated code blocks, so on
+// dark they flare as a bright vertical strip. Blend them into the code surface.
+.code-annotation-gutter-bg,
+.code-annotation-gutter {
+  background-color: var(--surface);
+}
+
+// The numbered markers in the explanation list below the block default to a dark
+// grey (hsl(180,4%,33%)) that's near-invisible on the dark page. Lift them to the
+// muted text + border palette, with the active marker in the accent.
+dl.code-annotation-container-grid dt {
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+dl.code-annotation-container-grid dt[data-target-cell].code-annotation-active {
+  color: var(--bg);
+  background-color: var(--accent);
+  border-color: var(--accent);
+}
+
 // ── Tables ──
+// Bootstrap paints every table cell border with `--bs-table-border-color`,
+// whose light-theme default (#e0ded8) survives into dark mode and shows as a
+// bright white underline beneath pandas index `<th>` cells — the data `<td>`s
+// were re-coloured below, the row-header `<th>`s were not. Re-point the
+// Bootstrap variables at the source so borders, striping and hover all track
+// the dark palette.
 table {
   border-color: var(--border);
+}
+
+table.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--text);
+  --bs-table-border-color: var(--border);
+  --bs-table-striped-bg: transparent;   // striping handled by the rule below
+  --bs-table-striped-color: var(--text);
+  --bs-table-hover-bg: var(--accent-soft);
+  --bs-table-hover-color: var(--text);
+
+  // Bootstrap hardcodes a light top+bottom frame
+  // (`.table { border-top/bottom: 1px solid #d3d4d2 }`) while the left/right
+  // come from --bs-table-border-color above. Re-pointing that variable left
+  // the sides dark but the top/bottom light. Set all four explicitly so the
+  // frame is consistent on every side.
+  border: 1px solid var(--table-frame);
 }
 
 table thead {
@@ -270,6 +324,14 @@ table tbody td {
   color: var(--text);
 }
 
+// Row-header cells (the pandas index column) — match the data cells instead of
+// inheriting Bootstrap's near-white default border.
+table tbody th {
+  border-bottom-color: var(--border);
+  background-color: transparent;
+  color: var(--text);
+}
+
 // ── Blockquotes ──
 blockquote {
   border-left-color: var(--accent);
@@ -277,9 +339,105 @@ blockquote {
   color: var(--text-muted);
 }
 
+// ── Callouts ──
+// Quarto ships callout headers as a light pastel tint of the type colour
+// (note → rgb(231,240,255)); on dark, the porcelain title text sits on that
+// near-white bar and all but disappears. Rebuild callouts as quiet dark cards:
+// a surface body, a low-alpha tint header, a vivid left rule, and a light,
+// type-coloured title.
+div.callout {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+
+// Bootstrap hardcodes light right/top/bottom borders on callouts
+// (`.callout.callout-style-default { border-*: 1px solid #e0ded8 }`, specificity
+// 0,2,0) — the same bright frame the tables had. Override those three sides to
+// the table frame colour at matching specificity; the left keeps its type
+// accent.
+div.callout.callout-style-default,
+div.callout.callout-style-simple {
+  border-right-color: var(--table-frame);
+  border-top-color: var(--table-frame);
+  border-bottom-color: var(--table-frame);
+}
+
+.callout .callout-body,
+.callout .callout-body-container {
+  color: var(--text);
+}
+
+div.callout.callout-style-default > .callout-header,
+div.callout.callout-style-simple > .callout-header {
+  background-color: var(--surface-raised);
+  opacity: 1;
+}
+
+.callout .callout-title-container {
+  color: var(--text);
+  font-weight: 600;
+}
+
+// Quarto's type icons are coloured SVGs that read dim on the dark header; the
+// collapse chevron is near-black. Lift both so they stay legible.
+.callout .callout-icon::before {
+  filter: brightness(1.4);
+}
+
+.callout .callout-toggle::before {
+  filter: invert(0.8);
+}
+
+// Per-type accents — softened from Bootstrap's saturated defaults to sit
+// calmly in the muted-academic palette.
+div.callout-note.callout { border-left-color: var(--accent); }
+div.callout-note.callout-style-default > .callout-header { background-color: rgba(122, 162, 199, 0.16); }
+.callout-note .callout-title-container { color: var(--accent-hover); }
+
+div.callout-tip.callout { border-left-color: #6fb894; }
+div.callout-tip.callout-style-default > .callout-header { background-color: rgba(111, 184, 148, 0.15); }
+.callout-tip .callout-title-container { color: #9fd3b8; }
+
+div.callout-warning.callout { border-left-color: #d9a441; }
+div.callout-warning.callout-style-default > .callout-header { background-color: rgba(217, 164, 65, 0.15); }
+.callout-warning .callout-title-container { color: #e6c47e; }
+
+div.callout-caution.callout { border-left-color: #d98e54; }
+div.callout-caution.callout-style-default > .callout-header { background-color: rgba(217, 142, 84, 0.15); }
+.callout-caution .callout-title-container { color: #e8ad81; }
+
+div.callout-important.callout { border-left-color: #d97070; }
+div.callout-important.callout-style-default > .callout-header { background-color: rgba(217, 112, 112, 0.15); }
+.callout-important .callout-title-container { color: #ea9d9d; }
+
 // ── Figures ──
 figcaption {
   color: var(--text-muted);
+}
+
+// Two figure problems on dark, one rule. (1) Code-generated plots bake a white
+// canvas into the pixels, which flares against the page. (2) Transparent PNG/SVG
+// diagrams (drawn in dark ink for the light slides) turn into black-on-black.
+// `background-color` on an <img> only shows through transparent pixels, so a
+// white "paper" backing rescues the transparent diagrams while staying invisible
+// behind opaque plots and photos — and being white, it matches those plots. Then
+// frame both alike — round corners, soft shadow, a slight dim to shave the glare
+// — and restore full fidelity on hover.
+//
+// Scoped to article-content images rather than `.figure-img`, so it also catches
+// bare `<img class="img-fluid">` — e.g. images placed in a raw <center> block
+// with no caption, which never get Quarto's `.figure-img` class. Absolutely
+// positioned overlays are left alone.
+#quarto-content img:not(.absolute) {
+  background-color: var(--figure-paper);
+  border-radius: 8px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  filter: brightness(0.95);
+  transition: filter 0.2s ease;
+}
+
+#quarto-content img:not(.absolute):hover {
+  filter: brightness(1);
 }
 
 // ── Landing-page cards ──
