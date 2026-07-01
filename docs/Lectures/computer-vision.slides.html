@@ -4331,25 +4331,90 @@ Liu, C.-L., Yin, F., Wang, D.-H., &amp; Wang, Q.-F. (2011). <span>CASIA</span> o
     })();
     </script>
     <script>
-    // Disable reveal.js's vim-style H/J/K/L navigation.
+    // Always enter a vertical stack at its top when moving forward.
     //
-    // By default reveal.js binds H/J/K/L to move within the 2D slide grid (left /
-    // down / up / right), mirroring vim's hjkl. With vim muscle memory that's a
-    // trap: `l` ("next") moves *right* across the grid rather than advancing in
-    // linear reading order, so you jump sideways instead of onto the next slide.
-    // Switch them off entirely so a stray hjkl press is a harmless no-op, leaving
-    // Space / PageDown / arrows as the navigation keys.
+    // Our decks run in reveal's `linear` navigation mode (Quarto's default). There,
+    // every navigation key advances in linear reading order — down a stack, then on
+    // to the *top* of the next one — while the same keys walk the 2D grid once
+    // Overview is open (left/down/up/right). That's exactly the behaviour we want.
+    //
+    // The one wrinkle is a reveal "feature": it remembers the vertical slide you
+    // last viewed in each stack (a `data-previous-indexv` attribute) and, when you
+    // later arrive at that stack going *forward*, resumes there instead of at the
+    // top. So after skipping ahead into a later stack and then coming back, forward
+    // navigation quietly jumps partway down that stack rather than showing it from
+    // the first slide — the traversal order seems to change out from under you.
+    // (This is independent of which keys you press — arrows, hjkl, Space, PageDown
+    // all funnel through the same next()/navigateRight() path.)
+    //
+    // Backward navigation is already correct: reveal computes the previous stack's
+    // *last* slide explicitly for prev(), so it never consults this attribute.
+    //
+    // Fix: after every slide change, strip the remembered index off all stacks, so
+    // forward entry always lands on the first vertical slide. We deliberately leave
+    // any author-set `data-start-indexv` alone — that one is intentional.
     (function () {
-      var DISABLE = { 72: null, 74: null, 75: null, 76: null }; // H, J, K, L
+      function clearRemembered() {
+        var stacks = document.querySelectorAll('.reveal section.stack[data-previous-indexv]');
+        for (var i = 0; i < stacks.length; i++) stacks[i].removeAttribute('data-previous-indexv');
+      }
 
-      function apply() {
-        if (!window.Reveal || !Reveal.configure) return false;
-        Reveal.configure({ keyboard: DISABLE });
+      var attached = false;
+      function attach() {
+        if (attached || !window.Reveal || !Reveal.on) return false;
+        attached = true;
+        // slidechanged fires at the end of each slide(); reveal writes the departed
+        // stack's data-previous-indexv during that same call, so clearing here wipes
+        // it before the next navigation can read it.
+        Reveal.on('slidechanged', clearRemembered);
+        clearRemembered(); // also drop anything left by the initial/deep-linked state
         return true;
       }
 
-      if (!apply()) {
-        var iv = setInterval(function () { if (apply()) clearInterval(iv); }, 50);
+      // Reveal may not be initialised yet when this after-body script runs; wait for it.
+      if (!attach()) {
+        var iv = setInterval(function () { if (attach()) clearInterval(iv); }, 50);
+        setTimeout(function () { clearInterval(iv); }, 10000);
+      }
+    })();
+    </script>
+    <script>
+    // Show every slide's preview in Overview mode.
+    //
+    // reveal lazy-loads slides: any slide beyond its "view distance" from the
+    // current one is unloaded (display:none) to save memory. In Overview that
+    // distance is hard-capped at 10 (it ignores the `view-distance` config), and
+    // for each *other* stack the vertical window is centred on that stack's
+    // remembered index — so slides at the bottom of a tall stack, or anything in a
+    // distant stack, show as blank cells until you navigate onto them, at which
+    // point they abruptly pop in. That makes Overview an unreliable map of the deck.
+    //
+    // Fix: while Overview is open, eagerly load every slide so the whole grid is
+    // populated. reveal has already positioned each cell — its overview layout()
+    // sets a transform on every section regardless of load state — so a freshly
+    // loaded slide drops straight into its correct spot. We re-run on slidechanged
+    // because moving around inside Overview calls slide(), which unloads far slides
+    // again. Outside Overview we do nothing, so normal lazy-loading is untouched.
+    (function () {
+      function loadAll() {
+        if (!window.Reveal || !Reveal.isOverview || !Reveal.isOverview()) return;
+        // Horizontal slides cover stacks unloaded by horizontal distance; the leaf
+        // slides cover the vertical ones. Loading both fills the entire grid.
+        var slides = Array.from(Reveal.getHorizontalSlides()).concat(Array.from(Reveal.getSlides()));
+        slides.forEach(function (s) { Reveal.loadSlide(s); });
+      }
+
+      var attached = false;
+      function attach() {
+        if (attached || !window.Reveal || !Reveal.on) return false;
+        attached = true;
+        Reveal.on('overviewshown', loadAll);
+        Reveal.on('slidechanged', loadAll); // moving within Overview re-unloads far slides
+        return true;
+      }
+
+      if (!attach()) {
+        var iv = setInterval(function () { if (attach()) clearInterval(iv); }, 50);
         setTimeout(function () { clearInterval(iv); }, 10000);
       }
     })();
