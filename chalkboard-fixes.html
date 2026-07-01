@@ -332,3 +332,44 @@
   }
 })();
 </script>
+<script>
+// Show every slide's preview in Overview mode.
+//
+// reveal lazy-loads slides: any slide beyond its "view distance" from the
+// current one is unloaded (display:none) to save memory. In Overview that
+// distance is hard-capped at 10 (it ignores the `view-distance` config), and
+// for each *other* stack the vertical window is centred on that stack's
+// remembered index — so slides at the bottom of a tall stack, or anything in a
+// distant stack, show as blank cells until you navigate onto them, at which
+// point they abruptly pop in. That makes Overview an unreliable map of the deck.
+//
+// Fix: while Overview is open, eagerly load every slide so the whole grid is
+// populated. reveal has already positioned each cell — its overview layout()
+// sets a transform on every section regardless of load state — so a freshly
+// loaded slide drops straight into its correct spot. We re-run on slidechanged
+// because moving around inside Overview calls slide(), which unloads far slides
+// again. Outside Overview we do nothing, so normal lazy-loading is untouched.
+(function () {
+  function loadAll() {
+    if (!window.Reveal || !Reveal.isOverview || !Reveal.isOverview()) return;
+    // Horizontal slides cover stacks unloaded by horizontal distance; the leaf
+    // slides cover the vertical ones. Loading both fills the entire grid.
+    var slides = Array.from(Reveal.getHorizontalSlides()).concat(Array.from(Reveal.getSlides()));
+    slides.forEach(function (s) { Reveal.loadSlide(s); });
+  }
+
+  var attached = false;
+  function attach() {
+    if (attached || !window.Reveal || !Reveal.on) return false;
+    attached = true;
+    Reveal.on('overviewshown', loadAll);
+    Reveal.on('slidechanged', loadAll); // moving within Overview re-unloads far slides
+    return true;
+  }
+
+  if (!attach()) {
+    var iv = setInterval(function () { if (attach()) clearInterval(iv); }, 50);
+    setTimeout(function () { clearInterval(iv); }, 10000);
+  }
+})();
+</script>
