@@ -8,42 +8,14 @@ bibliography: ../library.bib
 #| echo: false
 #| warning: false
 from setup import *
-```
 
-::: {.content-visible unless-format="revealjs"}
-
-```{python}
-#| code-fold: true
-#| code-summary: Show the package imports
+# Packages only used in hidden (echo: false) code chunks
 import json
-import random
+import pickle
+import graphviz
+import torch
 from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
-import numpy.random as rnd
-import pandas as pd
-
-import keras
-from keras.metrics import SparseTopKCategoricalAccuracy
-from keras.models import Sequential
-from keras.layers import Dense, Input
-from keras.callbacks import EarlyStopping
- 
-from sklearn.preprocessing import LabelEncoder
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.model_selection import train_test_split 
-from sklearn.preprocessing import OrdinalEncoder, StandardScaler, OneHotEncoder
-from sklearn.compose import make_column_transformer
-
-from keras.models import Model
-from keras.layers import Dense, Input
-
-from sklearn import set_config
-set_config(transform_output="pandas")
 ```
-
-:::
 
 # Introduction
 
@@ -439,7 +411,7 @@ ICE plots allow us to see the differences in the effect of a given variable base
 Optimal hyperparameter values can be chosen using partial dependence plots as seen in the plot above.
 :::
 
-## Permutation importance {.smaller}
+## Permutation importance
 
 ::: {.content-visible unless-format="revealjs"}
 We've seen this in the NLP example.
@@ -676,10 +648,6 @@ claims[["expo", "nclaims", "ageph", "bm", "power", "agec", "long", "lat"]].descr
 
 ```{python}
 #| code-fold: true
-import geopandas as gpd
-import contextily as ctx
-from shapely.geometry import Point
-
 # Compute average claims per location
 avg = train_raw.groupby(['lat', 'long'], as_index=False)['nclaims'].mean()
 
@@ -711,9 +679,6 @@ plt.show()
 ## Fitting using statsmodels
 
 ```{python}
-import statsmodels.api as sm
-import statsmodels.formula.api as smf
-
 formula = "nclaims ~ expo + ageph + bm + power + agec + lat + long " + \
     " + C(coverage) + C(sex) + C(fuel) + C(use) + C(fleet)"
 
@@ -863,8 +828,6 @@ The lines should be straight since we have taken the log of predicted number of 
 
 ```{python}
 #| code-fold: true
-import plotly.graph_objects as go
-
 # Create ranges
 ageph_range = np.linspace(train_raw['ageph'].min(), train_raw['ageph'].max(), 100)
 agec_range = np.linspace(train_raw['agec'].min(), train_raw['agec'].max(), 100)
@@ -933,19 +896,7 @@ y_test_gam = y_test_raw.values
 ```
 
 ```{python}
-#| code-fold: true
-# Need to monkey patch to get pygam working currently
-import scipy.sparse
-
-def to_array(self):
-    return self.toarray()
-
-scipy.sparse.spmatrix.A = property(to_array)
-```
-
-```{python}
 #| eval: false
-from pygam import PoissonGAM, s, f
 formula = s(0) + s(1) + s(2) + s(3) + s(4) + s(5) + s(6) + \
     f(7) + f(8) + f(9) + f(10) + f(11)
 gam_model = PoissonGAM(formula).fit(X_train_gam, y_train_gam)
@@ -954,9 +905,6 @@ gam_model = PoissonGAM(formula).fit(X_train_gam, y_train_gam)
 ```{python}
 #| echo: false
 #| output: false
-from pygam import PoissonGAM, s, f
-import pickle 
-
 filename = 'models/gam.pkl'
 
 if Path(filename).exists():
@@ -1038,8 +986,6 @@ for i, name in zip(dsc, cat_vars):
 
 ```{python}
 #| code-fold: true
-import plotly.graph_objects as go
-
 # Create ranges
 ageph_range = np.linspace(X_train_gam['ageph'].min(), X_train_gam['ageph'].max(), 100)
 agec_range = np.linspace(X_train_gam['agec'].min(), X_train_gam['agec'].max(), 100)
@@ -1080,6 +1026,8 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=50, b=50),  # Reduce whitespace cropping
 )
 ```
+
+{{< include _belgian-anam.qmd >}}
 
 {{< include _belgian-nn-pdp.qmd >}}
 
@@ -1127,7 +1075,6 @@ Source: Rudin (2019), [Stop explaining black box machine learning models for hig
 ## Package Versions {.appendix data-visibility="uncounted"}
 
 ```{python}
-#| code-fold: true
 from watermark import watermark
 print(watermark(python=True, packages="contextily,geopandas,keras,matplotlib,numpy,pandas,plotly,pygam,seaborn,scipy,shapely,sklearn,statsmodels,torch"))
 ```

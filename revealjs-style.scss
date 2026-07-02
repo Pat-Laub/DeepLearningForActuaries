@@ -20,6 +20,24 @@ $headingColor: #383D3D;
 
 .katex { font-size: 1.0em !important; }
 
+/* Reveal makes lists inline-block, so display equations inside list items are
+   centred within the shrink-wrapped list rather than the slide. Make only lists
+   containing display math full-width, then centre the display math within them. */
+.reveal .slide ol:has(.math.display),
+.reveal .slide ul:has(.math.display),
+.reveal .slide ol:has(.katex-display),
+.reveal .slide ul:has(.katex-display) {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.reveal .slide li .math.display,
+.reveal .slide li .katex-display {
+    display: block;
+    text-align: center !important;
+}
+
 /* Bring code block font size closer to body text (default is .55em) */
 .reveal pre {
     font-size: 0.7em;
@@ -73,6 +91,12 @@ $headingColor: #383D3D;
     background-size: contain;
 }
 
+// The title SVG must be centred against the full slide, not the 90%-wide
+// ordinary background box above.
+.reveal .slide-background.quarto-title-block .slide-background-content {
+    width: 100%;
+}
+
 .aligned-column {
     vertical-align: middle !important;
 }
@@ -96,32 +120,73 @@ $headingColor: #383D3D;
     right: 7px !important;
 }
 
-// Add a yellow bar to the right of the slide.
+// Add a yellow bar in the empty margin to the right of the slide.
+//
+// Reveal centres the `--slide-width` (1120px) slide, scaled by `--slide-scale`,
+// inside the `--viewport-width` viewport (the scale already folds in the 10%
+// `margin`, and depends on BOTH the viewport width and height). So the empty
+// margin on each side is `(viewport-width - slide-width * slide-scale) / 2`, and
+// the fixed-100px bar pinned to the viewport's right edge only clears the slide
+// while that margin is at least 100px wide.
+//
+// Reveal keeps these custom properties current on every resize/zoom, so we can
+// track the geometry exactly: show the bar at its full 100px while it fits, and
+// collapse it to 0 the moment it would overlap the content. A plain `max-width`
+// query can't do this, because the margin also depends on the viewport *height*
+// via the scale. The `* 1000` turns the ">= 100px" test into a near-instant
+// 0 -> 100px step instead of a gradual taper.
 .slide-background::after {
-   content: "";
-   position: absolute;
-    top: 0;
-    right: 0;
-    width: 100px;
-    height: 100%;
-    background: #fedc00;
-    @media (max-width: 900px) {
-        width: 0px;
-    }
-}
-
-// Put in the background yellow shape for the title slide
-.slide-background.quarto-title-block::before {
     content: "";
     position: absolute;
     top: 0;
-    bottom: 0;
-    left: 0;
-    right: 100px;
-    z-index: -1; /* Place it behind the actual content */
-    clip-path: polygon(10% 70%, 70% 5%, 95% 40%, 80% 80%, 30% 95%, 10% 70%);
+    right: 0;
+    height: 100%;
     background: #fedc00;
-  }
+    --bar-margin: calc(
+        (var(--viewport-width, 100vw) - var(--slide-width, 1120px) * var(--slide-scale, 1)) / 2
+    );
+    width: clamp(0px, calc((var(--bar-margin) - 100px) * 1000), 100px);
+}
+
+// Print / PDF view (`?view=print`, which adds `.print-pdf` to <html>) uses a
+// paged layout: reveal does NOT set the --slide-scale / --viewport-width custom
+// properties above, and each slide is placed on a page only ~10% wider than the
+// slide itself (a fixed ~56px margin per side). That is narrower than the 100px
+// bar, so — by the same "only show it if it fits" rule — hide it here. Without
+// this the rule above falls back to `100vw` (the print window width) and the bar
+// reappears and overlaps the content. The title polygon is a background image,
+// not this pseudo-element, so it is unaffected.
+.print-pdf .slide-background::after {
+    display: none !important;
+}
+
+// In overview mode the thumbnails are packed at the logical 16:10 aspect with
+// no side margin, so the fixed-width yellow bar overlaps the content. Hide the
+// strip on ordinary slides so it doesn't cover the preview, but keep it on the
+// first slide of each stack (the H1 `.level1` section dividers) so the thumbnail
+// grid still reads as a styled deck rather than looking naked. Reveal copies
+// each section's class onto its generated `.slide-background`, so `.level1`
+// reliably marks the first slide of every stack. The title slide's yellow shape
+// is a `data-background-image` (see below), which reveal renders in the overview
+// thumbnails automatically, so it needs no rule here.
+.reveal.overview .slide-background::after {
+    display: none !important;
+}
+.reveal.overview .slide-background.level1::after {
+    display: block !important;
+}
+// Hide the floating logo (a single fixed element) in overview.
+.reveal.overview .slide-logo {
+    display: none !important;
+}
+
+// The yellow shape behind the title slide is a proper reveal background image,
+// set via `title-slide-attributes` in _quarto.yml (data-background-image:
+// /title-background.svg, size: contain). `contain` scales it uniformly, so it
+// keeps its aspect ratio and shrinks proportionally as the window narrows —
+// unlike the old CSS `clip-path` polygon, whose percentage points distorted
+// horizontally when the background box changed shape. The SVG viewBox is 16:9
+// (1920x1080) so it reproduces the previous look exactly on a widescreen.
 
 // In reveal-js you can have code that folds away to be hidden.
 // This will remove the button which lets you hide or reveal the code.

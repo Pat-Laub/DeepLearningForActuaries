@@ -1,0 +1,156 @@
+
+# Neural Additive Models on the Belgian Data {visibility="uncounted"}
+
+## From GAM to Neural Additive Model
+
+A _Neural Additive Model_ (NAM) is a GAM where each $f_j$ is a small neural network.
+
+$$
+  \hat{y}_i = g^{-1}\bigl( \beta_0 + f_1(x_{i,1}) + f_2(x_{i,2}) + \dots + f_p(x_{i,p}) \bigr)
+$$
+
+The `anam` package (_Actuarial NAM_) fits these with a Poisson/Gamma likelihood, an exposure offset, and optional _monotonicity_ constraints.
+
+## Encode the data for `anam`
+
+Continuous variables are standardised; categoricals are ordinal-encoded (each subnetwork learns its own effect).
+
+```{python}
+anam_num = ['ageph', 'bm', 'power', 'agec', 'lat', 'long']
+anam_cat = ['coverage', 'sex', 'fuel', 'use', 'fleet']
+anam_feats = anam_num + anam_cat
+
+# Carve a validation set out of the training data
+anam_train, anam_val = train_test_split(train_raw, test_size=0.25, random_state=2000)
+
+anam_ct = make_column_transformer(
+    ("passthrough", ["expo"]),
+    (OrdinalEncoder(), anam_cat),
+    remainder=StandardScaler(),
+    verbose_feature_names_out=False,
+)
+anam_ct.fit(anam_train.drop(columns='nclaims'))
+
+def anam_encode(df):
+    out = pd.DataFrame(
+        anam_ct.transform(df.drop(columns='nclaims')),
+        columns=anam_ct.get_feature_names_out(),
+    )
+    out['nclaims'] = df['nclaims'].values
+    return out
+
+anam_tr = anam_encode(anam_train)
+anam_va = anam_encode(anam_val)
+```
+
+## Configure the subnetworks
+
+Each feature gets its own subnetwork; we constrain `bm` (bonus-malus) to be _increasing_.
+
+```{python}
+anam_configs = {}
+for v in anam_feats:
+    if v in anam_cat:
+        anam_configs[v] = {
+            'type': 'categorical',
+            'num_categories': int(anam_tr[v].max()) + 1,
+        }
+    else:
+        anam_configs[v] = {
+            'type': 'continuous',
+            'bounds': (float(anam_tr[v].min()), float(anam_tr[v].max())),
+        }
+        if v == 'bm':
+            anam_configs[v]['monotonicity'] = 'increasing'
+```
+
+## Fit the model {.smaller}
+
+Exposure enters as an _offset_, not a feature: $\log \mu = \beta_0 + \sum_j f_j(x_j) + \log(\text{expo})$. A `smooth_features` penalty keeps the numeric shape functions from overfitting.
+
+```{python}
+#| eval: false
+model_anam = ANAM(anam_configs, num_layers=2, num_neurons=32, link='exp')
+
+train_x, train_y, train_off = prepare_data(
+    anam_tr, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
+val_x, val_y, val_off = prepare_data(
+    anam_va, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
+
+cfg = TrainingConfig(epochs=300, batch_size=5000, learning_rate=0.01,
+    lambda_smooth=1e-3, smooth_features=anam_num, patience=40, verbose=False)
+train_anam(model_anam, train_x, train_y, val_x, val_y,
+    train_offset=train_off, val_offset=val_off, config=cfg, loss_fn=poisson_nll)
+```
+
+```{python}
+#| echo: false
+torch.manual_seed(2000)
+model_anam = ANAM(anam_configs, num_layers=2, num_neurons=32, link='exp')
+
+anam_path = Path("models/anam_belgian.pt")
+train_x, train_y, train_off = prepare_data(
+    anam_tr, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
+
+if anam_path.exists():
+    model_anam.load_state_dict(torch.load(anam_path))
+else:
+    val_x, val_y, val_off = prepare_data(
+        anam_va, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
+    cfg = TrainingConfig(epochs=300, batch_size=5000, learning_rate=0.01,
+                         lambda_smooth=1e-3, smooth_features=anam_num,
+                         patience=40, verbose=False)
+    train_anam(model_anam, train_x, train_y, val_x, val_y,
+        train_offset=train_off, val_offset=val_off, config=cfg, loss_fn=poisson_nll)
+    anam_path.parent.mkdir(exist_ok=True)
+    torch.save(model_anam.state_dict(), anam_path)
+```
+
+::: {.content-visible unless-format="revealjs"}
+Contrast this with the black-box neural network later in these slides, which (incorrectly) feeds `expo` in as an ordinary input feature. Here exposure is handled correctly as a multiplicative offset, exactly as in a Poisson GLM.
+
+The full ANAM paper goes further than this teaching example: it runs a three-stage _variable selection_ (an ensemble of NAMs ranks main effects, then candidate pairwise interactions are added greedily), selecting `ageph`, `bm`, `power`, `lat`, `long`, `agec` and `fuel`, and tunes hyperparameters with Optuna over 2000 epochs. We use a smaller fixed configuration so the slides render quickly.
+:::
+
+## Reading the shape functions {.smaller}
+
+Each curve is that feature's contribution to $\log \mu$; back on the original scale, $\exp(f_j)$ is a _multiplier_ on the expected claim count.
+
+```{python}
+#| code-fold: true
+# Standardised grid -> original units, so axes read in real-world values
+means = anam_train[anam_num].mean()
+stds = anam_train[anam_num].std(ddof=0)
+
+def anam_shape_plot(features, axes):
+    for ax, v in zip(np.ravel(axes), features):
+        lo, hi = anam_configs[v]['bounds']
+        grid = torch.linspace(lo, hi, 100)
+        with torch.no_grad():
+            vals = model_anam.get_shape_function(v, grid).numpy()
+        x = grid.numpy() * stds[v] + means[v]
+        ax.plot(x, vals)
+        ax.axhline(0, color='grey', lw=0.5)
+        ax.set_title(v); ax.set_xlabel(v); ax.set_ylabel('Contribution to log-mean')
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.2))
+anam_shape_plot(['ageph', 'bm', 'power'], axes)
+plt.tight_layout()
+```
+
+::: {.content-visible unless-format="revealjs"}
+The `ageph` effect is U-shaped (young and older drivers are riskier), `bm` increases monotonically as we constrained it to, and higher `power` raises expected claims. Unlike the GLM's forced exponential-in-age curve, the NAM _learns_ the shape from the data while staying additive and hence interpretable.
+:::
+
+## More shape functions
+
+```{python}
+#| code-fold: true
+fig, axes = plt.subplots(1, 3, figsize=(12, 3.2))
+anam_shape_plot(['agec', 'lat', 'long'], axes)
+plt.tight_layout()
+```
+
+::: {.content-visible unless-format="revealjs"}
+`lat`/`long` capture a smooth spatial effect, and `agec` (vehicle age) has a mild, non-linear contribution. Because effects are additive, we can plot and interpret each one in isolation --- the appeal of an _inherently interpretable_ neural network.
+:::

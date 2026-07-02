@@ -1,5 +1,47 @@
 
-# Illustrative Example 
+# Illustrative Example
+
+## Package imports
+
+```{python}
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+import numpy.random as rnd
+import pandas as pd
+
+import geopandas as gpd
+import contextily as ctx
+from shapely.geometry import Point
+import plotly.graph_objects as go
+
+import keras
+from keras.metrics import SparseTopKCategoricalAccuracy
+from keras.models import Sequential, Model
+from keras.layers import Dense, Input
+from keras.callbacks import EarlyStopping
+
+from sklearn import tree, set_config
+from sklearn.preprocessing import LabelEncoder, OrdinalEncoder, StandardScaler, OneHotEncoder
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.compose import make_column_transformer
+from sklearn.metrics import mean_poisson_deviance, mean_absolute_error
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.inspection import PartialDependenceDisplay
+set_config(transform_output="pandas")
+
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+from pygam import PoissonGAM, s, f
+
+from anam import (
+    ANAM, train_anam, TrainingConfig, prepare_data,
+    poisson_nll, plot_shape_function,
+)
+```
 
 ## First attempt at NLP task
 
@@ -133,7 +175,7 @@ The model performs very well on both the training and validation data.
 What words are actually important to making these predictions?
 :::
 
-## Permutation importance algorithm {.smaller}
+## Permutation importance algorithm
 
 Taken directly from scikit-learn documentation: 
 
@@ -239,14 +281,11 @@ We can try building a simpler model using only the most important features. Here
 :::
 
 ```{python}
-from sklearn import tree                                                #<1>
-
-clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)     #<2>
-clf.fit(X_train_bow[:, best_input_inds], y_train);                      #<3>
+clf = tree.DecisionTreeClassifier(random_state=0, max_leaf_nodes=3)     #<1>
+clf.fit(X_train_bow[:, best_input_inds], y_train);                      #<2>
 ```
-1. Imports `tree` class from `sklearn`
-2. Specifies a decision tree with 3 leaf nodes. `max_leaf_nodes=3` ensures that the fitted tree will have at most 3 leaf nodes
-3. Fits the decision tree on the selected dataset. Here we only select the `best_input_inds` columns from the train set
+1. Specifies a decision tree with 3 leaf nodes. `max_leaf_nodes=3` ensures that the fitted tree will have at most 3 leaf nodes
+2. Fits the decision tree on the selected dataset. Here we only select the `best_input_inds` columns from the train set
 
 ```{python}
 print(clf.score(X_train_bow[:, best_input_inds], y_train))
@@ -264,8 +303,7 @@ tree.plot_tree(clf, feature_names=best_inputs, filled=True);
 
 ```{python}
 #| echo: false
-import graphviz
-dot_data = tree.export_graphviz(clf, out_file=None, 
+dot_data = tree.export_graphviz(clf, out_file=None,
             feature_names=best_inputs,  
             class_names=["1", "2", "3+"],
             rounded=True,  
