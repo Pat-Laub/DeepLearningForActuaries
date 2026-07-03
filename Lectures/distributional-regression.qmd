@@ -168,86 +168,293 @@ plt.ylabel("Density")
 plt.legend()
 ```
 
-## Traditional vs distributional regression
+## One model, many distributions
 
-Traditional:
-
-<br>
-
-::: columns
-
-::: {.column width="33%"}
-| 👤 | 🚗 | 🏎️ |
-|:---------:|:-------------:|:-----------:|
-| 35        | 12       | Sport       |
-:::
-
-::: {.column width="33%"}
-<div style="display:flex; align-items:center; justify-content:center;">
-  <span style="font-size:2em; line-height:1;">→</span>
-  <div style="
-      border:2px solid black;
-      padding:0.5em 1em;
-      margin:0 0.5em;
-      font-weight:bold;
-      white-space:nowrap;
-    ">
-    Model
-  </div>
-  <span style="font-size:2em; line-height:1;">→</span>
-</div>
-:::
-
-::: {.column width="33%"}
-$1582.48$
-:::
-
-:::
-
-<br>
-
-Distributional:
-
-<br>
-
-::: columns
-
-::: {.column width="33%"}
-| 👤 | 🚗 | 🏎️ |
-|:---------:|:-------------:|:-----------:|
-| 35        | 12       | Sport       |
-:::
-
-::: {.column width="33%"}
-<div style="display:flex; align-items:center; justify-content:center;">
-  <span style="font-size:2em; line-height:1;">→</span>
-  <div style="
-      border:2px solid black;
-      padding:0.5em 1em;
-      margin:0 0.5em;
-      font-weight:bold;
-      white-space:nowrap;
-    ">
-    Model
-  </div>
-  <span style="font-size:2em; line-height:1;">→</span>
-</div>
-:::
-
-::: {.column width="33%"}
-
-<!-- $\displaystyle \mathcal{N}\bigl(1582.48,\;\sigma^2\bigr)$ -->
+Feed in a _batch_ of customers and the model returns a predicted claim-size distribution for _each_ one.
 
 ```{python}
 #| echo: false
-#| fig-cap: ""
-#| style: "margin-top: -1.5em;"
-draw_gamma_distribution(1582.48, 2, "black", 4) 
-plt.axvline(1582.48, color="black", linestyle="--", label="Mean");
+import matplotlib.patches as mpatches
+
+batch = [
+    (25, 3, "Sedan", 1200),   # (driver age, car age, type, mean claim)
+    (40, 5, "SUV", 2500),
+    (19, 1, "Sports", 3800),
+    (60, 10, "Hatch", 800),
+]
+xgrid = numpy.linspace(0, 6000, 400)
+GSHAPE = 2  # gamma shape parameter used for every customer
+
+
+ARROW_INSET = 0.01  # gap between an arrow tip and the box it points at
+
+
+def _arrow(bg, x0, x1, y=0.5):
+    bg.annotate("", xy=(x1, y), xytext=(x0, y),
+                arrowprops=dict(arrowstyle="-|>", lw=1.5, color="black"))
+
+
+def _data_table(fig, pos, rows):
+    # bbox=[0, 0, 1, 1] makes the table fill its axes exactly, so its visible
+    # edges match `pos` (arrows can connect cleanly) and every row is tall
+    # enough for the two-line headers. Returns the visible right edge.
+    ax = fig.add_axes(pos); ax.axis("off")
+    tbl = ax.table(cellText=rows, colLabels=["Driver\nage", "Car\nage", "Type"],
+                   cellLoc="center", bbox=[0, 0, 1, 1])
+    tbl.auto_set_font_size(False); tbl.set_fontsize(11)
+    for (r, _c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#AAAAAA")
+        if r == 0:
+            cell.set_facecolor("#ECECEC"); cell.set_text_props(weight="bold")
+    return pos[0] + pos[2]
+
+
+def _pdf_positions(n, x0, x1, ybottom=0.14, ytop=0.86, gap=0.025):
+    each = (ytop - ybottom - (n - 1) * gap) / n
+    return [(x0, ytop - i * (each + gap) - each, x1 - x0, each) for i in range(n)]
+
+
+def draw_pipeline_diagram(with_params=False):
+    n = len(batch)
+    fig = plt.figure(figsize=(11, 5.2))
+    bg = fig.add_axes([0, 0, 1, 1])
+    bg.set_xlim(0, 1); bg.set_ylim(0, 1); bg.axis("off")
+
+    # Columns are laid out with equal gaps so every arrow has the same length.
+    if with_params:
+        table_pos = [0.02, 0.30, 0.20, 0.40]
+        box_l, box_r = 0.33, 0.46
+        param_x0, param_x1 = 0.57, 0.71
+        pdf_x0, pdf_x1 = 0.82, 0.99
+    else:
+        table_pos = [0.04, 0.30, 0.24, 0.40]
+        box_l, box_r = 0.39, 0.55
+        pdf_x0, pdf_x1 = 0.66, 0.99
+    box_cx = (box_l + box_r) / 2
+
+    # left column: the batch of input data
+    table_r = _data_table(fig, table_pos,
+                          [[str(a), str(c), t] for (a, c, t, _) in batch])
+    bg.text((table_pos[0] + table_r) / 2, 0.93, "Batch of data",
+            ha="center", va="bottom", fontsize=12, weight="bold")
+
+    # middle column: the neural network box
+    box = mpatches.FancyBboxPatch(
+        (box_l, 0.5 - 0.17), box_r - box_l, 0.34,
+        boxstyle="round,pad=0.008,rounding_size=0.02",
+        linewidth=1.5, edgecolor="black", facecolor=COLOURS[0], alpha=0.55)
+    bg.add_patch(box)
+    bg.text(box_cx, 0.5, "Neural\nnetwork", ha="center", va="center",
+            fontsize=13, weight="bold")
+
+    # right column: one predicted distribution per input row
+    positions = _pdf_positions(n, pdf_x0, pdf_x1)
+    for i, pos in enumerate(positions):
+        ax = fig.add_axes(pos)
+        y = stats.gamma.pdf(xgrid, a=GSHAPE, scale=batch[i][3] / GSHAPE)
+        ax.plot(xgrid, y, color=COLOURS[i], lw=1.8)
+        ax.fill_between(xgrid, y, color=COLOURS[i], alpha=0.25)
+        ax.set_yticks([]); ax.set_xlim(0, 6000)
+        for s in ("left", "right", "top"):
+            ax.spines[s].set_visible(False)
+        if i < n - 1:
+            ax.set_xticks([]); ax.spines["bottom"].set_visible(False)
+        else:
+            ax.set_xticks([0, 3000, 6000]); ax.tick_params(labelsize=8)
+    bg.text((pdf_x0 + pdf_x1) / 2, 0.93, "Distributions",
+            ha="center", va="bottom", fontsize=12, weight="bold")
+    bg.text((pdf_x0 + pdf_x1) / 2, 0.045, "Claim size",
+            ha="center", va="center", fontsize=9)
+
+    if with_params:
+        # extra column: the parameters the network emits for each row
+        for i, pos in enumerate(positions):
+            cy = pos[1] + pos[3] / 2
+            bg.text((param_x0 + param_x1) / 2, cy,
+                    f"$\\alpha={GSHAPE}$\n$\\beta={batch[i][3] / GSHAPE:.0f}$",
+                    ha="center", va="center", fontsize=11,
+                    bbox=dict(boxstyle="round,pad=0.3", fc="white",
+                              ec=COLOURS[i], lw=1.6))
+        bg.text((param_x0 + param_x1) / 2, 0.93, "Parameters",
+                ha="center", va="bottom", fontsize=12, weight="bold")
+        _arrow(bg, table_r + ARROW_INSET, box_l - ARROW_INSET)
+        _arrow(bg, box_r + ARROW_INSET, param_x0 - ARROW_INSET)
+        _arrow(bg, param_x1 + ARROW_INSET, pdf_x0 - ARROW_INSET)
+    else:
+        _arrow(bg, table_r + ARROW_INSET, box_l - ARROW_INSET)
+        _arrow(bg, box_r + ARROW_INSET, pdf_x0 - ARROW_INSET)
+
+    plt.show()
+
+
+draw_pipeline_diagram(with_params=False)
 ```
+
+::: {.content-visible unless-format="revealjs"}
+The same network is applied to every row of the batch, and for each customer it returns a full predicted claim-size distribution rather than a single number.
 :::
 
+## Predicting distribution parameters
+
+In practice the network doesn't emit a whole curve --- it emits the _parameters_ of a chosen distribution family, which then define the distribution.
+
+```{python}
+#| echo: false
+draw_pipeline_diagram(with_params=True)
+```
+
+::: {.content-visible unless-format="revealjs"}
+Here the network maps each input $\mathbf{x}_i$ to a parameter vector $\theta_i = (\alpha_i, \beta_i)$. Those parameters are then plugged into the assumed family (a gamma here) to give the predicted distribution for customer $i$.
 :::
+
+## Anatomy of a predicted distribution
+
+From a _single_ predicted distribution we can read off the _mean_, the _variance_, and high _quantiles_ (e.g. Value-at-Risk).
+
+```{python}
+#| echo: false
+import matplotlib.patches as mpatches
+
+# A multimodal predicted claim-size distribution (mixture of gammas)
+mix = [
+    (0.45, stats.gamma(a=15, scale=60)),    # mode near 840
+    (0.35, stats.gamma(a=25, scale=100)),   # mode near 2400
+    (0.20, stats.gamma(a=30, scale=140)),   # mode near 4060
+]
+xx = numpy.linspace(0, 6500, 5000)
+pdf = sum(w * c.pdf(xx) for w, c in mix)
+cdf = sum(w * c.cdf(xx) for w, c in mix)
+
+mean = sum(w * c.mean() for w, c in mix)
+ex2 = sum(w * (c.var() + c.mean() ** 2) for w, c in mix)
+sd = numpy.sqrt(ex2 - mean ** 2)
+
+quantiles = [0.90, 0.95, 0.99]
+qx = numpy.interp(quantiles, cdf, xx)
+
+fig, ax = plt.subplots(figsize=(8, 4.3))
+ymax = pdf.max()
+ax.plot(xx, pdf, color=COLOURS[3], lw=2.2)
+ax.fill_between(xx, pdf, color=COLOURS[3], alpha=0.15)
+
+# the mean: label sits to the right of the line so the line doesn't cross it
+ax.axvline(mean, color="black", lw=2, ls="--")
+ax.text(mean + 90, ymax * 1.16, f"Mean = {mean:,.0f}", ha="left", va="top",
+        fontsize=10, weight="bold")
+
+# the variance as a +/- 1 SD span; the label floats above the arrow, to the
+# right of the mean line and clear of both modes
+ax.axvspan(mean - sd, mean + sd, color="0.5", alpha=0.12)
+ax.annotate("", xy=(mean + sd, ymax * 0.42), xytext=(mean - sd, ymax * 0.42),
+            arrowprops=dict(arrowstyle="<|-|>", color="0.4", lw=1.8))
+ax.text(mean + 120, ymax * 0.62, f"$\\pm$1 SD  (Var $=$ {sd ** 2:,.0f})",
+        ha="left", va="bottom", fontsize=9, color="0.35")
+
+# a few high quantiles (staggered vertically so the labels don't collide)
+qheights = [0.95, 0.75, 0.55]
+qcolours = [COLOURS[0], COLOURS[2], COLOURS[1]]
+for q, xv, h, col in zip(quantiles, qx, qheights, qcolours):
+    ax.axvline(xv, color=col, lw=1.8, ls=":")
+    ax.annotate(f"Q{int(q * 100)} = {xv:,.0f}", xy=(xv, ymax * h),
+                xytext=(xv + 250, ymax * h), fontsize=9, color=col,
+                weight="bold", va="center",
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec=col, lw=1.2))
+
+ax.set_xlim(0, 6500)
+ax.set_ylim(0, ymax * 1.22)
+ax.set_yticks([])
+ax.set_xlabel("Claim size")
+ax.set_ylabel("Density")
+plt.show()
+```
+
+::: {.content-visible unless-format="revealjs"}
+A predicted distribution need not be a tidy unimodal shape. This multimodal example still yields a well-defined mean and variance, and the high quantiles (here the 90%, 95% and 99% points) are exactly the risk measures actuaries care about, e.g. Value-at-Risk.
+:::
+
+## Traditional vs distributional regression
+
+Same inputs, same model --- the difference is what comes _out_.
+
+```{python}
+#| echo: false
+import matplotlib.patches as mpatches
+
+PREDICTION = 1582.48
+_XG = numpy.linspace(0, 6000, 400)
+_ROW = [["35", "12", "Sport"]]
+_COLS = ["Driver\nage", "Car\nage", "Type"]
+
+
+def _reg_arrow(bg, x0, x1, y):
+    bg.annotate("", xy=(x1, y), xytext=(x0, y),
+                arrowprops=dict(arrowstyle="-|>", lw=1.5, color="black"))
+
+
+def _reg_lane(fig, bg, ycen, heading, caption, draw_output):
+    # Equal gaps between table, box and output so both arrows match in length.
+    table_pos = [0.04, ycen - 0.09, 0.24, 0.18]
+    box_l, box_r = 0.39, 0.55
+    output_pos = [0.66, ycen - 0.075, 0.33, 0.15]
+    box_cx = (box_l + box_r) / 2
+
+    # left: the (shared) input row. bbox=[0, 0, 1, 1] fills the axes so the
+    # visible edges match `table_pos` and the two-line header row fits.
+    axt = fig.add_axes(table_pos); axt.axis("off")
+    tbl = axt.table(cellText=_ROW, colLabels=_COLS, cellLoc="center", bbox=[0, 0, 1, 1])
+    tbl.auto_set_font_size(False); tbl.set_fontsize(11)
+    for (r, _c), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#AAAAAA")
+        if r == 0:
+            cell.set_facecolor("#ECECEC"); cell.set_text_props(weight="bold")
+    table_r = table_pos[0] + table_pos[2]
+
+    # middle: the model box
+    box = mpatches.FancyBboxPatch((box_l, ycen - 0.085), box_r - box_l, 0.17,
+        boxstyle="round,pad=0.008,rounding_size=0.02", linewidth=1.5,
+        edgecolor="black", facecolor=COLOURS[0], alpha=0.55)
+    bg.add_patch(box)
+    bg.text(box_cx, ycen, "Model", ha="center", va="center", fontsize=13, weight="bold")
+
+    _reg_arrow(bg, table_r + 0.01, box_l - 0.01, ycen)
+    _reg_arrow(bg, box_r + 0.01, output_pos[0] - 0.01, ycen)
+
+    # right: whatever the model emits
+    axo = fig.add_axes(output_pos)
+    draw_output(axo)
+    axo.set_xlim(0, 6000); axo.set_xticks([0, 3000, 6000]); axo.tick_params(labelsize=8)
+    axo.set_yticks([])
+    for s in ("left", "right", "top"):
+        axo.spines[s].set_visible(False)
+
+    bg.text(0.48, ycen + 0.20, heading, ha="center", va="bottom", fontsize=15, weight="bold")
+    bg.text(output_pos[0] + output_pos[2] / 2, ycen - 0.115, caption,
+            ha="center", va="top", fontsize=10, style="italic", color="0.35")
+
+
+def _traditional_output(ax):
+    ax.set_ylim(0, 1.28)
+    ax.vlines(PREDICTION, 0, 1, color="black", lw=2.5)
+    ax.plot(PREDICTION, 1, "o", color="black", ms=8)
+    ax.text(PREDICTION, 1.08, r"\$1,582", ha="center", va="bottom", fontsize=12, weight="bold")
+
+
+def _distributional_output(ax):
+    y = stats.gamma.pdf(_XG, a=2, scale=PREDICTION / 2)
+    ax.plot(_XG, y, color=COLOURS[2], lw=2)
+    ax.fill_between(_XG, y, color=COLOURS[2], alpha=0.25)
+    ax.axvline(PREDICTION, color="black", ls="--", lw=1.5)
+    ax.set_ylim(0, y.max() * 1.28)
+
+
+fig = plt.figure(figsize=(10, 5.6))
+bg = fig.add_axes([0, 0, 1, 1]); bg.set_xlim(0, 1); bg.set_ylim(0, 1); bg.axis("off")
+_reg_lane(fig, bg, 0.72, "Traditional regression", "a single number", _traditional_output)
+bg.plot([0.03, 0.97], [0.485, 0.485], color="#CCCCCC", lw=1.2, ls="--")
+_reg_lane(fig, bg, 0.22, "Distributional regression", "a whole distribution",
+          _distributional_output)
+plt.show()
+```
 
 ::: {.content-visible unless-format="revealjs"}
 While traditional models give a single prediction (expected value), distributional regression models give a distribution of predictions.
@@ -486,27 +693,17 @@ Each example below follows the same maximum-likelihood recipe:
    L(\boldsymbol{\beta}) = \prod_{i=1}^n f(y_i; \theta_i)
    $$
 
-3. [Take logs to get the log-likelihood.]{.step-loglik}
+3. Take logs to get the [log-likelihood]{.step-loglik} and negate it to get [negative log likelihood.]{.step-nll}
 
    $$
-   \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \log f(y_i; \theta_i)
+   \ell(\boldsymbol{\beta}) = \sum_{i=1}^n \log f(y_i; \theta_i) \quad \Rightarrow \text{NLL}(\boldsymbol{\beta}) = -\ell(\boldsymbol{\beta})
    $$
 
-4. [Negate it to get the objective to minimise.]{.step-nll}
-
-   $$
-   \text{NLL}(\boldsymbol{\beta}) = -\ell(\boldsymbol{\beta})
-   $$
-
-5. [Drop constants and rescale to get the model loss.]{.step-loss}
+4. [Drop constants and rescale to get the model loss.]{.step-loss}
 
    $$
    \text{loss}(\boldsymbol{y}, \hat{\boldsymbol{y}})
    $$
-
-::: {.fragment}
-Changing the distributional assumption changes $f$, so it changes the loss.
-:::
 
 ## Traditional regression
 
@@ -990,7 +1187,7 @@ plt.ylabel("Stock Price");
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-This plot contains 300 simulated forecasts of the stock price over time. We see that the variance in the predictions increases with time. This makes sense as we are accumulating the random components over time.
+This plot contains 100 simulated forecasts of the stock price over time. We see that the variance in the predictions increases with time. This makes sense as we are accumulating the random components over time.
 :::
 
 ## 95% "prediction intervals"
@@ -1445,18 +1642,18 @@ def gamma_loss(y_true, y_pred):                                         #<1>
     return keras.ops.mean(keras.ops.log(y_pred) + y_true / y_pred)
 
 random.seed(1)
-deep_glm = Sequential([
-    Dense(64, activation="leaky_relu"),
-    Dense(64, activation="leaky_relu"),
-    Dense(1, activation="exponential")                                  #<2>
-])
+inputs = Input(shape=X_train.shape[1:])
+x = Dense(64, activation="leaky_relu")(inputs)
+x = Dense(64, activation="leaky_relu")(x)
+mu = Dense(1, activation="exponential")(x) + 1e-6                       #<2>
+deep_glm = Model(inputs, mu)
 deep_glm.compile(optimizer="adam", loss=gamma_loss)
 deep_glm.fit(X_train, y_train, epochs=100, batch_size=64, verbose=0,
     callbacks=[EarlyStopping(patience=10, restore_best_weights=True)],
     validation_split=0.2);
 ```
 1. The Gamma negative log-likelihood (the dispersion is a nuisance parameter) --- identical to the GLM's loss.
-2. The `exponential` activation plays the role of the GLM's inverse log link.
+2. The `exponential` activation plays the role of the GLM's inverse log link; the `+ 1e-6` keeps the mean strictly positive so it can't underflow to _exactly_ 0, which would otherwise make the loss's `log(y_pred)` and `y_true / y_pred` blow up to `NaN`.
 
 ::: {.content-visible unless-format="revealjs"}
 Unlike the GLM, the mean can be an arbitrary non-linear function of the inputs. Unlike the MDN (coming up), the response is still a single Gamma distribution with one constant dispersion. The CANN sits in between: it keeps the GLM and _adds_ a network on top.
@@ -1552,13 +1749,13 @@ nn_part = Dense(1, activation='linear',
                     bias_initializer="zeros")(x)                        #<3>
 
 # Combine GLM and CANN estimates
-mu = keras.ops.exp(glm_part + nn_part)                                  #<4>
+mu = keras.ops.exp(glm_part + nn_part) + 1e-6                           #<4>
 cann = Model(inputs, mu)
 ```
 1. Fit a GLM directly to the train data, and extract the fitted coefficients.
 2. Add a `Dense` layer with just one neuron, to store the model output (before inverse link function) from the GLM. The linear activation is used to make sure that the output is a linear combination of inputs. The weights are set to be non-trainable, hence the values obtained during GLM fitting will not change during the neural network training process. `kernel_initializer=Constant(glm_weights)` and `bias_initializer=Constant(glm_bias)` ensures that weights are initialized with the optimal values estimated from GLM fit. 
 3. Specify the neural network layers (1 dense hidden layer and the output neuron). The output neuron is initialised with _zero_ weights and bias, so that at the start of training the network part contributes nothing and the CANN's predictions are exactly those of the fitted GLM. Gradient descent then only _adds_ the structure the GLM missed (cf. the initialisation in @schelldorfer2019nesting).
-4. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate.
+4. Add the GLM contribution to the neural network output and exponentiate to get the mean estimate; the `+ 1e-6` stops the mean underflowing to _exactly_ 0 and turning the loss into `NaN`.
 
 Since this CANN predicts Gamma distributions, we reuse the same `gamma_loss` from the deep GLM.
 
@@ -1788,9 +1985,9 @@ draw_mdn_schematic(
 Suppose there are two types of claims:
 
 - Type I: $Y_1|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_1(\boldsymbol{x}), \beta_1(\boldsymbol{x}))$ and,
-- Type II: $Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))$,
+- Type II: $Y_2|\boldsymbol{X}=\boldsymbol{x}\sim \text{Gamma}(\alpha_2(\boldsymbol{x}), \beta_2(\boldsymbol{x}))$.
 
-so the claim amount $Y|\boldsymbol{X}=\boldsymbol{x}$ has density
+(Note the new gamma parametrisation.) So the claim amount $Y|\boldsymbol{X}=\boldsymbol{x}$ has density
 $$
     \begin{align*}
         f_{Y|\boldsymbol{X}}(y|\boldsymbol{x})
@@ -1803,6 +2000,14 @@ $$
     \text{MDN}(\boldsymbol{x}; \boldsymbol{w}^*)
     = \bigl( \pi_1, \pi_2,\ \alpha_1, \alpha_2,\ \beta_1, \beta_2 \bigr).
 $$
+
+::: {.content-visible unless-format="revealjs"}
+Watch the parameterisation. The Gamma GLM earlier used the _mean–dispersion_ form $(\mu, \phi)$; from here on we use the _shape–rate_ form $(\alpha, \beta)$ that `torch.distributions.Gamma` assumes, whose density is
+$$
+f(y; \alpha, \beta) = \frac{\beta^{\alpha}}{\Gamma(\alpha)}\, y^{\alpha - 1}\, \mathrm{e}^{-\beta y}, \qquad y > 0.
+$$
+So in the code `concentration` is the shape $\alpha$ and `rate` is $\beta$, giving mean $\alpha/\beta$. It is the _same_ distribution reparameterised: $\mu = \alpha/\beta$ and $\phi = 1/\alpha$.
+:::
 
 ::: footer
 Gamma MDNs for insurance claim amounts: @delong2021gamma; MDNs for loss reserving: @al2022stochastic.
@@ -1841,14 +2046,14 @@ x = Dense(64, activation="relu")(inputs)                                        
 x = Dense(64, activation="relu")(x)
 
 pis = Dense(n_components, activation="softmax")(x)                                       #<2>
-alphas = Dense(n_components, activation="softplus")(x)
-betas = Dense(n_components, activation="softplus")(x)
+alphas = Dense(n_components, activation="softplus")(x) + 1e-6
+betas = Dense(n_components, activation="softplus")(x) + 1e-6
 
 outputs = Concatenate()([pis, alphas, betas])                                            #<3>
 gamma_mdn = Model(inputs, outputs)
 ```
 1. Specifies the shared hidden layers of the neural network using Keras' functional API.
-2. Specifies the output heads. `softmax` is used for the $\pi$ values as they must sum to 1. `softplus` is used for the $\alpha$'s and $\beta$'s as they must be positive.
+2. Specifies the output heads. `softmax` is used for the $\pi$ values as they must sum to 1. `softplus` is used for the $\alpha$'s and $\beta$'s as they must be positive. We add a tiny constant (`1e-6`) because `softplus` can underflow to _exactly_ 0, which would make the Gamma parameters invalid and the log-likelihood `NaN`.
 3. Concatenates the three heads into a single output of $3 \times K$ values (mixing weights, shapes, rates), which the loss function will split apart.
 
 ## Loss & training
