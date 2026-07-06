@@ -39,6 +39,7 @@ nn_model = Sequential(
 
 ```{python}
 #| eval: false
+#| label: fit-nn-belgian
 nn_model.compile(
     optimizer="adam",
     loss="poisson",
@@ -52,6 +53,7 @@ history = nn_model.fit(X_train_nn, y_train_nn,
 
 ```{python}
 #| echo: false
+#| label: fit-nn-belgian-cache
 if not Path("models/nn_model_belgian.keras").exists():
     nn_model.compile(
         optimizer="adam",
@@ -106,7 +108,25 @@ print(f"GLM MAE                   : {mean_absolute_error(y_test_raw, y_pred_glm)
 ## Permutation importance example
 
 ```{python}
+#| eval: false
+#| label: perm-test-nn-belgian
 scores = permutation_test(nn_model, X_train_nn.values, y_train_nn)
+plt.plot(scores[:,0], label='Loss')
+plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
+```
+
+```{python}
+#| echo: false
+#| output: false
+#| label: perm-test-nn-belgian-cache
+scores = load_or_compute(
+    "models/perm_test_nn_belgian.pkl",
+    permutation_test, nn_model, X_train_nn.values, y_train_nn,
+)
+```
+
+```{python}
+#| echo: false
 plt.plot(scores[:,0], label='Loss')
 plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
 ```

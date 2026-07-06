@@ -135,6 +135,7 @@ def build_model(num_features, num_cats):
 
 ```{python}
 #| eval: false
+#| label: fit-nlp-fail-model
 num_features = X_train_bow.shape[1]
 num_cats = df_raw["NUM_VEHICLES"].nunique()
 model = build_model(num_features, num_cats)
@@ -147,6 +148,7 @@ model.summary()
 ```{python}
 #| echo: false
 #| warning: false
+#| label: fit-nlp-fail-model-cache
 num_features = X_train_bow.shape[1]
 num_cats = df_raw["NUM_VEHICLES"].nunique()
 model = build_model(num_features, num_cats)
@@ -232,9 +234,21 @@ def permutation_test(model, X, y, num_reps=1, seed=42):
 ## Run the permutation test
 
 ```{python}
+#| eval: false
+#| label: perm-test-nlp-fail
 all_perm_scores = permutation_test(model, X_val_bow, y_val) #<1>
 ```
 1. The `permutation_test`, aims to evaluate the model's performance on different sets of unseen data. The idea here is to shuffle the order of the _val_ set, and compare the `model` performance.
+
+```{python}
+#| echo: false
+#| output: false
+#| label: perm-test-nlp-fail-cache
+all_perm_scores = load_or_compute(
+    "models/perm_test_nlp_fail.pkl",
+    permutation_test, model, X_val_bow, y_val,
+)
+```
 
 <!-- ## Plot the permutated accuracies -->
 
@@ -382,12 +396,14 @@ es = EarlyStopping(patience=1, restore_best_weights=True,
 
 ```{python}
 #| eval: false
+#| label: fit-nlp-fixed-model
 model.fit(X_train_bow, y_train, epochs=10,
     callbacks=[es], validation_data=(X_val_bow, y_val), verbose=0);
 ```
 
 ```{python}
 #| echo: false
+#| label: fit-nlp-fixed-model-cache
 if not Path("models/nlp-fixed-model.keras").exists():
     model.fit(X_train_bow, y_train, epochs=10, callbacks=es,
         validation_data=(X_val_bow, y_val), verbose=0)
@@ -409,8 +425,26 @@ model.evaluate(X_val_bow, y_val, verbose=0)
 ## Permutation importance accuracy plot
 
 ```{python}
+#| eval: false
 #| code-fold: true
+#| label: perm-test-nlp-fixed
 perm_scores = permutation_test(model, X_val_bow, y_val)[:,1]
+plt.plot(perm_scores)
+plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
+```
+
+```{python}
+#| echo: false
+#| output: false
+#| label: perm-test-nlp-fixed-cache
+perm_scores = load_or_compute(
+    "models/perm_test_nlp_fixed.pkl",
+    permutation_test, model, X_val_bow, y_val,
+)[:,1]
+```
+
+```{python}
+#| echo: false
 plt.plot(perm_scores)
 plt.xlabel("Input index"); plt.ylabel("Accuracy when shuffled");
 ```

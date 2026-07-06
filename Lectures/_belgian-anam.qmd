@@ -1,4 +1,3 @@
-
 # Neural Additive Models on the Belgian Data {visibility="uncounted"}
 
 ## From GAM to Neural Additive Model
@@ -9,148 +8,294 @@ $$
   \hat{y}_i = g^{-1}\bigl( \beta_0 + f_1(x_{i,1}) + f_2(x_{i,2}) + \dots + f_p(x_{i,p}) \bigr)
 $$
 
-The `anam` package (_Actuarial NAM_) fits these with a Poisson/Gamma likelihood, an exposure offset, and optional _monotonicity_ constraints.
+The `anam` package (_Actuarial NAM_) fits these with a Poisson/Gamma likelihood, an exposure offset, optional _monotonicity_ constraints, and automatic selection of features and pairwise interactions.
 
-## Encode the data for `anam`
+## Specify the model
 
-Continuous variables are standardised; categoricals are ordinal-encoded (each subnetwork learns its own effect).
+`anam` works on the raw data: continuous vs categorical is read off the dtypes, and the standardising/encoding happens inside the model. A `smoothness` penalty keeps the continuous shape functions from overfitting.
 
 ```{python}
-anam_num = ['ageph', 'bm', 'power', 'agec', 'lat', 'long']
-anam_cat = ['coverage', 'sex', 'fuel', 'use', 'fleet']
-anam_feats = anam_num + anam_cat
+from anam import ANAM
 
 # Carve a validation set out of the training data
 anam_train, anam_val = train_test_split(train_raw, test_size=0.25, random_state=2000)
 
-anam_ct = make_column_transformer(
-    ("passthrough", ["expo"]),
-    (OrdinalEncoder(), anam_cat),
-    remainder=StandardScaler(),
-    verbose_feature_names_out=False,
+model_anam = ANAM(
+    distribution="poisson",         # implies log link + Poisson NLL
+    exposure="expo",                # offset: log(expo) added to the linear predictor
+    monotone={"bm": "increasing"},  # bonus-malus effect must be increasing
+    smoothness=1e-3,                # roughness penalty on continuous shape functions
 )
-anam_ct.fit(anam_train.drop(columns='nclaims'))
-
-def anam_encode(df):
-    out = pd.DataFrame(
-        anam_ct.transform(df.drop(columns='nclaims')),
-        columns=anam_ct.get_feature_names_out(),
-    )
-    out['nclaims'] = df['nclaims'].values
-    return out
-
-anam_tr = anam_encode(anam_train)
-anam_va = anam_encode(anam_val)
-```
-
-## Configure the subnetworks
-
-Each feature gets its own subnetwork; we constrain `bm` (bonus-malus) to be _increasing_.
-
-```{python}
-anam_configs = {}
-for v in anam_feats:
-    if v in anam_cat:
-        anam_configs[v] = {
-            'type': 'categorical',
-            'num_categories': int(anam_tr[v].max()) + 1,
-        }
-    else:
-        anam_configs[v] = {
-            'type': 'continuous',
-            'bounds': (float(anam_tr[v].min()), float(anam_tr[v].max())),
-        }
-        if v == 'bm':
-            anam_configs[v]['monotonicity'] = 'increasing'
-```
-
-## Fit the model {.smaller}
-
-Exposure enters as an _offset_, not a feature: $\log \mu = \beta_0 + \sum_j f_j(x_j) + \log(\text{expo})$. A `smooth_features` penalty keeps the numeric shape functions from overfitting.
-
-```{python}
-#| eval: false
-model_anam = ANAM(anam_configs, num_layers=2, num_neurons=32, link='exp')
-
-train_x, train_y, train_off = prepare_data(
-    anam_tr, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
-val_x, val_y, val_off = prepare_data(
-    anam_va, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
-
-cfg = TrainingConfig(epochs=300, batch_size=5000, learning_rate=0.01,
-    lambda_smooth=1e-3, smooth_features=anam_num, patience=40, verbose=False)
-train_anam(model_anam, train_x, train_y, val_x, val_y,
-    train_offset=train_off, val_offset=val_off, config=cfg, loss_fn=poisson_nll)
 ```
 
 ```{python}
 #| echo: false
-torch.manual_seed(2000)
-model_anam = ANAM(anam_configs, num_layers=2, num_neurons=32, link='exp')
-
+#| label: fit-anam-belgian-cache
 anam_path = Path("models/anam_belgian.pt")
-train_x, train_y, train_off = prepare_data(
-    anam_tr, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
 
 if anam_path.exists():
-    model_anam.load_state_dict(torch.load(anam_path))
+    model_anam = ANAM.load(anam_path)
 else:
-    val_x, val_y, val_off = prepare_data(
-        anam_va, anam_feats, 'nclaims', categorical_features=anam_cat, offset='expo')
-    cfg = TrainingConfig(epochs=300, batch_size=5000, learning_rate=0.01,
-                         lambda_smooth=1e-3, smooth_features=anam_num,
-                         patience=40, verbose=False)
-    train_anam(model_anam, train_x, train_y, val_x, val_y,
-        train_offset=train_off, val_offset=val_off, config=cfg, loss_fn=poisson_nll)
+    model_anam.rank_main_effects(anam_train, anam_train["nclaims"],
+        X_val=anam_val, y_val=anam_val["nclaims"], random_state=2000)
+    model_anam.rank_interactions(anam_train, anam_train["nclaims"],
+        X_val=anam_val, y_val=anam_val["nclaims"],
+        n_main=7, random_state=2000)
+    model_anam.choose(n_main=7, n_interactions=6)
+    model_anam.fit(anam_train, anam_train["nclaims"],
+        X_val=anam_val, y_val=anam_val["nclaims"],
+        epochs=300, batch_size=5000, lr=0.01, patience=40, random_state=2000)
     anam_path.parent.mkdir(exist_ok=True)
-    torch.save(model_anam.state_dict(), anam_path)
+    model_anam.save(anam_path)
+```
+
+The paper's workflow is _assess, then select_: rank every candidate feature, read the scree plot, and only then decide how many to keep. (For a hands-off fit, skip straight to `model_anam.fit(...)`, which runs the same screening and picks the cutoffs automatically with an elbow rule.)
+
+## Pick the main effects {.smaller}
+
+`rank_main_effects` trains an ensemble of shallow NAMs and scores each covariate by the _variance_ of its shape function --- a proxy for how much signal it carries --- without yet committing to a cutoff.
+
+```{python}
+#| eval: false
+#| label: anam-rank-main-effects
+model_anam.rank_main_effects(anam_train, anam_train["nclaims"],
+    X_val=anam_val, y_val=anam_val["nclaims"], random_state=2000)
+```
+
+```{python}
+model_anam.plot_main_effect_importance()
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-Contrast this with the black-box neural network later in these slides, which (incorrectly) feeds `expo` in as an ordinary input feature. Here exposure is handled correctly as a multiplicative offset, exactly as in a Poisson GLM.
-
-The full ANAM paper goes further than this teaching example: it runs a three-stage _variable selection_ (an ensemble of NAMs ranks main effects, then candidate pairwise interactions are added greedily), selecting `ageph`, `bm`, `power`, `lat`, `long`, `agec` and `fuel`, and tunes hyperparameters with Optuna over 2000 epochs. We use a smaller fixed configuration so the slides render quickly.
+`bm` (bonus-malus) dominates, followed by a gently declining body --- `ageph`, `long`, `lat`, `fuel`, `power`, `agec` --- and then a sharp drop to a near-zero tail (`coverage`, `sex`, `fleet`, `use`). The dashed line is the automatic elbow: because `bm` towers over everything, it is a little conservative here and stops at six. But `agec` still sits clearly above the tail, so --- like the paper --- we keep _seven_.
 :::
 
-## Reading the shape functions {.smaller}
+## Pick the interactions {.smaller}
+
+`rank_interactions` scores every pairwise term that passes the _strong heredity_ rule (a pair is only considered if both of its main effects are in the top $n\_main$), measuring how much each candidate improves the validation loss over the mains-only baseline.
+
+```{python}
+#| eval: false
+#| label: anam-rank-interactions
+model_anam.rank_interactions(anam_train, anam_train["nclaims"],
+    X_val=anam_val, y_val=anam_val["nclaims"],
+    n_main=7, random_state=2000)
+```
+
+```{python}
+#| echo: false
+model_anam.plot_interaction_importance()
+```
+
+::: {.content-visible unless-format="revealjs"}
+The plot shows how much each candidate pair improves the validation loss over the mains-only baseline, with the top five kept.
+:::
+
+## Lock in choices and fit
+
+
+```{python}
+#| eval: false
+#| label: anam-choose
+model_anam.choose(n_main=7, n_interactions=6)
+```
+
+```{python}
+model_anam.features_
+```
+
+```{python}
+model_anam.interactions_
+```
+
+Exposure enters the final fit as an _offset_, not a feature: $\log \mu = \beta_0 + \sum_j f_j(x_j) + \log(\text{expo})$.
+
+```{python}
+#| eval: false
+#| label: anam-fit
+model_anam.fit(anam_train, anam_train["nclaims"],
+    X_val=anam_val, y_val=anam_val["nclaims"],
+    epochs=300, batch_size=5000, lr=0.01, patience=40, random_state=2000)
+```
+
+::: {.content-visible unless-format="revealjs"}
+Contrast this with the black-box neural network later in these slides, which (incorrectly) feeds `expo` in as an ordinary input feature. Here exposure is handled correctly as a multiplicative offset, exactly as in a Poisson GLM. The selection workflow uses _strong heredity_ (a pair is only considered if both of its main effects survived), and `fit` then fine-tunes the chosen terms. The paper also tunes hyperparameters extensively; we use a smaller fixed configuration so the slides render quickly.
+:::
+
+## Reading the shape functions
 
 Each curve is that feature's contribution to $\log \mu$; back on the original scale, $\exp(f_j)$ is a _multiplier_ on the expected claim count.
 
 ```{python}
 #| code-fold: true
-# Standardised grid -> original units, so axes read in real-world values
-means = anam_train[anam_num].mean()
-stds = anam_train[anam_num].std(ddof=0)
-
-def anam_shape_plot(features, axes):
-    for ax, v in zip(np.ravel(axes), features):
-        lo, hi = anam_configs[v]['bounds']
-        grid = torch.linspace(lo, hi, 100)
-        with torch.no_grad():
-            vals = model_anam.get_shape_function(v, grid).numpy()
-        x = grid.numpy() * stds[v] + means[v]
-        ax.plot(x, vals)
-        ax.axhline(0, color='grey', lw=0.5)
-        ax.set_title(v); ax.set_xlabel(v); ax.set_ylabel('Contribution to log-mean')
-
-fig, axes = plt.subplots(1, 3, figsize=(12, 3.2))
-anam_shape_plot(['ageph', 'bm', 'power'], axes)
-plt.tight_layout()
+model_anam.plot_effects(["ageph", "bm", "power"]);
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The `ageph` effect is U-shaped (young and older drivers are riskier), `bm` increases monotonically as we constrained it to, and higher `power` raises expected claims. Unlike the GLM's forced exponential-in-age curve, the NAM _learns_ the shape from the data while staying additive and hence interpretable.
+The `ageph` effect is U-shaped (young and older drivers are riskier), `bm` increases monotonically as we constrained it to, and higher `power` raises expected claims. Unlike the GLM's forced exponential-in-age curve, the NAM _learns_ the shape from the data while staying additive and hence interpretable. The axes are in the original units --- the model remembers its own preprocessing.
 :::
-
-## More shape functions
 
 ```{python}
 #| code-fold: true
-fig, axes = plt.subplots(1, 3, figsize=(12, 3.2))
-anam_shape_plot(['agec', 'lat', 'long'], axes)
-plt.tight_layout()
+fig = model_anam.plot_effects(["agec", "lat", "long"])
+# Flag agec's sparse, extrapolated tail: 99% of cars are 18 years or younger.
+agec_ax = fig.axes[0]
+cutoff = anam_train["agec"].quantile(0.99)
+agec_ax.axvspan(cutoff, anam_train["agec"].max(), color="#FF8FA9", alpha=0.25)
+agec_ax.text(cutoff, agec_ax.get_ylim()[1], " sparse\n extrapolation",
+    ha="left", va="top", fontsize=7, color="#B03A5B");
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-`lat`/`long` capture a smooth spatial effect, and `agec` (vehicle age) has a mild, non-linear contribution. Because effects are additive, we can plot and interpret each one in isolation --- the appeal of an _inherently interpretable_ neural network.
+`lat`/`long` show a smooth spatial pattern and `agec` (vehicle age) a non-linear one. Because effects are additive, we can plot and interpret each one in isolation --- the appeal of an _inherently interpretable_ neural network. But each panel has its _own_ y-axis, which hides how different these effects are in size, as the next slides show. The shaded band on `agec` marks where the curve is pure _extrapolation_ --- almost no cars are older than 18, so the steep decline there is not evidence.
+:::
+
+## A categorical effect: fuel {.smaller}
+
+Continuous features give _curves_; a categorical feature gives one value per level. `anam` draws it as a bar chart with the real category labels, still in log-rate units.
+
+::: {style="width: 80%; margin: 0 auto;"}
+```{python}
+#| code-fold: true
+ax = model_anam.plot_effect("fuel")
+# Label each bar with its multiplier on the expected claim frequency.
+labels, values = model_anam.effect("fuel")
+for x, v in enumerate(values):
+    ax.annotate(f"×{np.exp(v):.2f}", (x, v), ha="center",
+        va="bottom" if v >= 0 else "top",
+        xytext=(0, 3 if v >= 0 else -3), textcoords="offset points")
+# Expand the bottom margin so the ×0.74 label on the negative bar isn't clipped.
+ymin, ymax = ax.get_ylim()
+ax.set_ylim(ymin - 0.1 * (ymax - ymin), ymax)
+ax.set_title("Effect of fuel type (categorical)");
+```
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Diesel policies carry roughly double the baseline claim frequency (×2.0) while petrol sits below it (×0.74) --- a diesel-vs-petrol ratio of about ×2.7. This single categorical term turns out to be the _most_ important feature in the model (next slides), yet it never appears in the continuous shape-function plots; categoricals are handled by an embedding rather than an MLP, but read the same way --- $\exp(f_\text{fuel})$ is a multiplier on the expected count.
+:::
+
+## The same curves, one honest scale {.smaller}
+
+Each panel above had its _own_ y-axis. Put the six continuous effects on a _shared_ scale and the picture changes: `agec` and `power` swing hard, while `ageph`, `lat` and `long` flatten to near-zero lines.
+
+```{python}
+#| code-fold: true
+feats = ["ageph", "bm", "power", "agec", "lat", "long"]
+fig, axes = plt.subplots(2, 3, figsize=(9, 5.5), sharey=True)
+fig.subplots_adjust(hspace=0.45)
+for ax, feat in zip(axes.ravel(), feats):
+    grid, values = model_anam.effect(feat)
+    ax.plot(grid, values)
+    ax.axhline(0, color="0.7", lw=0.6, zorder=0)
+    # Decile rug: black ticks at the 10th–90th percentiles of the data.
+    deciles = model_anam.deciles_[feat]
+    ax.plot(deciles, np.zeros_like(deciles), "|",
+        transform=ax.get_xaxis_transform(), color="black",
+        markeredgewidth=1.2, markersize=12)
+    ax.set_title(feat)
+fig.supylabel("Partial effect (log-rate)");
+```
+
+::: {.content-visible unless-format="revealjs"}
+The free y-axes on the previous slides exaggerate the unimportant effects: a curve that only moves the log-rate by ±0.001 looks as structured as one that moves it by ±1. On a common scale, only `agec`, `power` (and `bm`, mildly) do real work; the wiggles in `ageph`, `lat` and `long` are essentially noise around zero.
+:::
+
+## Which effects actually matter {.smaller}
+
+Reading a swing straight off the _grid_ is unfair: it rewards steep extrapolation into empty regions (like old `agec`). Instead measure the _standard deviation of each shape function across the training data_ --- the variance-based importance `anam` itself uses. Weighting by where the data really is, exponentiating gives a _typical multiplier_ on the expected claim frequency.
+
+::: {style="width: 80%; margin: 0 auto;"}
+```{python}
+#| code-fold: true
+from matplotlib.patches import Patch
+
+importance = {}
+for feat in model_anam.features_:
+    grid, values = model_anam.effect(feat)
+    grid = np.asarray(grid)
+    if np.issubdtype(grid.dtype, np.number):
+        effect_on_data = np.interp(anam_train[feat], grid.astype(float), values)
+    else:
+        lookup = {str(k): v for k, v in zip(grid, values)}
+        effect_on_data = anam_train[feat].astype(str).map(lookup).to_numpy()
+    importance[feat] = float(np.std(effect_on_data))
+
+names = sorted(importance, key=importance.get)
+fig, ax = plt.subplots(figsize=(7, 4))
+# Colour splits the material effects from the ones that do essentially nothing.
+colors = ["#FF8FA9" if importance[f] < 0.002 else "#3F9999" for f in names]
+bars = ax.barh(names, [importance[f] for f in names], color=colors)
+ax.set_xscale("log")
+ax.set_xlabel("Importance: std of shape function over the data (log-rate)")
+for f, bar in zip(names, bars):
+    ax.text(bar.get_width() * 1.15, bar.get_y() + bar.get_height() / 2,
+        f"×{np.exp(importance[f]):.2f}", va="center")
+ax.legend(handles=[
+    Patch(color="#3F9999", label="material effect"),
+    Patch(color="#FF8FA9", label="negligible (≈ ×1.00)"),
+], loc="lower right", frameon=False)
+ax.set_title("Importance from data density, not grid extrapolation");
+```
+:::
+
+::: {.content-visible unless-format="revealjs"}
+On this honest measure `fuel` leads, then `agec` and `power`, `bm` is small, and `lat`, `ageph`, `long` are negligible (×1.00). Contrast the naive _grid_ swing, which crowned `agec` at ×4.4 --- but that came entirely from its sparse, extrapolated tail beyond ~18 years (barely 1% of cars), which the data-weighted score correctly ignores. It also explains the earlier map: with the `lat`/`long` main effects near zero, the pairwise surface carries the whole spatial signal.
+:::
+
+## An interaction effect
+
+::: {style="width: 80%; margin: 0 auto;"}
+```{python}
+#| code-fold: true
+ax = model_anam.plot_effect("long", "lat")
+ax.scatter(anam_train["long"], anam_train["lat"],
+    s=2, c="white", alpha=0.15, linewidths=0);
+```
+:::
+
+::: {.content-visible unless-format="revealjs"}
+The `lat`:`long` pair is a learned spatial adjustment on top of the additive main effects. Overlaying the actual policy locations (white dots) shows _where_ that surface is trustworthy.
+:::
+
+## The interaction over a map
+
+::: {style="width: 80%; margin: 0 auto;"}
+```{python}
+#| code-fold: true
+import contextily as ctx
+
+# contextily wants x=longitude, y=latitude, so put long on the x-axis.
+long_grid, lat_grid, effect = model_anam.effect("long", "lat")
+
+fig, ax = plt.subplots(figsize=(6, 5))
+# Discrete bands (clipped to the 2nd-98th percentile) read far more clearly
+# than a translucent continuous heatmap does; draw them at full opacity.
+levels = np.linspace(np.percentile(effect, 2), np.percentile(effect, 98), 8)
+cf = ax.contourf(long_grid, lat_grid, effect.T, levels=levels,
+    cmap="viridis", extend="both")
+fig.colorbar(cf, ax=ax, label="Partial effect on log-rate", extendrect=True)
+
+# Draw the basemap, then recolour it to opaque black linework on a fully
+# transparent background: map each tile pixel's darkness to an alpha value.
+# This lays Belgium's borders and city labels over the colours without the
+# pale basemap fill washing them out.
+ctx.add_basemap(ax, crs="EPSG:4326", source=ctx.providers.CartoDB.Positron)
+tiles = ax.images[-1]
+rgb = np.asarray(tiles.get_array(), dtype=float)[..., :3]
+if rgb.max() > 1.0:
+    rgb = rgb / 255.0
+darkness = 1.0 - rgb @ np.array([0.2126, 0.7152, 0.0722])
+lines = np.zeros(darkness.shape + (4,))
+lines[..., 3] = np.clip((darkness - 0.07) * 3.5, 0.0, 1.0)
+tiles.set_data(lines)
+tiles.set_zorder(5)  # draw the linework above the filled contours
+
+ax.set(xlabel="long", ylabel="lat",
+    title="lat × long interaction over Belgium");
+```
+:::
+
+::: {.content-visible unless-format="revealjs"}
+Laying the same surface under a basemap makes the geography legible --- the high-risk band tracks the Brussels–Antwerp corridor, while the Ardennes in the south-east sits lower. Rather than fading the risk surface behind a translucent map, we keep the colours at full strength and overlay only the map's black linework --- borders and city labels --- so both stay readable. Recall from the previous slide that the model has almost no data in the sparsely populated south, so the surface there is an extrapolation, not evidence.
 :::
