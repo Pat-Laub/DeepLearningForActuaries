@@ -12,10 +12,6 @@ project:
     - scripts/add_pdf_format_link.py
     - scripts/move_color_scheme_toggle.py
     - scripts/collapse_sidebar_sections.py
-    - scripts/remove_cell_ids.py
-    - scripts/remove_execution_counts.py
-    - scripts/normalize_layout_attrs.py
-    - scripts/remove_slides_from_search.py
     - scripts/decktape_pdfs.py
     - scripts/compress_pdfs.py
 
@@ -91,9 +87,18 @@ format:
     shift-heading-level-by: 1
     smooth-scroll: false
     code-copy: hover
+    filters:
+      # Strip random Jupyter cell ids / execution counts and canonicalise
+      # layout-* attribute order, so the committed HTML is deterministic.
+      - at: post-render
+        path: filters/deterministic-html.lua
 
   revealjs:
     output-ext: "slides.html"
+    # Keep slide decks out of the website's search index — the site search
+    # should send students to the reading page, not into a slide deck. The
+    # decks stay reachable through each page's "Other Formats" links.
+    search: false
     theme: [serif, fonts.scss, shared.scss, revealjs-style.scss]
     controls: true
     controls-tutorial: true
@@ -121,6 +126,8 @@ format:
       file: reveal-fixes.html
     filters:
       - reveal-auto-agenda
+      - at: post-render
+        path: filters/deterministic-html.lua
     auto-agenda:
       heading: Lecture Outline
 
