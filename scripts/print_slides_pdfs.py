@@ -125,6 +125,41 @@ SHOW_FOOTERS_JS = """<script>
       }
     });
   }
+  function fixSlideNumbers() {
+    // Reveal's print view numbers pages with a flat counter (innerHTML=v++),
+    // ignoring the slideNumber format and data-visibility="uncounted" (the
+    // auto-agenda divider slides here). Recompute live-view numbers: the
+    // 1-based position among counted slides, formatted like SlideNumber's
+    // "c" / "c/t" markup. (Reveal's own getSlidePastCount/getTotalSlides
+    // can't be used — they query .slides>section, which the print view's
+    // .pdf-page wrappers no longer match.)
+    var format = window.Reveal && typeof Reveal.getConfig === 'function'
+      ? Reveal.getConfig().slideNumber : null;
+    if (format !== 'c' && format !== 'c/t') return;
+    var pages = Array.prototype.slice.call(document.querySelectorAll('.pdf-page'));
+    var entries = pages.map(function (page) {
+      var slide = page.querySelector('section');
+      return {
+        el: page.querySelector('.slide-number'),
+        uncounted: !!(slide && slide.getAttribute('data-visibility') === 'uncounted'),
+      };
+    });
+    var total = entries.filter(function (e) { return !e.uncounted; }).length;
+    var past = 0;
+    entries.forEach(function (e) {
+      var current = past + (e.uncounted ? 0 : 1);
+      if (e.el) {
+        // The spaces between spans render as "x / y", matching live view
+        // (Reveal's formatNumber template has whitespace between the spans).
+        e.el.innerHTML = '<span class="slide-number-a">' + current + '</span>' +
+          (format === 'c/t'
+            ? ' <span class="slide-number-delimiter">/</span> ' +
+              '<span class="slide-number-b">' + total + '</span>'
+            : '');
+      }
+      if (!e.uncounted) past++;
+    });
+  }
   function placeFooters() {
     var defaultFooter = document.querySelector('.footer-default');
     document.querySelectorAll('.pdf-page').forEach(function (page) {
@@ -146,7 +181,9 @@ SHOW_FOOTERS_JS = """<script>
   // Reveal's print view is set up asynchronously (and fires pdf-ready when
   // done); poll as a fallback in case Reveal was ready before this ran.
   var done = false;
-  function run() { if (!done) { done = true; widenTo16x9(); placeFooters(); } }
+  function run() {
+    if (!done) { done = true; widenTo16x9(); fixSlideNumbers(); placeFooters(); }
+  }
   if (window.Reveal && typeof Reveal.on === 'function') {
     Reveal.on('pdf-ready', run);
   }
