@@ -107,12 +107,41 @@ print(f"GLM MAE                   : {mean_absolute_error(y_test_raw, y_pred_glm)
 
 ## Permutation importance example
 
+As recommended earlier, shuffle the _raw_ columns and score the composition $f \circ t$, so each categorical is swapped wholesale and no "multi-hot" rows are created.
+
+```{python}
+def permutation_test_raw(model, ct, X_raw, y, num_reps=1, seed=42, batch_size=8192):
+    """
+    Run the permutation test on the raw features,
+    scoring the composite model (preprocessing then network).
+    """
+    rnd.seed(seed)
+    scores = []
+
+    for col in X_raw.columns:
+        original_column = X_raw[col].copy()
+        col_scores = []
+
+        for r in range(num_reps):
+            X_raw[col] = rnd.permutation(X_raw[col].values)
+            X_shuffled = ct.transform(X_raw).to_numpy()
+            col_scores.append(
+                model.evaluate(X_shuffled, y, verbose=0, batch_size=batch_size))
+
+        scores.append(np.mean(col_scores, axis=0))
+        X_raw[col] = original_column
+
+    return np.array(scores)
+```
+
+## Permutation importance example {data-visibility="uncounted" .unlisted}
+
 ```{python}
 #| eval: false
 #| label: perm-test-nn-belgian
-scores = permutation_test(nn_model, X_train_nn.values, y_train_nn)
+scores = permutation_test_raw(nn_model, ct, X_train_raw, y_train_nn)
 plt.plot(scores[:,0], label='Loss')
-plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
+plt.xticks(ticks=np.arange(len(X_train_raw.columns)), labels=X_train_raw.columns, rotation=90);
 ```
 
 ```{python}
@@ -120,19 +149,19 @@ plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, 
 #| output: false
 #| label: perm-test-nn-belgian-cache
 scores = load_or_compute(
-    "models/perm_test_nn_belgian.pkl",
-    permutation_test, nn_model, X_train_nn.values, y_train_nn,
+    "models/perm_test_nn_belgian_raw.pkl",
+    permutation_test_raw, nn_model, ct, X_train_raw, y_train_nn,
 )
 ```
 
 ```{python}
 #| echo: false
 plt.plot(scores[:,0], label='Loss')
-plt.xticks(ticks=np.arange(len(X_train_nn.columns)), labels=X_train_nn.columns, rotation=90);
+plt.xticks(ticks=np.arange(len(X_train_raw.columns)), labels=X_train_raw.columns, rotation=90);
 ```
 
 ::: {.content-visible unless-format="revealjs"}
-The exposure and bonus-malus variables are the least important. The type of coverage, use and if the vehicle is part of a fleet are the most important variables.
+Shuffling `expo` or `bm` degrades the loss the most, followed by the location and policyholder/vehicle age variables, while `use` and `fleet` barely matter. Note there is now one importance score per _raw_ feature: `coverage` is a single feature here, rather than the two separate `coverage_TPL+` and `coverage_TPL++` indicator columns the network actually sees. For the numeric features the composition makes no difference (shuffling a standardised column is the same as shuffling the raw one), but for the categoricals it both avoids impossible multi-hot rows and stops a variable's importance being split across its indicator columns.
 :::
 
 ## PDP: Training data {.smaller}
@@ -154,7 +183,7 @@ nn_model.predict(ct.transform(X_train_raw), verbose=0).mean()
 ## PDP: Alternate Reality {.smaller data-visibility="uncounted"}
 
 ::: {.content-visible unless-format="revealjs"}
-Consider an alternate reality where all polidyholders are 18 years old. What is the average prediction then?
+Consider an alternate reality where all policyholders are 18 years old. What is the average prediction then?
 :::
 
 ```{python}
@@ -205,7 +234,7 @@ What could go wrong?
 :::
 
 
-## Partial dependence plots
+## Partial dependence plot code
 
 ::: {.content-visible unless-format="revealjs"}
 Plot the average prediction for each age given to all policyholders.
@@ -223,6 +252,8 @@ for age in ageph_range:
     y_pred_batch = nn_model.predict(X_train_pd_ct, verbose=0, batch_size=X_train_pd_ct.shape[0])
     y_preds.append(y_pred_batch.mean())
 ```
+
+## Partial dependence plot
 
 ```{python}
 #| code-fold: true
