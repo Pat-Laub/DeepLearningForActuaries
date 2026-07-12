@@ -60,6 +60,10 @@ and executed.
 >
 > Fortunately, this story is not about you, but is instead about Josef K., the
 fictional protagonist of Kafka’s The Trial.
+>
+> ::: {style="text-align: right;"}
+> — @vredenburgh2022right [p. 1]
+> :::
 
 :::
 ::: {.column width="20%"}
@@ -541,6 +545,10 @@ other issues with black box models. In criminal justice, individuals may have
 been subjected to years of extra prison time due to typographical errors in black
 box model inputs and poorly-designed proprietary models for air quality
 have had serious consequences for public safety during wildfires...
+>
+> ::: {style="text-align: right;"}
+> — @rudin2022interpretable [pp. 2-3]
+> :::
 
 :::
 ::: {.column width="30%"}
@@ -642,6 +650,8 @@ A [Partial Dependence Plot (PDP)](https://christophm.github.io/interpretable-ml-
 ::: {.content-visible unless-format="revealjs"}
 ICE plots allow us to see the differences in the effect of a given variable based on the values of the other variables.
 :::
+
+All of these show the relationship between an input and the prediction that the _model_ has learned — not necessarily the true relationship in the world.
 
 ::: footer
 See @molnar2020interpretable [Section 12]. Note, there are documented issues with PDPs; they can even be manipulated to hide discrimination [@xin2025pitfalls].
@@ -956,6 +966,7 @@ For at least three variables:
 
 ## Map of claims
 
+::: {style="width: 75%; margin: 0 auto;"}
 ```{python}
 #| code-fold: true
 # Compute average claims per location
@@ -984,6 +995,7 @@ ax.set_axis_off()
 plt.title("Average Claims per Location")
 plt.show()
 ```
+:::
 
 
 ## Fitting using statsmodels
@@ -1071,6 +1083,37 @@ plt.title('GLM Predictions for Varying Age of Policyholder #1');
 
 ::: {.content-visible unless-format="revealjs"}
 This is an _exponential_ curve. Is this surprising? It shouldn't be, since the GLM has a log link function.
+:::
+
+## Interrogating an intentional bug
+
+We fed `expo` in as an ordinary covariate — the CP plot exposes the consequence.
+
+```{python}
+#| code-fold: true
+expo_range = np.linspace(train_raw['expo'].min(), train_raw['expo'].max(), 20)
+
+X_train_first = X_train_raw.iloc[0:1].copy()
+y_pred_batch = []
+for expo in expo_range:
+    X_train_first['expo'] = expo
+    y_pred_batch.append(glm_model.predict(X_train_first).item())
+
+plt.plot(expo_range, y_pred_batch, 'r', label='GLM ceteris paribus')
+plt.plot([0, expo_range[-1]], [0, y_pred_batch[-1]], '--', color='grey',
+    label='Proportional to exposure')
+
+real_expo = X_train_raw['expo'].iloc[0:1].item()
+plt.plot(real_expo, orig_prediction, 'o', markersize=5, color='r')
+
+plt.xlabel('Exposure')
+plt.ylabel('Predicted Number of Claims')
+plt.title('GLM Predictions for Varying Exposure of Policyholder #1')
+plt.legend();
+```
+
+::: {.content-visible unless-format="revealjs"}
+This modelling bug is _deliberate_, and we will keep it for this lecture. Expected claim counts should scale _proportionally_ with exposure: insuring a car for twice as long should double the expected number of claims, and a policy insured for one day should expect almost none. The proper treatment is to include exposure as an _offset_, adding $\log(\text{expo})$ to the linear predictor with a fixed coefficient of one (as the ANAM fit does later with `exposure="expo"`). Instead, we let the GLM estimate a coefficient for `expo` on the log-link scale, so it claims the claim count grows _exponentially_ with exposure — and, worse, predicts a decidedly non-zero claim count for a policy insured for a single day (the red curve does not pass through the origin). Interrogating the model with a ceteris paribus plot is exactly how this kind of specification error gets caught: the plotted relationship contradicts what we know must be true. The same flaw shows up again in the neural network's PDP for `expo` later in the lecture.
 :::
 
 ## What if we look at multiple policyholders?
@@ -1348,9 +1391,10 @@ fig.update_layout(
 
 ## LIME
 
-*Local Interpretable Model-agnostic Explanations* employs an interpretable surrogate model to explain locally how the black-box model makes predictions for individual instances.
+*Local Interpretable Model-agnostic Explanations* employs an interpretable surrogate model (e.g. a linear regression) to explain locally how the black-box model makes predictions for individual instances.
 
-E.g. a black-box model predicts Bob's premium as the highest among all policyholders. LIME uses an interpretable model (a linear regression) to explain how Bob's features influence the black-box model's prediction.
+<!--
+E.g. a black-box model predicts Bob's premium as the highest among all policyholders. LIME uses an interpretable model to explain how Bob's features influence the black-box model's prediction.
 
 ::: footer
 See ["Why Should I Trust You?": Explaining the Predictions of Any Classifier](https://youtu.be/hUnRCxnydCc).
@@ -1373,8 +1417,6 @@ Suppose we want to explain the instance $\boldsymbol{x}_{\text{Bob}}=(1, 2, 0.5)
 ## LIME Algorithm
 
 2.  Fit an interpretable model $g$, i.e., a linear regression using $\mathcal{D}_{\text{LIME}}$ and the following loss function: $$\mathcal{L}_{\text{LIME}}(f,g,\pi_{\boldsymbol{x}_{\text{Bob}}})=\sum_{i=1}^{N_{\text{Examples}}}\pi_{\boldsymbol{x}_{\text{Bob}}}\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\cdot \bigg(f\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)-g\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)\bigg)^2,$$ where $\pi_{\boldsymbol{x}_{\text{Bob}}}\big(\boldsymbol{x}^{'(i)}_{\text{Bob}}\big)$ represents the distance from the perturbed example $\boldsymbol{x}^{'(i)}_{\text{Bob}}$ to the instance to be explained $\boldsymbol{x}_{\text{Bob}}$.
-
-<!--
 ## "Explaining" to Bob {.smaller}
 
 ::: columns
@@ -1392,12 +1434,12 @@ The bold [red]{style="color:red;"} cross is the instance being explained. LIME s
 
 :::
 :::
--->
 
 ## LIME explained by its authors
+-->
 
 ::: {.content-hidden unless-format="revealjs"}
-{{< video https://www.youtube.com/embed/hUnRCxnydCc width="100%" height="80%" >}}
+{{< video https://www.youtube.com/embed/hUnRCxnydCc width="100%" height="70%" >}}
 :::
 ::: {.content-visible unless-format="revealjs"}
 {{< video https://www.youtube.com/embed/hUnRCxnydCc >}}

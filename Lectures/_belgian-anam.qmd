@@ -1,14 +1,14 @@
 # Neural Additive Models on the Belgian Data {visibility="uncounted"}
 
-## From GAM to Neural Additive Model
+## Actuarial Neural Additive Model
 
-A _Neural Additive Model_ (NAM) is a GAM where each $f_j$ is a small neural network.
+ANAM, at its core, is a GAM where each $f_j$ is a small neural network.
 
 $$
   \hat{y}_i = g^{-1}\bigl( \beta_0 + f_1(x_{i,1}) + f_2(x_{i,2}) + \dots + f_p(x_{i,p}) \bigr)
 $$
 
-The `anam` package (_Actuarial NAM_) fits these with a Poisson/Gamma likelihood, an exposure offset, optional _monotonicity_ constraints, and automatic selection of features and pairwise interactions.
+The `anam` package fits these with a Poisson/Gamma likelihood, an exposure offset, optional _monotonicity_ constraints, and automatic selection of features and pairwise interactions.
 
 ::: footer
 Source: @laub2026anam
@@ -16,12 +16,11 @@ Source: @laub2026anam
 
 ## Specify the model
 
-`anam` works on the raw data: continuous vs categorical is read off the dtypes, and the standardising/encoding happens inside the model. A `smoothness` penalty keeps the continuous shape functions from overfitting.
+ANAM works on the raw data (standardising/encoding happens inside the model). A `smoothness` penalty is to help keep the continuous shape functions from overfitting.
 
 ```{python}
 from anam import ANAM
 
-# Carve a validation set out of the training data
 anam_train, anam_val = train_test_split(train_raw, test_size=0.25, random_state=2000)
 
 model_anam = ANAM(
@@ -53,11 +52,11 @@ else:
     model_anam.save(anam_path)
 ```
 
-The paper's workflow is _assess, then select_: rank every candidate feature, read the scree plot, and only then decide how many to keep. (For a hands-off fit, skip straight to `model_anam.fit(...)`, which runs the same screening and picks the cutoffs automatically with an elbow rule.)
+The idea is to choose the features and interactions semi-automatically.
 
-## Pick the main effects {.smaller}
+## Pick the main effects
 
-`rank_main_effects` trains an ensemble of shallow NAMs and scores each covariate by the _variance_ of its shape function --- a proxy for how much signal it carries --- without yet committing to a cutoff.
+Trains an ensemble of shallow NAMs and scores each covariate by the _variance_ of its shape function.
 
 ```{python}
 #| eval: false
@@ -74,9 +73,9 @@ model_anam.plot_main_effect_importance()
 `bm` (bonus-malus) dominates, followed by a gently declining body --- `ageph`, `long`, `lat`, `fuel`, `power`, `agec` --- and then a sharp drop to a near-zero tail (`coverage`, `sex`, `fleet`, `use`). The dashed line is the automatic elbow: because `bm` towers over everything, it is a little conservative here and stops at six. But `agec` still sits clearly above the tail, so --- like the paper --- we keep _seven_.
 :::
 
-## Pick the interactions {.smaller}
+## Pick the interactions
 
-`rank_interactions` scores every pairwise term that passes the _strong heredity_ rule (a pair is only considered if both of its main effects are in the top $n\_main$), measuring how much each candidate improves the validation loss over the mains-only baseline.
+Scores every pairwise term that passes the _strong heredity_ rule (a pair is only considered if both of its main effects are in the top $n\_main$), measuring how much each candidate improves the validation loss over the mains-only baseline.
 
 ```{python}
 #| eval: false
@@ -154,9 +153,9 @@ agec_ax.text(cutoff, agec_ax.get_ylim()[1], " sparse\n extrapolation",
 `lat`/`long` show a smooth spatial pattern and `agec` (vehicle age) a non-linear one. Because effects are additive, we can plot and interpret each one in isolation --- the appeal of an _inherently interpretable_ neural network. But each panel has its _own_ y-axis, which hides how different these effects are in size, as the next slides show. The shaded band on `agec` marks where the curve is pure _extrapolation_ --- almost no cars are older than 18, so the steep decline there is not evidence.
 :::
 
-## A categorical effect: fuel {.smaller}
+## A categorical effect: fuel
 
-Continuous features give _curves_; a categorical feature gives one value per level. `anam` draws it as a bar chart with the real category labels, still in log-rate units.
+Continuous features give _curves_; a categorical feature gives one value per level.
 
 ::: {style="width: 80%; margin: 0 auto;"}
 ```{python}
@@ -207,7 +206,8 @@ The free y-axes on the previous slides exaggerate the unimportant effects: a cur
 
 ## Which effects actually matter {.smaller}
 
-Reading a swing straight off the _grid_ is unfair: it rewards steep extrapolation into empty regions (like old `agec`). Instead measure the _standard deviation of each shape function across the training data_ --- the variance-based importance `anam` itself uses. Weighting by where the data really is, exponentiating gives a _typical multiplier_ on the expected claim frequency.
+Measure the _standard deviation of each shape function across the training data_.
+Exponentiating gives a _typical multiplier_ on the expected claim frequency.
 
 ::: {style="width: 80%; margin: 0 auto;"}
 ```{python}
@@ -239,7 +239,7 @@ ax.legend(handles=[
     Patch(color="#3F9999", label="material effect"),
     Patch(color="#FF8FA9", label="negligible (≈ ×1.00)"),
 ], loc="lower right", frameon=False)
-ax.set_title("Importance from data density, not grid extrapolation");
+ax.set_title("Importance");
 ```
 :::
 
@@ -254,7 +254,11 @@ On this honest measure `fuel` leads, then `agec` and `power`, `bm` is small, and
 #| code-fold: true
 ax = model_anam.plot_effect("long", "lat")
 ax.scatter(anam_train["long"], anam_train["lat"],
-    s=2, c="white", alpha=0.15, linewidths=0);
+    s=2, c="white", alpha=0.15, linewidths=0)
+# A degree of longitude is shorter than a degree of latitude this far from
+# the equator, so use the true geographic proportions (Belgium is wider
+# than it is tall) rather than the default aspect ratio.
+ax.set_aspect(1 / np.cos(np.deg2rad(np.mean(ax.get_ylim()))));
 ```
 :::
 
@@ -269,33 +273,66 @@ The `lat`:`long` pair is a learned spatial adjustment on top of the additive mai
 #| code-fold: true
 import contextily as ctx
 
+
+def padded_effect(model, name, other, pad=0.05, n_points=50):
+    """
+    Like ``model.effect(name, other)``, but evaluated on a grid extended a
+    fraction ``pad`` beyond the training data's range, so the surface
+    extrapolates slightly past the outermost municipalities and covers the
+    whole country.
+    """
+    def grid_for(feat):
+        lo, hi = model.feature_configs_[feat]["bounds"]
+        margin = pad * (hi - lo)
+        g_std = torch.linspace(float(lo) - margin, float(hi) + margin, n_points)
+        g_orig = model.scalers_[feat].inverse_transform(
+            g_std.numpy().reshape(-1, 1)).ravel()
+        return g_std, g_orig
+
+    grid_a_std, grid_a = grid_for(name)
+    grid_b_std, grid_b = grid_for(other)
+    model.module_.eval()
+    with torch.no_grad():
+        values = model.module_.get_shape_function(
+            name, grid_a_std, other, grid_b_std).cpu().numpy()
+    if f"{name}_{other}" not in model.module_.interaction_subnets:
+        values = values.T
+    return grid_a, grid_b, values
+
+
 # contextily wants x=longitude, y=latitude, so put long on the x-axis.
-long_grid, lat_grid, effect = model_anam.effect("long", "lat")
+long_grid, lat_grid, effect = padded_effect(model_anam, "long", "lat")
 
 fig, ax = plt.subplots(figsize=(6, 5))
-# Discrete bands (clipped to the 2nd-98th percentile) read far more clearly
-# than a translucent continuous heatmap does; draw them at full opacity.
-levels = np.linspace(np.percentile(effect, 2), np.percentile(effect, 98), 8)
+# Discrete bands read far more clearly than a translucent continuous heatmap
+# does; draw them at full opacity. Match the colour limits to the previous
+# slide by using the effect's range over the data region --- the padded
+# corners beyond it spill into the end bands (via extend="both").
+_, _, effect_data = model_anam.effect("long", "lat")
+levels = np.linspace(effect_data.min(), effect_data.max(), 8)
 cf = ax.contourf(long_grid, lat_grid, effect.T, levels=levels,
     cmap="viridis", extend="both")
 fig.colorbar(cf, ax=ax, label="Partial effect on log-rate", extendrect=True)
 
-# Draw the basemap, then recolour it to opaque black linework on a fully
-# transparent background: map each tile pixel's darkness to an alpha value.
-# This lays Belgium's borders and city labels over the colours without the
-# pale basemap fill washing them out.
+# Draw the country borders and coastline as vector lines over the colours.
+# The file is Natural Earth's (public domain) 10m admin-0 boundary lines
+# plus coastline, clipped to this corner of Europe.
+borders = gpd.read_file("data/country-borders.geojson")
+xlim, ylim = ax.get_xlim(), ax.get_ylim()
+borders.plot(ax=ax, color="black", linewidth=1.0)
+ax.set_xlim(xlim)
+ax.set_ylim(ylim)
+
+# Add the place names from CARTO's labels-only tile layer: transparent
+# background with white-haloed names, made for overlaying on data like this.
 # The "@2x" retina tiles keep the same zoom level (so the same city labels)
-# but at double the resolution, so the linework stays sharp at print DPI.
-ctx.add_basemap(ax, crs="EPSG:4326", source=ctx.providers.CartoDB.Positron(r="@2x"))
-tiles = ax.images[-1]
-rgb = np.asarray(tiles.get_array(), dtype=float)[..., :3]
-if rgb.max() > 1.0:
-    rgb = rgb / 255.0
-darkness = 1.0 - rgb @ np.array([0.2126, 0.7152, 0.0722])
-lines = np.zeros(darkness.shape + (4,))
-lines[..., 3] = np.clip((darkness - 0.07) * 3.5, 0.0, 1.0)
-tiles.set_data(lines)
-tiles.set_zorder(5)  # draw the linework above the filled contours
+# but at double the resolution, so the text stays sharp at print DPI.
+ctx.add_basemap(ax, crs="EPSG:4326",
+    source=ctx.providers.CartoDB.PositronOnlyLabels(r="@2x"))
+
+# A degree of longitude is shorter than a degree of latitude this far from
+# the equator, so use the true geographic proportions.
+ax.set_aspect(1 / np.cos(np.deg2rad(np.mean(ax.get_ylim()))))
 
 ax.set(xlabel="long", ylabel="lat",
     title="lat × long interaction over Belgium");
@@ -303,5 +340,5 @@ ax.set(xlabel="long", ylabel="lat",
 :::
 
 ::: {.content-visible unless-format="revealjs"}
-Laying the same surface under a basemap makes the geography legible --- the high-risk band tracks the Brussels–Antwerp corridor, while the Ardennes in the south-east sits lower. Rather than fading the risk surface behind a translucent map, we keep the colours at full strength and overlay only the map's black linework --- borders and city labels --- so both stay readable. Recall from the previous slide that the model has almost no data in the sparsely populated south, so the surface there is an extrapolation, not evidence.
+Laying the surface under some geography makes it legible --- the high-risk band tracks the Brussels–Antwerp corridor, while the Ardennes in the south-east sits lower. Rather than fading the risk surface behind a translucent map, we keep the colours at full strength and draw only what we need on top: country borders and coastline as vector lines (Natural Earth), and place names from CARTO's labels-only tile layer, which is designed for exactly this kind of overlay. The surface is evaluated on a grid extended slightly past the outermost municipalities, so the whole country is covered (the corners of the plot extrapolate a little beyond Belgium). Recall from the previous slide that the model has almost no data in the sparsely populated south, so the surface there is an extrapolation, not evidence.
 :::
