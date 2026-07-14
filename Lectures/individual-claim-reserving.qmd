@@ -1,9 +1,16 @@
 ---
 title: Individual Claim Reserving
 engine: knitr
+# Only utilities.js and the esbuild-compiled components ship to docs/; the
+# .jsx sources stay in the repo as the editable source of truth (compiled by
+# scripts/compile_interactive_splits.py, invoked from this file's python
+# setup chunk so it runs only when this lecture renders).
+resources:
+  - interactive-splits/utilities.js
+  - interactive-splits/compiled/*.js
 # The project-wide `cache: true` must be off here: knitr's chunk cache does
 # not replay python side effects, so later chunks see an empty session.
-# The SPLICE parquet guard already makes re-renders fast.
+# Cheap anyway: SPLICE generation is only ~2.5s.
 execute:
   cache: false
 bibliography: ../library.bib
@@ -32,14 +39,57 @@ reticulate::use_virtualenv("../.venv", required = TRUE)
 knitr::opts_chunk$set(jupyter_compat = TRUE, fig.align = "center")
 ```
 
+```{r}
+#| echo: false
+#| output: false
+# THE data generation for the whole lecture. It lives up here, not at the
+# case study slide where it is shown, because it must run before ANY python
+# chunk reads data/splice/*.parquet — the motivating "one claim's life"
+# slides read it ~700 lines before the case study, and knitr runs chunks in
+# document order.
+#
+# Do NOT move this down / rewrite the parquet later in the render. Once a
+# python chunk has read a parquet file, pyarrow keeps it mapped; rewriting
+# that same file in place mid-session makes later reads in the same session
+# hand back aliased garbage (payments came back carrying the estimates
+# table's column names). Generate once, before the first reader.
+#
+# Unconditional: generation is fully reproducible (same random_seed => same
+# claims, payments and case estimates in any fresh R session; verified
+# 2026-07-14 by hashing all three tables across separate Rscript runs) and
+# takes ~2.5s, so there is no fixture to protect and nothing to guard.
+suppressMessages(library(SPLICE))
+suppressMessages(library(arrow))
+dir.create("data/splice", recursive = TRUE, showWarnings = FALSE)
+sim <- generate_data(
+  n_claims_per_period = 100, n_periods = 40, complexity = 5,
+  random_seed = 20260712,
+  covariates_obj = SynthETIC::test_covariates_obj
+)
+write_parquet(cbind(sim$claim_dataset, sim$covariates_data$data),
+              "data/splice/claims.parquet")
+write_parquet(sim$payment_dataset, "data/splice/payments.parquet")
+write_parquet(sim$incurred_dataset, "data/splice/estimates.parquet")
+```
+
 ```{python}
 #| echo: false
 #| warning: false
 from setup import *
 
-# BUILD: same load_or_compute caching helper as interpretability.qmd, plus
-# pandas/pyarrow to read the data/splice/*.parquet files written by the
-# R generation chunk in the case study section.
+# Per-file "pre-render": compile interactive-splits/*.jsx to compiled/*.js
+# (quarto pre-render hooks are project-wide only, and only this lecture needs
+# the step). Silent no-op when compiled/ is up to date; chunk execution
+# happens before quarto copies `resources:`, so fresh output always ships.
+import subprocess
+import sys
+
+subprocess.run(
+    [sys.executable, "../scripts/compile_interactive_splits.py"], check=True
+);
+
+# Model caching is done inline at the NN slide (guarded keras save/load)
+# rather than via a helper.
 
 
 def show_df(df):
@@ -62,26 +112,13 @@ The full/final version will be completed soon.
 
 
 
-## Why is pricing different from reserving?
+## Individual claim reserving
 
-::: {.incremental}
-
-
-
-- _Pricing_ is prospective and per-policy: no claim exists yet, and we predict the frequency/severity of hypothetical future claims from policy covariates (recall the French motor lectures).
-- _Reserving_ is about claims that have already happened: we condition on each claim's unfolding history — payments to date, case estimates — to predict what is still to be paid.
-- Consequence for the ML setup: pricing rows are policies with static features; reserving rows are claim-quarter snapshots with _time-varying_ features. That's why this lecture needs a whole preprocessing pipeline.
-:::
-
-## From claim severity models to individual reserving
-
-A claim severity model looks at a potential accident from the insured, and tries to work out from their covariates the likely size of such a claim.
-
-An individual reserving model is more specific: an accident has occurred, the insured has been notified, and maybe parts of the claim have already been paid, now we need to guess how much remains in this realised claim.
+An accident has occurred, the insurer has been notified, and maybe parts of the claim have already been paid, now we need to guess how much remains in this realised claim.
 
 ![](images/individual-claim.png)
 
-This is potentially a more promising application for neural networks (more features!).
+This is potentially a promising application for neural networks.
 
 ## Ultimate claim size
 
@@ -203,6 +240,13 @@ Each open claim's future payments (highlighted) get summed to give $T(v)$.
 The bottom claim has _occurred_ before $v$ but hasn't been _notified_ yet.
 No individual model can reserve for a claim it cannot see --- IBNR needs a separate adjustment.
 
+## Why is pricing different from reserving?
+
+- _Pricing_ is prospective and per-policy: no claim exists yet, and we predict the frequency/severity of hypothetical future claims from policy covariates (recall the French motor lectures).
+- _Reserving_ is about claims that have already happened: we condition on each claim's unfolding history — payments to date, case estimates — to predict what is still to be paid.
+- Consequence for the ML setup: pricing rows are policies with static features; reserving rows are claim-quarter snapshots with _time-varying_ features. That's why this lecture needs a whole preprocessing pipeline.
+
+
 # An Individual Claim
 
 ## The key dates
@@ -274,20 +318,21 @@ With hindsight: the true outstanding just after Payment #1 was $39, while the as
 
 
 
-## Putting it all together: payments growing
+## From the policyholder's perspective
 
 ```{python}
 #| echo: false
 # One synthetic claim's life, on the nominal basis (case estimates are
-# nominal). Claim 19 is hand-picked: its case estimate starts too low,
-# overshoots, then settles — the full story in one claim. Plotted over two
-# slides (incurred view, then case estimate view) from this shared prep.
-# NB this chunk reads the parquet fixture BEFORE the case study's generation
-# chunk runs, so data/splice/*.parquet must exist (it is the committed,
-# non-regenerable fixture — see the case study section). Uses the full-name
-# imports from setup.py (pandas, plt) so the case study's visible
-# `import pandas as pd` etc. slide is not preempted.
-claim_story_no = 19
+# nominal). Claim 1577 is hand-picked: incurred opens at $71k, two major
+# revisions blow it out to $758k, then minor revisions walk it back down to
+# the $473k ultimate — starts too low, overshoots, settles, the full story in
+# one claim. Plotted over two slides (incurred view, then case estimate view)
+# from this shared prep. NB this chunk reads the parquet BEFORE the case
+# study's generation chunk runs; the setup chunk at the top of the file
+# bootstraps it on a clean checkout. Uses the full-name imports from setup.py
+# (pandas, plt) so the case study's visible `import pandas as pd` etc. slide
+# is not preempted.
+claim_story_no = 1577
 _claims = pandas.read_parquet("data/splice/claims.parquet")
 _payments = pandas.read_parquet("data/splice/payments.parquet")
 _estimates = pandas.read_parquet("data/splice/estimates.parquet")
@@ -355,7 +400,7 @@ plt.legend(fontsize=7, frameon=False, loc="upper left");
 Payments step up toward the ultimate.
 The _incurred_, which is cumulative payments plus the case estimate of the outstanding, is the assessor's running view of the ultimate.
 
-## Putting it all together: outstanding shrinking
+## From the insurer's perspective
 
 ```{python}
 #| echo: false
@@ -445,26 +490,122 @@ Next week's guest lecture digs into _when and why_ aggregate models break down, 
 
 
 
+## One claim's full history
+
+Before any preprocessing: a claim is some static covariates plus a timeline of events. Step through a portfolio of 20 synthetic claims --- the _same_ claim is shown on every interactive slide in this lecture.
+
+```{=html}
+<style>
+/* Scoped stand-in for Tailwind preflight (which is disabled globally below,
+   so it cannot restyle reveal.js/Bootstrap). */
+.interactive-demo *,
+.interactive-demo *::before,
+.interactive-demo *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb;
+}
+.interactive-demo h1, .interactive-demo h2, .interactive-demo h3,
+.interactive-demo h4, .interactive-demo h5, .interactive-demo h6,
+.interactive-demo p, .interactive-demo figure, .interactive-demo blockquote,
+.interactive-demo dl, .interactive-demo dd {
+  margin: 0;
+}
+.interactive-demo ul, .interactive-demo ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.interactive-demo button, .interactive-demo input, .interactive-demo select,
+.interactive-demo textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+.interactive-demo button {
+  background-color: transparent;
+  background-image: none;
+  text-transform: none;
+  cursor: pointer;
+}
+.interactive-demo table {
+  border-collapse: collapse;
+  text-indent: 0;
+  border-color: inherit;
+  margin: 0;
+}
+.interactive-demo {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: left;
+  max-height: 540px;
+  overflow: auto;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  /* Become the containing block for position:fixed descendants (the
+     splitting diagram's Controls drawer) and clip them: inside reveal's
+     transformed slides the "off-screen" closed drawer would otherwise sit
+     visibly just right of the slide. Open, it docks inside this box. */
+  contain: paint;
+}
+.interactive-demo svg { max-width: none; }
+/* The splitting diagram centres its Train/Val/Test legend as an absolute
+   overlay on the control-bar row — fine at full browser width, but at slide
+   width it overlaps the buttons. Make it a normal row above them. */
+#demo-splitting .pointer-events-none.absolute.inset-0 {
+  position: static;
+  margin-bottom: 0.5rem;
+}
+</style>
+<div id="demo-claim" class="interactive-demo r-stretch"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Must run after the Play CDN script. Two clash guards: no global CSS
+  // reset (preflight), and scope every generated utility under
+  // .interactive-demo (Tailwind's "important" selector strategy). Without
+  // the scoping, the Play CDN scans the WHOLE page for class names and
+  // emits utilities for Bootstrap's classes too — e.g. `.collapse`
+  // (visibility: collapse), which hides quarto's sidebar in the html format
+  // the moment Tailwind's runtime stylesheet is injected.
+  tailwind.config = {
+    corePlugins: { preflight: false },
+    important: ".interactive-demo",
+  };
+</script>
+
+<script type="module" src="interactive-splits/utilities.js"></script>
+<script type="module" src="interactive-splits/compiled/StaticCovariates.js"></script>
+<script type="module" src="interactive-splits/compiled/ContinuousTimeline.js"></script>
+<script type="module" src="interactive-splits/compiled/PaymentDetails.js"></script>
+<script type="module" src="interactive-splits/compiled/QuarterlyAggregation.js"></script>
+<script type="module" src="interactive-splits/compiled/InflationAdjustment.js"></script>
+<script type="module" src="interactive-splits/compiled/OutstandingLiabilityCalculation.js"></script>
+<script type="module" src="interactive-splits/compiled/PlotlySpark.js"></script>
+<script type="module" src="interactive-splits/compiled/CovariateHistorySummaries.js"></script>
+<script type="module" src="interactive-splits/compiled/NeuralNetworkPreprocessing.js"></script>
+<script type="module" src="interactive-splits/compiled/DevelopmentPeriodGeneration.js"></script>
+<script type="module" src="interactive-splits/compiled/claims_splitting_diagram.js"></script>
+<script type="module" src="interactive-splits/compiled/lecture-demos.js"></script>
+```
+
 ## Noting the quarters
 
 We work in quarters --- the standard in actuarial practice.
-Each event date is binned into its calendar quarter, and we also track the _development quarter_ (quarters since the accident).
+Each event date is binned into its calendar quarter, and we also track the _development quarter_ (quarters since the accident); the exact dates $d_k^A, d_k^N, d_k^F$ are then discarded, keeping only the quarters $(A_k, N_k, F_k)$.
 
-| Event | Date | Calendar Quarter | Amount | Dev Quarter |
-|-------|------|-----------------|--------|-------------|
-| Accident | 2021-09-30 | 2021Q3 | | Q1 |
-| Notification | 2021-11-15 | 2021Q4 | | Q2 |
-| Payment #1 | 2022-05-17 | 2022Q2 | $9.00 | Q4 |
-| Payment #2 | 2022-08-31 | 2022Q3 | $2.00 | Q5 |
-| Payment #3 | 2022-10-23 | 2022Q4 | $2.00 | Q6 |
-| Payment #4 | 2022-12-20 | 2022Q4 | $4.00 | Q6 |
-| Payment #5 | 2023-02-19 | 2023Q1 | $2.00 | Q7 |
-| Payment #6 | 2023-05-31 | 2023Q2 | $3.00 | Q8 |
-| Payment #7 | 2023-07-08 | 2023Q3 | $18.00 | Q9 |
-| Payment #8 | 2023-09-10 | 2023Q3 | $8.00 | Q9 |
-| Finalisation | 2023-10-28 | 2023Q4 | | Q10 |
-
-The exact dates $d_k^A, d_k^N, d_k^F$ are then discarded; we only keep the quarters $(A_k, N_k, F_k)$.
+```{=html}
+<div id="demo-payments" class="interactive-demo r-stretch"></div>
+```
 
 ::: {.callout-warning}
 A side effect of discretising: a claim that opens _and_ closes within a single quarter vanishes from the snapshot dataset entirely.
@@ -473,29 +614,41 @@ A side effect of discretising: a claim that opens _and_ closes within a single q
 ## Quarterly aggregation
 
 All payments within a quarter collapse into one number, $Y_{k,t}$ --- including quarters with _zero_ payments, which are kept as rows.
+Case estimates within a quarter are instead summarised by their _latest_ value (the estimate is a level, not a flow --- summing revisions would be meaningless).
 
-| Quarter | Total Paid |
-|---------|------------|
-| 2022Q2 | $9.00 |
-| 2022Q3 | $2.00 |
-| 2022Q4 | $8.00 |
-| 2023Q1 | $2.00 |
-| 2023Q2 | $3.00 |
-| 2023Q3 | $26.00 |
-
-Case estimates within a quarter are summarised by their _latest_ value (the estimate is a level, not a flow --- summing revisions would be meaningless).
-
-
+```{=html}
+<div id="demo-quarterly" class="interactive-demo r-stretch"></div>
+```
 
 ## Adjusting for inflation
 
 A dollar paid in 2015 is not a dollar paid in 2025.
 If past payments enter the model in nominal terms, the model must waste capacity learning inflation --- and drifts as soon as inflation changes.
 
-- Deflate all dollar amounts to the valuation date using a suitable index (e.g. wage inflation for injury claims, since costs are dominated by wages and care).
+- Deflate all dollar amounts to the valuation date using a suitable index (e.g. wage inflation for injury claims, since costs are dominated by wages and care) --- here, a synthetic wage price index:
 - Fit the model in _real_ dollars; re-inflate predictions afterwards if needed.
 
 
+
+```{=html}
+<div id="demo-inflation-plot" class="interactive-demo r-stretch"></div>
+```
+
+## Adjusting for inflation, applied
+
+Each of the selected claim's quarters gets an adjustment factor from the index --- turning the nominal quarterly sums into real dollars.
+
+```{=html}
+<div id="demo-inflation" class="interactive-demo r-stretch"></div>
+```
+
+## The target, quarter by quarter
+
+For a finalised claim we can compute the outstanding $O_k(v)$ retrospectively at every quarter $v$ it was open --- these become the labels.
+
+```{=html}
+<div id="demo-outstanding" class="interactive-demo r-stretch"></div>
+```
 
 ## From history to features
 
@@ -535,7 +688,11 @@ How does $\Phi$ compress a variable-length payment history into fixed columns? S
 - current values of the time-varying covariates,
 - the static covariates unchanged.
 
+---
 
+```{=html}
+<div id="demo-history" class="interactive-demo r-stretch"></div>
+```
 
 ## Alternative: let an RNN read the history
 
@@ -560,9 +717,11 @@ The second half of $\Phi$ is the standard tabular recipe from earlier weeks:
 
 - `log1p` transform dollar amounts (heavy tails!),
 - one-hot encode categoricals (age band, injury severity, legal representation),
-- min--max scale numeric columns --- with scalers _fit on the training set only_.
+- min--max scale numeric columns.
 
-
+```{=html}
+<div id="demo-nn" class="interactive-demo r-stretch"></div>
+```
 
 ## Creating claim snapshots
 
@@ -579,7 +738,13 @@ $$
   \mathcal{D} := \{(X_{k,v}, O_k(v)) : k \in \mathcal{I},\ v = N_k, \dots, F_k - 1\}.
 $$
 
+## Creating claim snapshots
 
+The animated build of the same idea: one snapshot row per development quarter, each pairing features $X_{k,v}$ with the target $O_k(v)$.
+
+```{=html}
+<div id="demo-snapshots" class="interactive-demo r-stretch"></div>
+```
 
 # Splitting Claims into Datasets
 
@@ -587,7 +752,32 @@ $$
 
 ## A portfolio of claims over time
 
+```{python}
+#| echo: false
+#| fig-dpi: 350
+# Zoomed-out companion to the "total outstanding, visually" schematic — the
+# same visual language (o = notification, x = payment, X = finalisation) but
+# now a sample of real SPLICE claims, sorted by notification, with NO
+# valuation line or highlighting: just claims overlapping in time.
+_port = _claims.copy()
+_port["notif_time"] = _port["occurrence_time"] + _port["notidel"]
+_port["final_time"] = _port["notif_time"] + _port["setldel"]
+_port = (_port[_port["final_time"] <= 40]  # keep the axis inside the window
+         .sample(30, random_state=2026).sort_values("notif_time"))
 
+plt.figure(figsize=(5, 3.0))
+for _row, (_, _c) in enumerate(_port.iterrows()):
+    _y = -_row
+    plt.plot([_c["notif_time"], _c["final_time"]], [_y, _y],
+             color="#3F9999", linewidth=1.2)
+    _p = _payments.loc[_payments["claim_no"] == _c["claim_no"], "payment_time"]
+    plt.plot(_p, [_y] * len(_p), "x", color="#3F9999", markersize=4)
+    plt.plot(_c["notif_time"], _y, "o", color="#3F9999", markersize=3)
+    plt.plot(_c["final_time"], _y, "X", color="#3F9999", markersize=5)
+plt.yticks([])
+plt.gca().spines["left"].set_visible(False)
+plt.xlabel("Time (quarters)");
+```
 
 Now zoom out from one claim to the whole portfolio.
 Every claim needs to be allocated to train, validation, or test --- but claims _overlap in time_, so the familiar shuffled random split deserves suspicion.
@@ -601,6 +791,12 @@ Claims have two anchor dates you could split on:
 
 Both are sensible-looking temporal splits (the interactive demo shows both).
 But they differ in one important way: under a notification split, the training set contains claims that are _still open_ at the end of the training window --- and for those, we don't know the true outstanding.
+
+## Exploring the splits
+
+```{=html}
+<div id="demo-splitting" class="interactive-demo r-stretch"></div>
+```
 
 ## The trouble with splitting by notification
 
@@ -677,6 +873,10 @@ from sklearn.metrics import root_mean_squared_error
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import (FunctionTransformer, MinMaxScaler,
                                    OneHotEncoder)
+
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.callbacks import EarlyStopping
 ```
 
 ## Generating synthetic claims with SPLICE
@@ -685,38 +885,21 @@ SynthETIC [@avanzi2021synthetic] generates the claims and payments; SPLICE [@ava
 
 ```{r}
 #| eval: false
+# Verbatim copy of the chunk that actually runs, hoisted to the setup block at
+# the top of this file so it executes before the earlier slides read the
+# parquet (see the comment there — rewriting an already-read parquet mid-render
+# corrupts later reads). eval: false here purely to avoid writing them twice.
 sim <- generate_data(
   n_claims_per_period = 100,   # ~4,000 claims in total
   n_periods           = 40,    # 40 quarters = 10 accident years
   complexity          = 5,     # the most realistic scenario
-  random_seed         = 20260712,
+  random_seed         = 20260712,  # fully reproducible across sessions
   covariates_obj      = SynthETIC::test_covariates_obj
 )
 claims <- cbind(sim$claim_dataset, sim$covariates_data$data)
 write_parquet(claims, "data/splice/claims.parquet")
 write_parquet(sim$payment_dataset, "data/splice/payments.parquet")
 write_parquet(sim$incurred_dataset, "data/splice/estimates.parquet")
-```
-
-```{r}
-#| echo: false
-#| output: false
-# The chunk shown above is eval: false; this hidden twin actually runs it,
-# guarded so the saved dataset is never clobbered. The guard is load-bearing:
-# SPLICE's random_seed does NOT reproduce the payment-level simulation across
-# sessions, so data/splice/*.parquet is the source of truth (commit it).
-dir.create("data/splice", recursive = TRUE, showWarnings = FALSE)
-if (!file.exists("data/splice/claims.parquet")) {
-  sim <- generate_data(
-    n_claims_per_period = 100, n_periods = 40, complexity = 5,
-    random_seed = 20260712,
-    covariates_obj = SynthETIC::test_covariates_obj
-  )
-  claims <- cbind(sim$claim_dataset, sim$covariates_data$data)
-  write_parquet(claims, "data/splice/claims.parquet")
-  write_parquet(sim$payment_dataset, "data/splice/payments.parquet")
-  write_parquet(sim$incurred_dataset, "data/splice/estimates.parquet")
-}
 ```
 
 Three tables: one row per _claim_, per _payment_, and per _case estimate transaction_.
@@ -780,10 +963,11 @@ T_END = 40  # the valuation quarter (end of the observation window)
 claims["notif_qtr"] = np.ceil(claims["occurrence_time"] + claims["notidel"]).astype(int)
 claims["final_qtr"] = np.ceil(claims["occurrence_time"] + claims["notidel"] + claims["setldel"]).astype(int)
 
-ibnr = claims["notif_qtr"] > T_END
-unfinalised = ~ibnr & (claims["final_qtr"] > T_END)
-flash = ~ibnr & ~unfinalised & (claims["final_qtr"] == claims["notif_qtr"])
-observed = claims[~ibnr & ~unfinalised & ~flash]
+notif, final = claims["notif_qtr"], claims["final_qtr"]
+ibnr = notif > T_END
+unfinalised = (notif <= T_END) & (final > T_END)
+flash = (final <= T_END) & (final == notif)
+observed = claims[(final <= T_END) & (final > notif)]
 ```
 
 ```{python}
@@ -802,34 +986,57 @@ And some claims open and close within a single quarter, so they _vanish_ under t
 
 ## Building the snapshot grid
 
-One row per claim per open quarter, with the quarterly payments $Y_{k,t}$ merged in (missing quarters become zero-payment rows):
+One row per claim per open quarter, with the quarterly payments $Y_{k,t}$ merged in (missing quarters become zero-payment rows).
+The merge/groupby plumbing is routine (code folded away); what matters is the change of shape:
 
 ```{python}
+#| code-fold: true
 n_snapshots = (observed["final_qtr"] - observed["notif_qtr"]).to_numpy()
 grid = observed.loc[observed.index.repeat(n_snapshots),
     ["claim_no", "occurrence_period", "notif_qtr", "final_qtr", "notidel",
      "Legal Representation", "Injury Severity", "Age of Claimant"]].copy()
 grid["quarter"] = grid["notif_qtr"] + grid.groupby("claim_no").cumcount()
 
-quarterly = (payments.groupby(["claim_no", "payment_period"])["payment_size"]
+quarterly = (payments.rename(columns={"payment_period": "quarter"})
+             .groupby(["claim_no", "quarter"])["payment_size"]
              .sum().rename("Incremental").reset_index())
-grid = grid.merge(quarterly, left_on=["claim_no", "quarter"],
-                  right_on=["claim_no", "payment_period"], how="left")
+grid = grid.merge(quarterly, on=["claim_no", "quarter"], how="left")
 grid["Incremental"] = grid["Incremental"].fillna(0.0)
-grid = grid.drop(columns="payment_period")
 ```
+
+:::: {.columns}
+::: {.column width="40%"}
+Before --- one row per _claim_:
+
+```{python}
+#| echo: false
+#| output: asis
+show_df(observed[["claim_no", "notif_qtr", "final_qtr"]].head(3))
+```
+:::
+::: {.column width="60%"}
+After --- one row per claim per open _quarter_:
+
+```{python}
+#| echo: false
+#| output: asis
+show_df(grid[["claim_no", "quarter", "Incremental"]].round(2).head(6))
+```
+:::
+::::
 
 ## History summaries, case estimates, and the target
 
-The path-dependent features (expanding summaries of the payment history), the current-state features (latest case estimate, forward-filled), and the target:
+Onto that grid we add the path-dependent features (expanding summaries of the payment history), the current-state features (latest case estimate, forward-filled between revisions), and the target (code folded away):
 
 ```{python}
+#| code-fold: true
 g = grid.groupby("claim_no")["Incremental"]
 grid["count_Incremental"] = ((grid["Incremental"] > 0)
                              .groupby(grid["claim_no"]).cumsum())
 grid["sum_Incremental"] = g.cumsum()
 for stat in ["mean", "std", "min", "max"]:
-    grid[f"{stat}_Incremental"] = getattr(g.expanding(), stat)().to_numpy()
+    grid[f"{stat}_Incremental"] = g.expanding().agg(stat).to_numpy()
 grid["std_Incremental"] = grid["std_Incremental"].fillna(0.0)
 
 ultimate = payments.groupby("claim_no")["payment_size"].sum()
@@ -838,15 +1045,41 @@ grid["development_period"] = grid["quarter"] - grid["occurrence_period"] + 1
 ```
 
 ```{python}
-estimates["txn_qtr"] = np.ceil(estimates["txn_time"]).astype(int)
+#| code-fold: true
+estimates["quarter"] = np.ceil(estimates["txn_time"]).astype(int)
 latest = (estimates.sort_values("txn_time")
-          .groupby(["claim_no", "txn_qtr"])["OCL"].last()
+          .groupby(["claim_no", "quarter"])["OCL"].last()
           .rename("Estimate").reset_index())
-grid = grid.merge(latest, left_on=["claim_no", "quarter"],
-                  right_on=["claim_no", "txn_qtr"], how="left")
+grid = grid.merge(latest, on=["claim_no", "quarter"], how="left")
 grid["Estimate"] = grid.groupby("claim_no")["Estimate"].ffill()
-grid = grid.drop(columns="txn_qtr")
 ```
+
+:::: {.columns}
+::: {.column width="35%"}
+Before --- one claim's rows:
+
+```{python}
+#| echo: false
+#| output: asis
+# The input columns are untouched by the transforms above (only new columns
+# are added), so the "before" view can be sliced from the mutated grid.
+_first_claim = grid["claim_no"].iloc[0]
+show_df(grid.loc[grid["claim_no"] == _first_claim,
+                 ["quarter", "Incremental"]].round(2).head(5))
+```
+:::
+::: {.column width="65%"}
+After --- summaries, estimate, and the label $O_k(v)$:
+
+```{python}
+#| echo: false
+#| output: asis
+show_df(grid.loc[grid["claim_no"] == _first_claim,
+                 ["quarter", "sum_Incremental", "Estimate",
+                  "Outstanding"]].round(2).head(5))
+```
+:::
+::::
 
 ## The dataset after preprocessing
 
@@ -936,7 +1169,8 @@ def make_glm(with_estimate):
         ("dollars", make_pipeline(FunctionTransformer(np.log1p),
                                   MinMaxScaler()), dollars),
         ("numeric", MinMaxScaler(), numeric_cols),
-        ("categorical", OneHotEncoder(drop="first"), cat_cols),
+        ("categorical", OneHotEncoder(drop="first", sparse_output=False),
+         cat_cols),
     ])
     return make_pipeline(preprocess, Ridge(alpha=1e-4))
 ```
@@ -952,11 +1186,12 @@ X_train, X_test = splits["train"], splits["test"]
 y_train = np.log1p(X_train["Outstanding"])
 y_test = np.log1p(X_test["Outstanding"])
 
+glms = {}
 for with_est in [False, True]:
-    glm = make_glm(with_est).fit(X_train, y_train)
-    rmse = root_mean_squared_error(y_test, glm.predict(X_test))
-    print(f"GLM {'with' if with_est else 'without'} case estimates:"
-          f" test RMSE (log scale) = {rmse:.3f}")
+    name = f"GLM {'with' if with_est else 'without'} case estimates"
+    glms[name] = make_glm(with_est).fit(X_train, y_train)
+    rmse = root_mean_squared_error(y_test, glms[name].predict(X_test))
+    print(f"{name}: test RMSE (log scale) = {rmse:.3f}")
 
 rmse_ce = root_mean_squared_error(y_test, np.log1p(X_test["Estimate"]))
 print(f"Case estimate alone: test RMSE (log scale) = {rmse_ce:.3f}")
@@ -973,9 +1208,170 @@ On real data, assessors know things the payment stream doesn't, and this feature
 
 ## Fitting a neural network
 
+Swap the ridge regression for a small dense network --- same features, same target:
 
+```{python}
+#| eval: false
+preprocess = make_glm(with_estimate=True)[:-1]  # the same recipe, minus the Ridge
+X_train_nn = preprocess.fit_transform(X_train)
+X_val_nn = preprocess.transform(splits["val"])
+y_val = np.log1p(splits["val"]["Outstanding"])
+
+nn = Sequential([
+    Dense(30, activation="leaky_relu"),
+    Dense(30, activation="leaky_relu"),
+    Dense(1)])
+nn.compile(optimizer="adam", loss="mse")
+es = EarlyStopping(patience=10, restore_best_weights=True)
+hist = nn.fit(X_train_nn, y_train, epochs=100,
+              validation_data=(X_val_nn, y_val), callbacks=[es], verbose=0)
+```
+
+```{python}
+#| echo: false
+#| output: false
+# Hidden twin of the chunk above with a model cache (the same guard idiom as
+# the SPLICE generation chunk): training takes a minute, loading is instant.
+# Delete models/individual-reserving-nn.keras to force a refit.
+preprocess = make_glm(with_estimate=True)[:-1]
+X_train_nn = preprocess.fit_transform(X_train)
+X_val_nn = preprocess.transform(splits["val"])
+y_val = np.log1p(splits["val"]["Outstanding"])
+
+nn_path = "models/individual-reserving-nn.keras"
+if Path(nn_path).exists():
+    nn = keras.models.load_model(nn_path)
+else:
+    nn = Sequential([
+        Dense(30, activation="leaky_relu"),
+        Dense(30, activation="leaky_relu"),
+        Dense(1)])
+    nn.compile(optimizer="adam", loss="mse")
+    es = EarlyStopping(patience=10, restore_best_weights=True)
+    hist = nn.fit(X_train_nn, y_train, epochs=100,
+                  validation_data=(X_val_nn, y_val), callbacks=[es],
+                  verbose=0)
+    nn.save(nn_path)
+```
+
+The validation set finally earns its keep: early stopping monitors the validation loss, and our careful split by finalisation quarter is what makes that loss trustworthy.
+
+::: {.content-visible unless-format="revealjs"}
+The paper's version of this model predicts a whole _distribution_ for each claim's outstanding (recall the distributional regression week); a point estimate of the log outstanding is enough for today's comparisons.
+:::
 
 ## Evaluating the models
+
+All three models on the test set, against the benchmark-to-beat:
+
+```{python}
+X_test_nn = preprocess.transform(X_test)
+preds = {name: glm.predict(X_test) for name, glm in glms.items()}
+preds["Neural network"] = nn.predict(X_test_nn, verbose=0).flatten()
+preds["Case estimates alone"] = np.log1p(X_test["Estimate"])
+
+for name, pred in preds.items():
+    rmse = root_mean_squared_error(y_test, pred)
+    print(f"{name:28s} test RMSE (log scale) = {rmse:.3f}")
+```
+
+Per-snapshot accuracy is one lens --- but a reserving model's real job is the portfolio total, coming up next.
+
+
+
+## Predicted vs actual outstanding
+
+```{python}
+#| echo: false
+#| fig-dpi: 350
+plt.figure(figsize=(2.7, 2.7))
+plt.scatter(y_test, preds["Neural network"], s=2, alpha=0.15,
+            color="#3F9999", edgecolors="none")
+add_diagonal_line()
+plt.xlabel("Actual $\\log(1 + O_k(v))$")
+plt.ylabel("Predicted");
+```
+
+Each point is one test-set snapshot $(X_{k,v}, O_k(v))$, plotted on the model's log scale; the dashed diagonal is perfect prediction.
+
+## From per-claim predictions to the reserve
+
+This is the whole point of individual reserving: predict $\widehat{O}_k(v)$ for every claim still open at the valuation date, and sum them to get $\widehat{T}(v)$.
+
+```{python}
+#| echo: false
+#| output: false
+# Snapshot features for the claims still open at the valuation date, built
+# by re-running the snapshot pipeline with final_qtr clamped to T_END + 1
+# (so the grid runs notif_qtr..T_END) and keeping each claim's final row.
+# Mirrors the visible "Building the snapshot grid" / "History summaries"
+# chunks — keep in sync if those change. Payments/estimates after T_END
+# never merge in (the join key `quarter` stops at T_END), so no leakage.
+open_claims = claims[unfinalised].copy()
+open_claims["final_qtr"] = T_END + 1
+
+n_open = (open_claims["final_qtr"] - open_claims["notif_qtr"]).to_numpy()
+og = open_claims.loc[open_claims.index.repeat(n_open),
+    ["claim_no", "occurrence_period", "notif_qtr", "final_qtr", "notidel",
+     "Legal Representation", "Injury Severity", "Age of Claimant"]].copy()
+og["quarter"] = og["notif_qtr"] + og.groupby("claim_no").cumcount()
+
+og = og.merge(quarterly, on=["claim_no", "quarter"], how="left")
+og["Incremental"] = og["Incremental"].fillna(0.0)
+
+g_o = og.groupby("claim_no")["Incremental"]
+og["count_Incremental"] = ((og["Incremental"] > 0)
+                           .groupby(og["claim_no"]).cumsum())
+og["sum_Incremental"] = g_o.cumsum()
+for stat in ["mean", "std", "min", "max"]:
+    og[f"{stat}_Incremental"] = g_o.expanding().agg(stat).to_numpy()
+og["std_Incremental"] = og["std_Incremental"].fillna(0.0)
+og["development_period"] = og["quarter"] - og["occurrence_period"] + 1
+
+og = og.merge(latest, on=["claim_no", "quarter"], how="left")
+og["Estimate"] = og.groupby("claim_no")["Estimate"].ffill()
+X_open = og[og["quarter"] == T_END]
+```
+
+With one feature row per open claim (`X_open`, built by the same pipeline):
+
+```{python}
+reserves = {"Chain ladder": float(r.reserve_cl)}  # reticulate's R bridge
+for name, glm in glms.items():
+    reserves[name] = np.expm1(glm.predict(X_open)).sum()
+reserves["Neural network"] = float(np.expm1(
+    nn.predict(preprocess.transform(X_open), verbose=0)).sum())
+```
+
+## The portfolio reserves compared
+
+```{python}
+#| echo: false
+#| fig-dpi: 350
+future = payments[payments["payment_period"] > T_END]
+true_open = future[future["claim_no"]
+                   .isin(X_open["claim_no"])]["payment_size"].sum()
+true_total = future["payment_size"].sum()
+
+_short = {"GLM without case estimates": "GLM",
+          "GLM with case estimates": "GLM + case est."}
+_names = [_short.get(n, n) for n in reserves][::-1]
+_vals = [v / 1e6 for v in list(reserves.values())[::-1]]
+
+plt.figure(figsize=(5, 2.0))
+plt.barh(_names, _vals, color="#91CCCC", height=0.55)
+plt.axvline(true_open / 1e6, color="#FF8FA9", linestyle="--", linewidth=1.2)
+plt.axvline(true_total / 1e6, color="black", linestyle="--", linewidth=1.2)
+plt.annotate("true, visible claims", (true_open / 1e6, 1.02),
+             xycoords=("data", "axes fraction"), ha="right", fontsize=7,
+             color="#FF8FA9")
+plt.annotate(" true, incl. IBNR", (true_total / 1e6, 1.02),
+             xycoords=("data", "axes fraction"), ha="left", fontsize=7)
+plt.xlim(0, max(true_total / 1e6, max(_vals)) * 1.15)
+plt.xlabel("Portfolio reserve ($m)");
+```
+
+The individual models can only reserve for claims they can _see_, so their fair target is the lower line; the chain ladder triangle implicitly projects the IBNR claims too, so its target is the upper one.
 
 
 
@@ -992,8 +1388,6 @@ On real data, assessors know things the payment stream doesn't, and this feature
 
 
 ## What we didn't cover
-
-One slide, words only --- pointers to where this goes next:
 
 - _IBNR_: our model only reserves claims it can see; incurred-but-not-reported claims need a separate (usually aggregate) adjustment.
 - _Uncertainty_: a reserve needs a risk margin, not just a point estimate; distributional forecasts and ensembling give prediction intervals.

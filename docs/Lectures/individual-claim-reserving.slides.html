@@ -304,20 +304,11 @@ Patrick Laub
 </ul>
 </div>
 </section>
-<section id="why-is-pricing-different-from-reserving" class="slide level2">
-<h2>Why is pricing different from reserving?</h2>
-<ul>
-<li class="fragment"><em>Pricing</em> is prospective and per-policy: no claim exists yet, and we predict the frequency/severity of hypothetical future claims from policy covariates (recall the French motor lectures).</li>
-<li class="fragment"><em>Reserving</em> is about claims that have already happened: we condition on each claim’s unfolding history — payments to date, case estimates — to predict what is still to be paid.</li>
-<li class="fragment">Consequence for the ML setup: pricing rows are policies with static features; reserving rows are claim-quarter snapshots with <em>time-varying</em> features. That’s why this lecture needs a whole preprocessing pipeline.</li>
-</ul>
-</section>
-<section id="from-claim-severity-models-to-individual-reserving" class="slide level2">
-<h2>From claim severity models to individual reserving</h2>
-<p>A claim severity model looks at a potential accident from the insured, and tries to work out from their covariates the likely size of such a claim.</p>
-<p>An individual reserving model is more specific: an accident has occurred, the insured has been notified, and maybe parts of the claim have already been paid, now we need to guess how much remains in this realised claim.</p>
+<section id="individual-claim-reserving" class="slide level2">
+<h2>Individual claim reserving</h2>
+<p>An accident has occurred, the insurer has been notified, and maybe parts of the claim have already been paid, now we need to guess how much remains in this realised claim.</p>
 
-<img data-src="images/individual-claim.png" class="r-stretch"><p>This is potentially a more promising application for neural networks (more features!).</p>
+<img data-src="images/individual-claim.png" class="r-stretch"><p>This is potentially a promising application for neural networks.</p>
 </section>
 <section id="ultimate-claim-size" class="slide level2">
 <h2>Ultimate claim size</h2>
@@ -363,8 +354,16 @@ Patrick Laub
 <section id="the-total-outstanding-visually" class="slide level2">
 <h2>The total outstanding, visually</h2>
 
-<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-3-1.png" class="quarto-figure quarto-figure-center r-stretch" width="409"><p>Each open claim’s future payments (highlighted) get summed to give <span class="math inline">T(v)</span>.</p>
+<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-4-1.png" class="quarto-figure quarto-figure-center r-stretch" width="409"><p>Each open claim’s future payments (highlighted) get summed to give <span class="math inline">T(v)</span>.</p>
 <p>The bottom claim has <em>occurred</em> before <span class="math inline">v</span> but hasn’t been <em>notified</em> yet. No individual model can reserve for a claim it cannot see — IBNR needs a separate adjustment.</p>
+</section>
+<section id="why-is-pricing-different-from-reserving" class="slide level2">
+<h2>Why is pricing different from reserving?</h2>
+<ul>
+<li><em>Pricing</em> is prospective and per-policy: no claim exists yet, and we predict the frequency/severity of hypothetical future claims from policy covariates (recall the French motor lectures).</li>
+<li><em>Reserving</em> is about claims that have already happened: we condition on each claim’s unfolding history — payments to date, case estimates — to predict what is still to be paid.</li>
+<li>Consequence for the ML setup: pricing rows are policies with static features; reserving rows are claim-quarter snapshots with <em>time-varying</em> features. That’s why this lecture needs a whole preprocessing pipeline.</li>
+</ul>
 </section></section>
 <section>
 <section id="an-individual-claim" class="title-slide slide level1 agenda-slide center">
@@ -572,15 +571,15 @@ Patrick Laub
 </table>
 <p>With hindsight: the true outstanding just after Payment #1 was $39, while the assessor’s estimate was $21 — case estimates are informative but not oracles.</p>
 </section>
-<section id="putting-it-all-together-payments-growing" class="slide level2">
-<h2>Putting it all together: payments growing</h2>
+<section id="from-the-policyholders-perspective" class="slide level2">
+<h2>From the policyholder’s perspective</h2>
 
-<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-5-3.png" class="quarto-figure quarto-figure-center r-stretch" width="449"><p>Payments step up toward the ultimate. The <em>incurred</em>, which is cumulative payments plus the case estimate of the outstanding, is the assessor’s running view of the ultimate.</p>
+<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-6-3.png" class="quarto-figure quarto-figure-center r-stretch" width="445"><p>Payments step up toward the ultimate. The <em>incurred</em>, which is cumulative payments plus the case estimate of the outstanding, is the assessor’s running view of the ultimate.</p>
 </section>
-<section id="putting-it-all-together-outstanding-shrinking" class="slide level2">
-<h2>Putting it all together: outstanding shrinking</h2>
+<section id="from-the-insurers-perspective" class="slide level2">
+<h2>From the insurer’s perspective</h2>
 
-<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-6-5.png" class="quarto-figure quarto-figure-center r-stretch" width="449"><p>The same claim upside down: the true outstanding falls to zero as the payments arrive. The <em>outstanding claims liability (OCL)</em> is the assessor’s live forecast of the outstanding, and drops to zero.</p>
+<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-7-5.png" class="quarto-figure quarto-figure-center r-stretch" width="445"><p>The same claim upside down: the true outstanding falls to zero as the payments arrive. The <em>outstanding claims liability (OCL)</em> is the assessor’s live forecast of the outstanding, and drops to zero.</p>
 </section>
 <section id="three-levels-of-data-visibility" class="slide level2">
 <h2>Three levels of data visibility</h2>
@@ -765,100 +764,115 @@ Patrick Laub
 </ul>
 </div>
 </section>
+<section id="one-claims-full-history" class="slide level2">
+<h2>One claim’s full history</h2>
+<p>Before any preprocessing: a claim is some static covariates plus a timeline of events. Step through a portfolio of 20 synthetic claims — the <em>same</em> claim is shown on every interactive slide in this lecture.</p>
+<style>
+/* Scoped stand-in for Tailwind preflight (which is disabled globally below,
+   so it cannot restyle reveal.js/Bootstrap). */
+.interactive-demo *,
+.interactive-demo *::before,
+.interactive-demo *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb;
+}
+.interactive-demo h1, .interactive-demo h2, .interactive-demo h3,
+.interactive-demo h4, .interactive-demo h5, .interactive-demo h6,
+.interactive-demo p, .interactive-demo figure, .interactive-demo blockquote,
+.interactive-demo dl, .interactive-demo dd {
+  margin: 0;
+}
+.interactive-demo ul, .interactive-demo ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.interactive-demo button, .interactive-demo input, .interactive-demo select,
+.interactive-demo textarea {
+  font-family: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+.interactive-demo button {
+  background-color: transparent;
+  background-image: none;
+  text-transform: none;
+  cursor: pointer;
+}
+.interactive-demo table {
+  border-collapse: collapse;
+  text-indent: 0;
+  border-color: inherit;
+  margin: 0;
+}
+.interactive-demo {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  text-align: left;
+  max-height: 540px;
+  overflow: auto;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  /* Become the containing block for position:fixed descendants (the
+     splitting diagram's Controls drawer) and clip them: inside reveal's
+     transformed slides the "off-screen" closed drawer would otherwise sit
+     visibly just right of the slide. Open, it docks inside this box. */
+  contain: paint;
+}
+.interactive-demo svg { max-width: none; }
+/* The splitting diagram centres its Train/Val/Test legend as an absolute
+   overlay on the control-bar row — fine at full browser width, but at slide
+   width it overlaps the buttons. Make it a normal row above them. */
+#demo-splitting .pointer-events-none.absolute.inset-0 {
+  position: static;
+  margin-bottom: 0.5rem;
+}
+</style>
+<div id="demo-claim" class="interactive-demo r-stretch"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // Must run after the Play CDN script. Two clash guards: no global CSS
+  // reset (preflight), and scope every generated utility under
+  // .interactive-demo (Tailwind's "important" selector strategy). Without
+  // the scoping, the Play CDN scans the WHOLE page for class names and
+  // emits utilities for Bootstrap's classes too — e.g. `.collapse`
+  // (visibility: collapse), which hides quarto's sidebar in the html format
+  // the moment Tailwind's runtime stylesheet is injected.
+  tailwind.config = {
+    corePlugins: { preflight: false },
+    important: ".interactive-demo",
+  };
+</script>
+
+<script type="module" src="interactive-splits/utilities.js"></script>
+<script type="module" src="interactive-splits/compiled/StaticCovariates.js"></script>
+<script type="module" src="interactive-splits/compiled/ContinuousTimeline.js"></script>
+<script type="module" src="interactive-splits/compiled/PaymentDetails.js"></script>
+<script type="module" src="interactive-splits/compiled/QuarterlyAggregation.js"></script>
+<script type="module" src="interactive-splits/compiled/InflationAdjustment.js"></script>
+<script type="module" src="interactive-splits/compiled/OutstandingLiabilityCalculation.js"></script>
+<script type="module" src="interactive-splits/compiled/PlotlySpark.js"></script>
+<script type="module" src="interactive-splits/compiled/CovariateHistorySummaries.js"></script>
+<script type="module" src="interactive-splits/compiled/NeuralNetworkPreprocessing.js"></script>
+<script type="module" src="interactive-splits/compiled/DevelopmentPeriodGeneration.js"></script>
+<script type="module" src="interactive-splits/compiled/claims_splitting_diagram.js"></script>
+<script type="module" src="interactive-splits/compiled/lecture-demos.js"></script>
+</section>
 <section id="noting-the-quarters" class="slide level2">
 <h2>Noting the quarters</h2>
-<p>We work in quarters — the standard in actuarial practice. Each event date is binned into its calendar quarter, and we also track the <em>development quarter</em> (quarters since the accident).</p>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th>Event</th>
-<th>Date</th>
-<th>Calendar Quarter</th>
-<th>Amount</th>
-<th>Dev Quarter</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>Accident</td>
-<td>2021-09-30</td>
-<td>2021Q3</td>
-<td></td>
-<td>Q1</td>
-</tr>
-<tr class="even">
-<td>Notification</td>
-<td>2021-11-15</td>
-<td>2021Q4</td>
-<td></td>
-<td>Q2</td>
-</tr>
-<tr class="odd">
-<td>Payment #1</td>
-<td>2022-05-17</td>
-<td>2022Q2</td>
-<td>$9.00</td>
-<td>Q4</td>
-</tr>
-<tr class="even">
-<td>Payment #2</td>
-<td>2022-08-31</td>
-<td>2022Q3</td>
-<td>$2.00</td>
-<td>Q5</td>
-</tr>
-<tr class="odd">
-<td>Payment #3</td>
-<td>2022-10-23</td>
-<td>2022Q4</td>
-<td>$2.00</td>
-<td>Q6</td>
-</tr>
-<tr class="even">
-<td>Payment #4</td>
-<td>2022-12-20</td>
-<td>2022Q4</td>
-<td>$4.00</td>
-<td>Q6</td>
-</tr>
-<tr class="odd">
-<td>Payment #5</td>
-<td>2023-02-19</td>
-<td>2023Q1</td>
-<td>$2.00</td>
-<td>Q7</td>
-</tr>
-<tr class="even">
-<td>Payment #6</td>
-<td>2023-05-31</td>
-<td>2023Q2</td>
-<td>$3.00</td>
-<td>Q8</td>
-</tr>
-<tr class="odd">
-<td>Payment #7</td>
-<td>2023-07-08</td>
-<td>2023Q3</td>
-<td>$18.00</td>
-<td>Q9</td>
-</tr>
-<tr class="even">
-<td>Payment #8</td>
-<td>2023-09-10</td>
-<td>2023Q3</td>
-<td>$8.00</td>
-<td>Q9</td>
-</tr>
-<tr class="odd">
-<td>Finalisation</td>
-<td>2023-10-28</td>
-<td>2023Q4</td>
-<td></td>
-<td>Q10</td>
-</tr>
-</tbody>
-</table>
-<p>The exact dates <span class="math inline">d_k^A, d_k^N, d_k^F</span> are then discarded; we only keep the quarters <span class="math inline">(A_k, N_k, F_k)</span>.</p>
+<p>We work in quarters — the standard in actuarial practice. Each event date is binned into its calendar quarter, and we also track the <em>development quarter</em> (quarters since the accident); the exact dates <span class="math inline">d_k^A, d_k^N, d_k^F</span> are then discarded, keeping only the quarters <span class="math inline">(A_k, N_k, F_k)</span>.</p>
+<div id="demo-payments" class="interactive-demo r-stretch"></div>
 <div class="callout callout-warning callout-titled callout-style-default">
 <div class="callout-body">
 <div class="callout-title">
@@ -875,50 +889,27 @@ Patrick Laub
 </section>
 <section id="quarterly-aggregation" class="slide level2">
 <h2>Quarterly aggregation</h2>
-<p>All payments within a quarter collapse into one number, <span class="math inline">Y_{k,t}</span> — including quarters with <em>zero</em> payments, which are kept as rows.</p>
-<table class="caption-top">
-<thead>
-<tr class="header">
-<th>Quarter</th>
-<th>Total Paid</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>2022Q2</td>
-<td>$9.00</td>
-</tr>
-<tr class="even">
-<td>2022Q3</td>
-<td>$2.00</td>
-</tr>
-<tr class="odd">
-<td>2022Q4</td>
-<td>$8.00</td>
-</tr>
-<tr class="even">
-<td>2023Q1</td>
-<td>$2.00</td>
-</tr>
-<tr class="odd">
-<td>2023Q2</td>
-<td>$3.00</td>
-</tr>
-<tr class="even">
-<td>2023Q3</td>
-<td>$26.00</td>
-</tr>
-</tbody>
-</table>
-<p>Case estimates within a quarter are summarised by their <em>latest</em> value (the estimate is a level, not a flow — summing revisions would be meaningless).</p>
+<p>All payments within a quarter collapse into one number, <span class="math inline">Y_{k,t}</span> — including quarters with <em>zero</em> payments, which are kept as rows. Case estimates within a quarter are instead summarised by their <em>latest</em> value (the estimate is a level, not a flow — summing revisions would be meaningless).</p>
+<div id="demo-quarterly" class="interactive-demo r-stretch"></div>
 </section>
 <section id="adjusting-for-inflation" class="slide level2">
 <h2>Adjusting for inflation</h2>
 <p>A dollar paid in 2015 is not a dollar paid in 2025. If past payments enter the model in nominal terms, the model must waste capacity learning inflation — and drifts as soon as inflation changes.</p>
 <ul>
-<li>Deflate all dollar amounts to the valuation date using a suitable index (e.g.&nbsp;wage inflation for injury claims, since costs are dominated by wages and care).</li>
+<li>Deflate all dollar amounts to the valuation date using a suitable index (e.g.&nbsp;wage inflation for injury claims, since costs are dominated by wages and care) — here, a synthetic wage price index:</li>
 <li>Fit the model in <em>real</em> dollars; re-inflate predictions afterwards if needed.</li>
 </ul>
+<div id="demo-inflation-plot" class="interactive-demo r-stretch"></div>
+</section>
+<section id="adjusting-for-inflation-applied" class="slide level2">
+<h2>Adjusting for inflation, applied</h2>
+<p>Each of the selected claim’s quarters gets an adjustment factor from the index — turning the nominal quarterly sums into real dollars.</p>
+<div id="demo-inflation" class="interactive-demo r-stretch"></div>
+</section>
+<section id="the-target-quarter-by-quarter" class="slide level2">
+<h2>The target, quarter by quarter</h2>
+<p>For a finalised claim we can compute the outstanding <span class="math inline">O_k(v)</span> retrospectively at every quarter <span class="math inline">v</span> it was open — these become the labels.</p>
+<div id="demo-outstanding" class="interactive-demo r-stretch"></div>
 </section>
 <section id="from-history-to-features" class="slide level2">
 <h2>From history to features</h2>
@@ -951,6 +942,10 @@ Patrick Laub
 <li>the static covariates unchanged.</li>
 </ul>
 </section>
+<section class="slide level2">
+
+<div id="demo-history" class="interactive-demo r-stretch"></div>
+</section>
 <section id="alternative-let-an-rnn-read-the-history" class="slide level2">
 <h2>Alternative: let an RNN read the history</h2>
 <p>The claim history is naturally a <em>sequence</em> — one vector per development quarter: <span class="math display">
@@ -969,8 +964,9 @@ Patrick Laub
 <ul>
 <li><code>log1p</code> transform dollar amounts (heavy tails!),</li>
 <li>one-hot encode categoricals (age band, injury severity, legal representation),</li>
-<li>min–max scale numeric columns — with scalers <em>fit on the training set only</em>.</li>
+<li>min–max scale numeric columns.</li>
 </ul>
+<div id="demo-nn" class="interactive-demo r-stretch"></div>
 </section>
 <section id="creating-claim-snapshots" class="slide level2">
 <h2>Creating claim snapshots</h2>
@@ -981,6 +977,11 @@ Patrick Laub
 <p>So a claim that took <span class="math inline">F_k - N_k</span> quarters to settle contributes <span class="math inline">F_k - N_k</span> rows. The full supervised dataset is <span class="math display">
   \mathcal{D} := \{(X_{k,v}, O_k(v)) : k \in \mathcal{I},\ v = N_k, \dots, F_k - 1\}.
 </span></p>
+</section>
+<section id="creating-claim-snapshots-1" class="slide level2">
+<h2>Creating claim snapshots</h2>
+<p>The animated build of the same idea: one snapshot row per development quarter, each pairing features <span class="math inline">X_{k,v}</span> with the target <span class="math inline">O_k(v)</span>.</p>
+<div id="demo-snapshots" class="interactive-demo r-stretch"></div>
 </section></section>
 <section>
 <section id="splitting-claims-into-datasets" class="title-slide slide level1 agenda-slide center">
@@ -1016,7 +1017,8 @@ Patrick Laub
 </section>
 <section id="a-portfolio-of-claims-over-time" class="slide level2">
 <h2>A portfolio of claims over time</h2>
-<p>Now zoom out from one claim to the whole portfolio. Every claim needs to be allocated to train, validation, or test — but claims <em>overlap in time</em>, so the familiar shuffled random split deserves suspicion.</p>
+
+<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-8-7.png" class="quarto-figure quarto-figure-center r-stretch" width="391"><p>Now zoom out from one claim to the whole portfolio. Every claim needs to be allocated to train, validation, or test — but claims <em>overlap in time</em>, so the familiar shuffled random split deserves suspicion.</p>
 </section>
 <section id="two-natural-ways-to-split-claims-in-time" class="slide level2">
 <h2>Two natural ways to split claims in time</h2>
@@ -1026,6 +1028,10 @@ Patrick Laub
 <li>by <em>finalisation</em> quarter: a claim belongs to the era in which it <em>completed</em>.</li>
 </ul>
 <p>Both are sensible-looking temporal splits (the interactive demo shows both). But they differ in one important way: under a notification split, the training set contains claims that are <em>still open</em> at the end of the training window — and for those, we don’t know the true outstanding.</p>
+</section>
+<section id="exploring-the-splits" class="slide level2">
+<h2>Exploring the splits</h2>
+<div id="demo-splitting" class="interactive-demo r-stretch"></div>
 </section>
 <section id="the-trouble-with-splitting-by-notification" class="slide level2">
 <h2>The trouble with splitting by notification</h2>
@@ -1112,24 +1118,32 @@ Patrick Laub
 <span id="cb2-5"><a></a><span class="im">from</span> sklearn.metrics <span class="im">import</span> root_mean_squared_error</span>
 <span id="cb2-6"><a></a><span class="im">from</span> sklearn.pipeline <span class="im">import</span> make_pipeline</span>
 <span id="cb2-7"><a></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> (FunctionTransformer, MinMaxScaler,</span>
-<span id="cb2-8"><a></a>                                   OneHotEncoder)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-8"><a></a>                                   OneHotEncoder)</span>
+<span id="cb2-9"><a></a></span>
+<span id="cb2-10"><a></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential</span>
+<span id="cb2-11"><a></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense</span>
+<span id="cb2-12"><a></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="generating-synthetic-claims-with-splice" class="slide level2">
 <h2>Generating synthetic claims with SPLICE</h2>
 <p>SynthETIC <span class="citation" data-cites="avanzi2021synthetic">(<a href="#/references" role="doc-biblioref" onclick="">Avanzi et al., 2021</a>)</span> generates the claims and payments; SPLICE <span class="citation" data-cites="avanzi2023splice">(<a href="#/references" role="doc-biblioref" onclick="">Avanzi et al., 2023</a>)</span> adds the case estimates; the claim-level covariates plug in via SynthETIC’s covariates module.</p>
 <div class="cell" data-layout-align="center">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a></a>sim <span class="ot">&lt;-</span> <span class="fu">generate_data</span>(</span>
-<span id="cb3-2"><a></a>  <span class="at">n_claims_per_period =</span> <span class="dv">100</span>,   <span class="co"># ~4,000 claims in total</span></span>
-<span id="cb3-3"><a></a>  <span class="at">n_periods           =</span> <span class="dv">40</span>,    <span class="co"># 40 quarters = 10 accident years</span></span>
-<span id="cb3-4"><a></a>  <span class="at">complexity          =</span> <span class="dv">5</span>,     <span class="co"># the most realistic scenario</span></span>
-<span id="cb3-5"><a></a>  <span class="at">random_seed         =</span> <span class="dv">20260712</span>,</span>
-<span id="cb3-6"><a></a>  <span class="at">covariates_obj      =</span> SynthETIC<span class="sc">::</span>test_covariates_obj</span>
-<span id="cb3-7"><a></a>)</span>
-<span id="cb3-8"><a></a>claims <span class="ot">&lt;-</span> <span class="fu">cbind</span>(sim<span class="sc">$</span>claim_dataset, sim<span class="sc">$</span>covariates_data<span class="sc">$</span>data)</span>
-<span id="cb3-9"><a></a><span class="fu">write_parquet</span>(claims, <span class="st">"data/splice/claims.parquet"</span>)</span>
-<span id="cb3-10"><a></a><span class="fu">write_parquet</span>(sim<span class="sc">$</span>payment_dataset, <span class="st">"data/splice/payments.parquet"</span>)</span>
-<span id="cb3-11"><a></a><span class="fu">write_parquet</span>(sim<span class="sc">$</span>incurred_dataset, <span class="st">"data/splice/estimates.parquet"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource r number-lines code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a></a><span class="co"># Verbatim copy of the chunk that actually runs, hoisted to the setup block at</span></span>
+<span id="cb3-2"><a></a><span class="co"># the top of this file so it executes before the earlier slides read the</span></span>
+<span id="cb3-3"><a></a><span class="co"># parquet (see the comment there — rewriting an already-read parquet mid-render</span></span>
+<span id="cb3-4"><a></a><span class="co"># corrupts later reads). eval: false here purely to avoid writing them twice.</span></span>
+<span id="cb3-5"><a></a>sim <span class="ot">&lt;-</span> <span class="fu">generate_data</span>(</span>
+<span id="cb3-6"><a></a>  <span class="at">n_claims_per_period =</span> <span class="dv">100</span>,   <span class="co"># ~4,000 claims in total</span></span>
+<span id="cb3-7"><a></a>  <span class="at">n_periods           =</span> <span class="dv">40</span>,    <span class="co"># 40 quarters = 10 accident years</span></span>
+<span id="cb3-8"><a></a>  <span class="at">complexity          =</span> <span class="dv">5</span>,     <span class="co"># the most realistic scenario</span></span>
+<span id="cb3-9"><a></a>  <span class="at">random_seed         =</span> <span class="dv">20260712</span>,  <span class="co"># fully reproducible across sessions</span></span>
+<span id="cb3-10"><a></a>  <span class="at">covariates_obj      =</span> SynthETIC<span class="sc">::</span>test_covariates_obj</span>
+<span id="cb3-11"><a></a>)</span>
+<span id="cb3-12"><a></a>claims <span class="ot">&lt;-</span> <span class="fu">cbind</span>(sim<span class="sc">$</span>claim_dataset, sim<span class="sc">$</span>covariates_data<span class="sc">$</span>data)</span>
+<span id="cb3-13"><a></a><span class="fu">write_parquet</span>(claims, <span class="st">"data/splice/claims.parquet"</span>)</span>
+<span id="cb3-14"><a></a><span class="fu">write_parquet</span>(sim<span class="sc">$</span>payment_dataset, <span class="st">"data/splice/payments.parquet"</span>)</span>
+<span id="cb3-15"><a></a><span class="fu">write_parquet</span>(sim<span class="sc">$</span>incurred_dataset, <span class="st">"data/splice/estimates.parquet"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Three tables: one row per <em>claim</em>, per <em>payment</em>, and per <em>case estimate transaction</em>.</p>
 </section>
@@ -1186,16 +1200,16 @@ payment_inflated
 1.0
 </td>
 <td>
-4.226871
+3.062821
 </td>
 <td>
-5.0
+4.0
 </td>
 <td>
-1977.969824
+6432.827392
 </td>
 <td>
-2577.772115
+7888.576867
 </td>
 </tr>
 <tr>
@@ -1206,76 +1220,16 @@ payment_inflated
 2.0
 </td>
 <td>
-4.851022
+7.534395
 </td>
 <td>
-5.0
+8.0
 </td>
 <td>
-1991.849601
+5942.159392
 </td>
 <td>
-2699.394047
-</td>
-</tr>
-<tr>
-<th>
-2
-</th>
-<td>
-3.0
-</td>
-<td>
-5.683277
-</td>
-<td>
-6.0
-</td>
-<td>
-2312.694383
-</td>
-<td>
-3301.991516
-</td>
-</tr>
-<tr>
-<th>
-3
-</th>
-<td>
-4.0
-</td>
-<td>
-6.431716
-</td>
-<td>
-7.0
-</td>
-<td>
-16329.733127
-</td>
-<td>
-24434.524512
-</td>
-</tr>
-<tr>
-<th>
-4
-</th>
-<td>
-5.0
-</td>
-<td>
-6.961067
-</td>
-<td>
-7.0
-</td>
-<td>
-2120.736589
-</td>
-<td>
-3280.323306
+9814.951351
 </td>
 </tr>
 </tbody>
@@ -1331,7 +1285,7 @@ OCL
 0
 </th>
 <td>
-3.646604
+0.862753
 </td>
 <td>
 Ma
@@ -1340,7 +1294,7 @@ Ma
 0.000000
 </td>
 <td>
-35934.023245
+21627.603600
 </td>
 </tr>
 <tr>
@@ -1348,16 +1302,16 @@ Ma
 1
 </th>
 <td>
-4.226871
+3.062821
 </td>
 <td>
-P
+PMi
 </td>
 <td>
-2577.772115
+7888.576867
 </td>
 <td>
-33356.251130
+13397.618653
 </td>
 </tr>
 <tr>
@@ -1365,16 +1319,16 @@ P
 2
 </th>
 <td>
-4.851022
+6.049107
 </td>
 <td>
-P
+Mi
 </td>
 <td>
-5277.166162
+7888.576867
 </td>
 <td>
-30656.857083
+10543.927822
 </td>
 </tr>
 <tr>
@@ -1382,47 +1336,13 @@ P
 3
 </th>
 <td>
-5.683277
-</td>
-<td>
-P
-</td>
-<td>
-8579.157678
-</td>
-<td>
-27354.865567
-</td>
-</tr>
-<tr>
-<th>
-4
-</th>
-<td>
-6.431716
+7.534395
 </td>
 <td>
 PMi
 </td>
 <td>
-33013.682190
-</td>
-<td>
-3087.435635
-</td>
-</tr>
-<tr>
-<th>
-5
-</th>
-<td>
-6.961067
-</td>
-<td>
-PMi
-</td>
-<td>
-36294.005496
+17703.528218
 </td>
 <td>
 0.000000
@@ -1443,62 +1363,499 @@ PMi
 <span id="cb6-3"><a></a>claims[<span class="st">"notif_qtr"</span>] <span class="op">=</span> np.ceil(claims[<span class="st">"occurrence_time"</span>] <span class="op">+</span> claims[<span class="st">"notidel"</span>]).astype(<span class="bu">int</span>)</span>
 <span id="cb6-4"><a></a>claims[<span class="st">"final_qtr"</span>] <span class="op">=</span> np.ceil(claims[<span class="st">"occurrence_time"</span>] <span class="op">+</span> claims[<span class="st">"notidel"</span>] <span class="op">+</span> claims[<span class="st">"setldel"</span>]).astype(<span class="bu">int</span>)</span>
 <span id="cb6-5"><a></a></span>
-<span id="cb6-6"><a></a>ibnr <span class="op">=</span> claims[<span class="st">"notif_qtr"</span>] <span class="op">&gt;</span> T_END</span>
-<span id="cb6-7"><a></a>unfinalised <span class="op">=</span> <span class="op">~</span>ibnr <span class="op">&amp;</span> (claims[<span class="st">"final_qtr"</span>] <span class="op">&gt;</span> T_END)</span>
-<span id="cb6-8"><a></a>flash <span class="op">=</span> <span class="op">~</span>ibnr <span class="op">&amp;</span> <span class="op">~</span>unfinalised <span class="op">&amp;</span> (claims[<span class="st">"final_qtr"</span>] <span class="op">==</span> claims[<span class="st">"notif_qtr"</span>])</span>
-<span id="cb6-9"><a></a>observed <span class="op">=</span> claims[<span class="op">~</span>ibnr <span class="op">&amp;</span> <span class="op">~</span>unfinalised <span class="op">&amp;</span> <span class="op">~</span>flash]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb6-6"><a></a>notif, final <span class="op">=</span> claims[<span class="st">"notif_qtr"</span>], claims[<span class="st">"final_qtr"</span>]</span>
+<span id="cb6-7"><a></a>ibnr <span class="op">=</span> notif <span class="op">&gt;</span> T_END</span>
+<span id="cb6-8"><a></a>unfinalised <span class="op">=</span> (notif <span class="op">&lt;=</span> T_END) <span class="op">&amp;</span> (final <span class="op">&gt;</span> T_END)</span>
+<span id="cb6-9"><a></a>flash <span class="op">=</span> (final <span class="op">&lt;=</span> T_END) <span class="op">&amp;</span> (final <span class="op">==</span> notif)</span>
+<span id="cb6-10"><a></a>observed <span class="op">=</span> claims[(final <span class="op">&lt;=</span> T_END) <span class="op">&amp;</span> (final <span class="op">&gt;</span> notif)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell" data-layout-align="center">
 <div class="cell-output cell-output-stdout">
-<pre><code>4,027 claims: 2,726 finalised &amp; usable, 883 unfinalised, 245 IBNR, 173 settled within a quarter</code></pre>
+<pre><code>4,027 claims: 2,739 finalised &amp; usable, 880 unfinalised, 232 IBNR, 176 settled within a quarter</code></pre>
 </div>
 </div>
 <p>Every category from the theory shows up in the counts.</p>
 </section>
 <section id="building-the-snapshot-grid" class="slide level2">
 <h2>Building the snapshot grid</h2>
-<p>One row per claim per open quarter, with the quarterly payments <span class="math inline">Y_{k,t}</span> merged in (missing quarters become zero-payment rows):</p>
+<p>One row per claim per open quarter, with the quarterly payments <span class="math inline">Y_{k,t}</span> merged in (missing quarters become zero-payment rows). The merge/groupby plumbing is routine (code folded away); what matters is the change of shape:</p>
 <div class="cell" data-layout-align="center">
+<details class="code-fold">
+<summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a></a>n_snapshots <span class="op">=</span> (observed[<span class="st">"final_qtr"</span>] <span class="op">-</span> observed[<span class="st">"notif_qtr"</span>]).to_numpy()</span>
 <span id="cb8-2"><a></a>grid <span class="op">=</span> observed.loc[observed.index.repeat(n_snapshots),</span>
 <span id="cb8-3"><a></a>    [<span class="st">"claim_no"</span>, <span class="st">"occurrence_period"</span>, <span class="st">"notif_qtr"</span>, <span class="st">"final_qtr"</span>, <span class="st">"notidel"</span>,</span>
 <span id="cb8-4"><a></a>     <span class="st">"Legal Representation"</span>, <span class="st">"Injury Severity"</span>, <span class="st">"Age of Claimant"</span>]].copy()</span>
 <span id="cb8-5"><a></a>grid[<span class="st">"quarter"</span>] <span class="op">=</span> grid[<span class="st">"notif_qtr"</span>] <span class="op">+</span> grid.groupby(<span class="st">"claim_no"</span>).cumcount()</span>
 <span id="cb8-6"><a></a></span>
-<span id="cb8-7"><a></a>quarterly <span class="op">=</span> (payments.groupby([<span class="st">"claim_no"</span>, <span class="st">"payment_period"</span>])[<span class="st">"payment_size"</span>]</span>
-<span id="cb8-8"><a></a>             .sum().rename(<span class="st">"Incremental"</span>).reset_index())</span>
-<span id="cb8-9"><a></a>grid <span class="op">=</span> grid.merge(quarterly, left_on<span class="op">=</span>[<span class="st">"claim_no"</span>, <span class="st">"quarter"</span>],</span>
-<span id="cb8-10"><a></a>                  right_on<span class="op">=</span>[<span class="st">"claim_no"</span>, <span class="st">"payment_period"</span>], how<span class="op">=</span><span class="st">"left"</span>)</span>
-<span id="cb8-11"><a></a>grid[<span class="st">"Incremental"</span>] <span class="op">=</span> grid[<span class="st">"Incremental"</span>].fillna(<span class="fl">0.0</span>)</span>
-<span id="cb8-12"><a></a>grid <span class="op">=</span> grid.drop(columns<span class="op">=</span><span class="st">"payment_period"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb8-7"><a></a>quarterly <span class="op">=</span> (payments.rename(columns<span class="op">=</span>{<span class="st">"payment_period"</span>: <span class="st">"quarter"</span>})</span>
+<span id="cb8-8"><a></a>             .groupby([<span class="st">"claim_no"</span>, <span class="st">"quarter"</span>])[<span class="st">"payment_size"</span>]</span>
+<span id="cb8-9"><a></a>             .sum().rename(<span class="st">"Incremental"</span>).reset_index())</span>
+<span id="cb8-10"><a></a>grid <span class="op">=</span> grid.merge(quarterly, on<span class="op">=</span>[<span class="st">"claim_no"</span>, <span class="st">"quarter"</span>], how<span class="op">=</span><span class="st">"left"</span>)</span>
+<span id="cb8-11"><a></a>grid[<span class="st">"Incremental"</span>] <span class="op">=</span> grid[<span class="st">"Incremental"</span>].fillna(<span class="fl">0.0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 </div>
+<div class="columns">
+<div class="column" style="width:40%;">
+<p>Before — one row per <em>claim</em>:</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output cell-output-display">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>
+</th>
+<th>
+claim_no
+</th>
+<th>
+notif_qtr
+</th>
+<th>
+final_qtr
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+0
+</th>
+<td>
+1
+</td>
+<td>
+1
+</td>
+<td>
+8
+</td>
+</tr>
+<tr>
+<th>
+1
+</th>
+<td>
+2
+</td>
+<td>
+1
+</td>
+<td>
+4
+</td>
+</tr>
+<tr>
+<th>
+2
+</th>
+<td>
+3
+</td>
+<td>
+7
+</td>
+<td>
+12
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:60%;">
+<p>After — one row per claim per open <em>quarter</em>:</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output cell-output-display">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>
+</th>
+<th>
+claim_no
+</th>
+<th>
+quarter
+</th>
+<th>
+Incremental
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+0
+</th>
+<td>
+1
+</td>
+<td>
+1
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+1
+</th>
+<td>
+1
+</td>
+<td>
+2
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+2
+</th>
+<td>
+1
+</td>
+<td>
+3
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+3
+</th>
+<td>
+1
+</td>
+<td>
+4
+</td>
+<td>
+6432.83
+</td>
+</tr>
+<tr>
+<th>
+4
+</th>
+<td>
+1
+</td>
+<td>
+5
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+5
+</th>
+<td>
+1
+</td>
+<td>
+6
+</td>
+<td>
+0.00
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div></div>
 </section>
 <section id="history-summaries-case-estimates-and-the-target" class="slide level2">
 <h2>History summaries, case estimates, and the target</h2>
-<p>The path-dependent features (expanding summaries of the payment history), the current-state features (latest case estimate, forward-filled), and the target:</p>
+<p>Onto that grid we add the path-dependent features (expanding summaries of the payment history), the current-state features (latest case estimate, forward-filled between revisions), and the target (code folded away):</p>
 <div class="cell" data-layout-align="center">
+<details class="code-fold">
+<summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a></a>g <span class="op">=</span> grid.groupby(<span class="st">"claim_no"</span>)[<span class="st">"Incremental"</span>]</span>
 <span id="cb9-2"><a></a>grid[<span class="st">"count_Incremental"</span>] <span class="op">=</span> ((grid[<span class="st">"Incremental"</span>] <span class="op">&gt;</span> <span class="dv">0</span>)</span>
 <span id="cb9-3"><a></a>                             .groupby(grid[<span class="st">"claim_no"</span>]).cumsum())</span>
 <span id="cb9-4"><a></a>grid[<span class="st">"sum_Incremental"</span>] <span class="op">=</span> g.cumsum()</span>
 <span id="cb9-5"><a></a><span class="cf">for</span> stat <span class="kw">in</span> [<span class="st">"mean"</span>, <span class="st">"std"</span>, <span class="st">"min"</span>, <span class="st">"max"</span>]:</span>
-<span id="cb9-6"><a></a>    grid[<span class="ss">f"</span><span class="sc">{</span>stat<span class="sc">}</span><span class="ss">_Incremental"</span>] <span class="op">=</span> <span class="bu">getattr</span>(g.expanding(), stat)().to_numpy()</span>
+<span id="cb9-6"><a></a>    grid[<span class="ss">f"</span><span class="sc">{</span>stat<span class="sc">}</span><span class="ss">_Incremental"</span>] <span class="op">=</span> g.expanding().agg(stat).to_numpy()</span>
 <span id="cb9-7"><a></a>grid[<span class="st">"std_Incremental"</span>] <span class="op">=</span> grid[<span class="st">"std_Incremental"</span>].fillna(<span class="fl">0.0</span>)</span>
 <span id="cb9-8"><a></a></span>
 <span id="cb9-9"><a></a>ultimate <span class="op">=</span> payments.groupby(<span class="st">"claim_no"</span>)[<span class="st">"payment_size"</span>].sum()</span>
 <span id="cb9-10"><a></a>grid[<span class="st">"Outstanding"</span>] <span class="op">=</span> grid[<span class="st">"claim_no"</span>].<span class="bu">map</span>(ultimate) <span class="op">-</span> grid[<span class="st">"sum_Incremental"</span>]</span>
 <span id="cb9-11"><a></a>grid[<span class="st">"development_period"</span>] <span class="op">=</span> grid[<span class="st">"quarter"</span>] <span class="op">-</span> grid[<span class="st">"occurrence_period"</span>] <span class="op">+</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 </div>
 <div class="cell" data-layout-align="center">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a>estimates[<span class="st">"txn_qtr"</span>] <span class="op">=</span> np.ceil(estimates[<span class="st">"txn_time"</span>]).astype(<span class="bu">int</span>)</span>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a>estimates[<span class="st">"quarter"</span>] <span class="op">=</span> np.ceil(estimates[<span class="st">"txn_time"</span>]).astype(<span class="bu">int</span>)</span>
 <span id="cb10-2"><a></a>latest <span class="op">=</span> (estimates.sort_values(<span class="st">"txn_time"</span>)</span>
-<span id="cb10-3"><a></a>          .groupby([<span class="st">"claim_no"</span>, <span class="st">"txn_qtr"</span>])[<span class="st">"OCL"</span>].last()</span>
+<span id="cb10-3"><a></a>          .groupby([<span class="st">"claim_no"</span>, <span class="st">"quarter"</span>])[<span class="st">"OCL"</span>].last()</span>
 <span id="cb10-4"><a></a>          .rename(<span class="st">"Estimate"</span>).reset_index())</span>
-<span id="cb10-5"><a></a>grid <span class="op">=</span> grid.merge(latest, left_on<span class="op">=</span>[<span class="st">"claim_no"</span>, <span class="st">"quarter"</span>],</span>
-<span id="cb10-6"><a></a>                  right_on<span class="op">=</span>[<span class="st">"claim_no"</span>, <span class="st">"txn_qtr"</span>], how<span class="op">=</span><span class="st">"left"</span>)</span>
-<span id="cb10-7"><a></a>grid[<span class="st">"Estimate"</span>] <span class="op">=</span> grid.groupby(<span class="st">"claim_no"</span>)[<span class="st">"Estimate"</span>].ffill()</span>
-<span id="cb10-8"><a></a>grid <span class="op">=</span> grid.drop(columns<span class="op">=</span><span class="st">"txn_qtr"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb10-5"><a></a>grid <span class="op">=</span> grid.merge(latest, on<span class="op">=</span>[<span class="st">"claim_no"</span>, <span class="st">"quarter"</span>], how<span class="op">=</span><span class="st">"left"</span>)</span>
+<span id="cb10-6"><a></a>grid[<span class="st">"Estimate"</span>] <span class="op">=</span> grid.groupby(<span class="st">"claim_no"</span>)[<span class="st">"Estimate"</span>].ffill()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
 </div>
+<div class="columns">
+<div class="column" style="width:35%;">
+<p>Before — one claim’s rows:</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output cell-output-display">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>
+</th>
+<th>
+quarter
+</th>
+<th>
+Incremental
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+0
+</th>
+<td>
+1
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+1
+</th>
+<td>
+2
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+2
+</th>
+<td>
+3
+</td>
+<td>
+0.00
+</td>
+</tr>
+<tr>
+<th>
+3
+</th>
+<td>
+4
+</td>
+<td>
+6432.83
+</td>
+</tr>
+<tr>
+<th>
+4
+</th>
+<td>
+5
+</td>
+<td>
+0.00
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:65%;">
+<p>After — summaries, estimate, and the label <span class="math inline">O_k(v)</span>:</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output cell-output-display">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th>
+</th>
+<th>
+quarter
+</th>
+<th>
+sum_Incremental
+</th>
+<th>
+Estimate
+</th>
+<th>
+Outstanding
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>
+0
+</th>
+<td>
+1
+</td>
+<td>
+0.00
+</td>
+<td>
+21627.60
+</td>
+<td>
+12374.99
+</td>
+</tr>
+<tr>
+<th>
+1
+</th>
+<td>
+2
+</td>
+<td>
+0.00
+</td>
+<td>
+21627.60
+</td>
+<td>
+12374.99
+</td>
+</tr>
+<tr>
+<th>
+2
+</th>
+<td>
+3
+</td>
+<td>
+0.00
+</td>
+<td>
+21627.60
+</td>
+<td>
+12374.99
+</td>
+</tr>
+<tr>
+<th>
+3
+</th>
+<td>
+4
+</td>
+<td>
+6432.83
+</td>
+<td>
+13397.62
+</td>
+<td>
+5942.16
+</td>
+</tr>
+<tr>
+<th>
+4
+</th>
+<td>
+5
+</td>
+<td>
+6432.83
+</td>
+<td>
+13397.62
+</td>
+<td>
+5942.16
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div></div>
 </section>
 <section id="the-dataset-after-preprocessing" class="slide level2">
 <h2>The dataset after preprocessing</h2>
@@ -1559,22 +1916,22 @@ Outstanding
 1
 </td>
 <td>
-4
+1
 </td>
 <td>
-4.0
+1.0
+</td>
+<td>
+0.0
 </td>
 <td>
 0.000000
 </td>
 <td>
-0.000000
+21627.603600
 </td>
 <td>
-35934.023245
-</td>
-<td>
-24732.983524
+12374.986784
 </td>
 </tr>
 <tr>
@@ -1585,27 +1942,79 @@ Outstanding
 1
 </td>
 <td>
-5
+2
 </td>
 <td>
-5.0
+2.0
 </td>
 <td>
-3969.819426
+0.0
 </td>
 <td>
-3969.819426
+0.000000
 </td>
 <td>
-30656.857083
+21627.603600
 </td>
 <td>
-20763.164098
+12374.986784
 </td>
 </tr>
 <tr>
 <th>
 2
+</th>
+<td>
+1
+</td>
+<td>
+3
+</td>
+<td>
+3.0
+</td>
+<td>
+0.0
+</td>
+<td>
+0.000000
+</td>
+<td>
+21627.603600
+</td>
+<td>
+12374.986784
+</td>
+</tr>
+<tr>
+<th>
+…
+</th>
+<td>
+…
+</td>
+<td>
+…
+</td>
+<td>
+…
+</td>
+<td>
+…
+</td>
+<td>
+…
+</td>
+<td>
+…
+</td>
+<td>
+…
+</td>
+</tr>
+<tr>
+<th>
+5
 </th>
 <td>
 1
@@ -1617,68 +2026,16 @@ Outstanding
 6.0
 </td>
 <td>
-2312.694383
+0.0
 </td>
 <td>
-6282.513808
+6432.827392
 </td>
 <td>
-27354.865567
+13397.618653
 </td>
 <td>
-18450.469716
-</td>
-</tr>
-<tr>
-<th>
-…
-</th>
-<td>
-…
-</td>
-<td>
-…
-</td>
-<td>
-…
-</td>
-<td>
-…
-</td>
-<td>
-…
-</td>
-<td>
-…
-</td>
-<td>
-…
-</td>
-</tr>
-<tr>
-<th>
-5
-</th>
-<td>
-2
-</td>
-<td>
-3
-</td>
-<td>
-3.0
-</td>
-<td>
-0.000000
-</td>
-<td>
-0.000000
-</td>
-<td>
-15706.062142
-</td>
-<td>
-296539.772454
+5942.159392
 </td>
 </tr>
 <tr>
@@ -1686,25 +2043,25 @@ Outstanding
 6
 </th>
 <td>
-2
+1
 </td>
 <td>
-4
+7
 </td>
 <td>
-4.0
+7.0
 </td>
 <td>
-0.000000
+0.0
 </td>
 <td>
-0.000000
+6432.827392
 </td>
 <td>
-15706.062142
+10543.927822
 </td>
 <td>
-296539.772454
+5942.159392
 </td>
 </tr>
 <tr>
@@ -1715,22 +2072,22 @@ Outstanding
 2
 </td>
 <td>
-5
+1
 </td>
 <td>
-5.0
+1.0
 </td>
 <td>
-10058.311380
+0.0
 </td>
 <td>
-10058.311380
+0.000000
 </td>
 <td>
-5411.776655
+13166.230696
 </td>
 <td>
-286481.461075
+15482.268370
 </td>
 </tr>
 </tbody>
@@ -1754,9 +2111,9 @@ Outstanding
 </div>
 <div class="cell" data-layout-align="center">
 <div class="cell-output cell-output-stdout">
-<pre><code>train    9,499 rows  1,575 claims  (finalisation quarters 2..28)
-val      5,491 rows    609 claims  (finalisation quarters 29..34)
-test     4,922 rows    542 claims  (finalisation quarters 35..40)</code></pre>
+<pre><code>train   10,247 rows  1,623 claims  (finalisation quarters 2..28)
+val      4,892 rows    564 claims  (finalisation quarters 29..34)
+test     4,925 rows    552 claims  (finalisation quarters 35..40)</code></pre>
 </div>
 </div>
 <p>Note rows <span class="math inline">\gg</span> claims: each claim contributes one row per quarter it was open — and every one of a claim’s rows lands in the same set.</p>
@@ -1777,16 +2134,16 @@ test     4,922 rows    542 claims  (finalisation quarters 35..40)</code></pre>
 <div class="cell-output cell-output-stdout">
 <pre><code>        dev_year
 acc_year    1     2     3     4     5     6     7     8     9    10
-      1  1.44 10.31 20.94 31.91 39.89 48.66 55.51 60.24 64.77 65.71
-      2  1.36  9.72 23.94 31.12 38.18 51.38 59.53 61.35 63.60    NA
-      3  1.16  8.90 24.57 34.37 40.07 47.59 53.12 53.95    NA    NA
-      4  1.70 10.42 21.21 35.53 50.53 62.02 66.14    NA    NA    NA
-      5  1.18  9.21 22.12 32.27 37.72 44.55    NA    NA    NA    NA
-      6  1.16 12.26 26.07 36.08 46.09    NA    NA    NA    NA    NA
-      7  2.99 14.13 28.93 36.01    NA    NA    NA    NA    NA    NA
-      8  0.93  7.18 17.98    NA    NA    NA    NA    NA    NA    NA
-      9  1.01  8.71    NA    NA    NA    NA    NA    NA    NA    NA
-      10 1.20    NA    NA    NA    NA    NA    NA    NA    NA    NA</code></pre>
+      1  0.87  7.75 21.99 34.85 41.05 48.61 54.12 57.59 61.45 67.32
+      2  0.71  6.81 16.56 29.23 37.55 47.37 53.38 57.58 61.23    NA
+      3  0.99 12.30 22.76 32.83 41.82 48.04 53.12 55.35    NA    NA
+      4  1.05 10.47 31.63 51.14 65.89 74.55 77.70    NA    NA    NA
+      5  1.60  9.62 24.34 34.56 41.04 45.21    NA    NA    NA    NA
+      6  1.25 10.20 27.44 38.69 49.10    NA    NA    NA    NA    NA
+      7  0.85 11.08 24.99 39.18    NA    NA    NA    NA    NA    NA
+      8  0.75  9.31 21.64    NA    NA    NA    NA    NA    NA    NA
+      9  1.14  9.46    NA    NA    NA    NA    NA    NA    NA    NA
+      10 1.32    NA    NA    NA    NA    NA    NA    NA    NA    NA</code></pre>
 </div>
 </div>
 </section>
@@ -1800,8 +2157,8 @@ acc_year    1     2     3     4     5     6     7     8     9    10
 <span id="cb16-5"><a></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">"Chain ladder reserve:   $%.1fm</span><span class="sc">\n</span><span class="st">"</span>, reserve_cl <span class="sc">/</span> <span class="fl">1e6</span>),</span>
 <span id="cb16-6"><a></a>    <span class="fu">sprintf</span>(<span class="st">"True total outstanding: $%.1fm</span><span class="sc">\n</span><span class="st">"</span>, true_outstanding <span class="sc">/</span> <span class="fl">1e6</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Chain ladder reserve:   $208.9m
- True total outstanding: $264.6m</code></pre>
+<pre><code>Chain ladder reserve:   $310.0m
+ True total outstanding: $241.0m</code></pre>
 </div>
 </div>
 <p>As this is synthetic data, we know the future and can compare against the true value.</p>
@@ -1821,9 +2178,10 @@ acc_year    1     2     3     4     5     6     7     8     9    10
 <span id="cb18-9"><a></a>        (<span class="st">"dollars"</span>, make_pipeline(FunctionTransformer(np.log1p),</span>
 <span id="cb18-10"><a></a>                                  MinMaxScaler()), dollars),</span>
 <span id="cb18-11"><a></a>        (<span class="st">"numeric"</span>, MinMaxScaler(), numeric_cols),</span>
-<span id="cb18-12"><a></a>        (<span class="st">"categorical"</span>, OneHotEncoder(drop<span class="op">=</span><span class="st">"first"</span>), cat_cols),</span>
-<span id="cb18-13"><a></a>    ])</span>
-<span id="cb18-14"><a></a>    <span class="cf">return</span> make_pipeline(preprocess, Ridge(alpha<span class="op">=</span><span class="fl">1e-4</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb18-12"><a></a>        (<span class="st">"categorical"</span>, OneHotEncoder(drop<span class="op">=</span><span class="st">"first"</span>, sparse_output<span class="op">=</span><span class="va">False</span>),</span>
+<span id="cb18-13"><a></a>         cat_cols),</span>
+<span id="cb18-14"><a></a>    ])</span>
+<span id="cb18-15"><a></a>    <span class="cf">return</span> make_pipeline(preprocess, Ridge(alpha<span class="op">=</span><span class="fl">1e-4</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Two versions: <em>without</em> and <em>with</em> the case estimate as a feature.</p>
 </section>
@@ -1834,28 +2192,86 @@ acc_year    1     2     3     4     5     6     7     8     9    10
 <span id="cb19-2"><a></a>y_train <span class="op">=</span> np.log1p(X_train[<span class="st">"Outstanding"</span>])</span>
 <span id="cb19-3"><a></a>y_test <span class="op">=</span> np.log1p(X_test[<span class="st">"Outstanding"</span>])</span>
 <span id="cb19-4"><a></a></span>
-<span id="cb19-5"><a></a><span class="cf">for</span> with_est <span class="kw">in</span> [<span class="va">False</span>, <span class="va">True</span>]:</span>
-<span id="cb19-6"><a></a>    glm <span class="op">=</span> make_glm(with_est).fit(X_train, y_train)</span>
-<span id="cb19-7"><a></a>    rmse <span class="op">=</span> root_mean_squared_error(y_test, glm.predict(X_test))</span>
-<span id="cb19-8"><a></a>    <span class="bu">print</span>(<span class="ss">f"GLM </span><span class="sc">{</span><span class="st">'with'</span> <span class="cf">if</span> with_est <span class="cf">else</span> <span class="st">'without'</span><span class="sc">}</span><span class="ss"> case estimates:"</span></span>
-<span id="cb19-9"><a></a>          <span class="ss">f" test RMSE (log scale) = </span><span class="sc">{</span>rmse<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb19-5"><a></a>glms <span class="op">=</span> {}</span>
+<span id="cb19-6"><a></a><span class="cf">for</span> with_est <span class="kw">in</span> [<span class="va">False</span>, <span class="va">True</span>]:</span>
+<span id="cb19-7"><a></a>    name <span class="op">=</span> <span class="ss">f"GLM </span><span class="sc">{</span><span class="st">'with'</span> <span class="cf">if</span> with_est <span class="cf">else</span> <span class="st">'without'</span><span class="sc">}</span><span class="ss"> case estimates"</span></span>
+<span id="cb19-8"><a></a>    glms[name] <span class="op">=</span> make_glm(with_est).fit(X_train, y_train)</span>
+<span id="cb19-9"><a></a>    rmse <span class="op">=</span> root_mean_squared_error(y_test, glms[name].predict(X_test))</span>
+<span id="cb19-10"><a></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>name<span class="sc">}</span><span class="ss">: test RMSE (log scale) = </span><span class="sc">{</span>rmse<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>GLM without case estimates: test RMSE (log scale) = 1.308
-GLM with case estimates: test RMSE (log scale) = 1.327</code></pre>
+<pre><code>GLM without case estimates: test RMSE (log scale) = 1.318
+GLM with case estimates: test RMSE (log scale) = 1.306</code></pre>
 </div>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a></a>rmse_ce <span class="op">=</span> root_mean_squared_error(y_test, np.log1p(X_test[<span class="st">"Estimate"</span>]))</span>
 <span id="cb21-2"><a></a><span class="bu">print</span>(<span class="ss">f"Case estimate alone: test RMSE (log scale) = </span><span class="sc">{</span>rmse_ce<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Case estimate alone: test RMSE (log scale) = 1.748</code></pre>
+<pre><code>Case estimate alone: test RMSE (log scale) = 1.713</code></pre>
 </div>
 </div>
 <p>Two questions for the printed numbers: does the model beat the assessors’ estimates? Does giving it the case estimates help?</p>
 </section>
 <section id="fitting-a-neural-network" class="slide level2">
 <h2>Fitting a neural network</h2>
+<p>Swap the ridge regression for a small dense network — same features, same target:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a></a>preprocess <span class="op">=</span> make_glm(with_estimate<span class="op">=</span><span class="va">True</span>)[:<span class="op">-</span><span class="dv">1</span>]  <span class="co"># the same recipe, minus the Ridge</span></span>
+<span id="cb23-2"><a></a>X_train_nn <span class="op">=</span> preprocess.fit_transform(X_train)</span>
+<span id="cb23-3"><a></a>X_val_nn <span class="op">=</span> preprocess.transform(splits[<span class="st">"val"</span>])</span>
+<span id="cb23-4"><a></a>y_val <span class="op">=</span> np.log1p(splits[<span class="st">"val"</span>][<span class="st">"Outstanding"</span>])</span>
+<span id="cb23-5"><a></a></span>
+<span id="cb23-6"><a></a>nn <span class="op">=</span> Sequential([</span>
+<span id="cb23-7"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb23-8"><a></a>    Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>),</span>
+<span id="cb23-9"><a></a>    Dense(<span class="dv">1</span>)])</span>
+<span id="cb23-10"><a></a>nn.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"mse"</span>)</span>
+<span id="cb23-11"><a></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb23-12"><a></a>hist <span class="op">=</span> nn.fit(X_train_nn, y_train, epochs<span class="op">=</span><span class="dv">100</span>,</span>
+<span id="cb23-13"><a></a>              validation_data<span class="op">=</span>(X_val_nn, y_val), callbacks<span class="op">=</span>[es], verbose<span class="op">=</span><span class="dv">0</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>The validation set finally earns its keep: early stopping monitors the validation loss, and our careful split by finalisation quarter is what makes that loss trustworthy.</p>
 </section>
 <section id="evaluating-the-models" class="slide level2">
 <h2>Evaluating the models</h2>
+<p>All three models on the test set, against the benchmark-to-beat:</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a></a>X_test_nn <span class="op">=</span> preprocess.transform(X_test)</span>
+<span id="cb24-2"><a></a>preds <span class="op">=</span> {name: glm.predict(X_test) <span class="cf">for</span> name, glm <span class="kw">in</span> glms.items()}</span>
+<span id="cb24-3"><a></a>preds[<span class="st">"Neural network"</span>] <span class="op">=</span> nn.predict(X_test_nn, verbose<span class="op">=</span><span class="dv">0</span>).flatten()</span>
+<span id="cb24-4"><a></a>preds[<span class="st">"Case estimates alone"</span>] <span class="op">=</span> np.log1p(X_test[<span class="st">"Estimate"</span>])</span>
+<span id="cb24-5"><a></a></span>
+<span id="cb24-6"><a></a><span class="cf">for</span> name, pred <span class="kw">in</span> preds.items():</span>
+<span id="cb24-7"><a></a>    rmse <span class="op">=</span> root_mean_squared_error(y_test, pred)</span>
+<span id="cb24-8"><a></a>    <span class="bu">print</span>(<span class="ss">f"</span><span class="sc">{</span>name<span class="sc">:28s}</span><span class="ss"> test RMSE (log scale) = </span><span class="sc">{</span>rmse<span class="sc">:.3f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>GLM without case estimates   test RMSE (log scale) = 1.318
+GLM with case estimates      test RMSE (log scale) = 1.306
+Neural network               test RMSE (log scale) = 1.161
+Case estimates alone         test RMSE (log scale) = 1.713</code></pre>
+</div>
+</div>
+<p>Per-snapshot accuracy is one lens — but a reserving model’s real job is the portfolio total, coming up next.</p>
+</section>
+<section id="predicted-vs-actual-outstanding" class="slide level2">
+<h2>Predicted vs actual outstanding</h2>
+
+<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-37-1.png" class="quarto-figure quarto-figure-center r-stretch" width="278"><p>Each point is one test-set snapshot <span class="math inline">(X_{k,v}, O_k(v))</span>, plotted on the model’s log scale; the dashed diagonal is perfect prediction.</p>
+</section>
+<section id="from-per-claim-predictions-to-the-reserve" class="slide level2">
+<h2>From per-claim predictions to the reserve</h2>
+<p>This is the whole point of individual reserving: predict <span class="math inline">\widehat{O}_k(v)</span> for every claim still open at the valuation date, and sum them to get <span class="math inline">\widehat{T}(v)</span>.</p>
+<p>With one feature row per open claim (<code>X_open</code>, built by the same pipeline):</p>
+<div class="cell" data-layout-align="center">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a></a>reserves <span class="op">=</span> {<span class="st">"Chain ladder"</span>: <span class="bu">float</span>(r.reserve_cl)}  <span class="co"># reticulate's R bridge</span></span>
+<span id="cb26-2"><a></a><span class="cf">for</span> name, glm <span class="kw">in</span> glms.items():</span>
+<span id="cb26-3"><a></a>    reserves[name] <span class="op">=</span> np.expm1(glm.predict(X_open)).sum()</span>
+<span id="cb26-4"><a></a>reserves[<span class="st">"Neural network"</span>] <span class="op">=</span> <span class="bu">float</span>(np.expm1(</span>
+<span id="cb26-5"><a></a>    nn.predict(preprocess.transform(X_open), verbose<span class="op">=</span><span class="dv">0</span>)).sum())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="the-portfolio-reserves-compared" class="slide level2">
+<h2>The portfolio reserves compared</h2>
+
+<img data-src="individual-claim-reserving_files/figure-revealjs/unnamed-chunk-40-3.png" class="quarto-figure quarto-figure-center r-stretch" width="517"><p>The individual models can only reserve for claims they can <em>see</em>, so their fair target is the lower line; the chain ladder triangle implicitly projects the IBNR claims too, so its target is the upper one.</p>
 </section></section>
 <section>
 <section id="wrapping-up" class="title-slide slide level1 agenda-slide center">
@@ -1899,7 +2315,6 @@ GLM with case estimates: test RMSE (log scale) = 1.327</code></pre>
 </section>
 <section id="what-we-didnt-cover" class="slide level2">
 <h2>What we didn’t cover</h2>
-<p>One slide, words only — pointers to where this goes next:</p>
 <ul>
 <li><em>IBNR</em>: our model only reserves claims it can see; incurred-but-not-reported claims need a separate (usually aggregate) adjustment.</li>
 <li><em>Uncertainty</em>: a reserve needs a risk margin, not just a point estimate; distributional forecasts and ensembling give prediction intervals.</li>
