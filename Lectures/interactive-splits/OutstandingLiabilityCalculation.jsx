@@ -58,7 +58,7 @@ function OutstandingLiabilityCalculation({
         </table>
       </div>
       <div className="text-xs text-gray-600 mt-2">
-        OCL = <span className="font-mono">Ultimate</span> − <span className="font-mono">CumulativePaidToDate</span>
+        True outstanding = <span className="font-mono">Ultimate</span> − <span className="font-mono">CumulativePaidToDate</span>
       </div>
     </div>
   );

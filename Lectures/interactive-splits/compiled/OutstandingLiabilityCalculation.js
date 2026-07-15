@@ -24,6 +24,6 @@ function OutstandingLiabilityCalculation({
       const outstandingLiability = Math.max(0, ultimateClaimSize - cumulativeSum);
       return /* @__PURE__ */ React.createElement("tr", { key: i, className: "border-t border-gray-100" }, /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 font-mono" }, "Dev Q", quarter.developmentQuarter), /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-right font-medium" }, formatCurrency(cumulativeSum)), /* @__PURE__ */ React.createElement("td", { className: "px-3 py-2 text-right font-medium" }, formatCurrency(outstandingLiability)));
     });
-  })()))), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mt-2" }, "OCL = ", /* @__PURE__ */ React.createElement("span", { className: "font-mono" }, "Ultimate"), " \u2212 ", /* @__PURE__ */ React.createElement("span", { className: "font-mono" }, "CumulativePaidToDate")));
+  })()))), /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-600 mt-2" }, "True outstanding = ", /* @__PURE__ */ React.createElement("span", { className: "font-mono" }, "Ultimate"), " \u2212 ", /* @__PURE__ */ React.createElement("span", { className: "font-mono" }, "CumulativePaidToDate")));
 }
 window.OutstandingLiabilityCalculation = OutstandingLiabilityCalculation;

@@ -87,6 +87,13 @@ function LinkedDemo({ render }) {
 
 // ---- One mount per interactive slide ----
 const demoMounts = [
+  // Intro slide ("Individual claim reserving"): the live version of the same
+  // timeline the static images/individual-claim.png was a screenshot of —
+  // just the ContinuousTimeline (no covariates table), steppable and synced
+  // to the shared claim like every later demo.
+  ["demo-claim-intro", (claim, data) => (
+    <ContinuousTimeline claimInfo={data.claimInfo} selectedClaim={claim} />
+  )],
   ["demo-claim", (claim, data) => (
     <div className="space-y-3">
       <StaticCovariates claimInfo={data.claimInfo} />

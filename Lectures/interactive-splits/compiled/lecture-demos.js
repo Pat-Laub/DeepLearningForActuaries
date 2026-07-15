@@ -66,6 +66,11 @@ function LinkedDemo({ render }) {
   return /* @__PURE__ */ React.createElement("div", { className: "p-3" }, /* @__PURE__ */ React.createElement(ClaimBar, null), render(claim, data));
 }
 const demoMounts = [
+  // Intro slide ("Individual claim reserving"): the live version of the same
+  // timeline the static images/individual-claim.png was a screenshot of —
+  // just the ContinuousTimeline (no covariates table), steppable and synced
+  // to the shared claim like every later demo.
+  ["demo-claim-intro", (claim, data) => /* @__PURE__ */ React.createElement(ContinuousTimeline, { claimInfo: data.claimInfo, selectedClaim: claim })],
   ["demo-claim", (claim, data) => /* @__PURE__ */ React.createElement("div", { className: "space-y-3" }, /* @__PURE__ */ React.createElement(StaticCovariates, { claimInfo: data.claimInfo }), /* @__PURE__ */ React.createElement(ContinuousTimeline, { claimInfo: data.claimInfo, selectedClaim: claim }))],
   ["demo-payments", (claim, data) => /* @__PURE__ */ React.createElement(
     PaymentDetails,
