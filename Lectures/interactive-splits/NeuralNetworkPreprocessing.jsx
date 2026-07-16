@@ -17,9 +17,22 @@ function NeuralNetworkPreprocessing({
   // Get the same data as CovariateHistorySummaries
   const { claimInfo, quarters } = claimData;
 
+  // Default to the middle development quarter (like CovariateHistorySummaries)
+  // to avoid showing a finalised claim with zero outstanding.
+  const devQs = (quarters || []).map(q => q.developmentQuarter);
+  const minDevQ = devQs.length ? Math.min(...devQs) : 0;
+  const maxDevQ = devQs.length ? Math.max(...devQs) : 0;
+  const defaultCutoffDevQ = React.useMemo(
+    () => Math.floor((minDevQ + maxDevQ) / 2),
+    [minDevQ, maxDevQ]
+  );
+  const [cutoffDevQ, setCutoffDevQ] = React.useState(defaultCutoffDevQ);
+
   if (!claimInfo || !claimInfo.accidentDate) {
     return null;
   }
+
+  const dispQ = (dq) => oneBasedDevQuarters ? dq + 1 : dq;
 
   // Calculate features (same logic as CovariateHistorySummaries)
   const postcodeHistory = [];
@@ -51,18 +64,14 @@ function NeuralNetworkPreprocessing({
   // Calculate ultimate claim size
   const ultimateAdj = adjustedIncrements.reduce((sum, val) => sum + val, 0);
 
-  // Use middle development quarter as cutoff (like CovariateHistorySummaries)
-  // to avoid showing a finalised claim with zero outstanding
-  const devQs = quarters.map(q => q.developmentQuarter);
-  const minDevQ = Math.min(...devQs);
-  const maxDevQ = Math.max(...devQs);
-  const cutoffDevQ = Math.floor((minDevQ + maxDevQ) / 2);
+  // The slider state can outlive a claim switch, so clamp it to this claim's range
+  const cutoff = Math.max(minDevQ, Math.min(maxDevQ, cutoffDevQ));
 
   // Calculate features at cutoff
-  const postcodeLatest = [...postcodeHistory].reverse().find(x => x.devQ <= cutoffDevQ)?.value;
-  const legalRepLatest = [...legalRepHistory].reverse().find(x => x.devQ <= cutoffDevQ)?.value;
+  const postcodeLatest = [...postcodeHistory].reverse().find(x => x.devQ <= cutoff)?.value;
+  const legalRepLatest = [...legalRepHistory].reverse().find(x => x.devQ <= cutoff)?.value;
 
-  const incUpToCutoff = adjustedIncrements.filter((_, i) => quarters[i].developmentQuarter <= cutoffDevQ);
+  const incUpToCutoff = adjustedIncrements.filter((_, i) => quarters[i].developmentQuarter <= cutoff);
   const incStats = {
     mean: incUpToCutoff.length > 0 ? incUpToCutoff.reduce((a, b) => a + b, 0) / incUpToCutoff.length : 0,
     max: incUpToCutoff.length > 0 ? Math.max(...incUpToCutoff) : 0,
@@ -71,15 +80,15 @@ function NeuralNetworkPreprocessing({
       : 0,
   };
 
-  const cumUpToCutoff = cumulativeAdj.filter((_, i) => quarters[i].developmentQuarter <= cutoffDevQ);
+  const cumUpToCutoff = cumulativeAdj.filter((_, i) => quarters[i].developmentQuarter <= cutoff);
   const cumStats = {
     last: cumUpToCutoff.length > 0 ? cumUpToCutoff[cumUpToCutoff.length - 1] : 0,
   };
 
-  // Calculate true outstanding and incurred with error (same as CovariateHistorySummaries)
+  // Calculate true outstanding and the case estimate with error (same as CovariateHistorySummaries)
   const trueOutstanding = cumulativeAdj.map(c => Math.max(0, ultimateAdj - c));
   
-  // Add estimation error to incurred
+  // Add estimation error to the case estimate
   const mulberry32 = (a) => {
     return function() {
       let t = a += 0x6D2B79F5;
@@ -98,21 +107,48 @@ function NeuralNetworkPreprocessing({
     return Math.max(0, trueVal * errorFactor);
   });
 
-  const remUpToCutoff = remainingAdj.filter((_, i) => quarters[i].developmentQuarter <= cutoffDevQ);
+  const remUpToCutoff = remainingAdj.filter((_, i) => quarters[i].developmentQuarter <= cutoff);
   const remStats = {
     last: remUpToCutoff.length > 0 ? remUpToCutoff[remUpToCutoff.length - 1] : 0,
   };
 
   const trueOutstandingStats = {
-    last: trueOutstanding.filter((_, i) => quarters[i].developmentQuarter <= cutoffDevQ).slice(-1)[0] || 0,
+    last: trueOutstanding.filter((_, i) => quarters[i].developmentQuarter <= cutoff).slice(-1)[0] || 0,
   };
 
   // Apply log1p transformation to dollar amounts
   const log1p = (x) => Math.log(1 + x);
 
+  const cutoffQuarterKey = quarters.find(q => q.developmentQuarter === cutoff)?.quarterKey;
+
   return (
     <div className="mb-4 p-4 bg-teal-50 rounded-lg border border-teal-200">
       <div className="text-sm text-teal-800 space-y-3">
+        {/* Control row */}
+        <div className="bg-white rounded border p-3">
+          <div className="flex flex-col md:flex-row md:items-center md:gap-4">
+            <div className="text-xs font-medium text-gray-700 mb-2 md:mb-0">
+              Choose valuation quarter:
+            </div>
+            <div className="flex-1 flex items-center gap-3">
+              <span className="text-xs text-gray-600 font-mono">Dev Q{dispQ(minDevQ)}</span>
+              <input
+                type="range"
+                min={minDevQ}
+                max={maxDevQ}
+                value={cutoff}
+                onChange={(e) => setCutoffDevQ(parseInt(e.target.value, 10))}
+                className="w-full"
+              />
+              <span className="text-xs text-gray-600 font-mono">Dev Q{dispQ(maxDevQ)}</span>
+            </div>
+            <div className="text-xs text-gray-700">
+              <span className="font-mono bg-teal-100 px-1 rounded mr-1">Valuation: Dev Q{dispQ(cutoff)}</span>
+              <span className="font-mono bg-gray-100 px-1 rounded">{cutoffQuarterKey || '-'}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Show log-transformed table */}
         <div className="bg-white rounded border p-3">
           <div className="text-xs font-medium text-gray-700 mb-2">
@@ -161,12 +197,12 @@ function NeuralNetworkPreprocessing({
                   <td className="px-3 py-2 text-right font-mono text-teal-700">{log1p(cumStats.last).toFixed(4)}</td>
                 </tr>
                 <tr className="border-t">
-                  <td className="px-3 py-2 font-mono">incurred_last_qk</td>
+                  <td className="px-3 py-2 font-mono">case_estimate</td>
                   <td className="px-3 py-2 text-red-700">{formatCurrency(remStats.last)}</td>
                   <td className="px-3 py-2 text-right font-mono text-teal-700">{log1p(remStats.last).toFixed(4)}</td>
                 </tr>
                 <tr className="border-t-2 border-indigo-300 bg-indigo-50">
-                  <td className="px-3 py-2 font-mono font-bold">outstanding_liability</td>
+                  <td className="px-3 py-2 font-mono font-bold">outstanding</td>
                   <td className="px-3 py-2 font-bold text-indigo-700" colSpan="2">{formatCurrency(trueOutstandingStats.last)}</td>
                 </tr>
               </tbody>

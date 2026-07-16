@@ -103,6 +103,8 @@ const demoMounts = [
       midQuarterIndexMap: demoMidQuarter
     }
   )],
+  // Split across two slides (the full component is ~2 slides tall): the
+  // covariate-summary grid on one, the assembled training row on the next.
   ["demo-history", (claim, data) => /* @__PURE__ */ React.createElement(
     CovariateHistorySummaries,
     {
@@ -110,7 +112,19 @@ const demoMounts = [
       endDate: demoEnd,
       priceIndexMap: demoPrice.map,
       midQuarterIndexMap: demoMidQuarter,
-      oneBasedDevQuarters: true
+      oneBasedDevQuarters: true,
+      show: "summaries"
+    }
+  )],
+  ["demo-history-row", (claim, data) => /* @__PURE__ */ React.createElement(
+    CovariateHistorySummaries,
+    {
+      claimData: data,
+      endDate: demoEnd,
+      priceIndexMap: demoPrice.map,
+      midQuarterIndexMap: demoMidQuarter,
+      oneBasedDevQuarters: true,
+      show: "row"
     }
   )],
   ["demo-nn", (claim, data) => /* @__PURE__ */ React.createElement(

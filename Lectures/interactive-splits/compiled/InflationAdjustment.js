@@ -29,7 +29,7 @@ function InflationAdjustment({
     }
     return m;
   }, [priceIndexSeries, priceIndexMap]);
-  return /* @__PURE__ */ React.createElement("div", { className: "bg-orange-50 p-4 rounded-lg border border-orange-200" }, show !== "tables" && /* @__PURE__ */ React.createElement("div", { className: "bg-white rounded border p-3 mb-4" }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-medium text-gray-700 mb-2" }, "WPI: Quarter vs End\u2011of\u2011Quarter"), (() => {
+  return /* @__PURE__ */ React.createElement("div", { className: "bg-orange-50 p-4 rounded-lg border border-orange-200" }, show !== "tables" && /* @__PURE__ */ React.createElement("div", { className: `bg-white rounded border p-3 ${show === "plot" ? "" : "mb-4"}` }, /* @__PURE__ */ React.createElement("div", { className: "text-xs font-medium text-gray-700 mb-2" }, "WPI: Quarter vs End\u2011of\u2011Quarter"), (() => {
     if (!priceIndexSeries || priceIndexSeries.length === 0) return /* @__PURE__ */ React.createElement("div", { className: "text-xs text-gray-500" }, "No index data.");
     const w = 720, h = 180, pad = 32;
     const quarterSeries = priceIndexSeries.map((p) => ({ quarterKey: p.quarterKey, index: priceIndexMap[p.quarterKey] ?? p.index }));

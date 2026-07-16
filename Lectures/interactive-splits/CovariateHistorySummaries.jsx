@@ -7,7 +7,8 @@ function CovariateHistorySummaries({
   endDate,
   priceIndexMap,
   midQuarterIndexMap,
-  oneBasedDevQuarters
+  oneBasedDevQuarters,
+  show = "all"        // "all" | "summaries" | "row" — split across two slides
 }) {
   const { getQuarterInfo, formatCurrency } = window.utils || {};
 
@@ -83,7 +84,7 @@ function CovariateHistorySummaries({
     return out;
   })();
 
-  // Incurred (estimator's assessment of remaining liability, inflation-adjusted to observation quarter)
+  // Case estimate C_{k,v} (assessor's subjective estimate of the outstanding, inflation-adjusted to observation quarter)
   const adjustedIncrements = (() => {
     const obsQ = getQuarterInfo(endDate, claimInfo.accidentDate);
     const targetPI = priceIndexMap ? priceIndexMap[obsQ.quarterKey] : null;
@@ -114,8 +115,8 @@ function CovariateHistorySummaries({
   // Calculate true outstanding liability (unknowable in practice)
   const trueOutstanding = cumulativeAdj.map(c => Math.max(0, ultimateAdj - c));
   
-  // Generate incurred estimates with realistic estimation error
-  // Incurred should be correlated with but different from true outstanding
+  // Generate case-estimate values with realistic estimation error
+  // The case estimate should be correlated with but different from the true outstanding
   const remainingAdj = React.useMemo(() => {
     // Use claim ID to seed the noise generation for consistency
     const claimSeed = claimInfo.claimId ? claimInfo.claimId.charCodeAt(claimInfo.claimId.length - 1) : 42;
@@ -162,7 +163,7 @@ function CovariateHistorySummaries({
   // Use inflation-adjusted values for all stats
   const incStats = statsUpTo(adjustedIncrements, cutoffIndex);
   const cumStats = statsUpTo(cumulativeAdj, cutoffIndex);
-  const remStats = statsUpTo(remainingAdj, cutoffIndex); // Incurred estimates (with error)
+  const remStats = statsUpTo(remainingAdj, cutoffIndex); // Case estimate (with error)
   const trueOutstandingStats = statsUpTo(trueOutstanding, cutoffIndex); // True outstanding (target)
 
   // Check if outstanding liability is zero (claim is finalised)
@@ -174,13 +175,16 @@ function CovariateHistorySummaries({
 
   const Spark = window.PlotlySpark;
 
+  const showSummaries = show !== "row";   // control + covariate-summary grid
+  const showRow = show !== "summaries";   // control + assembled training row
+
   return (
     <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
           {/* Control row */}
           <div className="bg-white rounded border p-3 mb-4">
             <div className="flex flex-col md:flex-row md:items-center md:gap-4">
               <div className="text-xs font-medium text-gray-700 mb-2 md:mb-0">
-                Choose development cutoff:
+                Choose valuation quarter:
               </div>
               <div className="flex-1 flex items-center gap-3">
                 <span className="text-xs text-gray-600 font-mono">Dev Q{dispQ(minDevQ)}</span>
@@ -195,7 +199,7 @@ function CovariateHistorySummaries({
                 <span className="text-xs text-gray-600 font-mono">Dev Q{dispQ(maxDevQ)}</span>
               </div>
               <div className="text-xs text-gray-700">
-                <span className="font-mono bg-indigo-100 px-1 rounded mr-1">Cutoff: Dev Q{dispQ(cutoffDevQ)}</span>
+                <span className="font-mono bg-indigo-100 px-1 rounded mr-1">Valuation: Dev Q{dispQ(cutoffDevQ)}</span>
                 <span className="font-mono bg-gray-100 px-1 rounded">{cutoffQuarterKey || '-'}</span>
               </div>
             </div>
@@ -206,13 +210,14 @@ function CovariateHistorySummaries({
             )}
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-4">
+          {showSummaries && (
+          <div className="grid md:grid-cols-2 gap-4">
             {/* Near-static summarisation */}
             <div className="bg-white rounded border p-3">
               <div className="text-xs font-medium text-gray-700 mb-2">Near‑Static Covariates (latest up to cutoff)</div>
 
               {/* Small per-quarter table */}
-              <div className="overflow-auto border rounded mb-3">
+              <div className="overflow-auto border rounded mb-3 max-h-56">
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
@@ -266,7 +271,7 @@ function CovariateHistorySummaries({
                   <div className="flex items-center justify-between mb-1">
                     <div className="text-xs text-gray-600">Incremental payments</div>
                   </div>
-                  <Spark kind="bar" values={adjustedIncrements} labels={devLabels} cutoffIndex={cutoffIndex} height={110} currency />
+                  <Spark kind="bar" values={adjustedIncrements} labels={devLabels} cutoffIndex={cutoffIndex} height={90} currency />
                   <div className="grid grid-cols-4 gap-2 mt-2 text-xs">
                     <div className="bg-gray-50 border rounded p-2">
                       <div className="text-gray-600">Mean</div>
@@ -292,7 +297,7 @@ function CovariateHistorySummaries({
                   <div className="flex items-center justify-between mb-1">
                     <div className="text-xs text-gray-600">Cumulative paid to date</div>
                   </div>
-                  <Spark kind="line" values={cumulativeAdj} labels={devLabels} cutoffIndex={cutoffIndex} height={110} currency />
+                  <Spark kind="line" values={cumulativeAdj} labels={devLabels} cutoffIndex={cutoffIndex} height={90} currency />
                   <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
                     <div className="bg-gray-50 border rounded p-2">
                       <div className="text-gray-600">Last (as‑of cutoff)</div>
@@ -313,12 +318,12 @@ function CovariateHistorySummaries({
                   </div>
                 </div>
 
-                {/* Incurred */}
+                {/* Case estimate */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <div className="text-xs text-gray-600">Incurred</div>
+                    <div className="text-xs text-gray-600">Case estimate</div>
                   </div>
-                  <Spark kind="line" values={remainingAdj} labels={devLabels} cutoffIndex={cutoffIndex} height={110} currency />
+                  <Spark kind="line" values={remainingAdj} labels={devLabels} cutoffIndex={cutoffIndex} height={90} currency />
                   <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
                     <div className="bg-gray-50 border rounded p-2">
                       <div className="text-gray-600">Last (as‑of cutoff)</div>
@@ -337,8 +342,10 @@ function CovariateHistorySummaries({
               </div>
             </div>
           </div>
+          )}
 
-          {/* Final "features as-of cutoff" table */}
+          {showRow && (
+          /* Final "features as-of cutoff" table */
           <div className="bg-white rounded border p-3 mt-4">
             <div className="text-xs font-medium text-gray-700 mb-2">Training Row (as‑of Dev Q{dispQ(cutoffDevQ)})</div>
             <div className="overflow-auto">
@@ -389,21 +396,22 @@ function CovariateHistorySummaries({
                     <td className="px-3 py-2 text-right">{formatCurrency ? formatCurrency(cumStats.last) : cumStats.last.toFixed(2)}</td>
                   </tr>
                   <tr className="border-t">
-                    <td className="px-3 py-2 font-mono">incurred_last_qk</td>
+                    <td className="px-3 py-2 font-mono">case_estimate</td>
                     <td className="px-3 py-2">Time‑series</td>
-                    <td className="px-3 py-2">Incurred (last observed ≤ cutoff)</td>
+                    <td className="px-3 py-2">Case estimate (latest ≤ cutoff)</td>
                     <td className="px-3 py-2 text-right text-red-700">{formatCurrency ? formatCurrency(remStats.last) : remStats.last.toFixed(2)}</td>
                   </tr>
                   <tr className="border-t-2 border-indigo-300 bg-indigo-50">
-                    <td className="px-3 py-2 font-mono font-bold">outstanding_liability</td>
+                    <td className="px-3 py-2 font-mono font-bold">outstanding</td>
                     <td className="px-3 py-2 font-bold">Target</td>
-                    <td className="px-3 py-2">Remaining at cutoff (actual)</td>
+                    <td className="px-3 py-2">Actual outstanding = ultimate − paid-to-date</td>
                     <td className="px-3 py-2 text-right font-bold text-indigo-900">{formatCurrency ? formatCurrency(trueOutstandingStats.last) : trueOutstandingStats.last.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
+          )}
     </div>
   );
 }

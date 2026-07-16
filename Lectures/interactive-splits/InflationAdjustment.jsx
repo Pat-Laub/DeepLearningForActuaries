@@ -40,7 +40,7 @@ function InflationAdjustment({
   return (
     <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
           {/* Price Index chart: plot end-of-quarter (line) and mid-quarter (dots) */}
-          {show !== "tables" && <div className="bg-white rounded border p-3 mb-4">
+          {show !== "tables" && <div className={`bg-white rounded border p-3 ${show === "plot" ? "" : "mb-4"}`}>
             <div className="text-xs font-medium text-gray-700 mb-2">WPI: Quarter vs End‑of‑Quarter</div>
             {(() => {
               if (!priceIndexSeries || priceIndexSeries.length === 0) return <div className="text-xs text-gray-500">No index data.</div>;
