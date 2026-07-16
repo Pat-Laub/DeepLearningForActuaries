@@ -67,8 +67,11 @@ knitr::opts_chunk$set(jupyter_compat = TRUE, fig.align = "center")
 suppressMessages(library(SPLICE))
 suppressMessages(library(arrow))
 dir.create("data/splice", recursive = TRUE, showWarnings = FALSE)
+# 100 quarters of history so the book reaches a steady state; we later keep
+# only the claims finalising in the last ~40 quarters (see T_START below),
+# mimicking a portfolio inherited mid-stream rather than a brand-new insurer.
 sim <- generate_data(
-  n_claims_per_period = 100, n_periods = 40, complexity = 5,
+  n_claims_per_period = 100, n_periods = 100, complexity = 5,
   random_seed = 20260712,
   covariates_obj = SynthETIC::test_covariates_obj
 )
@@ -109,7 +112,7 @@ The full/final version will be completed soon.
 
 # Introduction
 
-# Individual claim reserving
+## Individual claim reserving
 
 An accident has occurred, the insurer has been notified, and maybe parts of the claim have already been paid, now we need to guess how much remains in this realised claim.
 
@@ -128,15 +131,15 @@ This is potentially a promising application for neural networks.
 
 For claim $k$, we want to know the  _ultimate claim size_
 $$
-  U_k := \sum_{t} Y_{k,t},
+  U_k := \sum_{t} P_{k,t},
 $$
 
-This is the sum of all _incremental payments_ $Y_{k,t}$ (also called _partial payments_) over the complete lifetime of the claim.
+This is the sum of all _incremental payments_ $P_{k,t}$ (also called _partial payments_) over the complete lifetime of the claim.
 
 ::: {.callout-note}
 ## Assumption: payments are positive
 
-We assume $Y_{k,t} \ge 0$ throughout. In reality some payments are _negative_ --- called _recoveries_ (e.g. money coming back from a third party or a salvaged vehicle). They are typically so rare and small relative to normal payments that ignoring them is reasonable (though this depends on the dataset).
+We assume $P_{k,t} \ge 0$ throughout. In reality some payments are _negative_ --- called _recoveries_ (e.g. money coming back from a third party or a salvaged vehicle). They are typically so rare and small relative to normal payments that ignoring them is reasonable (though this depends on the dataset).
 :::
 
 ## Outstanding claim amount
@@ -145,12 +148,12 @@ Say the valuation date is $v$, then we've seen the history of the claim $\mathca
 
 So the _outstanding_ (future unpaid amount) for claim $k$ is
 $$
-  O_k(v) := \sum_{t>v} Y_{k,t}.
+  O_k(v) := \sum_{t>v} P_{k,t}.
 $$
 
-If the claim is still ongoing, then we have
+Writing $P_k(v) := \sum_{t \le v} P_{k,t}$ for the _cumulative paid to date_, if the claim is still ongoing then
 $$
-  U_k = \sum_{t \le v} Y_{k,t} + O_k(v) \,.
+  U_k = P_k(v) + O_k(v) \,.
 $$
 
 In words:
@@ -248,7 +251,7 @@ No individual model can reserve for a claim it cannot see --- IBNR needs a separ
 - Consequence for the ML setup: pricing rows are policies with static features; reserving rows are claim-quarter snapshots with _time-varying_ features. That's why this lecture needs a whole preprocessing pipeline.
 
 
-# An Individual Claim
+# Insurance Claim Payments and Case Estimates
 
 ## The key dates
 
@@ -310,11 +313,6 @@ So case estimates play two roles for us:
 | 2023-09-10 | Payment #8 | $8.00 | $0.00 |
 | 2023-10-28 | Finalisation | | $0.00 |
 
-With hindsight: the true outstanding just after Payment #1 was $39, while the assessor's estimate was $21 --- case estimates are informative but not oracles.
-
-<!-- Numbers above are made up but internally consistent with the running
-example (U_k = $48). -->
-
 ## From the policyholder's perspective
 
 ```{python}
@@ -323,7 +321,7 @@ example (U_k = $48). -->
 # nominal). Shared prep for the two views below; uses setup.py's full-name
 # imports (pandas, plt) so the case study's `import pandas as pd` slide isn't
 # preempted.
-claim_story_no = 1929
+claim_story_no = 7501
 _claims = pandas.read_parquet("data/splice/claims.parquet")
 _payments = pandas.read_parquet("data/splice/payments.parquet")
 _estimates = pandas.read_parquet("data/splice/estimates.parquet")
@@ -424,17 +422,13 @@ plt.legend(fontsize=7, frameon=False, loc="center left",
 
 The true outstanding value and the _outstanding claims liability (OCL)_ (the assessor's live forecast of outstanding) both drop to zero.
 
-## Three levels of data visibility
+# Benchmark: Aggregate Reserving
+
+## Three levels of claim data granularity
 
 1. _Individual transaction level_: Stores every transaction or other update for every claim. Highest granularity. Often just visible in the insured's bank statements, or in insurance company's finance records. Usually considered too granular to be useful for actuaries.
 2. _Individual quarterly summaries_: This aggregates all the payments within a quarter (alternatively per month) for each claim. This is what the actuary would see.
 3. _Portfolio quarterly summaries_: Aggregates all payments within a quarter (alternatively per month) across all claims. This feeds into a Chain Ladder style of reserving.
-
-# Benchmark: Aggregate Reserving
-
-<!-- Chain ladder stays numeric-example-only: no general development-factor
-notation (it collides with the already-heavy individual-level notation, and
-students have seen the formal version). -->
 
 ## Aggregate reserving
 
@@ -493,6 +487,90 @@ With claim-level data and machine learning, we can use those discarded covariate
 ::: {.callout-note}
 Next week's guest lecture digs into _when and why_ aggregate models break down, and the trade-offs between micro- and macro-level models. Today we focus on individual-level approach and how to implement it.
 :::
+
+# Individual Claim Modelling Choices
+
+## A few major choices upfront
+
+1) What are the model inputs and outputs?
+
+Predictions are made from the perspective of some fixed time $v$, the _valuation quarter_.
+
+The individual claim model has:
+
+- _Input_: an $X_{k,v}$ summarising the claim's history up to $v$.
+- _Output_: either the ultimate claim size $U_k$ or the outstanding value $O_k(v)$.
+
+2) Are we performing traditional regression or distributional regression?
+
+## Two potential targets: ultimate or outstanding
+
+The output distribution can sit on either of two quantities:
+
+- the _ultimate_ $U_k$, or
+- the _outstanding_ $O_k(v) = U_k - P_k(v)$.
+
+```{python}
+#| echo: false
+# Illustrative densities for the two things a distributional model could
+# forecast for one in-progress claim. The x-axis is the ultimate amount.
+#   - Forecast the ultimate directly: a lognormal on [0, inf).
+#   - Forecast the outstanding: a lognormal on the *outstanding*, which on the
+#     ultimate axis is shifted right by the cumulative paid-to-date.
+from scipy.stats import lognorm
+
+_C_ult = "#3F9999"  # teal, as for cumulative payments earlier
+_C_out = "#CC91BC"  # mauve, as for incurred earlier
+_paid = 60.0        # cumulative paid to date ($000s)
+
+# Ultimate  U ~ LogNormal;  outstanding  O ~ LogNormal (shifted by _paid).
+_x = numpy.linspace(0, 260, 2000)
+_pdf_ult = lognorm.pdf(_x, s=0.42, scale=95)
+_xo = _x - _paid
+_pdf_out = numpy.where(_xo > 0, lognorm.pdf(_xo, s=0.5, scale=48), 0.0)
+
+
+def _forecast_base_plot():
+    plt.figure(figsize=(5.4, 3.0))
+    plt.subplots_adjust(top=0.92, left=0.145, right=0.70, bottom=0.17)
+    plt.plot(_x, _pdf_ult, color=_C_ult, linewidth=2,
+             label="Forecast ultimate $U_k$")
+    plt.plot(_x, _pdf_out, color=_C_out, linewidth=2,
+             label="Forecast outstanding $O_k(v)$")
+    plt.axvline(_paid, color="black", linestyle="--", linewidth=1.2,
+                label="Paid to date")
+    plt.ylim(0, None)
+    plt.xlim(0, 260)
+    plt.xlabel("Ultimate claim amount ($000s)")
+    plt.ylabel("Probability density")
+    plt.legend(fontsize=7, frameon=False, loc="center left",
+               bbox_to_anchor=(1.0, 0.5), handletextpad=0.5, borderaxespad=0)
+```
+
+```{python}
+#| echo: false
+#| fig-dpi: 350
+_forecast_base_plot();
+```
+
+## Claim snapshots
+
+![We will turn one claim into multiple "claim snapshots"/rows of input.](images/fig-snapshot-dataset.svg)
+
+One finalised claim, viewed retrospectively from _every_ quarter it was open, yields one training row per quarter:
+$$
+  (X_{k,v},\ O_k(v)) \quad \text{for } v = N_k, \dots, F_k - 1 .
+$$
+
+So a claim that took $F_k - N_k$ quarters to settle contributes $F_k - N_k$ rows. The shape is what matters here: features in, one target out per row.
+
+<!-- The full supervised dataset is
+$$
+  \mathcal{D} := \{(X_{k,v}, O_k(v)) : k \in \mathcal{I},\ v = N_k, \dots, F_k - 1\},
+$$
+where $\mathcal{I}$ is the set of _finalised_ claims --- the ones whose target $O_k(v)$ we can actually observe.
+ -->
+
 
 # Preprocessing One Claim
 
@@ -615,24 +693,6 @@ internet at view time (CDN React/Tailwind/Plotly). -->
 <script type="module" src="interactive-splits/compiled/lecture-demos.js"></script>
 ```
 
-## Creating claim snapshots
-
-![We will turn one claim into multiple "claim snapshots"/rows of input.](images/fig-snapshot-dataset.svg)
-
-One finalised claim, viewed retrospectively from _every_ quarter it was open, yields one training row per quarter:
-$$
-  (X_{k,v},\ O_k(v)) \quad \text{for } v = N_k, \dots, F_k - 1 .
-$$
-
-So a claim that took $F_k - N_k$ quarters to settle contributes $F_k - N_k$ rows.
-
-<!-- The full supervised dataset is
-$$
-  \mathcal{D} := \{(X_{k,v}, O_k(v)) : k \in \mathcal{I},\ v = N_k, \dots, F_k - 1\},
-$$
-where $\mathcal{I}$ is the set of _finalised_ claims --- the ones whose target $O_k(v)$ we can actually observe.
- -->
-
 ## Noting the quarters
 
 Each event date is binned into its calendar quarter $(A_k, N_k, F_k)$, and we also track the _development quarter_ (quarters since the accident).
@@ -647,7 +707,7 @@ A side effect of discretising: a claim that opens _and_ closes within a single q
 
 ## Quarterly aggregation
 
-All payments within a quarter collapse into one number, $Y_{k,t}$.
+All payments within a quarter collapse into one number, $P_{k,t}$.
 Case estimates within a quarter are instead summarised by their _latest_ value.
 
 ```{=html}
@@ -685,7 +745,7 @@ Compute the outstanding $O_k(v)$ retrospectively at every quarter $v$ it was ope
 
 Everything known about claim $k$ at valuation quarter $v$:
 $$
-  \mathcal{H}_{k,v} := \left\{A_k, N_k, (Z_{k,t})_{t\le v},\ (Y_{k,t})_{t\le v},\ (C_{k,t})_{t\le v}\right\}
+  \mathcal{H}_{k,v} := \left\{A_k, N_k, (Z_{k,t})_{t\le v},\ (P_{k,t})_{t\le v},\ (C_{k,t})_{t\le v}\right\}
 $$
 
 Some covariates $Z_{k,t}$ are _static_ (age at accident, injury severity), others are _time-varying_ (legal representation can switch on mid-claim).
@@ -731,7 +791,7 @@ How does $\Phi$ compress a variable-length payment history into fixed columns? S
 
 The claim history is naturally a _sequence_ --- one vector per development quarter:
 $$
-  \bigl( Y_{k,t},\ C_{k,t},\ Z_{k,t} \bigr) \quad \text{for } t = N_k, \dots, v .
+  \bigl( P_{k,t},\ C_{k,t},\ Z_{k,t} \bigr) \quad \text{for } t = N_k, \dots, v .
 $$
 
 So instead of hand-crafting summary statistics, we could:
@@ -765,7 +825,7 @@ One snapshot row per development quarter, each pairing features $X_{k,v}$ with t
 <div id="demo-snapshots" class="interactive-demo r-stretch"></div>
 ```
 
-# Splitting Claims into Datasets
+# Splitting Claims by Finalisation Quarter
 
 ## A portfolio of claims over time
 
@@ -778,7 +838,7 @@ One snapshot row per development quarter, each pairing features $X_{k,v}$ with t
 _port = _claims.copy()
 _port["notif_time"] = _port["occurrence_time"] + _port["notidel"]
 _port["final_time"] = _port["notif_time"] + _port["setldel"]
-_port = (_port[_port["final_time"] <= 40]  # keep the axis inside the window
+_port = (_port[(_port["final_time"] > 60) & (_port["final_time"] <= 100)]
          .sample(30, random_state=2026).sort_values("notif_time"))
 
 plt.figure(figsize=(5, 3.0))
@@ -798,73 +858,175 @@ plt.xlabel("Time (quarters)");
 Now zoom out from one claim to the whole portfolio.
 Every claim needs to be allocated to train, validation, or test --- but claims _overlap in time_, so the familiar shuffled random split deserves suspicion.
 
-## Two natural ways to split claims in time
+Remember, claim $k$ generates $F_k - N_k$ snapshot rows, and consecutive snapshots of the same claim are _near-duplicates_ (the history only grows by one quarter).
+So: _all snapshots from one claim go to the same set_.
 
-Claims have two anchor dates you could split on:
+## The simplest approach
 
-- by _notification_ quarter: a claim belongs to the era in which it _arrived_, or
-- by _finalisation_ quarter: a claim belongs to the era in which it _completed_.
+Order claims by finalisation quarter, then cut into _train_, _validation_, and _test_ eras:
 
-Both are sensible-looking temporal splits (the interactive demo shows both).
-But they differ in one important way: under a notification split, the training set contains claims that are _still open_ at the end of the training window --- and for those, we don't know the true outstanding.
+![Those still open at $t_{\text{test}}$ are the _unfinalised_ set.](images/fig-claims-tvt-sets.svg)
 
-## Exploring the splits
+## Old claims skew a naive split
+
+Suppose we keep every claim _notified_ after the portfolio's inception --- the obvious thing to do for a _brand-new_ insurer. A hard wall then sits at the start: no claim reaches back across it.
+
+A claim can only finalise in the _train_ era if it both _arrived_ and _closed_ early, which caps its duration at $t_{\text{train}}$. Every genuinely long-running claim is forced past the cut, into _validation_ or _test_.
+
+```{python}
+#| echo: false
+#| fig-dpi: 350
+# Schematic (not SPLICE data): each claim is a segment from notification (open
+# circle) to finalisation (filled dot), coloured by which era its finalisation
+# falls in. The hard wall on the left is the insurer's inception.
+_tvt_C = {"train": "#3F9999", "val": "#E0A030", "test": "#FF8FA9",
+          "old": "#B8B8B8"}
+_T_TRAIN, _T_VAL, _T_ETEND = 18, 28, 36
+
+
+def _tvt_era(_final):
+    if _final <= _T_TRAIN:
+        return "train"
+    return "val" if _final <= _T_VAL else "test"
+
+
+def _tvt_panel(_ax, _claims_nd, _start, _show_old):
+    # _claims_nd: list of (notification, duration).
+    for _row, (_n, _d) in enumerate(sorted(_claims_nd)):
+        _y, _f = -_row, _n + _d
+        _col = _tvt_C[_tvt_era(_f)]
+        if _n < _start and _show_old:  # opened before we arrived: grey stub
+            _ax.plot([_n, _start], [_y, _y], color=_tvt_C["old"], lw=1.4, zorder=2)
+            _ax.plot([_start, _f], [_y, _y], color=_col, lw=1.8, zorder=3)
+            _ax.plot(_n, _y, "o", mfc="white", mec=_tvt_C["old"], mew=1.0, ms=4, zorder=4)
+        else:
+            _ax.plot([_n, _f], [_y, _y], color=_col, lw=1.8, zorder=3)
+            _ax.plot(_n, _y, "o", mfc="white", mec=_col, mew=1.1, ms=4, zorder=4)
+        _ax.plot(_f, _y, "o", color=_col, ms=5, zorder=4)
+    _nrows = len(_claims_nd)
+    _ybot = -_nrows + 0.4
+    for _x0, _x1, _c in [(_start, _T_TRAIN, "train"), (_T_TRAIN, _T_VAL, "val"),
+                         (_T_VAL, _T_ETEND, "test")]:
+        _ax.axvspan(_x0, _x1, color=_tvt_C[_c], alpha=0.06, zorder=0)
+        _ax.annotate(_c, ((_x0 + _x1) / 2, _ybot - 0.9), ha="center", va="top",
+                     fontsize=8, color=_tvt_C[_c], weight="bold")
+    _ax.axvline(_start, color="black", lw=1.6, zorder=1)
+    for _x, _lab in [(_T_TRAIN, r"$t_{\mathrm{train}}$"), (_T_VAL, r"$t_{\mathrm{val}}$")]:
+        _ax.axvline(_x, color="black", ls="--", lw=1.0, zorder=1)
+        _ax.annotate(_lab, (_x, 1.4), ha="center", va="bottom", fontsize=8)
+    _ax.set_xlim(-14 if _show_old else _start - 1.5, _T_ETEND + 1.5)
+    _ax.set_ylim(_ybot - 1.8, 2.6)
+    _ax.set_yticks([])
+    for _s in ("left", "right", "top"):
+        _ax.spines[_s].set_visible(False)
+    _ax.set_xlabel("Time (quarters)", fontsize=8)
+    _ax.tick_params(labelsize=7)
+
+
+# A handful of claims with widely varying durations; several are long runners.
+_tvt_post = [(1, 3), (2, 5), (4, 24), (5, 2), (7, 27), (9, 4), (11, 20),
+             (14, 3), (16, 15), (19, 7), (24, 9), (27, 3), (30, 4)]
+
+_fig, _ax = plt.subplots(figsize=(6.2, 2.9))
+_tvt_panel(_ax, _tvt_post, 0, _show_old=False)
+_ax.text(0.14, 0.13, "every long claim is\nforced past $t_{\\mathrm{train}}$",
+         transform=_ax.transAxes, ha="left", va="bottom", fontsize=7.5,
+         color=_tvt_C["train"])
+plt.tight_layout();
+```
+
+The _train_ set never sees a long claim, yet the model is judged on them --- a mismatch baked in by construction.
+
+## Fix: arrive at a steady-state portfolio
+
+A real reserving team never starts at inception; they inherit a portfolio already _in force_, full of claims opened years earlier. We mimic that: simulate a long _burn-in_ of history first, then keep every claim _finalised_ after a chosen start date (not every claim _notified_ after it).
+
+```{python}
+#| echo: false
+#| fig-dpi: 350
+# Same claims, but now we "arrive" at the portfolio start with old long-running
+# claims already open (grey stubs reaching back before the start line).
+_tvt_pre = [(-11, 24), (-8, 20), (-6, 12), (-4, 27)]
+
+_fig, _ax = plt.subplots(figsize=(6.2, 3.1))
+_tvt_panel(_ax, _tvt_pre + _tvt_post, 0, _show_old=True)
+_ax.annotate("portfolio start", (0, 1.9), ha="center", va="bottom", fontsize=7.5)
+_ax.text(0.02, 0.1, "old long-running claims,\nalready in force at the start",
+         transform=_ax.transAxes, ha="left", va="bottom", fontsize=7.5,
+         color="#8A8A8A")
+plt.tight_layout();
+```
+
+Old long-running claims now finalise inside the _train_ era too, so every split carries the full spread of durations. We simulate many quarters and place the observation window deep in the steady state.
+
+# Splitting Claims by Notification Quarter
+
+## This is more complex
 
 ```{=html}
 <div id="demo-splitting" class="interactive-demo r-stretch"></div>
 ```
 
-## The trouble with splitting by notification
+## Never-finalising claims are censored
 
-For an in-progress claim, we haven't yet seen the target, we only know the _bound_:
+If the claim $k$ is still open at the end of our dataset, then we have not observed the ultimate.
+
+We only know a lower bound, $U_k \ge P_k(v)$, i.e. it is a _right-censored_ observation (the survival-analysis kind).
+
+```{python}
+#| echo: false
+#| fig-dpi: 350
+_forecast_base_plot()
+# For a censored claim we know U_k >= paid-to-date. Shade the part of the
+# ultimate's density that respects this bound; the mass to the left of the
+# dashed line is inadmissible and must be truncated away.
+_mask = _x >= _paid
+plt.fill_between(_x[_mask], _pdf_ult[_mask], color=_C_ult, alpha=0.25,
+                 hatch="////", edgecolor=_C_ult, linewidth=0.0,
+                 label=r"Admissible: $U_k \geq$ paid");
+plt.legend(fontsize=7, frameon=False, loc="center left",
+           bbox_to_anchor=(1.0, 0.5), handletextpad=0.5, borderaxespad=0);
+```
+
+The ultimate model must put _zero_ mass left of the dashed line. The outstanding model gets this free: it lives on $[0, \infty)$ from the start.
+
+## Training directly on the censored ultimate
+
+Keep the ultimate $U_k$ as the target and borrow the _censored likelihood_ from survival analysis.
+
+- $\delta_k \in \{0, 1\}$: claim $k$ is _finalised_ ($\delta_k = 1$) or still _open_ ($\delta_k = 0$).
+- $P_k(v) = \sum_{t \le v} P_{k,t}$: the _paid-to-date_ for claim $k$ at the training cut $v$.
+- Distributional regression: $U_k \mid X_k \sim \mathcal{D}(\vartheta_k)$ with $\vartheta_k = \vartheta(X_k; \theta)$, giving density $f_k$, cdf $F_k$, and survival $S_k = 1 - F_k$.
+
+What we actually observe:
+
+- _Finalised_ ($\delta_k = 1$): the exact ultimate $U_k = u_k$.
+- _Open_ ($\delta_k = 0$): only the bound $U_k \ge P_k(v)$ (right-censored at $P_k(v)$).
+
+## The censored log-likelihood
+
+A finalised claim contributes its _density_ at $u_k$; an open claim contributes its _survival_ at $P_k(v)$ (all we know is $U_k \ge P_k(v)$):
+
 $$
-  U_k \ge \sum_{t \le v} Y_{k,t} \,,
+  L(\theta) = \prod_{k=1}^{n} \big[\,f_k(u_k)\,\big]^{\delta_k}\,\big[\,S_k\!\big(P_k(v)\big)\,\big]^{1 - \delta_k} \,.
 $$
-i.e. the ultimate is at least what's been paid so far. This is a _censored_ observation (the survival-analysis kind).
 
-You could still train on these rows: add a loss term that penalises predictions of the ultimate _below_ the payments made to date.
+The loss is the negative log-likelihood:
 
-## It's simpler if we predict the outstanding
+$$
+  -\ell(\theta) = -\sum_{k=1}^{n} \Big[\, \delta_k \log f_k(u_k) \;+\; (1 - \delta_k)\log\big(1 - F_k(P_k(v))\big) \,\Big] \,.
+$$
 
-We chose to predict the _outstanding_ $O_k(v)$ rather than the ultimate $U_k$ directly.
+Open claims still inform $\theta$ through the survival term $S_k\!\big(P_k(v)\big)$: the constraint $U_k \ge P_k(v)$ is genuinely informative when the target is the ultimate.
 
-- For a censored row, the bound $U_k \ge \text{paid so far}$ translates to just $O_k(v) \ge 0$.
-- Any sensible model of the outstanding would only predicts _positive_ values.
-- So the censored observations impose a constraint the model satisfies _by construction_, they carry no usable information.
+## But if we're predicting the outstanding...
 
-So we predict the outstanding, split by _finalisation_ quarter, and train only on fully-observed claims.
+We'll predict the _outstanding_ $O_k(v)$ rather than the ultimate $U_k$ directly.
 
-<!-- Target choice (outstanding vs ultimate) determines whether censored data
-is worth anything — worth slowing down on. -->
+- For a censored claim, the bound $U_k \ge P_k(v)$ becomes just $O_k(v) \ge 0$.
+- Any sensible model of the outstanding only predicts _positive_ values.
+- So the censoring constraint is satisfied _by construction_ --- censored claims carry no usable information, and we can simply drop them.
 
-## Train / validation / test splits
-
-Split claims by their _finalisation quarter_:
-
-![Those still open at $t_{\text{test}}$ are the _unfinalised_ set.](images/fig-claims-tvt-sets.svg)
-
-<!-- This mimics reality: models are trained on the past, selected on the recent past, and evaluated on the most recent claims --- exactly how a deployed model would have been built over time. -->
-
-## Why split by claim, not by row?
-
-One claim generates $F_k - N_k$ snapshot rows, and consecutive snapshots of the same claim are _near-duplicates_ (the history only grows by one quarter).
-
-If we randomly shuffled _rows_ into train/val/test, almost every test row would have a sibling in the training set.
-The model could just memorise claims --- validation scores would look brilliant, deployment would disappoint.
-
-So: _all snapshots from one claim go to the same set_. Splitting by finalisation quarter guarantees this, and keeps time flowing in one direction too.
-
-<!-- Callback to the early-weeks leakage / grouped-splits material. The demo's
-"duplication" toggle shows a censored train claim reappearing in val. -->
-
-## Censoring at the observation date
-
-Claims still open at the end of the data window are _right-censored_: we can see their history, but not their target $O_k(v)$ (the future payments haven't happened yet).
-
-- They can't be used for training or testing as their label is unknown.
-- But they are precisely the claims we need predictions for in deployment! They form the _unfinalised set_.
-
-<!-- Note the quiet bias this creates: the test set only contains claims that _managed to finalise_ by $t_{\text{test}}$, so very long claims are under-represented. -->
 
 # Case Study: Synthetic Claims
 
@@ -901,8 +1063,8 @@ from keras.callbacks import EarlyStopping
 ```{r}
 #| eval: false
 sim <- generate_data(
-  n_claims_per_period = 100,   # ~4,000 claims in total
-  n_periods           = 40,    # 40 quarters = 10 accident years
+  n_claims_per_period = 100,   # ~10,000 claims over the full horizon
+  n_periods           = 100,   # long burn-in; we observe the last ~40 quarters
   complexity          = 5,     # the most realistic scenario
   random_seed         = 20260712,
   covariates_obj      = SynthETIC::test_covariates_obj
@@ -987,15 +1149,18 @@ The package shows payments as both a nominal (`payment_inflated`) and a deflated
 The case estimates are revised at irregular times, just like the toy table earlier --- though note they are tracked in nominal dollars (assessors think in the money of the day).
 :::
 
-<!-- BUILD: claim_no 1 spans ~21 quarters — check it fits the slide (else
-.scrollable or a shorter claim). OCL/cumpaid are nominal (inflated) dollars. -->
+<!-- BUILD: claim_no 1 is short (~5 quarters, 4 payments) so both tables fit;
+if a later regeneration lengthens it, use .scrollable or a shorter claim.
+OCL/cumpaid are nominal (inflated) dollars. -->
 
 ## From transactions to snapshot rows
 
 Bin each claim's key dates into quarters, and sort the claims into groups:
 
 ```{python}
-T_END = 40  # the valuation quarter (end of the observation window)
+# We "arrive" at the portfolio at T_START and value it at T_END: keep claims
+# that finalise inside this steady-state window, not those that merely start in it.
+T_START, T_END = 60, 100
 
 claims["notif_qtr"] = np.ceil(claims["occurrence_time"] + claims["notidel"]).astype(int)
 claims["final_qtr"] = np.ceil(claims["occurrence_time"] + claims["notidel"] + claims["setldel"]).astype(int)
@@ -1004,7 +1169,7 @@ notif, final = claims["notif_qtr"], claims["final_qtr"]
 ibnr = notif > T_END
 unfinalised = (notif <= T_END) & (final > T_END)
 flash = (final <= T_END) & (final == notif)
-observed = claims[(final <= T_END) & (final > notif)]
+observed = claims[(final > T_START) & (final <= T_END) & (final > notif)]
 ```
 
 ```{python}
@@ -1023,7 +1188,7 @@ And some claims open and close within a single quarter, so they _vanish_ under t
 
 ## Building the snapshot grid
 
-One row per claim per open quarter, with the quarterly payments $Y_{k,t}$ merged in (missing quarters become zero-payment rows).
+One row per claim per open quarter, with the quarterly payments $P_{k,t}$ merged in (missing quarters become zero-payment rows).
 The merge/groupby plumbing is routine (code folded away); what matters is the change of shape:
 
 ```{python}
@@ -1139,7 +1304,7 @@ covariates are visible. -->
 ## Splitting by finalisation quarter
 
 ```{python}
-T_TRAIN, T_VAL = 28, 34
+T_TRAIN, T_VAL = 88, 94  # grid already starts at T_START, so train is (60, 88]
 splits = {
     "train": grid[grid["final_qtr"] <= T_TRAIN],
     "val": grid[(grid["final_qtr"] > T_TRAIN) & (grid["final_qtr"] <= T_VAL)],
@@ -1163,12 +1328,14 @@ Note rows $\gg$ claims: each claim contributes one row per quarter it was open -
 
 ```{r}
 payments <- read_parquet("data/splice/payments.parquet")
-observed <- subset(payments, payment_period <= 40)
-observed$acc_year <- ceiling(observed$occurrence_period / 4)
-observed$dev_year <- ceiling(observed$payment_period / 4) -
-  observed$acc_year + 1
+# The triangle uses the observed window (accident quarters 61-100), shifted to
+# 1-40 so it reads as ten fresh accident years valued at quarter 100.
+window <- subset(payments, occurrence_period > 60 & payment_period <= 100)
+window$acc_year <- ceiling((window$occurrence_period - 60) / 4)
+window$dev_year <- ceiling((window$payment_period - 60) / 4) -
+  window$acc_year + 1
 
-incr <- aggregate(payment_size ~ acc_year + dev_year, observed, sum)
+incr <- aggregate(payment_size ~ acc_year + dev_year, window, sum)
 tri <- incr2cum(as.triangle(incr, origin = "acc_year",
                             dev = "dev_year", value = "payment_size"))
 round(tri / 1e6, 2)  # cumulative payments, $m
@@ -1179,7 +1346,7 @@ round(tri / 1e6, 2)  # cumulative payments, $m
 ```{r}
 mack <- MackChainLadder(tri, est.sigma = "Mack")
 reserve_cl <- summary(mack)$Totals["IBNR:", ]
-true_outstanding <- sum(subset(payments, payment_period > 40)$payment_size)
+true_outstanding <- sum(subset(payments, payment_period > 100)$payment_size)
 
 cat(sprintf("Chain ladder reserve:   $%.1fm\n", reserve_cl / 1e6),
     sprintf("True total outstanding: $%.1fm\n", true_outstanding / 1e6))
@@ -1317,15 +1484,15 @@ All three models on the test set, against the benchmark-to-beat:
 ```{python}
 X_test_nn = preprocess.transform(X_test)
 preds = {name: glm.predict(X_test) for name, glm in glms.items()}
-preds["Neural network"] = nn.predict(X_test_nn, verbose=0).flatten()
+preds["Neural network with case estimates"] = nn.predict(X_test_nn, verbose=0).flatten()
 preds["Case estimates alone"] = np.log(X_test["Estimate"])
 
 for name, pred in preds.items():
     rmse = root_mean_squared_error(y_test, pred)
-    print(f"{name:28s} test RMSE (log scale) = {rmse:.3f}")
+    print(f"{name:34s} test RMSE (log scale) = {rmse:.3f}")
 ```
 
-Per-snapshot accuracy is one lens --- but a reserving model's real job is the portfolio total, coming up next.
+Per-snapshot accuracy is one lens --- but a reserving model's real job is the portfolio total.
 
 ## Predicted vs actual outstanding
 
