@@ -1028,6 +1028,8 @@ library(ChainLadder)
 The Python side does the machine learning:
 
 ```{python}
+import random
+
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -1371,7 +1373,7 @@ cat_cols = ["Legal Representation", "Injury Severity", "Age of Claimant"]
 def make_preprocessor(with_estimate):
     dollars = dollar_cols + (["Estimate"] if with_estimate else [])
     return ColumnTransformer([
-        ("dollars", make_pipeline(FunctionTransformer(np.log1p), MinMaxScaler()), dollars),
+        ("dollars", make_pipeline(FunctionTransformer(np.log1p, feature_names_out="one-to-one"), MinMaxScaler()), dollars),
         ("numeric", MinMaxScaler(), numeric_cols),
         ("categorical", OneHotEncoder(drop="first", sparse_output=False), cat_cols),
     ])
@@ -1408,6 +1410,7 @@ glm_est = Ridge(alpha=1e-4).fit(X_train_est, y_train)
 
 ```{python}
 #| eval: false
+random.seed(1)
 nn = Sequential([
     Dense(30, activation="leaky_relu"),
     Dense(30, activation="leaky_relu"),
@@ -1426,6 +1429,7 @@ nn_path = "models/individual-reserving-nn.keras"
 if Path(nn_path).exists():
     nn = keras.models.load_model(nn_path)
 else:
+    random.seed(1)
     nn = Sequential([
         Dense(30, activation="leaky_relu"),
         Dense(30, activation="leaky_relu"),
@@ -1667,14 +1671,39 @@ The individual models can only reserve for claims they can _see_, so their fair 
 ```{python}
 #| echo: false
 #| output: false
-# Export the generated tables for reuse outside the render (labs, students).
-# This must stay at the very end and stay write-only: nothing may read these
-# files back in the same process, or pyarrow's mmap hands back corrupt strings.
+# Export the generated data in a raw / interim / processed layout.
+import joblib
 from pathlib import Path
-Path("data/splice").mkdir(parents=True, exist_ok=True)
-claims.to_parquet("data/splice/claims.parquet")
-payments.to_parquet("data/splice/payments.parquet")
-estimates.to_parquet("data/splice/estimates.parquet")
+
+for _sub in ("raw", "interim", "processed"):
+    Path(f"data/{_sub}").mkdir(parents=True, exist_ok=True)
+
+claims.to_parquet("data/raw/claims.parquet")
+payments.to_parquet("data/raw/payments.parquet")
+estimates.to_parquet("data/raw/estimates.parquet")
+
+train.to_parquet("data/interim/reserving_train.parquet")
+val.to_parquet("data/interim/reserving_val.parquet")
+test.to_parquet("data/interim/reserving_test.parquet")
+unfinalised.to_parquet("data/interim/reserving_unfinalised.parquet")
+
+# The model-ready design matrices (the with-case-estimate version the
+# NN uses), each X paired with its log-Outstanding target; the unfinalised set has
+# no known target. The fitted preprocessor is saved alongside so raw features can
+# be re-transformed (e.g. for the PDP demo).
+_feat_names = ct_est.get_feature_names_out()
+
+def _save_design(X, y, path):
+    df = pd.DataFrame(np.asarray(X), columns=_feat_names)
+    if y is not None:
+        df["log_Outstanding"] = np.asarray(y)
+    df.to_parquet(path)
+
+_save_design(X_train_est, y_train, "data/processed/reserving_train.parquet")
+_save_design(X_val_est, y_val, "data/processed/reserving_val.parquet")
+_save_design(X_test_est, y_test, "data/processed/reserving_test.parquet")
+_save_design(X_unfinalised_est, None, "data/processed/reserving_unfinalised.parquet")
+joblib.dump(ct_est, "data/processed/reserving_ct_est.joblib")
 ```
 
 ## Python package versions {.appendix data-visibility="uncounted"}
