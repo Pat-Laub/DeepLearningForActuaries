@@ -286,6 +286,10 @@ So case estimates play two roles for us:
 - a _strong predictor_ to feed into the model, and
 - a _benchmark to beat_ (if the model can't out-predict the assessors, why bother?).
 
+::: footer
+See @taylor2008individual.
+:::
+
 ## Payments and case estimates together
 
 | Date | Event | Payment | Case estimate |
@@ -527,6 +531,10 @@ def _forecast_base_plot():
 _forecast_base_plot();
 ```
 
+::: footer
+See @al2022stochastic for distributional forecasts of individual claims using MDNs.
+:::
+
 ## Claim snapshots
 
 ![We will turn one claim into multiple "claim snapshots"/rows of input.](images/fig-snapshot-dataset.svg)
@@ -535,6 +543,10 @@ One finalised claim, viewed retrospectively from _every_ quarter it was open, yi
 $$(X_{k,v},\ O_k(v)) \text{ for } v = N_k, \dots, F_k - 1\,.$$
 
 Note, claims with $N_k = F_k$ just dissapear.
+
+::: footer
+See @avanzi2026case.
+:::
 
 # Preprocessing One Claim
 
@@ -751,10 +763,6 @@ When $\Phi$ compresses the history, the time-varying covariates split into two k
 1. _Only the latest value matters._ E.g. legal representation status, or the current case estimate: keep $Z_{k,v}$, discard the path. (Implicitly a _Markov-style_ assumption: the current state is a sufficient summary.)
 2. _The path matters._ E.g. the payments-per-quarter series: a claim that paid $40 in one early lump differs from one that dribbled out $10 four times. These get summarised as functions of the whole history --- they are _path-dependent_ features.
 
-<!-- TODO: align "current state" vs "path-dependent" wording with the demo,
-and check for established names in the literature. (NB the survival-analysis
-"external vs internal" distinction is a different thing — don't borrow it.) -->
-
 Deciding which kind each covariate is _is itself a modelling choice_: treating the case estimate as "latest value only" throws away how often the assessor has revised it.
 
 ## Summarising the payment history
@@ -792,10 +800,9 @@ So instead of hand-crafting summary statistics, we could:
 - take the final hidden state as a _learned_ summary of the history,
 - concatenate the static covariates, and predict $O_k(v)$ with a dense head.
 
-<!-- TODO: pick an RNN-reserving citation for library.bib. In our experiments
-the RNN didn't beat the summary-statistics pipeline, so we keep the tabular
-approach — but it's a natural design worth trying. Optional: an architecture
-sketch (quarter-vectors -> RNN -> hidden state -> concat static -> dense). -->
+::: footer
+@avanzi2026case compares exactly this design against the summary-statistics pipeline.
+:::
 
 ## Preparing features for a neural network
 
@@ -1043,6 +1050,10 @@ from keras.layers import Dense
 from keras.callbacks import EarlyStopping
 ```
 
+::: footer
+SPLICE package [@avanzi2023splice]; ChainLadder package [@gesmann2026chainladder].
+:::
+
 ## Generating synthetic claims with SPLICE
 
 ```{r}
@@ -1055,10 +1066,15 @@ sim <- generate_data(
 )
 ```
 
-Three main tables: one row per _claim_, per _payment_, and per _case estimate transaction_.
+Four main tables:
+
+1. claim-level information
+2. claim-level covariates,
+3. payment history, and
+4. case estimate revision history.
 
 ::: footer
-SynthETIC [@avanzi2021synthetic] generates the claims and payments; SPLICE [@avanzi2023splice] adds the case estimates; the claim-level covariates plug in via SynthETIC's covariates module.
+Under the hood, SynthETIC [@avanzi2021synthetic] generates the claims, payments and claim-level covariates, while SPLICE adds the case estimates.
 :::
 
 ## All claims
@@ -1534,7 +1550,7 @@ sigma2_nn = np.mean((y_val - nn.predict(X_val_est, verbose=0).flatten()) ** 2)
 
 ## Did our model beat the professionals?
 
-_Better%_ is the share of test claims we win vs the case estimates.
+_Better%_ is the share of test snapshots we win vs the case estimates.
 
 ```{python}
 actual = test["Outstanding"]
@@ -1558,7 +1574,7 @@ print(f"Neural network with case estimates Better% = {wins_nn.mean():5.1%}")
 
 The portfolio reserve is dominated by the _big_ claims, so weight each win by the claim's ultimate --- winning a \$2m claim counts for more than winning a \$5k one:
 $$
-  \text{Weighted Better\%} \;=\; \sum_{k} w_k \,\mathbf{1}\{\text{model wins claim } k\}, \qquad w_k = \frac{U_k}{\sum_j U_j} .
+  \text{Weighted Better\%} \;=\; \sum_{k,v} w_{k,v} \,\mathbf{1}\{\text{model wins snapshot } (k,v)\}, \qquad w_{k,v} = \frac{U_k}{\sum_{(j,u)} U_j} .
 $$
 
 ```{python}
@@ -1574,6 +1590,10 @@ print(f"Neural network with case estimates Weighted Better% = "
 ```
 
 Weighting by size lifts every model: they may trail the assessor on a plain _count_ of claims, yet come out ahead on the large claims that actually move the reserve.
+
+::: footer
+The Better% metrics come from @avanzi2026case.
+:::
 
 ::: {.content-visible unless-format="revealjs"}
 That gap between the two figures is the whole point of looking past RMSE: a model can lose the majority of small, easy claims to a sharp assessor and still win the handful of large ones that dominate the reserve --- and only the size-weighted view makes that visible.
@@ -1654,19 +1674,18 @@ The individual models can only reserve for claims they can _see_, so their fair 
 
 # Wrapping Up
 
-## Individual vs aggregate reserving
+## Conclusions
+
+Individual vs aggregate reserving:
 
 - _Aggregate_ (chain ladder on triangles): simple, stable, industry standard; but throws away claim-level covariates and gives no per-claim view.
 - _Individual_: predicts $O_k(v)$ per open claim; the portfolio reserve is just the sum $T(v)$; supports triage and segmentation; per-claim errors partially cancel in the aggregate.
 - Individual level reserving is a data engineering headache, and the total still misses IBNR, so an individual model alone is _not yet_ a full portfolio reserve.
 
-<!-- Callback the T(v)/IBNR figure from the Introduction here. -->
-
-## What we didn't cover
+Next steps:
 
 - _IBNR_: our model only reserves claims it can see; incurred-but-not-reported claims need a separate (usually aggregate) adjustment.
 - _Uncertainty_: a reserve needs a risk margin, not just a point estimate; distributional forecasts and ensembling give prediction intervals.
-- _When does granular beat aggregate?_
 
 ```{python}
 #| echo: false
@@ -1705,6 +1724,32 @@ _save_design(X_test_est, y_test, "data/processed/reserving_test.parquet")
 _save_design(X_unfinalised_est, None, "data/processed/reserving_unfinalised.parquet")
 joblib.dump(ct_est, "data/processed/reserving_ct_est.joblib")
 ```
+
+## Glossary {.appendix data-visibility="uncounted"}
+
+::: columns
+::: column
+- case estimate
+- censoring
+- chain ladder
+- claim snapshot
+- development quarter
+- finalisation
+- IBNR claims
+- incurred
+- individual vs aggregate reserving
+:::
+::: column
+- lognormal variance correction
+- notification, notification delay
+- outstanding claim amount
+- portfolio reserve / total outstanding
+- run-off triangle
+- steady-state portfolio
+- ultimate claim size
+- weighted Better%
+:::
+:::
 
 ## Python package versions {.appendix data-visibility="uncounted"}
 
