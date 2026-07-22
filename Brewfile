@@ -8,7 +8,6 @@
 
 brew "graphviz"     # diagram rendering
 brew "ghostscript"  # PDF compression in scripts/compress_pdfs.py
-brew "node"         # provides npm, used to install the decktape CLI for slide PDFs
 
 # A LaTeX distribution is required too. The lightweight cross-platform route is
 # `quarto install tinytex` (see README.md). Uncomment the next line instead if

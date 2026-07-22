@@ -26,14 +26,6 @@ brew bundle
 
 On other platforms install them through your package manager, e.g. `apt install graphviz ghostscript`.
 
-Generating the slide PDFs also requires [Node.js](https://nodejs.org/) (which provides `npm`) and the [decktape](https://github.com/astefanutti/decktape) CLI. The `Brewfile` above installs Node; install decktape globally so it's on your `PATH` (`scripts/decktape_pdfs.py` invokes it by name):
-
-```shell
-npm install -g decktape
-```
-
-This step is only needed when rendering lecture slides — rendering a non-slides page such as `index.qmd` skips it.
-
 A LaTeX/TeX distribution is also required (some figures are built from `.tex` sources and PDF output goes through LaTeX). The recommended option is Quarto's bundled TinyTeX — it's smaller (~200 MB) and auto-installs any extra LaTeX packages on demand:
 
 ```shell
