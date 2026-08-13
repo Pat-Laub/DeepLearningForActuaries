@@ -115,26 +115,41 @@ $headingColor: #383D3D;
     }
 }
 
-.reveal .slide-logo {
-    max-height: 80px !important;
-    right: 7px !important;
-}
-
-// Add a yellow bar in the empty margin to the right of the slide.
+// Geometry of the yellow bar in the empty margin to the right of the slide.
 //
 // Reveal centres the `--slide-width` (1120px) slide, scaled by `--slide-scale`,
 // inside the `--viewport-width` viewport (the scale already folds in the 10%
 // `margin`, and depends on BOTH the viewport width and height). So the empty
 // margin on each side is `(viewport-width - slide-width * slide-scale) / 2`, and
-// the fixed-100px bar pinned to the viewport's right edge only clears the slide
-// while that margin is at least 100px wide.
+// a bar pinned to the viewport's right edge only clears the slide while it is no
+// wider than that margin.
 //
 // Reveal keeps these custom properties current on every resize/zoom, so we can
-// track the geometry exactly: show the bar at its full 100px while it fits, and
-// collapse it to 0 the moment it would overlap the content. A plain `max-width`
-// query can't do this, because the margin also depends on the viewport *height*
-// via the scale. The `* 1000` turns the ">= 100px" test into a near-instant
-// 0 -> 100px step instead of a gradual taper.
+// track the geometry exactly, which a plain `max-width` query cannot do: the
+// margin depends on the viewport *height* too, via the scale.
+//
+// The bar takes its full $bar-width whenever the margin can hold it, and
+// otherwise shrinks to exactly fill the margin. That matters on 4:3 tablets:
+// whenever the viewport is narrower than the slide's 16:10 aspect the scale is
+// set by the width, which pins the margin at 5% of the viewport width. An iPad
+// Pro 12.9" (1366 CSS px wide) therefore only ever offers a 68px margin, and
+// would need a 2000px-wide viewport to earn the full bar. Below $bar-min the
+// remaining sliver reads as a rendering artefact rather than a design element,
+// so drop it; the `* 1000` turns that test into a near-instant step.
+$bar-width: 100px;
+$bar-min: 24px;
+
+.reveal-viewport {
+    --bar-margin: calc(
+        (var(--viewport-width, 100vw) - var(--slide-width, 1120px) * var(--slide-scale, 1)) / 2
+    );
+    --bar-width: clamp(
+        0px,
+        calc((var(--bar-margin) - #{$bar-min}) * 1000),
+        min(var(--bar-margin), #{$bar-width})
+    );
+}
+
 .slide-background::after {
     content: "";
     position: absolute;
@@ -142,10 +157,27 @@ $headingColor: #383D3D;
     right: 0;
     height: 100%;
     background: #fedc00;
-    --bar-margin: calc(
-        (var(--viewport-width, 100vw) - var(--slide-width, 1120px) * var(--slide-scale, 1)) / 2
-    );
-    width: clamp(0px, calc((var(--bar-margin) - 100px) * 1000), 100px);
+    width: var(--bar-width, #{$bar-width});
+}
+
+// The logo sits inside the yellow bar, so it has to scale along with it: at the
+// 80px cap it is 79px wide, which together with the 7px offset already needs
+// 86px of a 100px bar. Sizing both as a fraction of the bar keeps the logo in
+// the same proportion to it at every width, and reproduces exactly today's
+// 80px/7px on a full-width bar. When the bar is too narrow to be drawn at all
+// the logo floats over the slide instead and has nothing to fit inside, so keep
+// it full size — the second branch, selected by the `--bar-width` step trick.
+.reveal .slide-logo {
+    max-height: clamp(
+        calc(var(--bar-width, #{$bar-width}) * 0.8),
+        calc((#{$bar-min} - var(--bar-margin)) * 1000),
+        80px
+    ) !important;
+    right: clamp(
+        calc(var(--bar-width, #{$bar-width}) * 0.07),
+        calc((#{$bar-min} - var(--bar-margin)) * 1000),
+        7px
+    ) !important;
 }
 
 // Print / PDF view (`?view=print`, which adds `.print-pdf` to <html>) uses a
@@ -155,7 +187,14 @@ $headingColor: #383D3D;
 // bar, so — by the same "only show it if it fits" rule — hide it here. Without
 // this the rule above falls back to `100vw` (the print window width) and the bar
 // reappears and overlaps the content. The title polygon is a background image,
-// not this pseudo-element, so it is unaffected.
+// not this pseudo-element, so it is unaffected. Pin `--bar-width` too, so the
+// logo keeps its full size in print rather than scaling itself to a bar width
+// derived from those meaningless fallbacks. `.print-pdf` sits on <html>, so this
+// has to re-declare the property on the same element as the rule above (<body>)
+// to win over it, not merely inherit.
+.print-pdf .reveal-viewport {
+    --bar-width: #{$bar-width};
+}
 .print-pdf .slide-background::after {
     display: none !important;
 }
