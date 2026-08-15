@@ -13,14 +13,15 @@ Differences from the decktape output: pages are the deck's 1120x700 rather
 than decktape's 1280x720 viewport, and text/vector graphics stay vector
 instead of being screenshot pixels — smaller files, selectable text.
 
-The output directory is served as-is through a small local HTTP server that
-rewrites each .slides.html on the fly before Chrome sees it:
-  1. Swap YouTube iframes for thumbnail <img> tags — iframes don't render
-     reliably under headless Chrome, leaving grey boxes in the PDF.
-  2. Inject a script that restores Quarto's per-slide footers (image
+The output directory is served through a small local HTTP server that injects
+two print-layout fixes into each .slides.html before Chrome sees it:
+  1. Inject a script that restores Quarto's per-slide footers (image
      attributions etc.), which Reveal's print view otherwise drops.
-  3. Inject a requestAnimationFrame shim, without which Reveal's print-view
+  2. Inject a requestAnimationFrame shim, without which Reveal's print-view
      setup stalls and prints one blank page (see RAF_SHIM_JS).
+(YouTube thumbnails and author-supplied print replacements are already embedded
+in the published deck by the print-media Quarto extension, so ordinary browser
+PDF export gets the same deterministic media as this automated path.)
 (The menu icons that decktape had to hide with injected CSS are already
 hidden by Quarto's own html.print-pdf rules in print view.)
 
@@ -44,17 +45,10 @@ import sys
 import tempfile
 import threading
 import time
-import urllib.error
-import urllib.request
 from glob import glob
 from urllib.parse import quote
 
 OUTPUT_DIR = "docs"
-
-YOUTUBE_IFRAME_RE = re.compile(
-    r'<iframe\b[^>]*\bsrc="https?://www\.youtube\.com/embed/([\w-]+)[^"]*"[^>]*>\s*</iframe>',
-    re.IGNORECASE,
-)
 
 # Make requestAnimationFrame resolve under --virtual-time-budget.
 #
@@ -276,67 +270,6 @@ def find_chrome():
 CHROME = find_chrome()
 
 
-# Download each video's thumbnail at most once per build and serve it from
-# this process: Chrome reliably paints same-origin images into the printed
-# PDF, whereas remote (i.ytimg.com) images loaded fine but were skipped
-# during print rasterisation of the large print-view document. The threaded
-# server may call this concurrently for the same id; a duplicate download is
-# harmless, and dict writes are atomic under the GIL.
-_thumbnail_cache = {}
-
-THUMBNAIL_PATH_PREFIX = "/__yt-thumb/"
-
-
-def _thumbnail_bytes(video_id):
-    """
-    Best available YouTube thumbnail for video_id, as JPEG bytes (or None).
-
-    maxresdefault.jpg is the highest resolution but 404s on many older videos;
-    hqdefault.jpg exists for every video.
-    """
-    if video_id not in _thumbnail_cache:
-        data = None
-        for name in ("maxresdefault", "hqdefault"):
-            url = f"https://i.ytimg.com/vi/{video_id}/{name}.jpg"
-            try:
-                req = urllib.request.Request(
-                    url, headers={"User-Agent": "Mozilla/5.0"}
-                )
-                with urllib.request.urlopen(req, timeout=15) as resp:
-                    if resp.status == 200:
-                        data = resp.read()
-                        break
-            except urllib.error.HTTPError:
-                continue  # maxresdefault missing (404) -> try hqdefault
-            except urllib.error.URLError:
-                break  # network hiccup -> give up; the <img> will 404
-        _thumbnail_cache[video_id] = data
-    return _thumbnail_cache[video_id]
-
-
-def _replace_youtube_iframe(match):
-    full = match.group(0)
-    video_id = match.group(1)
-    # Give the <img> the iframe's box (width/height are usually percentages
-    # like 100%/80%). Without an explicit height the thumbnail renders at its
-    # natural ~700px and no longer fits under the slide heading; an <img> is
-    # monolithic in print fragmentation, so one that crosses its page
-    # boundary is pushed to the next page, where the .pdf-page's
-    # overflow:hidden clips it — it silently vanishes from the PDF (along
-    # with everything after it on the slide).
-    styles = []
-    for prop in ("width", "height"):
-        val = re.search(rf'{prop}="(\d+%?)"', full)
-        if val:
-            size = val.group(1)
-            styles.append(f"{prop}:{size if size.endswith('%') else size + 'px'}")
-    styles.append("object-fit:contain")
-    return (
-        f'<img src="{THUMBNAIL_PATH_PREFIX}{video_id}.jpg"'
-        f' style="{";".join(styles)}" alt="YouTube thumbnail">'
-    )
-
-
 class RewritingHandler(http.server.SimpleHTTPRequestHandler):
     # Silence per-request access logging — with several Chrome instances
     # hitting the server in parallel it just floods the terminal.
@@ -355,18 +288,6 @@ class RewritingHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split('?', 1)[0].split('#', 1)[0]
-        if path.startswith(THUMBNAIL_PATH_PREFIX) and path.endswith('.jpg'):
-            video_id = path[len(THUMBNAIL_PATH_PREFIX):-len('.jpg')]
-            data = _thumbnail_bytes(video_id)
-            if data is None:
-                self.send_error(404)
-                return
-            self.send_response(200)
-            self.send_header('Content-Type', 'image/jpeg')
-            self.send_header('Content-Length', str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
-            return
         if path.endswith('.slides.html'):
             fs_path = self.translate_path(path)
             try:
@@ -376,7 +297,6 @@ class RewritingHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_error(404)
                 return
             text = body.decode('utf-8', errors='replace')
-            text = YOUTUBE_IFRAME_RE.sub(_replace_youtube_iframe, text)
             if RAF_SHIM_JS not in text and '<head>' in text:
                 text = text.replace('<head>', f'<head>{RAF_SHIM_JS}', 1)
             if SHOW_FOOTERS_JS not in text and '</body>' in text:

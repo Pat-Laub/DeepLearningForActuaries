@@ -7,9 +7,11 @@
 <script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
 <link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="../site_libs/quarto-html/light-border.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-9f246038b6c17588c4424a74ba3ead56.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<link href="../site_libs/quarto-contrib/reveal-auto-agenda-0.0.3/reveal-auto-agenda.css" rel="stylesheet"><meta charset="utf-8">
-  <meta name="generator" content="quarto-1.9.38">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-14b9d25457c371785d01fff7863bca02.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<link href="../site_libs/quarto-contrib/reveal-auto-agenda-0.0.3/reveal-auto-agenda.css" rel="stylesheet">
+<script src="../site_libs/quarto-contrib/print-media-0.2.1/print-media.js"></script>
+<link href="../site_libs/quarto-contrib/print-media-0.2.1/print-media.css" rel="stylesheet"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.10.18">
 
   <meta name="author" content="Patrick Laub">
   <title>Deep Learning for Actuaries – Entity Embedding</title>
@@ -22,10 +24,13 @@
     /* Default styles provided by pandoc.
     ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
     */
-    code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
     ul.task-list{list-style: none;}
     ul.task-list li input[type="checkbox"] {
@@ -119,7 +124,7 @@
     div.csl-indent {
       margin-left: 2em;
     }  </style>
-  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-8ccf69db795220f1d1d37d8b7909e295.css">
+  <link rel="stylesheet" href="../site_libs/revealjs/dist/theme/quarto-39a8ef59909b4b4f3584c1294b24c4e1.css">
   <script>window.backupDefine = window.define; window.define = undefined;</script><script src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
   <script>document.addEventListener("DOMContentLoaded", function () {
  var mathElements = document.getElementsByClassName("math");
@@ -253,7 +258,7 @@
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
 <div class="quarto-title-author-name">
-Patrick Laub 
+Patrick Laub
 </div>
 </div>
 </div>
@@ -383,25 +388,25 @@ Patrick Laub
 <section id="imports-needed-for-these-demos" class="slide level2">
 <h2>Imports needed for these demos</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a></a><span class="im">import</span> random</span>
-<span id="cb1-2"><a></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb1-3"><a></a></span>
-<span id="cb1-4"><a></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
-<span id="cb1-5"><a></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
-<span id="cb1-6"><a></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
-<span id="cb1-7"><a></a></span>
-<span id="cb1-8"><a></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential, Model</span>
-<span id="cb1-9"><a></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense, Input, Embedding, Reshape, Concatenate</span>
-<span id="cb1-10"><a></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
-<span id="cb1-11"><a></a><span class="im">from</span> keras.utils <span class="im">import</span> plot_model</span>
-<span id="cb1-12"><a></a></span>
-<span id="cb1-13"><a></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
-<span id="cb1-14"><a></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_openml</span>
-<span id="cb1-15"><a></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
-<span id="cb1-16"><a></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, OrdinalEncoder, StandardScaler</span>
-<span id="cb1-17"><a></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
-<span id="cb1-18"><a></a></span>
-<span id="cb1-19"><a></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a aria-label="1"></a><span class="im">import</span> random</span>
+<span id="cb1-2"><a aria-label="2"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-3"><a aria-label="3"></a></span>
+<span id="cb1-4"><a aria-label="4"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a aria-label="5"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-6"><a aria-label="6"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a aria-label="7"></a></span>
+<span id="cb1-8"><a aria-label="8"></a><span class="im">from</span> keras.models <span class="im">import</span> Sequential, Model</span>
+<span id="cb1-9"><a aria-label="9"></a><span class="im">from</span> keras.layers <span class="im">import</span> Dense, Input, Embedding, Reshape, Concatenate</span>
+<span id="cb1-10"><a aria-label="10"></a><span class="im">from</span> keras.callbacks <span class="im">import</span> EarlyStopping</span>
+<span id="cb1-11"><a aria-label="11"></a><span class="im">from</span> keras.utils <span class="im">import</span> plot_model</span>
+<span id="cb1-12"><a aria-label="12"></a></span>
+<span id="cb1-13"><a aria-label="13"></a><span class="im">from</span> sklearn <span class="im">import</span> set_config</span>
+<span id="cb1-14"><a aria-label="14"></a><span class="im">from</span> sklearn.datasets <span class="im">import</span> fetch_openml</span>
+<span id="cb1-15"><a aria-label="15"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> train_test_split</span>
+<span id="cb1-16"><a aria-label="16"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> OneHotEncoder, OrdinalEncoder, StandardScaler</span>
+<span id="cb1-17"><a aria-label="17"></a><span class="im">from</span> sklearn.compose <span class="im">import</span> make_column_transformer</span>
+<span id="cb1-18"><a aria-label="18"></a></span>
+<span id="cb1-19"><a aria-label="19"></a>set_config(transform_output<span class="op">=</span><span class="st">"pandas"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="revisit-the-french-motor-dataset" class="slide level2">
@@ -409,13 +414,13 @@ Patrick Laub
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">"data/freq_data.csv"</span>).exists():</span>
-<span id="cb2-2"><a></a>    freq <span class="op">=</span> fetch_openml(data_id<span class="op">=</span><span class="dv">41214</span>, as_frame<span class="op">=</span><span class="va">True</span>).frame</span>
-<span id="cb2-3"><a></a>    freq.to_csv(<span class="st">"data/freq_data.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb2-4"><a></a><span class="cf">else</span>:</span>
-<span id="cb2-5"><a></a>    freq <span class="op">=</span> pd.read_csv(<span class="st">"data/freq_data.csv"</span>)</span>
-<span id="cb2-6"><a></a></span>
-<span id="cb2-7"><a></a>freq</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a aria-label="1"></a><span class="cf">if</span> <span class="kw">not</span> Path(<span class="st">"data/freq_data.csv"</span>).exists():</span>
+<span id="cb2-2"><a aria-label="2"></a>    freq <span class="op">=</span> fetch_openml(data_id<span class="op">=</span><span class="dv">41214</span>, as_frame<span class="op">=</span><span class="va">True</span>).frame</span>
+<span id="cb2-3"><a aria-label="3"></a>    freq.to_csv(<span class="st">"data/freq_data.csv"</span>, index<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb2-4"><a aria-label="4"></a><span class="cf">else</span>:</span>
+<span id="cb2-5"><a aria-label="5"></a>    freq <span class="op">=</span> pd.read_csv(<span class="st">"data/freq_data.csv"</span>)</span>
+<span id="cb2-6"><a aria-label="6"></a></span>
+<span id="cb2-7"><a aria-label="7"></a>freq</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-display">
 <div>
@@ -651,20 +656,20 @@ Y_i \sim \mathsf{Poisson}(\text{Exposure}_i \times \lambda(\mathbf{x}_i)).
 <div class="cell">
 <details class="code-fold">
 <summary>Code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a></a>freq <span class="op">=</span> freq.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>).head(<span class="dv">25_000</span>)</span>
-<span id="cb3-2"><a></a></span>
-<span id="cb3-3"><a></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
-<span id="cb3-4"><a></a>  freq.drop(<span class="st">"ClaimNb"</span>, axis<span class="op">=</span><span class="dv">1</span>), freq[<span class="st">"ClaimNb"</span>], random_state<span class="op">=</span><span class="dv">36861</span>)</span>
-<span id="cb3-5"><a></a></span>
-<span id="cb3-6"><a></a><span class="co"># Reset each index to start at 0 again.</span></span>
-<span id="cb3-7"><a></a>X_train_raw <span class="op">=</span> X_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb3-8"><a></a>X_test_raw <span class="op">=</span> X_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a aria-label="1"></a>freq <span class="op">=</span> freq.drop(<span class="st">"IDpol"</span>, axis<span class="op">=</span><span class="dv">1</span>).head(<span class="dv">25_000</span>)</span>
+<span id="cb3-2"><a aria-label="2"></a></span>
+<span id="cb3-3"><a aria-label="3"></a>X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(</span>
+<span id="cb3-4"><a aria-label="4"></a>  freq.drop(<span class="st">"ClaimNb"</span>, axis<span class="op">=</span><span class="dv">1</span>), freq[<span class="st">"ClaimNb"</span>], random_state<span class="op">=</span><span class="dv">36861</span>)</span>
+<span id="cb3-5"><a aria-label="5"></a></span>
+<span id="cb3-6"><a aria-label="6"></a><span class="co"># Reset each index to start at 0 again.</span></span>
+<span id="cb3-7"><a aria-label="7"></a>X_train_raw <span class="op">=</span> X_train.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb3-8"><a aria-label="8"></a>X_test_raw <span class="op">=</span> X_test.reset_index(drop<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a></a>X_train_raw[<span class="st">"Area"</span>].value_counts()</span>
-<span id="cb4-2"><a></a>X_train_raw[<span class="st">"VehBrand"</span>].value_counts()</span>
-<span id="cb4-3"><a></a>X_train_raw[<span class="st">"VehGas"</span>].value_counts()</span>
-<span id="cb4-4"><a></a>X_train_raw[<span class="st">"Region"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a aria-label="1"></a>X_train_raw[<span class="st">"Area"</span>].value_counts()</span>
+<span id="cb4-2"><a aria-label="2"></a>X_train_raw[<span class="st">"VehBrand"</span>].value_counts()</span>
+<span id="cb4-3"><a aria-label="3"></a>X_train_raw[<span class="st">"VehGas"</span>].value_counts()</span>
+<span id="cb4-4"><a aria-label="4"></a>X_train_raw[<span class="st">"Region"</span>].value_counts()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="quarto-layout-panel" data-layout-ncol="2" data-layout-nrow="2">
 <div class="quarto-layout-row">
 <div class="cell quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
@@ -716,18 +721,18 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <section id="how-we-preprocessed-last-time" class="slide level2">
 <h2>How we preprocessed last time</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb9-2"><a></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
-<span id="cb9-3"><a></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
-<span id="cb9-4"><a></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb9-5"><a></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb9-6"><a></a>)</span>
-<span id="cb9-7"><a></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a aria-label="1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb9-2"><a aria-label="2"></a>  (OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>, drop<span class="op">=</span><span class="st">"first"</span>), [<span class="st">"VehGas"</span>, <span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]),</span>
+<span id="cb9-3"><a aria-label="3"></a>  (OrdinalEncoder(), [<span class="st">"Area"</span>]),</span>
+<span id="cb9-4"><a aria-label="4"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb9-5"><a aria-label="5"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb9-6"><a aria-label="6"></a>)</span>
+<span id="cb9-7"><a aria-label="7"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a></a>X_train_raw.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a aria-label="1"></a>X_train_raw.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <style scoped="">
@@ -808,7 +813,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a></a>X_train.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a aria-label="1"></a>X_train.head(<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <style scoped="">
@@ -973,11 +978,11 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <section id="one-hot-encoding" class="slide level2">
 <h2>One-hot encoding</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a></a>oh <span class="op">=</span> OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>)</span>
-<span id="cb12-2"><a></a>X_train_oh <span class="op">=</span> oh.fit_transform(X_train_raw[[<span class="st">"Region"</span>]])</span>
-<span id="cb12-3"><a></a>X_test_oh <span class="op">=</span> oh.transform(X_test_raw[[<span class="st">"Region"</span>]])</span>
-<span id="cb12-4"><a></a><span class="bu">print</span>(<span class="bu">list</span>(X_train_raw[<span class="st">"Region"</span>][:<span class="dv">5</span>]))</span>
-<span id="cb12-5"><a></a>X_train_oh.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a aria-label="1"></a>oh <span class="op">=</span> OneHotEncoder(sparse_output<span class="op">=</span><span class="va">False</span>)</span>
+<span id="cb12-2"><a aria-label="2"></a>X_train_oh <span class="op">=</span> oh.fit_transform(X_train_raw[[<span class="st">"Region"</span>]])</span>
+<span id="cb12-3"><a aria-label="3"></a>X_test_oh <span class="op">=</span> oh.transform(X_test_raw[[<span class="st">"Region"</span>]])</span>
+<span id="cb12-4"><a aria-label="4"></a><span class="bu">print</span>(<span class="bu">list</span>(X_train_raw[<span class="st">"Region"</span>][:<span class="dv">5</span>]))</span>
+<span id="cb12-5"><a aria-label="5"></a>X_train_oh.head()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>['R24', 'R21', 'R53', 'R24', 'R82']</code></pre>
 </div>
@@ -1156,21 +1161,21 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <section id="train-on-one-hot-inputs" class="slide level2">
 <h2>Train on one-hot inputs</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a></a>num_regions <span class="op">=</span> <span class="bu">len</span>(oh.categories_[<span class="dv">0</span>])</span>
-<span id="cb14-2"><a></a></span>
-<span id="cb14-3"><a></a>random.seed(<span class="dv">12</span>)</span>
-<span id="cb14-4"><a></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb14-5"><a></a>  Input(shape<span class="op">=</span>(num_regions,)),</span>
-<span id="cb14-6"><a></a>  Dense(<span class="dv">2</span>),</span>
-<span id="cb14-7"><a></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
-<span id="cb14-8"><a></a>])</span>
-<span id="cb14-9"><a></a></span>
-<span id="cb14-10"><a></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb14-11"><a></a></span>
-<span id="cb14-12"><a></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb14-13"><a></a>hist <span class="op">=</span> model.fit(X_train_oh, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>, validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
-<span id="cb14-14"><a></a>                           </span>
-<span id="cb14-15"><a></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a aria-label="1"></a>num_regions <span class="op">=</span> <span class="bu">len</span>(oh.categories_[<span class="dv">0</span>])</span>
+<span id="cb14-2"><a aria-label="2"></a></span>
+<span id="cb14-3"><a aria-label="3"></a>random.seed(<span class="dv">12</span>)</span>
+<span id="cb14-4"><a aria-label="4"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb14-5"><a aria-label="5"></a>  Input(shape<span class="op">=</span>(num_regions,)),</span>
+<span id="cb14-6"><a aria-label="6"></a>  Dense(<span class="dv">2</span>),</span>
+<span id="cb14-7"><a aria-label="7"></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb14-8"><a aria-label="8"></a>])</span>
+<span id="cb14-9"><a aria-label="9"></a></span>
+<span id="cb14-10"><a aria-label="10"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb14-11"><a aria-label="11"></a></span>
+<span id="cb14-12"><a aria-label="12"></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb14-13"><a aria-label="13"></a>hist <span class="op">=</span> model.fit(X_train_oh, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>, validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
+<span id="cb14-14"><a aria-label="14"></a>                           </span>
+<span id="cb14-15"><a aria-label="15"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Epoch 6: early stopping</code></pre>
 </div>
@@ -1184,8 +1189,8 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a></a>X <span class="op">=</span> np.eye(num_regions)</span>
-<span id="cb17-2"><a></a>pd.DataFrame(X, columns<span class="op">=</span>oh.categories_[<span class="dv">0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a aria-label="1"></a>X <span class="op">=</span> np.eye(num_regions)</span>
+<span id="cb17-2"><a aria-label="2"></a>pd.DataFrame(X, columns<span class="op">=</span>oh.categories_[<span class="dv">0</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <style scoped="">
@@ -1359,7 +1364,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a></a>model.layers[<span class="dv">0</span>](X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a aria-label="1"></a>model.layers[<span class="dv">0</span>](X)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>tensor([[-0.0646, -0.2346],
         [ 0.1463, -0.0323],
@@ -1390,9 +1395,9 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <section id="the-first-layer" class="slide level2">
 <h2>The first layer</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a></a>layer <span class="op">=</span> model.layers[<span class="dv">0</span>]</span>
-<span id="cb20-2"><a></a>W, b <span class="op">=</span> layer.get_weights()</span>
-<span id="cb20-3"><a></a>X.shape, W.shape, b.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a aria-label="1"></a>layer <span class="op">=</span> model.layers[<span class="dv">0</span>]</span>
+<span id="cb20-2"><a aria-label="2"></a>W, b <span class="op">=</span> layer.get_weights()</span>
+<span id="cb20-3"><a aria-label="3"></a>X.shape, W.shape, b.shape</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>((22, 22), (22, 2), (2,))</code></pre>
 </div>
@@ -1400,7 +1405,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a></a>X <span class="op">@</span> W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a aria-label="1"></a>X <span class="op">@</span> W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[-0.06, -0.23],
        [ 0.15, -0.03],
@@ -1428,7 +1433,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a aria-label="1"></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[-0.06, -0.23],
        [ 0.15, -0.03],
@@ -1461,7 +1466,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a></a>display(<span class="bu">list</span>(oh.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a aria-label="1"></a>display(<span class="bu">list</span>(oh.categories_[<span class="dv">0</span>]))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>['R11',
  'R21',
@@ -1489,7 +1494,7 @@ Name: count, Length: 22, dtype: int64</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb28-1"><a aria-label="1"></a>W <span class="op">+</span> b</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[-0.06, -0.23],
        [ 0.15, -0.03],
@@ -1521,12 +1526,12 @@ Name: count, Length: 22, dtype: int64</code></pre>
 <section id="turn-the-region-into-an-index" class="slide level2">
 <h2>Turn the region into an index</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a></a>oe <span class="op">=</span> OrdinalEncoder()</span>
-<span id="cb30-2"><a></a>X_train_reg <span class="op">=</span> oe.fit_transform(X_train_raw[[<span class="st">"Region"</span>]])</span>
-<span id="cb30-3"><a></a>X_test_reg <span class="op">=</span> oe.transform(X_test_raw[[<span class="st">"Region"</span>]])</span>
-<span id="cb30-4"><a></a></span>
-<span id="cb30-5"><a></a><span class="cf">for</span> i, reg <span class="kw">in</span> <span class="bu">enumerate</span>(oe.categories_[<span class="dv">0</span>][:<span class="dv">3</span>]):</span>
-<span id="cb30-6"><a></a>  <span class="bu">print</span>(<span class="ss">f"The Region value </span><span class="sc">{</span>reg<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a aria-label="1"></a>oe <span class="op">=</span> OrdinalEncoder()</span>
+<span id="cb30-2"><a aria-label="2"></a>X_train_reg <span class="op">=</span> oe.fit_transform(X_train_raw[[<span class="st">"Region"</span>]])</span>
+<span id="cb30-3"><a aria-label="3"></a>X_test_reg <span class="op">=</span> oe.transform(X_test_raw[[<span class="st">"Region"</span>]])</span>
+<span id="cb30-4"><a aria-label="4"></a></span>
+<span id="cb30-5"><a aria-label="5"></a><span class="cf">for</span> i, reg <span class="kw">in</span> <span class="bu">enumerate</span>(oe.categories_[<span class="dv">0</span>][:<span class="dv">3</span>]):</span>
+<span id="cb30-6"><a aria-label="6"></a>  <span class="bu">print</span>(<span class="ss">f"The Region value </span><span class="sc">{</span>reg<span class="sc">}</span><span class="ss"> gets turned into </span><span class="sc">{</span>i<span class="sc">}</span><span class="ss">."</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>The Region value R11 gets turned into 0.
 The Region value R21 gets turned into 1.
@@ -1537,22 +1542,22 @@ The Region value R22 gets turned into 2.</code></pre>
 <section id="use-an-embedding-layer" class="slide level2">
 <h2>Use an Embedding layer</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a></a>num_regions <span class="op">=</span> X_train_raw[<span class="st">"Region"</span>].nunique()</span>
-<span id="cb32-2"><a></a></span>
-<span id="cb32-3"><a></a>random.seed(<span class="dv">12</span>)</span>
-<span id="cb32-4"><a></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb32-5"><a></a>  Input(shape<span class="op">=</span>(<span class="dv">1</span>,)),</span>
-<span id="cb32-6"><a></a>  Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>),</span>
-<span id="cb32-7"><a></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
-<span id="cb32-8"><a></a>])</span>
-<span id="cb32-9"><a></a></span>
-<span id="cb32-10"><a></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a aria-label="1"></a>num_regions <span class="op">=</span> X_train_raw[<span class="st">"Region"</span>].nunique()</span>
+<span id="cb32-2"><a aria-label="2"></a></span>
+<span id="cb32-3"><a aria-label="3"></a>random.seed(<span class="dv">12</span>)</span>
+<span id="cb32-4"><a aria-label="4"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb32-5"><a aria-label="5"></a>  Input(shape<span class="op">=</span>(<span class="dv">1</span>,)),</span>
+<span id="cb32-6"><a aria-label="6"></a>  Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>),</span>
+<span id="cb32-7"><a aria-label="7"></a>  Dense(<span class="dv">1</span>, activation<span class="op">=</span><span class="st">"exponential"</span>)</span>
+<span id="cb32-8"><a aria-label="8"></a>])</span>
+<span id="cb32-9"><a aria-label="9"></a></span>
+<span id="cb32-10"><a aria-label="10"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb33-2"><a></a>hist <span class="op">=</span> model.fit(X_train_reg, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb33-3"><a></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
-<span id="cb33-4"><a></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a aria-label="1"></a>es <span class="op">=</span> EarlyStopping(verbose<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb33-2"><a aria-label="2"></a>hist <span class="op">=</span> model.fit(X_train_reg, y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb33-3"><a aria-label="3"></a>    validation_split<span class="op">=</span><span class="fl">0.2</span>, callbacks<span class="op">=</span>[es])</span>
+<span id="cb33-4"><a aria-label="4"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Epoch 4: early stopping</code></pre>
 </div>
@@ -1561,7 +1566,7 @@ The Region value R22 gets turned into 2.</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a></a>model.layers</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb36"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb36-1"><a aria-label="1"></a>model.layers</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>[&lt;Embedding name=embedding, built=True&gt;, &lt;Dense name=dense_2, built=True&gt;]</code></pre>
 </div>
@@ -1573,7 +1578,7 @@ The Region value R22 gets turned into 2.</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a></a>model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a aria-label="1"></a>model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[ 0.05, -0.07],
        [-0.02,  0.03],
@@ -1601,7 +1606,7 @@ The Region value R22 gets turned into 2.</code></pre>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a></a>X_train_raw[<span class="st">"Region"</span>].head(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb40"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a aria-label="1"></a>X_train_raw[<span class="st">"Region"</span>].head(<span class="dv">4</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>0    R24
 1    R21
@@ -1611,8 +1616,8 @@ Name: Region, dtype: str</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a></a>X_sample <span class="op">=</span> X_train_reg[:<span class="dv">4</span>].to_numpy()</span>
-<span id="cb42-2"><a></a>X_sample</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb42"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a aria-label="1"></a>X_sample <span class="op">=</span> X_train_reg[:<span class="dv">4</span>].to_numpy()</span>
+<span id="cb42-2"><a aria-label="2"></a>X_sample</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[ 4.],
        [ 1.],
@@ -1621,8 +1626,8 @@ Name: Region, dtype: str</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a></a>enc_tensor <span class="op">=</span> model.layers[<span class="dv">0</span>](X_sample)</span>
-<span id="cb44-2"><a></a>keras.ops.convert_to_numpy(enc_tensor).squeeze()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb44"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a aria-label="1"></a>enc_tensor <span class="op">=</span> model.layers[<span class="dv">0</span>](X_sample)</span>
+<span id="cb44-2"><a aria-label="2"></a>keras.ops.convert_to_numpy(enc_tensor).squeeze()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>array([[ 0.24, -0.22],
        [-0.02,  0.03],
@@ -1646,11 +1651,11 @@ Name: Region, dtype: str</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a></a>points <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span>
-<span id="cb46-2"><a></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">3</span>, <span class="dv">3</span>))</span>
-<span id="cb46-3"><a></a>plt.scatter(points[:,<span class="dv">0</span>], points[:,<span class="dv">1</span>])</span>
-<span id="cb46-4"><a></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_regions):</span>
-<span id="cb46-5"><a></a>  plt.text(points[i,<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.01</span>, points[i,<span class="dv">1</span>] , s<span class="op">=</span>oe.categories_[<span class="dv">0</span>][i])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb46"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb46-1"><a aria-label="1"></a>points <span class="op">=</span> model.layers[<span class="dv">0</span>].get_weights()[<span class="dv">0</span>]</span>
+<span id="cb46-2"><a aria-label="2"></a>plt.figure(figsize<span class="op">=</span>(<span class="dv">3</span>, <span class="dv">3</span>))</span>
+<span id="cb46-3"><a aria-label="3"></a>plt.scatter(points[:,<span class="dv">0</span>], points[:,<span class="dv">1</span>])</span>
+<span id="cb46-4"><a aria-label="4"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(num_regions):</span>
+<span id="cb46-5"><a aria-label="5"></a>  plt.text(points[i,<span class="dv">0</span>]<span class="op">+</span><span class="fl">0.01</span>, points[i,<span class="dv">1</span>] , s<span class="op">=</span>oe.categories_[<span class="dv">0</span>][i])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1717,45 +1722,45 @@ Name: Region, dtype: str</code></pre>
 <div class="columns">
 <div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a></a>random.seed(<span class="dv">12</span>)</span>
-<span id="cb47-2"><a></a></span>
-<span id="cb47-3"><a></a>model <span class="op">=</span> Sequential([</span>
-<span id="cb47-4"><a></a>  Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],)),</span>
-<span id="cb47-5"><a></a>  Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>),</span>
-<span id="cb47-6"><a></a>  Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)</span>
-<span id="cb47-7"><a></a>])</span>
-<span id="cb47-8"><a></a></span>
-<span id="cb47-9"><a></a>model.compile(</span>
-<span id="cb47-10"><a></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
-<span id="cb47-11"><a></a>  loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb47-12"><a></a></span>
-<span id="cb47-13"><a></a>hist <span class="op">=</span> model.fit(</span>
-<span id="cb47-14"><a></a>  X_train_oh, y_train,</span>
-<span id="cb47-15"><a></a>  epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb47-16"><a></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb47-17"><a></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb47"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb47-1"><a aria-label="1"></a>random.seed(<span class="dv">12</span>)</span>
+<span id="cb47-2"><a aria-label="2"></a></span>
+<span id="cb47-3"><a aria-label="3"></a>model <span class="op">=</span> Sequential([</span>
+<span id="cb47-4"><a aria-label="4"></a>  Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],)),</span>
+<span id="cb47-5"><a aria-label="5"></a>  Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>),</span>
+<span id="cb47-6"><a aria-label="6"></a>  Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)</span>
+<span id="cb47-7"><a aria-label="7"></a>])</span>
+<span id="cb47-8"><a aria-label="8"></a></span>
+<span id="cb47-9"><a aria-label="9"></a>model.compile(</span>
+<span id="cb47-10"><a aria-label="10"></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
+<span id="cb47-11"><a aria-label="11"></a>  loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb47-12"><a aria-label="12"></a></span>
+<span id="cb47-13"><a aria-label="13"></a>hist <span class="op">=</span> model.fit(</span>
+<span id="cb47-14"><a aria-label="14"></a>  X_train_oh, y_train,</span>
+<span id="cb47-15"><a aria-label="15"></a>  epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb47-16"><a aria-label="16"></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb47-17"><a aria-label="17"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>0.7695862650871277</code></pre>
 </div>
 </div>
 </div><div class="column">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a></a>random.seed(<span class="dv">12</span>)</span>
-<span id="cb49-2"><a></a></span>
-<span id="cb49-3"><a></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],))</span>
-<span id="cb49-4"><a></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inputs)</span>
-<span id="cb49-5"><a></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)(x)</span>
-<span id="cb49-6"><a></a>model <span class="op">=</span> Model(inputs, out)</span>
-<span id="cb49-7"><a></a></span>
-<span id="cb49-8"><a></a>model.compile(</span>
-<span id="cb49-9"><a></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
-<span id="cb49-10"><a></a>  loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb49-11"><a></a></span>
-<span id="cb49-12"><a></a>hist <span class="op">=</span> model.fit(</span>
-<span id="cb49-13"><a></a>  X_train_oh, y_train,</span>
-<span id="cb49-14"><a></a>  epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb49-15"><a></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb49-16"><a></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb49"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb49-1"><a aria-label="1"></a>random.seed(<span class="dv">12</span>)</span>
+<span id="cb49-2"><a aria-label="2"></a></span>
+<span id="cb49-3"><a aria-label="3"></a>inputs <span class="op">=</span> Input(shape<span class="op">=</span>(X_train_oh.shape[<span class="dv">1</span>],))</span>
+<span id="cb49-4"><a aria-label="4"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inputs)</span>
+<span id="cb49-5"><a aria-label="5"></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>)(x)</span>
+<span id="cb49-6"><a aria-label="6"></a>model <span class="op">=</span> Model(inputs, out)</span>
+<span id="cb49-7"><a aria-label="7"></a></span>
+<span id="cb49-8"><a aria-label="8"></a>model.compile(</span>
+<span id="cb49-9"><a aria-label="9"></a>  optimizer<span class="op">=</span><span class="st">"adam"</span>,</span>
+<span id="cb49-10"><a aria-label="10"></a>  loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb49-11"><a aria-label="11"></a></span>
+<span id="cb49-12"><a aria-label="12"></a>hist <span class="op">=</span> model.fit(</span>
+<span id="cb49-13"><a aria-label="13"></a>  X_train_oh, y_train,</span>
+<span id="cb49-14"><a aria-label="14"></a>  epochs<span class="op">=</span><span class="dv">1</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb49-15"><a aria-label="15"></a>  validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb49-16"><a aria-label="16"></a>hist.history[<span class="st">"val_loss"</span>][<span class="op">-</span><span class="dv">1</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>0.7695212364196777</code></pre>
 </div>
@@ -1775,13 +1780,13 @@ Name: Region, dtype: str</code></pre>
 </div><div class="column" style="width:55%;">
 <p>Add a <em>skip connection</em> from input to output layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a></a>inp <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
-<span id="cb51-2"><a></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inp)</span>
-<span id="cb51-3"><a></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(hidden1)</span>
-<span id="cb51-4"><a></a>concat <span class="op">=</span> Concatenate()(</span>
-<span id="cb51-5"><a></a>  [inp, hidden2])</span>
-<span id="cb51-6"><a></a>output <span class="op">=</span> Dense(<span class="dv">1</span>)(concat)</span>
-<span id="cb51-7"><a></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[inp], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb51"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb51-1"><a aria-label="1"></a>inp <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:])</span>
+<span id="cb51-2"><a aria-label="2"></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(inp)</span>
+<span id="cb51-3"><a aria-label="3"></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"leaky_relu"</span>)(hidden1)</span>
+<span id="cb51-4"><a aria-label="4"></a>concat <span class="op">=</span> Concatenate()(</span>
+<span id="cb51-5"><a aria-label="5"></a>  [inp, hidden2])</span>
+<span id="cb51-6"><a aria-label="6"></a>output <span class="op">=</span> Dense(<span class="dv">1</span>)(concat)</span>
+<span id="cb51-7"><a aria-label="7"></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[inp], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div></div>
 <div class="footer">
@@ -1792,12 +1797,12 @@ Name: Region, dtype: str</code></pre>
 <h2>Naming the layers</h2>
 <p>For complex networks, it is often useful to give meaningful names to the layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a></a>input_ <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"input"</span>)</span>
-<span id="cb52-2"><a></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(input_)</span>
-<span id="cb52-3"><a></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(hidden1)</span>
-<span id="cb52-4"><a></a>concat <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([input_, hidden2])</span>
-<span id="cb52-5"><a></a>output <span class="op">=</span> Dense(<span class="dv">1</span>, name<span class="op">=</span><span class="st">"output"</span>)(concat)</span>
-<span id="cb52-6"><a></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[input_], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb52"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb52-1"><a aria-label="1"></a>input_ <span class="op">=</span> Input(shape<span class="op">=</span>X_train.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"input"</span>)</span>
+<span id="cb52-2"><a aria-label="2"></a>hidden1 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(input_)</span>
+<span id="cb52-3"><a aria-label="3"></a>hidden2 <span class="op">=</span> Dense(<span class="dv">30</span>, activation<span class="op">=</span><span class="st">"leaky_relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(hidden1)</span>
+<span id="cb52-4"><a aria-label="4"></a>concat <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([input_, hidden2])</span>
+<span id="cb52-5"><a aria-label="5"></a>output <span class="op">=</span> Dense(<span class="dv">1</span>, name<span class="op">=</span><span class="st">"output"</span>)(concat)</span>
+<span id="cb52-6"><a aria-label="6"></a>model <span class="op">=</span> Model(inputs<span class="op">=</span>[input_], outputs<span class="op">=</span>[output])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="inspecting-a-complex-model" class="slide level2">
@@ -1805,7 +1810,7 @@ Name: Region, dtype: str</code></pre>
 <div class="columns">
 <div class="column" style="width:30%;">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb53"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb53-1"><a aria-label="1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1817,7 +1822,7 @@ Name: Region, dtype: str</code></pre>
 </div><div class="column" style="width:70%;">
 <div class="smaller">
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a></a>model.summary(line_length<span class="op">=</span><span class="dv">60</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb54"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb54-1"><a aria-label="1"></a>model.summary(line_length<span class="op">=</span><span class="dv">60</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre style="white-space:pre;overflow-x:auto;line-height:normal;font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><span style="font-weight: bold">Model: "functional_5"</span>
 </pre>
@@ -1896,62 +1901,62 @@ Name: Region, dtype: str</code></pre>
 <h2>Preprocess all French motor inputs</h2>
 <p>Transform the categorical variables to integers:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a></a>num_brands, num_regions <span class="op">=</span> X_train_raw[[<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]].nunique()</span>
-<span id="cb55-2"><a></a></span>
-<span id="cb55-3"><a></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb55-4"><a></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
-<span id="cb55-5"><a></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb55-6"><a></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb55-7"><a></a>)</span>
-<span id="cb55-8"><a></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
-<span id="cb55-9"><a></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb55"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb55-1"><a aria-label="1"></a>num_brands, num_regions <span class="op">=</span> X_train_raw[[<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>]].nunique()</span>
+<span id="cb55-2"><a aria-label="2"></a></span>
+<span id="cb55-3"><a aria-label="3"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb55-4"><a aria-label="4"></a>  (OrdinalEncoder(), [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<span id="cb55-5"><a aria-label="5"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb55-6"><a aria-label="6"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb55-7"><a aria-label="7"></a>)</span>
+<span id="cb55-8"><a aria-label="8"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
+<span id="cb55-9"><a aria-label="9"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Split the brand and region data apart from the rest:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a></a>X_train_brand <span class="op">=</span> X_train[<span class="st">"VehBrand"</span>]</span>
-<span id="cb56-2"><a></a>X_train_region <span class="op">=</span> X_train[<span class="st">"Region"</span>]</span>
-<span id="cb56-3"><a></a>X_train_rest <span class="op">=</span> X_train.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb56-4"><a></a></span>
-<span id="cb56-5"><a></a>X_test_brand <span class="op">=</span> X_test[<span class="st">"VehBrand"</span>]</span>
-<span id="cb56-6"><a></a>X_test_region <span class="op">=</span> X_test[<span class="st">"Region"</span>]</span>
-<span id="cb56-7"><a></a>X_test_rest <span class="op">=</span> X_test.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb56"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb56-1"><a aria-label="1"></a>X_train_brand <span class="op">=</span> X_train[<span class="st">"VehBrand"</span>]</span>
+<span id="cb56-2"><a aria-label="2"></a>X_train_region <span class="op">=</span> X_train[<span class="st">"Region"</span>]</span>
+<span id="cb56-3"><a aria-label="3"></a>X_train_rest <span class="op">=</span> X_train.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb56-4"><a aria-label="4"></a></span>
+<span id="cb56-5"><a aria-label="5"></a>X_test_brand <span class="op">=</span> X_test[<span class="st">"VehBrand"</span>]</span>
+<span id="cb56-6"><a aria-label="6"></a>X_test_region <span class="op">=</span> X_test[<span class="st">"Region"</span>]</span>
+<span id="cb56-7"><a aria-label="7"></a>X_test_rest <span class="op">=</span> X_test.drop([<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>], axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="organise-the-inputs" class="slide level2">
 <h2>Organise the inputs</h2>
 <p>Make a Keras <code>Input</code> for: vehicle brand, region, &amp; others.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a></a>veh_brand <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"veh_brand"</span>)</span>
-<span id="cb57-2"><a></a>region <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"region"</span>)</span>
-<span id="cb57-3"><a></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb57"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb57-1"><a aria-label="1"></a>veh_brand <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"veh_brand"</span>)</span>
+<span id="cb57-2"><a aria-label="2"></a>region <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"region"</span>)</span>
+<span id="cb57-3"><a aria-label="3"></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Create embeddings and join them with the other inputs.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a></a>random.seed(<span class="dv">1337</span>)</span>
-<span id="cb58-2"><a></a>veh_brand_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_brands, output_dim<span class="op">=</span><span class="dv">2</span>,</span>
-<span id="cb58-3"><a></a>    name<span class="op">=</span><span class="st">"veh_brand_ee"</span>)(veh_brand)</span>
-<span id="cb58-4"><a></a>veh_brand_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(veh_brand_ee)</span>
-<span id="cb58-5"><a></a></span>
-<span id="cb58-6"><a></a>region_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>, name<span class="op">=</span><span class="st">"region_ee"</span>)(region)</span>
-<span id="cb58-7"><a></a>region_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(region_ee)</span>
-<span id="cb58-8"><a></a></span>
-<span id="cb58-9"><a></a>x <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([veh_brand_ee, region_ee, other_inputs])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb58"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb58-1"><a aria-label="1"></a>random.seed(<span class="dv">1337</span>)</span>
+<span id="cb58-2"><a aria-label="2"></a>veh_brand_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_brands, output_dim<span class="op">=</span><span class="dv">2</span>,</span>
+<span id="cb58-3"><a aria-label="3"></a>    name<span class="op">=</span><span class="st">"veh_brand_ee"</span>)(veh_brand)</span>
+<span id="cb58-4"><a aria-label="4"></a>veh_brand_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(veh_brand_ee)</span>
+<span id="cb58-5"><a aria-label="5"></a></span>
+<span id="cb58-6"><a aria-label="6"></a>region_ee <span class="op">=</span> Embedding(input_dim<span class="op">=</span>num_regions, output_dim<span class="op">=</span><span class="dv">2</span>, name<span class="op">=</span><span class="st">"region_ee"</span>)(region)</span>
+<span id="cb58-7"><a aria-label="7"></a>region_ee <span class="op">=</span> Reshape(target_shape<span class="op">=</span>(<span class="dv">2</span>,))(region_ee)</span>
+<span id="cb58-8"><a aria-label="8"></a></span>
+<span id="cb58-9"><a aria-label="9"></a>x <span class="op">=</span> Concatenate(name<span class="op">=</span><span class="st">"combined"</span>)([veh_brand_ee, region_ee, other_inputs])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="complete-the-model-and-fit-it" class="slide level2">
 <h2>Complete the model and fit it</h2>
 <p>Feed the combined embeddings &amp; continuous inputs to some normal dense layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden"</span>)(x)</span>
-<span id="cb59-2"><a></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"out"</span>)(x)</span>
-<span id="cb59-3"><a></a></span>
-<span id="cb59-4"><a></a>model <span class="op">=</span> Model([veh_brand, region, other_inputs], out)</span>
-<span id="cb59-5"><a></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb59-6"><a></a></span>
-<span id="cb59-7"><a></a>hist <span class="op">=</span> model.fit((X_train_brand, X_train_region, X_train_rest),</span>
-<span id="cb59-8"><a></a>    y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb59-9"><a></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">5</span>)], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb59-10"><a></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb59"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb59-1"><a aria-label="1"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden"</span>)(x)</span>
+<span id="cb59-2"><a aria-label="2"></a>out <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"out"</span>)(x)</span>
+<span id="cb59-3"><a aria-label="3"></a></span>
+<span id="cb59-4"><a aria-label="4"></a>model <span class="op">=</span> Model([veh_brand, region, other_inputs], out)</span>
+<span id="cb59-5"><a aria-label="5"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb59-6"><a aria-label="6"></a></span>
+<span id="cb59-7"><a aria-label="7"></a>hist <span class="op">=</span> model.fit((X_train_brand, X_train_region, X_train_rest),</span>
+<span id="cb59-8"><a aria-label="8"></a>    y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb59-9"><a aria-label="9"></a>    callbacks<span class="op">=</span>[EarlyStopping(patience<span class="op">=</span><span class="dv">5</span>)], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb59-10"><a aria-label="10"></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-display">
 <pre><code>np.float64(0.6855398416519165)</code></pre>
 </div>
@@ -1960,14 +1965,14 @@ Name: Region, dtype: str</code></pre>
 <section id="plotting-this-model" class="slide level2">
 <h2>Plotting this model</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb61"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb61-1"><a aria-label="1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 </div>
 <img data-src="entity-embedding_files/figure-revealjs/cell-42-output-1.png" class="r-stretch"></section>
 <section id="why-we-need-to-reshape" class="slide level2">
 <h2>Why we need to reshape</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>, show_shapes<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb62"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb62-1"><a aria-label="1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>, show_shapes<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 </div>
 <img data-src="entity-embedding_files/figure-revealjs/cell-43-output-1.png" class="r-stretch"><div class="footer">
@@ -2014,46 +2019,46 @@ Name: Region, dtype: str</code></pre>
 <section id="just-take-continuous-variables" class="slide level2">
 <h2>Just take continuous variables</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a></a>ct <span class="op">=</span> make_column_transformer(</span>
-<span id="cb63-2"><a></a>  (<span class="st">"passthrough"</span>, [<span class="st">"Exposure"</span>]),</span>
-<span id="cb63-3"><a></a>  (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
-<span id="cb63-4"><a></a>  remainder<span class="op">=</span>StandardScaler(),</span>
-<span id="cb63-5"><a></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
-<span id="cb63-6"><a></a>)</span>
-<span id="cb63-7"><a></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
-<span id="cb63-8"><a></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb63"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb63-1"><a aria-label="1"></a>ct <span class="op">=</span> make_column_transformer(</span>
+<span id="cb63-2"><a aria-label="2"></a>  (<span class="st">"passthrough"</span>, [<span class="st">"Exposure"</span>]),</span>
+<span id="cb63-3"><a aria-label="3"></a>  (<span class="st">"drop"</span>, [<span class="st">"VehBrand"</span>, <span class="st">"Region"</span>, <span class="st">"Area"</span>, <span class="st">"VehGas"</span>]),</span>
+<span id="cb63-4"><a aria-label="4"></a>  remainder<span class="op">=</span>StandardScaler(),</span>
+<span id="cb63-5"><a aria-label="5"></a>  verbose_feature_names_out<span class="op">=</span><span class="va">False</span></span>
+<span id="cb63-6"><a aria-label="6"></a>)</span>
+<span id="cb63-7"><a aria-label="7"></a>X_train <span class="op">=</span> ct.fit_transform(X_train_raw)</span>
+<span id="cb63-8"><a aria-label="8"></a>X_test <span class="op">=</span> ct.transform(X_test_raw)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Split exposure apart from the rest:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a></a>X_train_exp <span class="op">=</span> X_train[<span class="st">"Exposure"</span>]</span>
-<span id="cb64-2"><a></a>X_test_exp <span class="op">=</span> X_test[<span class="st">"Exposure"</span>]</span>
-<span id="cb64-3"><a></a>X_train_rest <span class="op">=</span> X_train.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb64-4"><a></a>X_test_rest <span class="op">=</span> X_test.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb64"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb64-1"><a aria-label="1"></a>X_train_exp <span class="op">=</span> X_train[<span class="st">"Exposure"</span>]</span>
+<span id="cb64-2"><a aria-label="2"></a>X_test_exp <span class="op">=</span> X_test[<span class="st">"Exposure"</span>]</span>
+<span id="cb64-3"><a aria-label="3"></a>X_train_rest <span class="op">=</span> X_train.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb64-4"><a aria-label="4"></a>X_test_rest <span class="op">=</span> X_test.drop(<span class="st">"Exposure"</span>, axis<span class="op">=</span><span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>Organise the inputs:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a></a>exposure <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"exposure"</span>)</span>
-<span id="cb65-2"><a></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb65"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb65-1"><a aria-label="1"></a>exposure <span class="op">=</span> Input(shape<span class="op">=</span>(<span class="dv">1</span>,), name<span class="op">=</span><span class="st">"exposure"</span>)</span>
+<span id="cb65-2"><a aria-label="2"></a>other_inputs <span class="op">=</span> Input(shape<span class="op">=</span>X_train_rest.shape[<span class="dv">1</span>:], name<span class="op">=</span><span class="st">"other_inputs"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="make-fit-the-model" class="slide level2">
 <h2>Make &amp; fit the model</h2>
 <p>Feed the continuous inputs to some normal dense layers.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a></a>random.seed(<span class="dv">1337</span>)</span>
-<span id="cb66-2"><a></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(other_inputs)</span>
-<span id="cb66-3"><a></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(x)</span>
-<span id="cb66-4"><a></a>lambda_ <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"lambda"</span>)(x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb66"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb66-1"><a aria-label="1"></a>random.seed(<span class="dv">1337</span>)</span>
+<span id="cb66-2"><a aria-label="2"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden1"</span>)(other_inputs)</span>
+<span id="cb66-3"><a aria-label="3"></a>x <span class="op">=</span> Dense(<span class="dv">30</span>, <span class="st">"relu"</span>, name<span class="op">=</span><span class="st">"hidden2"</span>)(x)</span>
+<span id="cb66-4"><a aria-label="4"></a>lambda_ <span class="op">=</span> Dense(<span class="dv">1</span>, <span class="st">"exponential"</span>, name<span class="op">=</span><span class="st">"lambda"</span>)(x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a></a>out <span class="op">=</span> lambda_ <span class="op">*</span> exposure</span>
-<span id="cb67-2"><a></a>model <span class="op">=</span> Model([exposure, other_inputs], out)</span>
-<span id="cb67-3"><a></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
-<span id="cb67-4"><a></a></span>
-<span id="cb67-5"><a></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>, verbose<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb67-6"><a></a>hist <span class="op">=</span> model.fit((X_train_exp, X_train_rest), y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
-<span id="cb67-7"><a></a>    callbacks<span class="op">=</span>[es], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
-<span id="cb67-8"><a></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb67"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb67-1"><a aria-label="1"></a>out <span class="op">=</span> lambda_ <span class="op">*</span> exposure</span>
+<span id="cb67-2"><a aria-label="2"></a>model <span class="op">=</span> Model([exposure, other_inputs], out)</span>
+<span id="cb67-3"><a aria-label="3"></a>model.compile(optimizer<span class="op">=</span><span class="st">"adam"</span>, loss<span class="op">=</span><span class="st">"poisson"</span>)</span>
+<span id="cb67-4"><a aria-label="4"></a></span>
+<span id="cb67-5"><a aria-label="5"></a>es <span class="op">=</span> EarlyStopping(patience<span class="op">=</span><span class="dv">10</span>, restore_best_weights<span class="op">=</span><span class="va">True</span>, verbose<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb67-6"><a aria-label="6"></a>hist <span class="op">=</span> model.fit((X_train_exp, X_train_rest), y_train, epochs<span class="op">=</span><span class="dv">100</span>, verbose<span class="op">=</span><span class="dv">0</span>,</span>
+<span id="cb67-7"><a aria-label="7"></a>    callbacks<span class="op">=</span>[es], validation_split<span class="op">=</span><span class="fl">0.2</span>)</span>
+<span id="cb67-8"><a aria-label="8"></a>np.min(hist.history[<span class="st">"val_loss"</span>])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Epoch 29: early stopping
 Restoring model weights from the end of the best epoch: 19.</code></pre>
@@ -2066,7 +2071,7 @@ Restoring model weights from the end of the best epoch: 19.</code></pre>
 <section id="plot-the-model" class="slide level2">
 <h2>Plot the model</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb70"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb70-1"><a aria-label="1"></a>plot_model(model, show_layer_names<span class="op">=</span><span class="va">True</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 
 </div>
 <img data-src="entity-embedding_files/figure-revealjs/cell-49-output-1.png" class="r-stretch"></section>
@@ -2077,8 +2082,8 @@ Restoring model weights from the end of the best epoch: 19.</code></pre>
 <section id="package-versions" class="slide level2 appendix" data-visibility="uncounted">
 <h2>Package Versions</h2>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
-<span id="cb71-2"><a></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb71"><pre class="sourceCode numberSource python number-lines code-with-copy"><code class="sourceCode python"><span id="cb71-1"><a aria-label="1"></a><span class="im">from</span> watermark <span class="im">import</span> watermark</span>
+<span id="cb71-2"><a aria-label="2"></a><span class="bu">print</span>(watermark(python<span class="op">=</span><span class="va">True</span>, packages<span class="op">=</span><span class="st">"keras,matplotlib,numpy,pandas,seaborn,scipy,torch"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>Python implementation: CPython
 Python version       : 3.14.5
