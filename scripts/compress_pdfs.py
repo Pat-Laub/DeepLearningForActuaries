@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Compress the slide PDFs produced by decktape, in place, with Ghostscript.
+Compress the slide PDFs produced by headless Chrome, in place, with Ghostscript.
 
-decktape exports large (tens of MB) PDFs because headless Chrome embeds the
+The uncompressed exports are large because headless Chrome embeds the
 slide images at full resolution. This replaces the manual "open in Acrobat ->
 Compress PDF" step with a tuned Ghostscript pass that:
 
@@ -22,7 +22,7 @@ On the benchmark deck this matched/beat Acrobat's "Compress" output at
 comparable quality. A file is only replaced if the result is actually smaller.
 
 Note: output is not byte-for-byte reproducible (Ghostscript stamps a random
-/ID, and decktape's input already varies run-to-run), so the PDFs remain
+/ID, and Chrome's input metadata varies run-to-run), so the PDFs remain
 churning binaries in git — same as the previous Acrobat workflow.
 
 Config (environment variables):
@@ -30,7 +30,7 @@ Config (environment variables):
   COMPRESS_JOBS   parallel Ghostscript processes (default min(4, cpu, n))
 
 Usage (post-render): reads QUARTO_PROJECT_OUTPUT_FILES and compresses the .pdf
-                     decktape produced for each rendered .slides.html.
+                     produced for each rendered .slides.html.
 Usage (manual):      python compress_pdfs.py "docs/**/*.pdf"
 """
 

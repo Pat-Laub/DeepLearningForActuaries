@@ -2,9 +2,9 @@
 """
 Self-host the project's Google Fonts as embedded (data-URI) @font-face rules.
 
-The slide PDFs are produced by screenshotting reveal.js in headless Chrome
-(see decktape_pdfs.py). When the heading/body font (Playfair Display) is loaded
-from Google Fonts with `display=swap`, a slow/flaky network lets decktape
+The slide PDFs are produced from reveal.js in headless Chrome
+(see print_slides_pdfs.py). When the heading/body font (Playfair Display) is loaded
+from Google Fonts with `display=swap`, a slow/flaky network can let Chrome
 capture the title slide before the font arrives — so it renders in the Times
 fallback at the wrong size. Fetching fonts over the network at render time is
 the root cause.

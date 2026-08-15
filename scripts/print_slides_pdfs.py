@@ -13,14 +13,16 @@ Differences from the decktape output: pages are the deck's 1120x700 rather
 than decktape's 1280x720 viewport, and text/vector graphics stay vector
 instead of being screenshot pixels — smaller files, selectable text.
 
-Like its predecessor, this serves docs/ through a small local HTTP server
-that rewrites each .slides.html on the fly before Chrome sees it:
+The output directory is served as-is through a small local HTTP server that
+rewrites each .slides.html on the fly before Chrome sees it:
   1. Swap YouTube iframes for thumbnail <img> tags — iframes don't render
      reliably under headless Chrome, leaving grey boxes in the PDF.
   2. Inject a script that restores Quarto's per-slide footers (image
      attributions etc.), which Reveal's print view otherwise drops.
-(The chalkboard/menu icons that decktape had to hide with injected CSS are
-already hidden by Quarto's own html.print-pdf rules in print view.)
+  3. Inject a requestAnimationFrame shim, without which Reveal's print-view
+     setup stalls and prints one blank page (see RAF_SHIM_JS).
+(The menu icons that decktape had to hide with injected CSS are already
+hidden by Quarto's own html.print-pdf rules in print view.)
 
 Config (environment variables):
   CHROME_PATH        path to the Chrome/Chromium binary (else common
@@ -53,6 +55,37 @@ YOUTUBE_IFRAME_RE = re.compile(
     r'<iframe\b[^>]*\bsrc="https?://www\.youtube\.com/embed/([\w-]+)[^"]*"[^>]*>\s*</iframe>',
     re.IGNORECASE,
 )
+
+# Make requestAnimationFrame resolve under --virtual-time-budget.
+#
+# Reveal builds the print view in PrintView.activate(), an async method that
+# awaits four requestAnimationFrames: the last one gates the step that
+# actually appends the finished `.pdf-page` boxes to the document. rAF
+# callbacks only run when the compositor produces a frame, and under
+# --virtual-time-budget headless Chrome stops producing them once the page
+# goes idle — so that final callback never fires. Everything earlier in
+# activate() has already run (the @page rule is injected, the body is
+# resized), but no page is ever appended, and Chrome prints a single blank
+# page. Which decks lose depends on whether activate() started synchronously
+# at init or from the `load` event, so it looks arbitrary: it hit every deck
+# in this template, and in bigger courses only some decks failed until
+# several Chromes ran in parallel (PRINT_SLIDES_JOBS>1).
+#
+# Routing rAF through setTimeout makes those awaits depend on the timer
+# queue, which --virtual-time-budget fast-forwards, so the chain always
+# completes. Injected into <head> so it is in place before reveal.js loads,
+# and gated on print-pdf so it only ever affects the copy this server hands
+# to Chrome, never the decks published to docs/. (Printing wants the layout
+# finished as fast as possible; there is no animation to keep smooth here.)
+RAF_SHIM_JS = """<script>
+(function () {
+  if (!/print-pdf/gi.test(window.location.search)) return;
+  window.requestAnimationFrame = function (cb) {
+    return setTimeout(function () { cb(performance.now()); }, 0);
+  };
+  window.cancelAnimationFrame = function (id) { clearTimeout(id); };
+})();
+</script>"""
 
 # Quarto's per-slide footers (::: footer, used for image attributions) are
 # missing from Reveal's print view: in live mode the support plugin clones
@@ -120,7 +153,32 @@ SHOW_FOOTERS_JS = """<script>
         // taller than the page (e.g. a ::: columns line-box with a portrait
         // image) is clipped in place rather than pushed. This needs an
         // explicit height (auto would collapse the clip to the content).
-        slide.style.setProperty('height', page.clientHeight + 'px', 'important');
+        //
+        // Height it to the deck's own slide height, not the page height: the
+        // page is taller by the print margin, and anything the theme anchors
+        // to the bottom of the slide (::: footer, Quarto's footnote <aside>,
+        // which is position:absolute; bottom:20px) follows the box it sits in.
+        // Stretching that box to the page pushed those asides below the
+        // printed page edge, so multi-line footnotes lost their last line.
+        var deckH = (window.Reveal && typeof Reveal.getConfig === 'function'
+          && Reveal.getConfig().height) || (page.clientHeight - 2 * top);
+        // Preserve Reveal's original page-height containing block for embeds
+        // that explicitly size themselves with a percentage height. Quarto's
+        // video shortcode emits `height="80%"`; after the print server swaps
+        // that iframe for a thumbnail, changing its containing block from the
+        // 770px print box to the 700px deck box makes Reveal's stretch/layout
+        // calculation cover the title and footer on that slide. Ordinary
+        // slides still use deckH so bottom-anchored footnotes stay in bounds.
+        var percentageHeightContent = Array.prototype.some.call(
+          slide.querySelectorAll('[height], [style]'),
+          function (el) {
+            var attr = (el.getAttribute('height') || '').trim();
+            var inline = (el.style && el.style.height || '').trim();
+            return /%$/.test(attr) || /%$/.test(inline);
+          }
+        );
+        var slideH = percentageHeightContent ? page.clientHeight : deckH;
+        slide.style.setProperty('height', slideH + 'px', 'important');
         slide.style.setProperty('overflow', 'hidden', 'important');
       }
     });
@@ -319,6 +377,8 @@ class RewritingHandler(http.server.SimpleHTTPRequestHandler):
                 return
             text = body.decode('utf-8', errors='replace')
             text = YOUTUBE_IFRAME_RE.sub(_replace_youtube_iframe, text)
+            if RAF_SHIM_JS not in text and '<head>' in text:
+                text = text.replace('<head>', f'<head>{RAF_SHIM_JS}', 1)
             if SHOW_FOOTERS_JS not in text and '</body>' in text:
                 text = text.replace('</body>', f'{SHOW_FOOTERS_JS}</body>', 1)
             body = text.encode('utf-8')
@@ -356,8 +416,49 @@ def _pdf_complete(path):
         return False
 
 
-def print_to_pdf(url, output, timeout=240):
+def _pdf_page_count(path):
+    """Number of page objects in a written PDF (0 if unreadable)."""
+    try:
+        with open(path, "rb") as f:
+            return len(re.findall(rb"/Type\s*/Page\b", f.read()))
+    except OSError:
+        return 0
+
+
+def _deck_slide_count(path):
+    """Number of <section> tags in the deck file — an upper bound on slides."""
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            return len(re.findall(r"<section\b", f.read()))
+    except OSError:
+        return 0
+
+
+def print_to_pdf(url, output, timeout=240, deck=None, attempts=3):
     """Print the deck at `url` (already in print-pdf mode) to `output`.
+
+    A safety net for the blank-page failure RAF_SHIM_JS fixes: if Chrome ever
+    still captures the page before Reveal lays out the print view, the PDF is
+    a single blank page. Detect that signature (a one-page PDF for a
+    multi-section deck) and retry after a short settle delay; accept the last
+    attempt either way, warning so the deck can be re-run.
+    """
+    expected = _deck_slide_count(deck) if deck else 0
+    for attempt in range(1, attempts + 1):
+        _print_once(url, output, timeout)
+        if expected <= 1 or _pdf_page_count(output) > 1:
+            return output
+        if attempt < attempts:
+            time.sleep(2)
+    print(
+        f"warning: {output} has 1 page but the deck has ~{expected} "
+        "sections — the PDF may be blank; re-run the script to redo it."
+    )
+    return output
+
+
+def _print_once(url, output, timeout=240):
+    """Single print attempt for print_to_pdf (see that for the retry logic).
 
     Recent Chrome versions (observed with 150 on macOS) write the PDF but
     then never exit in headless --print-to-pdf mode, so we can't just wait
@@ -453,15 +554,28 @@ def _collect_slides():
 
 
 def main():
+    # The progress lines use ✓/✗, which a Windows console running the legacy
+    # cp1252 code page cannot encode: printing one raises UnicodeEncodeError
+    # from inside the results loop, and the except branch then dies on ✗ too,
+    # so a perfectly good render ends in a traceback.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     slides_files = _collect_slides()
     if not slides_files:
         print("print_slides_pdfs: no .slides.html files to convert.")
         return
 
     if not CHROME:
-        raise Exception(
-            "print_slides_pdfs: no Chrome/Chromium found — set CHROME_PATH."
+        # Not fatal: the website and slides rendered fine, only the optional
+        # PDF copies are skipped. Install Chrome (or set CHROME_PATH) to get
+        # them back.
+        print(
+            "print_slides_pdfs: no Chrome/Chromium found — skipping slide "
+            "PDFs (set CHROME_PATH to override)."
         )
+        return
 
     # Sequential by default — each conversion only takes a few seconds now;
     # set PRINT_SLIDES_JOBS=N to run several Chromes in parallel.
@@ -476,7 +590,7 @@ def main():
             f"{url_base}/{'/'.join(quote(part) for part in rel_path.split(os.sep))}"
             "?print-pdf&pdfMaxPagesPerSlide=1"
         )
-        print_to_pdf(url, os.path.abspath(pdf_file))
+        print_to_pdf(url, os.path.abspath(pdf_file), deck=file)
         return pdf_file
 
     print(
